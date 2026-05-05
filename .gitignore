@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+build/
+.out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Backend env
+backend/.env
+backend/server/.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary
+tmp/
+temp/
+.cache/
+
+# Crash files
+core.*
+
+# Archives
+*.zip
+
+# Misc lixo
+TO-DO.json
+replace_modal.py
+YOUWARE.md
+AGENTS.md
+yw_manifest.json
+chat/
+__generated__/

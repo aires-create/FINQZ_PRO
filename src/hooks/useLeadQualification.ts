@@ -1,0 +1,222 @@
+import { useState, useCallback } from 'react';
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+
+interface LeadQualificationResult {
+  score: number;
+  probability: number;
+  nextSteps: string[];
+  observations: string;
+  tags: string[];
+  analysis: string;
+}
+
+interface LeadData {
+  nome?: string;
+  email?: string;
+  celular?: string;
+  cidade?: string;
+  estado?: string;
+  status?: string;
+  origem?: string;
+  etapa_funil?: string;
+  ultima_interacao_at?: number;
+  tags?: string[];
+}
+
+export function useLeadQualification() {
+  const [isQualifying, setIsQualifying] = useState(false);
+  const [qualificationResult, setQualificationResult] = useState<LeadQualificationResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const qualifyLead = useCallback(async (lead: LeadData) => {
+    const startTime = Date.now();
+    setIsQualifying(true);
+    setError(null);
+
+    console.log('[START] Starting lead qualification:', { leadId: lead.id || lead.celular, nome: lead.nome });
+
+    const config = globalThis.ywConfig?.ai_config?.lead_qualification;
+    if (!config) {
+      const errorMsg = 'API Error - Configuration lead_qualification not found';
+      console.error('[ERROR]', errorMsg);
+      setError(errorMsg);
+      setIsQualifying(false);
+      throw new Error(errorMsg);
+    }
+
+    const systemPrompt = config.system_prompt || '';
+    const leadInfo = `
+Dados do Lead:
+- Nome: ${lead.nome || 'Não informado'}
+- Email: ${lead.email || 'Não informado'}
+- Celular: ${lead.celular || 'Não informado'}
+- Cidade: ${lead.cidade || 'Não informado'}
+- Estado: ${lead.estado || 'Não informado'}
+- Status atual: ${lead.status || 'lead'}
+- Origem: ${lead.origem || 'Não identificada'}
+- Etapa do funil: ${lead.etapa_funil || 'Não definida'}
+- Última interação: ${lead.ultima_interacao_at ? new Date(lead.ultima_interacao_at).toLocaleString('pt-BR') : 'Sem interação registrada'}
+- Tags atuais: ${lead.tags ? lead.tags.join(', ') : 'Nenhuma'}
+    `.trim();
+
+    const userMessage = `Por favor, analise o lead abaixo e forneça uma qualificação detalhada no seguinte formato JSON:
+{
+  "score": (número de 1 a 10),
+  "probability": (porcentagem de 0 a 100),
+  "nextSteps": ["passo 1", "passo 2", "passo 3"],
+  "observations": "suas observações sobre o perfil do cliente",
+  "tags": ["tag1", "tag2", "tag3"],
+  "analysis": "análise detalhada do lead em 2-3 frases"
+}
+
+${leadInfo}`;
+
+    console.log('[REQUEST] AI API Request (Lead Qualification):', {
+      model: config.model,
+      scene: 'lead_qualification',
+      input: leadInfo.substring(0, 100) + '...',
+      parameters: {
+        temperature: config.temperature || 0.3,
+        maxTokens: config.maxTokens || 2000
+      }
+    });
+
+    const openai = createOpenAI({
+      baseURL: 'https://api.youware.com/public/v1/ai',
+      apiKey: 'sk-YOUWARE'
+    });
+
+    try {
+      const { text } = await generateText({
+        model: openai(config.model),
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: config.temperature || 0.3,
+        maxTokens: config.maxTokens || 2000
+      });
+
+      console.log('[SUCCESS] AI API Response (Lead Qualification):', {
+        model: config.model,
+        outputLength: text.length,
+        responsePreview: text.substring(0, 150) + '...',
+        processingTime: `${Date.now() - startTime}ms`
+      });
+
+      // Parse JSON from response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        setQualificationResult(parsed);
+        return parsed;
+      } else {
+        throw new Error('API Error - Invalid response format from AI');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'API Error - Lead qualification failed';
+      console.error('[ERROR] API Error - Lead qualification failed:', {
+        model: config.model,
+        error: err.message,
+        processingTime: `${Date.now() - startTime}ms`
+      });
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsQualifying(false);
+    }
+  }, []);
+
+  const clearResult = useCallback(() => {
+    setQualificationResult(null);
+    setError(null);
+  }, []);
+
+  return {
+    qualifyLead,
+    qualificationResult,
+    isQualifying,
+    error,
+    clearResult
+  };
+}
+
+// Hook for batch lead qualification
+export function useBatchLeadQualification() {
+  const [isQualifying, setIsQualifying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [results, setResults] = useState<Map<number, LeadQualificationResult>>(new Map());
+  const [errors, setErrors] = useState<Map<number, string>>(new Map());
+
+  const qualifyBatch = useCallback(async (leads: LeadData[], onProgress?: (current: number, total: number) => void) => {
+    setIsQualifying(true);
+    setProgress(0);
+    setResults(new Map());
+    setErrors(new Map());
+
+    const total = leads.length;
+    let current = 0;
+
+    const config = globalThis.ywConfig?.ai_config?.lead_qualification;
+    if (!config) {
+      throw new Error('API Error - Configuration lead_qualification not found');
+    }
+
+    const openai = createOpenAI({
+      baseURL: 'https://api.youware.com/public/v1/ai',
+      apiKey: 'sk-YOUWARE'
+    });
+
+    for (const lead of leads) {
+      try {
+        const leadInfo = `
+Dados do Lead:
+- Nome: ${lead.nome || 'Não informado'}
+- Email: ${lead.email || 'Não informado'}
+- Celular: ${lead.celular || 'Não informado'}
+- Cidade: ${lead.cidade || 'Não informado'}
+- Estado: ${lead.estado || 'Não informado'}
+- Status atual: ${lead.status || 'lead'}
+- Origem: ${lead.origem || 'Não identificada'}
+        `.trim();
+
+        const userMessage = `Forneça a qualificação em JSON:
+{"score": 1-10, "probability": 0-100, "nextSteps": ["string"], "observations": "string", "tags": ["string"], "analysis": "string"}
+${leadInfo}`;
+
+        const { text } = await generateText({
+          model: openai(config.model),
+          messages: [
+            { role: 'system', content: config.system_prompt || '' },
+            { role: 'user', content: userMessage }
+          ],
+          temperature: config.temperature || 0.3,
+          maxTokens: config.maxTokens || 2000
+        });
+
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          setResults(prev => new Map(prev).set(lead.id as number, parsed));
+        }
+      } catch (err: any) {
+        setErrors(prev => new Map(prev).set(lead.id as number, err.message));
+      }
+
+      current++;
+      setProgress(Math.round((current / total) * 100));
+      onProgress?.(current, total);
+    }
+
+    setIsQualifying(false);
+  }, []);
+
+  return {
+    qualifyBatch,
+    progress,
+    results,
+    errors,
+    isQualifying
+  };
+}

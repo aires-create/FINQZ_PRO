@@ -1,0 +1,11 @@
+{
+  "name": "backend",
+  "private": true,
+  "workspaces": [
+    "server"
+  ],
+  "scripts": {},
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

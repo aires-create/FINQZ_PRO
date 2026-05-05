@@ -1,0 +1,84 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2021": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "jsx": true
+    },
+    "ecmaVersion": "latest",
+    "sourceType": "module"
+  },
+  "plugins": [
+    "react",
+    "@typescript-eslint"
+  ],
+  "rules": {
+    // 🚨 BLOQUEAR HTML CRU - FORÇAR USO DO DESIGN SYSTEM
+    
+    // Bloquear <button> nativo - usar <Button /> do Design System
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXElement[openingElement.name.name='button']",
+        "message": "Use <Button /> do Design System em vez de <button> nativo. Importe de: import { Button } from '@/components/ui';"
+      }
+    ],
+    
+    // Bloquear <input> nativo - usar <Input /> do Design System
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXElement[openingElement.name.name='input']",
+        "message": "Use <Input /> do Design System em vez de <input> nativo. Importe de: import { Input } from '@/components/ui';"
+      }
+    ],
+    
+    // Bloquear <select> nativo - usar <Select /> do Design System
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXElement[openingElement.name.name='select']",
+        "message": "Use <Select /> do Design System em vez de <select> nativo. Importe de: import { Select } from '@/components/ui';"
+      }
+    ],
+    
+    // Bloquear <textarea> nativo - usar Input com prop multiline ou componente próprio
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXElement[openingElement.name.name='textarea']",
+        "message": "Use <Input /> do Design System (com prop 'multiline') em vez de <textarea> nativo. Importe de: import { Input } from '@/components/ui';"
+      }
+    ],
+    
+    // ⚠️ AVISAR sobre cores hardcoded - incentivando uso de classes do Design System
+    "no-restricted-patterns": [
+      "warn",
+      {
+        "pattern": "\\[#[0-9a-fA-F]{3,6}\\]",
+        "message": "Evite cores hex hardcoded. Use classes do Design System como 'bg-primary', 'text-primary', ou configure no tailwind.config.js"
+      }
+    ],
+    
+    // React rules
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/explicit-module-boundary-types": "off"
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
+}
