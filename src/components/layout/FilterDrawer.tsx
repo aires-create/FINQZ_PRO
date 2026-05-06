@@ -157,7 +157,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         aria-labelledby="filter-drawer-title"
       >
         {/* Header: shrink-0, border-b */}
-        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0F172A]/90">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-[#000dff]/10 rounded-lg">
               <Filter className="w-5 h-5 text-[#000dff]" />
@@ -165,7 +165,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
             <div>
               <h2 
                 id="filter-drawer-title" 
-                className="text-lg font-semibold text-slate-900"
+                className="text-lg font-semibold text-white"
               >
                 {title}
               </h2>
@@ -179,7 +179,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             aria-label="Fechar filtros"
           >
             <X className="w-5 h-5 text-slate-500" />
@@ -190,13 +190,13 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {safeFields.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-4 bg-gray-100 rounded-full mb-4">
+              <div className="p-4 bg-[#111827] rounded-full mb-4">
                 <Filter className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-medium text-slate-700 mb-2">
+              <h3 className="text-lg font-medium text-slate-200 mb-2">
                 Nenhum filtro disponível
               </h3>
-              <p className="text-slate-500 text-sm max-w-xs">
+              <p className="text-slate-400 text-sm max-w-xs">
                 Esta tela não possui filtros configurados no momento.
               </p>
             </div>
@@ -229,7 +229,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   />
                 ) : field.type === "dateRange" ? (
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-700">
+                    <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -263,7 +263,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   />
                 ) : field.type === "numberRange" ? (
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-700">
+                    <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -311,7 +311,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                       }}
                       className={`
                         relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${localValues[field.key] === "true" ? "bg-[#000dff]" : "bg-gray-200"}
+                        ${localValues[field.key] === "true" ? "bg-[#000dff]" : "bg-white/10"}
                       `}
                     >
                       <span
@@ -321,14 +321,14 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                         `}
                       />
                     </button>
-                    <span className="text-sm text-slate-700">{field.label}</span>
+                    <span className="text-sm text-slate-300">{field.label}</span>
                   </div>
                 ) : field.type === "multiSelect" ? (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">
+                    <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
-                    <div className="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg min-h-[44px]">
+                    <div className="flex flex-wrap gap-2 p-3 border border-white/10 bg-[#0F172A] rounded-lg min-h-[44px]">
                       {(field.options || []).map((option) => {
                         const isSelected = (localValues[field.key] || "").split(",").includes(option.value);
                         return (
@@ -348,7 +348,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                               px-3 py-1.5 text-sm rounded-full border transition-all
                               ${isSelected 
                                 ? "bg-[#000dff]/10 border-[#000dff] text-[#000dff]" 
-                                : "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border-gray-200 text-slate-600 hover:border-gray-300"
+                                : "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-300 hover:border-white/20"
                               }
                             `}
                           >
@@ -361,7 +361,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   </div>
                 ) : field.type === "currency" ? (
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-700">
+                    <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -431,7 +431,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         </div>
 
         {/* Footer: shrink-0 border-t */}
-        <div className="shrink-0 px-6 py-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border-t border-gray-200 flex items-center gap-3">
+        <div className="shrink-0 px-6 py-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border-t border-white/10 flex items-center gap-3">
           <Button
             variant="outline"
             onClick={handleClear}
@@ -481,7 +481,7 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
         transition-all duration-200 border
         ${activeCount > 0 
           ? "bg-[#000dff]/10 border-[#000dff]/30 text-[#000dff]" 
-          : "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border-gray-300 text-slate-700 hover:bg-gray-50 hover:border-gray-400"
+          : "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20"
         }
       `}
     >

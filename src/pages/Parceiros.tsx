@@ -307,7 +307,7 @@ export const ParceirosPage: React.FC = () => {
   });
 
   // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
-  const tenantFilteredParceiros = useTenantFilter(parceiros);
+  const tenantFilteredParceiros = useTenantFilter(parceiros) as Parceiro[];
   
   const filteredParceiros = tenantFilteredParceiros.filter((p) => {
     const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -733,20 +733,20 @@ export const ParceirosPage: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px]">
             <thead>
-            <tr className="border-b border-[#1f2937] bg-gray-50">
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">ID/Código</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Parceiro</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Tipo</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Responsável</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Contato</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Localização</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-slate-600">Ações</th>
+            <tr className="border-b border-[#1f2937] bg-[#0F172A]">
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">ID/Código</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">Parceiro</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">Tipo</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">Responsável</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">Contato</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-300">Localização</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-slate-300">Ações</th>
             </tr>
           </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-[#1f2937]">
               {filteredParceiros.map((parceiro) => (
-                <tr key={parceiro.id} className="hover:bg-gray-50">
+                <tr key={parceiro.id} className="hover:bg-[#0F172A]/50 transition-colors">
                   <td className="px-4 py-3 text-white font-medium">{normalizeCodigoParceiro(parceiro.codigo)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
@@ -759,7 +759,7 @@ export const ParceirosPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-slate-300">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-slate-300 border border-[#374151]">
                       {getTipoLabel(parceiro.tipo)}
                     </span>
                   </td>
@@ -786,14 +786,14 @@ export const ParceirosPage: React.FC = () => {
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button
-                        onClick={() => handleEdit(parceiro)}
-                        className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg"
+                        onClick={() => handleEdit(parceiro as Parceiro)}
+                        className="p-2 text-slate-400 hover:text-[#3388d9] hover:bg-white/10 rounded-lg transition-colors"
                       >
                         <Edit size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete(parceiro.id)}
-                        className="p-2 text-slate-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
+                        onClick={() => handleDelete((parceiro as Parceiro).id)}
+                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -844,13 +844,13 @@ export const ParceirosPage: React.FC = () => {
                     type="text"
                     value={generatedCredentials.login}
                     readOnly
-                    className="flex-1 px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-xl text-white font-mono"
+                    className="flex-1 px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white font-mono focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9]"
                   />
                   <button
                     onClick={() => copyToClipboard(generatedCredentials.login, 'login')}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                    className="p-2 bg-[#1f2937] hover:bg-[#374151] rounded-xl transition-colors"
                   >
-                    {copiedField === 'login' ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-slate-600" />}
+                    {copiedField === 'login' ? <Check size={18} className="text-green-400" /> : <Copy size={18} className="text-slate-400" />}
                   </button>
                 </div>
               </div>
@@ -862,14 +862,14 @@ export const ParceirosPage: React.FC = () => {
                     type="password"
                     value={generatedCredentials.senha}
                     readOnly
-                    className="flex-1 px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-xl text-white font-mono"
+                    className="flex-1 px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white font-mono focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9]"
                   />
                   <button
                     onClick={() => copyToClipboard(generatedCredentials.senha, 'senha')}
-                    className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                    className="p-2 bg-[#1f2937] hover:bg-[#374151] rounded-xl transition-colors"
                     title="Copiar senha"
                   >
-                    {copiedField === 'senha' ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-slate-600" />}
+                    {copiedField === 'senha' ? <Check size={18} className="text-green-400" /> : <Copy size={18} className="text-slate-400" />}
                   </button>
                 </div>
               </div>
@@ -914,7 +914,7 @@ export const ParceirosPage: React.FC = () => {
                     required
                     value={formData.nome}
                     onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
@@ -925,7 +925,7 @@ export const ParceirosPage: React.FC = () => {
                     required
                     value={formData.tipo}
                     onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     {PARCEIRO_TIPOS.map((tipo) => (
                       <option key={tipo.key} value={tipo.key}>{tipo.label}</option>
@@ -940,7 +940,7 @@ export const ParceirosPage: React.FC = () => {
                     type="text"
                     value={formData.cpf_cnpj}
                     onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
@@ -951,7 +951,7 @@ export const ParceirosPage: React.FC = () => {
                     type="text"
                     value={formData.responsavel}
                     onChange={(e) => setFormData({ ...formData, responsavel: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
@@ -962,7 +962,7 @@ export const ParceirosPage: React.FC = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
@@ -973,7 +973,7 @@ export const ParceirosPage: React.FC = () => {
                     type="text"
                     value={formData.telefone}
                     onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
@@ -984,7 +984,7 @@ export const ParceirosPage: React.FC = () => {
                     type="text"
                     value={formData.celular}
                     onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
@@ -995,7 +995,7 @@ export const ParceirosPage: React.FC = () => {
                     required
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     {PARCEIRO_STATUSES.map((status) => (
                       <option key={status.key} value={status.key}>{status.label}</option>
@@ -1020,7 +1020,7 @@ export const ParceirosPage: React.FC = () => {
                   <select
                     value={formData.estado_civil}
                     onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="solteiro">Solteiro(a)</option>
@@ -1037,7 +1037,7 @@ export const ParceirosPage: React.FC = () => {
                   <select
                     value={formData.sexo}
                     onChange={(e) => setFormData({ ...formData, sexo: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="masculino">Masculino</option>
@@ -1054,7 +1054,7 @@ export const ParceirosPage: React.FC = () => {
                     type="date"
                     value={formData.data_nascimento}
                     onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 {isCNPJ(formData.cpf_cnpj || "") && (
@@ -1067,7 +1067,7 @@ export const ParceirosPage: React.FC = () => {
                         type="text"
                         value={formData.responsavel_legal}
                         onChange={(e) => setFormData({ ...formData, responsavel_legal: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                        className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                       />
                     </div>
                     <div>
@@ -1078,7 +1078,7 @@ export const ParceirosPage: React.FC = () => {
                         type="text"
                         value={formData.cpf_responsavel}
                         onChange={(e) => setFormData({ ...formData, cpf_responsavel: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                        className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                       />
                     </div>
                   </>

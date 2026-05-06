@@ -198,7 +198,7 @@ const ReportFilters: React.FC<{
           <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
           <select
             value={filters.status || 'todos'}
-            onChange={(e) => onChange({ ...filters, status: e.target.value })}
+            onChange={(e) => onChange({ ...filters, status: (e.target.value as any) })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="todos">Todos os Status</option>
@@ -301,19 +301,7 @@ const RelatoriosPage: React.FC = () => {
           ticketMedio: item.ticketMedio,
         }));
     
-    reportUtils.exportToCSV(exportData, `relatorio_${reportType}`);
-  }, [reportType, analyticalData, consolidatedData]);
-
-  const handleExportXLSX = useCallback(() => {
-    const exportData = reportType === 'analitico'
-      ? analyticalData
-      : consolidatedData.map(item => ({
-          label: item.label,
-          quantidade: item.quantidade,
-          valorTotal: item.valorTotal,
-          comissaoTotal: item.comissaoTotal,
-          ticketMedio: item.ticketMedio,
-        }));
+    reportUtils.exportToCSV(exportData as any[], `relatorio_${reportType}`);
     
     reportUtils.exportToXLSX(exportData, `relatorio_${reportType}`);
   }, [reportType, analyticalData, consolidatedData]);
@@ -492,8 +480,6 @@ const RelatoriosPage: React.FC = () => {
     <div className="space-y-5">
       {/* Header Padronizado */}
       <PageHeader
-        title="Relatórios"
-        subtitle="Visão geral dos relatórios"
         onRefresh={() => {}}
         onOpenFilters={() => setOpenFilterDrawer(true)}
         importLabel="Importar Base"
@@ -586,18 +572,22 @@ const RelatoriosPage: React.FC = () => {
             { label: 'Todos', value: 'todos' },
           ], placeholder: 'Todos os parceiros' },
         ]}
-        values={filters}
+        values={filters as any}
         onChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
         onApply={() => setOpenFilterDrawer(false)}
         onClear={() => setFilters({
-          periodo: '30dias',
+          periodo: 'mes',
           dataInicio: undefined,
           dataFim: undefined,
-          produto: 'todos',
-          parceiro: 'todos',
-          status: 'todos',
+          produto: undefined,
+          parceiro: undefined,
+          status: undefined,
+          etapa: undefined,
+          origem: undefined,
+          usuario: undefined,
+          equipe: undefined,
           search: '',
-        })}
+        } as any)}
       />
     </div>
   );

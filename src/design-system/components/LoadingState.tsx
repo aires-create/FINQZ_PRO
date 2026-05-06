@@ -30,7 +30,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
         size={sizes.icon}
       />
       {text && (
-        <p className={`text-slate-500 mt-2 ${sizes.text}`}>{text}</p>
+        <p className={`text-slate-300 mt-2 ${sizes.text}`}>{text}</p>
       )}
     </div>
   );
@@ -51,7 +51,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className="h-4 bg-gray-200 rounded animate-pulse"
+          className="h-4 bg-white/10 rounded animate-pulse"
           style={{ width: `${Math.random() * 40 + 60}%` }}
         />
       ))}
@@ -61,17 +61,17 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
 // Card skeleton
 export const CardSkeleton: React.FC<{ className?: string }> = ({ className = "" }) => (
-  <div className={`bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-4 shadow-sm ${className}`}>
+  <div className={`bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-sm ${className}`}>
     <div className="flex items-center gap-3 mb-3">
-      <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
+      <div className="w-10 h-10 bg-white/10 rounded-full animate-pulse" />
       <div className="flex-1">
-        <div className="h-4 bg-gray-200 rounded w-1/3 mb-2 animate-pulse" />
-        <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse" />
+        <div className="h-4 bg-white/10 rounded w-1/3 mb-2 animate-pulse" />
+        <div className="h-3 bg-white/10 rounded w-1/2 animate-pulse" />
       </div>
     </div>
     <div className="space-y-2">
-      <div className="h-3 bg-gray-200 rounded animate-pulse" />
-      <div className="h-3 bg-gray-200 rounded w-2/3 animate-pulse" />
+      <div className="h-3 bg-white/10 rounded animate-pulse" />
+      <div className="h-3 bg-white/10 rounded w-2/3 animate-pulse" />
     </div>
   </div>
 );
@@ -86,7 +86,7 @@ export const TableSkeleton: React.FC<{
     {/* Header */}
     <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
       {Array.from({ length: columns }).map((_, i) => (
-        <div key={i} className="h-4 bg-gray-200 rounded w-3/4 animate-pulse" />
+        <div key={i} className="h-4 bg-white/10 rounded w-3/4 animate-pulse" />
       ))}
     </div>
     {/* Rows */}
@@ -97,7 +97,7 @@ export const TableSkeleton: React.FC<{
         style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
       >
         {Array.from({ length: columns }).map((_, colIndex) => (
-          <div key={colIndex} className="h-4 bg-gray-100 rounded animate-pulse" />
+          <div key={colIndex} className="h-4 bg-white/10 rounded animate-pulse" />
         ))}
       </div>
     ))}

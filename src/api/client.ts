@@ -410,7 +410,22 @@ export const api = {
     if (params?.endDate) query.set("endDate", params.endDate.toString());
     return apiFetch<any>(`/api/eventos/stats${query.toString() ? "?" + query.toString() : ""}`);
   },
-};
+  get: <T = any>(endpoint: string, params?: Record<string, unknown>) => {
+    const query = buildQueryString(params || {});
+    return apiFetch<T>(`${endpoint}${query}`);
+  },
+  post: <T = any>(endpoint: string, data?: any) =>
+    apiFetch<T>(endpoint, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  put: <T = any>(endpoint: string, data?: any) =>
+    apiFetch<T>(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  delete: <T = any>(endpoint: string) =>
+    apiFetch<T>(endpoint, { method: "DELETE" }),};
 
 // ============================================
 // EXPORTS

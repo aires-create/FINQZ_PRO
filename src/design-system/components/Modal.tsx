@@ -59,15 +59,15 @@ export const Modal: React.FC<ModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
     >
       <div
-        className={`${sizes[size]} w-full mx-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl animate-in zoom-in-95 duration-200`}
+        className={`${sizes[size]} w-full mx-4 bg-[#0F172A]/85 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl animate-in zoom-in-95 duration-200`}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            {title && <h2 className="text-lg font-semibold text-slate-900">{title}</h2>}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#111827]">
+            {title && <h2 className="text-lg font-semibold text-white">{title}</h2>}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-gray-100 transition-colors"
+                className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <X size={20} />
               </button>

@@ -9,40 +9,163 @@ body {
 }
 
 @layer components {
-
   .card {
-    @apply bg-[#0F172A] rounded-lg border border-white/10 shadow-lg;
+    @apply rounded-lg shadow-lg;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    color: var(--text-primary);
   }
 
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-2xl;
+    @apply transition-all duration-200;
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
   }
 
   .table-container {
-    @apply w-full overflow-x-auto rounded-lg border border-white/10;
+    @apply w-full overflow-x-auto rounded-lg;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
   }
 
   .table {
     @apply w-full text-sm;
+    color: var(--text-primary);
   }
 
   .table th {
-    @apply px-4 py-3 text-left font-semibold text-slate-300 bg-[#0F172A] border-b border-white/10;
+    @apply px-4 py-3 text-left font-semibold;
+    background: var(--bg-surface-strong);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-muted);
   }
 
   .table td {
-    @apply px-4 py-3 text-white border-b border-white/10;
+    @apply px-4 py-3;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-muted);
   }
 
-  .table tr:hover td {
-    @apply bg-blue-500/10;
+  .table tr:hover td,
+  .table tr.selected td,
+  .table tr[data-selected] td,
+  .table tr:nth-child(even) td {
+    background: var(--bg-surface-hover);
   }
 
   .table tr:last-child td {
-    @apply border-b-0;
+    border-bottom: 0;
   }
 
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-cyan-400;
   }
+}
+
+input,
+select,
+textarea,
+button[role="combobox"],
+.input,
+.select,
+.textarea {
+  background: var(--bg-surface-strong) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: 0.75rem !important;
+}
+
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: var(--placeholder) !important;
+  opacity: 1 !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button[role="combobox"]:focus,
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1px rgba(0, 13, 255, 0.2), 0 0 20px rgba(0, 13, 255, 0.12) !important;
+  background: var(--bg-surface-strong) !important;
+}
+
+thead,
+th {
+  background: var(--bg-surface-strong) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-muted) !important;
+}
+
+td,
+th {
+  color: var(--text-primary) !important;
+}
+
+.bg-white,
+.bg-gray-50,
+.bg-gray-100,
+.bg-slate-50,
+.bg-slate-100,
+.bg-slate-200,
+.bg-slate-300,
+.bg-slate-400,
+.bg-slate-500 {
+  background: var(--bg-surface-soft) !important;
+  color: var(--text-primary) !important;
+}
+
+.border-gray-200,
+.border-gray-300,
+.border-gray-400,
+.border-slate-200,
+.border-slate-300,
+.border-slate-400 {
+  border-color: var(--border-default) !important;
+}
+
+.text-slate-900,
+.text-slate-800,
+.text-slate-700,
+.text-slate-600,
+.text-gray-700,
+.text-gray-600,
+.text-slate-500,
+.text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+/* Melhorar contraste para textos escuros em dark mode */
+.text-slate-700,
+.text-gray-700 {
+  color: var(--text-primary) !important;
+}
+
+.text-slate-600,
+.text-gray-600 {
+  color: var(--text-secondary) !important;
+}
+
+.text-slate-500,
+.text-slate-400 {
+  color: var(--text-muted) !important;
+}
+
+.badge,
+[class*="badge"] {
+  border: 1px solid var(--border-default) !important;
+  background: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+}
+
+option {
+  background: var(--bg-surface-strong) !important;
+  color: var(--text-primary) !important;
 }

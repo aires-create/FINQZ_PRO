@@ -54,7 +54,7 @@ export const Toggle: React.FC<ToggleProps> = ({
           `}
         />
       </button>
-      {label && <span className="text-sm text-slate-700">{label}</span>}
+      {label && <span className="text-sm text-slate-300">{label}</span>}
     </label>
   );
 };

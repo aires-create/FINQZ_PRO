@@ -467,7 +467,7 @@ export const ProdutosPage: React.FC = () => {
 
       // Tabela / Convênio
       tabela: form.tabela.trim() || undefined,
-      conveni: form.convenio.trim() || undefined,
+      convenio: form.convenio.trim() || undefined,
 
       // Condições comerciais
       taxa_juros: toOptionalNumber(form.taxa_juros),

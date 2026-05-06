@@ -29,14 +29,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     <div
       className={`flex flex-col items-center justify-center py-12 px-4 ${className}`}
     >
-      <div className="bg-gray-100 rounded-full p-4 mb-4">
+      <div className="bg-[#111827] rounded-full p-4 mb-4">
         {icon || defaultIcon}
       </div>
-      <h3 className="text-lg font-semibold text-slate-900 text-center">
+      <h3 className="text-lg font-semibold text-white text-center">
         {title}
       </h3>
       {description && (
-        <p className="text-sm text-slate-500 text-center mt-1 max-w-sm">
+        <p className="text-sm text-slate-300 text-center mt-1 max-w-sm">
           {description}
         </p>
       )}
