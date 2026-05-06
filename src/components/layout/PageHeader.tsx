@@ -383,7 +383,7 @@ export function PageHeader({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 placeholder="Buscar..."
-                className="h-10 w-[280px] rounded-xl border border-white/10 bg-[#0F172A] text-slate-100 placeholder:text-slate-400 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/20"
+                className="h-10 w-full sm:w-[280px] rounded-xl border border-white/10 bg-[#0F172A] text-slate-100 placeholder:text-slate-400 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/20"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             </div>
