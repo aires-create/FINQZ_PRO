@@ -631,6 +631,7 @@ export const ParceirosPage: React.FC = () => {
       {/* Header Padronizado */}
       <PageHeader
         onSearch={setSearch}
+        showSearch={true}
         onRefresh={() => {}}
         onCreate={() => {
           setEditingParceiro(null);
@@ -732,7 +733,7 @@ export const ParceirosPage: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <div className="rounded-3xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-2xl shadow-black/20">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Resumo de Parceiros</p>
           <h3 className="mt-3 text-2xl font-bold text-white">Visão geral da carteira</h3>
@@ -753,7 +754,7 @@ export const ParceirosPage: React.FC = () => {
       </div>
 
       {/* Partners List - Apenas Lista */}
-      <div className="rounded-3xl border border-white/10 bg-[#0F172A]/90 shadow-2xl shadow-black/20 overflow-hidden">
+      <div className="hidden md:block rounded-3xl border border-white/10 bg-[#0F172A]/90 shadow-2xl shadow-black/20 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-full lg:min-w-[1100px]">
             <thead>
@@ -829,6 +830,83 @@ export const ParceirosPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards View */}
+      <div className="md:hidden space-y-4">
+        {filteredParceiros.map((parceiro) => (
+          <div key={parceiro.id} className="rounded-3xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-2xl shadow-black/20">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <EntityAvatar 
+                  name={parceiro.nome} 
+                  type={parceiro.tipo === 'franquia' ? 'empresa' : 'parceiro'} 
+                  size="sm" 
+                />
+                <div>
+                  <h3 className="font-medium text-white">{parceiro.nome}</h3>
+                  <p className="text-sm text-slate-400">{normalizeCodigoParceiro(parceiro.codigo)}</p>
+                </div>
+              </div>
+              <Badge
+                variant={
+                  parceiro.status === 'ativo' ? 'success' :
+                  parceiro.status === 'inativo' ? 'danger' : 'warning'
+                }
+                className="uppercase tracking-[0.04em]"
+              >
+                {getStatusLabel(parceiro.status)}
+              </Badge>
+            </div>
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Tipo:</span>
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-slate-300 border border-[#374151]">
+                  {getTipoLabel(parceiro.tipo)}
+                </span>
+              </div>
+              {parceiro.responsavel && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Responsável:</span>
+                  <span className="text-sm text-slate-300">{parceiro.responsavel}</span>
+                </div>
+              )}
+              {(parceiro.telefone || parceiro.email) && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Contato:</span>
+                  <div className="text-sm">
+                    {parceiro.telefone && <div className="text-slate-300">{parceiro.telefone}</div>}
+                    {parceiro.email && <div className="text-slate-400 text-xs">{parceiro.email}</div>}
+                  </div>
+                </div>
+              )}
+              {(parceiro.cidade || parceiro.estado) && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Localização:</span>
+                  <span className="text-sm text-slate-300">
+                    {parceiro.cidade || parceiro.estado ? `${parceiro.cidade || ''}${parceiro.cidade && parceiro.estado ? ', ' : ''}${parceiro.estado || ''}` : '-'}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => handleEdit(parceiro as Parceiro)}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#3388d9]/10 text-[#3388d9] border border-[#3388d9]/20 rounded-xl hover:bg-[#3388d9]/20 transition-colors"
+              >
+                <Edit size={16} />
+                Editar
+              </button>
+              <button
+                onClick={() => handleDelete((parceiro as Parceiro).id)}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors"
+              >
+                <Trash2 size={16} />
+                Excluir
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
       {filteredParceiros.length === 0 && (
