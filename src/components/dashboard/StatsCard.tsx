@@ -62,7 +62,7 @@ export default function StatsCard({ title, value, change, icon, variant = "blue"
       bg-gradient-to-br ${styles.gradient}
       border ${styles.border}
       backdrop-blur-xl
-      p-6
+      p-5 sm:p-6
       transition-all duration-500 ease-out
       hover:scale-[1.02] hover:-translate-y-1
       hover:shadow-2xl hover:${styles.glow}
