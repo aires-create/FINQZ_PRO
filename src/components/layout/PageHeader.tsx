@@ -341,20 +341,20 @@ export function PageHeader({
   ]
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-3 shadow-sm">
+    <div className="rounded-2xl border border-white/10 bg-[#0F172A]/80 backdrop-blur-xl p-3 shadow-sm">
       <div className="flex items-center justify-between w-full gap-4 flex-wrap">
         
         {/* Left: Busca + Atualizar */}
         <div className="flex items-center gap-2">
           {/* Kanban / Lista Toggle */}
           {view && setView && (
-            <div className="flex bg-gray-100 rounded-lg p-1">
+            <div className="flex bg-[#111827]/90 rounded-lg p-1 border border-white/10">
               <button
                 onClick={() => setView('kanban')}
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'kanban' 
                     ? 'bg-[#000dff] text-white shadow-sm' 
-                    : 'text-slate-600 hover:bg-gray-200'
+                    : 'text-slate-300 hover:bg-white/10'
                 }`}
                 title="Kanban"
               >
@@ -365,7 +365,7 @@ export function PageHeader({
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'list' 
                     ? 'bg-[#000dff] text-white shadow-sm' 
-                    : 'text-slate-600 hover:bg-gray-200'
+                    : 'text-slate-300 hover:bg-white/10'
                 }`}
                 title="Lista"
               >
@@ -383,7 +383,7 @@ export function PageHeader({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 placeholder="Buscar..."
-                className="h-10 w-[280px] rounded-xl border border-gray-200 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/10"
+                className="h-10 w-[280px] rounded-xl border border-white/10 bg-[#0F172A] text-slate-100 placeholder:text-slate-400 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/20"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             </div>
@@ -392,7 +392,7 @@ export function PageHeader({
           {/* Atualizar - botão fantasma com ícone apenas */}
           <button 
             onClick={onRefresh} 
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-gray-100"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10"
             title="Atualizar"
           >
             <RefreshCw size={18} />
@@ -412,10 +412,10 @@ export function PageHeader({
                     setShowFilterDropdown(!showFilterDropdown)
                   }
                 }}
-                className={`flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 px-3 text-sm font-medium transition-all ${
+                className={`flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#0F172A]/80 backdrop-blur-xl px-3 text-sm font-medium transition-all ${
                   activeFiltersCount > 0 || showFilterDropdown
                     ? 'border-[#000dff] bg-[#000dff]/5 text-[#000dff]'
-                    : 'text-slate-700 hover:bg-gray-50'
+                    : 'text-slate-300 hover:bg-white/10'
                 }`}
               >
                 <Filter size={16} className={activeFiltersCount > 0 ? 'text-[#000dff]' : 'text-slate-500'} />
@@ -437,9 +437,9 @@ export function PageHeader({
                     className="fixed inset-0 z-40" 
                     onClick={() => setShowFilterDropdown(false)} 
                   />
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 shadow-lg z-50 p-4">
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg z-50 p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-slate-900">Filtros</h3>
+                      <h3 className="font-semibold text-slate-100">Filtros</h3>
                       <button 
                         onClick={() => {
                           setLocalFilterValues({})
@@ -453,14 +453,14 @@ export function PageHeader({
                     <div className="space-y-3">
                       {filters.map((filter) => (
                         <div key={filter.key}>
-                          <label className="block text-xs font-medium text-slate-600 mb-1">
+                          <label className="block text-xs font-medium text-slate-300 mb-1">
                             {filter.label}
                           </label>
                           {filter.type === 'select' && filter.options ? (
                             <select
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+                              className="w-full border border-white/10 rounded-lg bg-[#0F172A] text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
                             >
                               <option value="">{filter.placeholder || 'Selecione...'}</option>
                               {filter.options.map((opt) => (
@@ -473,14 +473,14 @@ export function PageHeader({
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
                               placeholder={filter.placeholder}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+                              className="w-full border border-white/10 rounded-lg bg-[#0F172A] text-slate-100 placeholder:text-slate-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
                             />
                           ) : filter.type === 'date' ? (
                             <input
                               type="date"
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+                              className="w-full border border-white/10 rounded-lg bg-[#0F172A] text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
                             />
                           ) : null}
                         </div>
@@ -500,9 +500,9 @@ export function PageHeader({
 
           {/* Importar */}
           {onImport && importColumns.length > 0 && (
-            <button 
+            <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 transition-all"
+              className="flex items-center gap-2 border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 transition-all"
             >
               <Upload size={16} className="text-slate-500" />
               {importLabel}
@@ -513,7 +513,7 @@ export function PageHeader({
           <div className="relative">
             <button 
               onClick={() => setShowExportDropdown(!showExportDropdown)}
-              className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 transition-all"
+              className="flex items-center gap-2 border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 transition-all"
             >
               <Download size={16} className="text-slate-500" />
               {exportLabel}
@@ -526,12 +526,12 @@ export function PageHeader({
                   className="fixed inset-0 z-40" 
                   onClick={() => setShowExportDropdown(false)} 
                 />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 shadow-lg z-50 py-2">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg z-50 py-2">
                   {exportOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleExport(option.value)}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-200 hover:bg-white/5 transition-colors"
                     >
                       {option.icon}
                       {option.label}
@@ -559,11 +559,11 @@ export function PageHeader({
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)} />
-          <div className="relative w-full max-w-2xl mx-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl border border-gray-200 max-h-[80vh] overflow-hidden">
+          <div className="relative w-full max-w-2xl mx-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">Importar Dados</h2>
-              <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X size={20} className="text-slate-500" />
+              <h2 className="text-lg font-semibold text-slate-100">Importar Dados</h2>
+              <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-white/10 rounded-lg">
+                <X size={20} className="text-slate-300" />
               </button>
             </div>
             
@@ -571,11 +571,11 @@ export function PageHeader({
               {/* Upload de arquivo */}
               {!importData.length && (
                 <div 
-                  className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#000dff] transition-colors cursor-pointer"
+                  className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-[#000dff] transition-colors cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload size={48} className="mx-auto text-slate-400 mb-4" />
-                  <p className="text-slate-600 mb-2">Clique ou arraste o arquivo aqui</p>
+                  <p className="text-slate-300 mb-2">Clique ou arraste o arquivo aqui</p>
                   <p className="text-xs text-slate-400">Aceitos: CSV, XLSX, XLS</p>
                   <input 
                     ref={fileInputRef}
@@ -595,7 +595,7 @@ export function PageHeader({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-slate-900">{importFileName}</p>
+                      <p className="font-medium text-slate-100">{importFileName}</p>
                       <p className="text-sm text-slate-500">
                         Total: {importData.length + Object.keys(importErrors).length} linhas • 
                         Válidas: <span className="text-green-600 font-medium">{importData.length}</span> • 
@@ -628,10 +628,10 @@ export function PageHeader({
                   {/* Preview da tabela */}
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-[#0F172A]">
                         <tr>
-                          {importColumns.slice(0, 5).map(col => (
-                            <th key={col.key} className="px-3 py-2 text-left font-medium text-slate-600">{col.label}</th>
+                          {columns.map((col) => (
+                            <th key={col.key} className="px-3 py-2 text-left font-medium text-slate-300">{col.label}</th>
                           ))}
                         </tr>
                       </thead>
@@ -639,7 +639,7 @@ export function PageHeader({
                         {importData.slice(0, 5).map((row, i) => (
                           <tr key={i} className="border-t">
                             {importColumns.slice(0, 5).map(col => (
-                              <td key={col.key} className="px-3 py-2 text-slate-700">{row[col.key] || '-'}</td>
+                              <td key={col.key} className="px-3 py-2 text-slate-200">{row[col.key] || '-'}</td>
                             ))}
                           </tr>
                         ))}
@@ -654,7 +654,7 @@ export function PageHeader({
             <div className="p-4 border-t flex justify-end gap-3">
               <button 
                 onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-sm font-medium text-slate-200 bg-[#111827] rounded-lg hover:bg-white/5"
               >
                 Cancelar
               </button>

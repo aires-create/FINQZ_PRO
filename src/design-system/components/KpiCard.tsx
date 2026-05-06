@@ -17,36 +17,36 @@ export interface KpiCardProps {
 
 // Mapeamento de cores para ícone (fundo suave)
 const iconColorClasses: Record<string, string> = {
-  blue: "bg-blue-50 text-blue-600",
-  green: "bg-green-50 text-green-600",
-  red: "bg-red-50 text-red-600",
-  orange: "bg-orange-50 text-orange-600",
-  purple: "bg-purple-50 text-purple-600",
-  cyan: "bg-cyan-50 text-cyan-600",
-  gray: "bg-gray-100 text-slate-600",
-  default: "bg-gray-100 text-slate-600",
+  blue: "bg-blue-950/30 text-blue-300",
+  green: "bg-emerald-950/30 text-emerald-300",
+  red: "bg-red-950/30 text-red-300",
+  orange: "bg-orange-950/30 text-orange-300",
+  purple: "bg-violet-950/30 text-violet-300",
+  cyan: "bg-cyan-950/30 text-cyan-300",
+  gray: "bg-white/10 text-slate-200",
+  default: "bg-white/10 text-slate-200",
   // Nomes antigos para compatibilidade
-  info: "bg-blue-50 text-blue-600",
-  success: "bg-green-50 text-green-600",
-  warning: "bg-orange-50 text-orange-600",
-  danger: "bg-red-50 text-red-600",
+  info: "bg-blue-950/30 text-blue-300",
+  success: "bg-emerald-950/30 text-emerald-300",
+  warning: "bg-orange-950/30 text-orange-300",
+  danger: "bg-red-950/30 text-red-300",
 };
 
 // Mapeamento de cores para o valor (mesma cor do ícone)
 const valueColorClasses: Record<string, string> = {
-  blue: "text-blue-600",
-  green: "text-green-600",
-  red: "text-red-600",
-  orange: "text-orange-600",
-  purple: "text-purple-600",
-  cyan: "text-cyan-600",
-  gray: "text-slate-900",
-  default: "text-slate-900",
+  blue: "text-blue-300",
+  green: "text-emerald-300",
+  red: "text-red-300",
+  orange: "text-orange-300",
+  purple: "text-violet-300",
+  cyan: "text-cyan-300",
+  gray: "text-slate-200",
+  default: "text-slate-200",
   // Nomes antigos para compatibilidade
-  info: "text-blue-600",
-  success: "text-green-600",
-  warning: "text-orange-600",
-  danger: "text-red-600",
+  info: "text-blue-300",
+  success: "text-emerald-300",
+  warning: "text-orange-300",
+  danger: "text-red-300",
 };
 
 export const KpiCard: React.FC<KpiCardProps> = ({
@@ -79,7 +79,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
   };
 
   return (
-    <div className={`rounded-2xl border border-gray-200 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-4 shadow-sm min-h-[92px] overflow-hidden ${className}`}>
+    <div className={`rounded-2xl border border-white/10 bg-[#111827] backdrop-blur-xl p-4 shadow-sm min-h-[92px] overflow-hidden ${className}`}>
       <div className="flex h-full items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-slate-500 truncate">{label}</p>

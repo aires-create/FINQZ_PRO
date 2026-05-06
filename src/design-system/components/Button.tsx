@@ -27,12 +27,12 @@ export const Button: React.FC<ButtonProps> = ({
 
   // Variantes com cores FINQZ
   const variants = {
-    primary: "bg-primary text-white hover:bg-primary-hover active:bg-primary-700 focus:ring-primary/30",
-    secondary: "bg-gray-100 text-slate-700 hover:bg-gray-200 active:bg-gray-300 focus:ring-gray-300",
-    outline: "border border-gray-300 text-slate-700 hover:bg-gray-50 active:bg-gray-100 focus:ring-primary/30",
-    ghost: "text-slate-600 hover:bg-gray-100 hover:text-slate-900 focus:ring-gray-300",
-    danger: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-red-300",
-    filter: "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 text-slate-700 hover:border-gray-300 hover:bg-gray-50 focus:ring-gray-200",
+    primary: "bg-primary text-white hover:bg-primary-hover active:bg-[#0009e0] focus:ring-primary/30",
+    secondary: "bg-[#111827] border border-white/10 text-slate-200 hover:bg-[#0F172A] active:bg-[#0B1523] focus:ring-primary/20",
+    outline: "border border-white/10 text-slate-200 hover:bg-white/5 active:bg-white/10 focus:ring-primary/20",
+    ghost: "text-slate-200 hover:bg-white/5 focus:ring-primary/20",
+    danger: "bg-[#7f1d1d] text-white hover:bg-[#991b1b] active:bg-[#7f1d1d] focus:ring-red-300/20",
+    filter: "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-200 hover:bg-white/5 focus:ring-primary/20",
   };
 
   const sizes = {

@@ -107,6 +107,23 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const getTypeBadgeVariant = (tipo: TransacaoTipo) => {
+  if (tipo === "credito") return "success";
+  if (tipo === "debito") return "danger";
+  if (tipo.includes("estorno")) return "warning";
+  if (tipo === "cashback") return "info";
+  if (tipo === "campanha") return "primary";
+  return "default";
+};
+
+const getStatusBadgeVariant = (status: TransacaoStatus) => {
+  if (status === "confirmado") return "success";
+  if (status === "pendente") return "warning";
+  if (status === "cancelado") return "danger";
+  if (status === "estornado") return "default";
+  return "info";
+};
+
 export const FinanceiroPage: React.FC = () => {
   const store = useAppStore();
   const transacoesFinanceiras = store.transacoesFinanceiras || [];
@@ -368,125 +385,173 @@ export const FinanceiroPage: React.FC = () => {
           value={formatCurrency(cards.totalCreditos)}
           icon={<TrendingUp size={18} />}
           variant="green"
+          className="shadow-2xl shadow-emerald-500/10"
         />
         <KpiCard
           label="Despesas"
           value={formatCurrency(cards.totalDebitos)}
           icon={<TrendingDown size={18} />}
           variant="red"
+          className="shadow-2xl shadow-red-500/10"
         />
         <KpiCard
           label="Saldo"
           value={formatCurrency(cards.saldo)}
           icon={<Wallet size={18} />}
           variant={cards.saldo >= 0 ? "green" : "red"}
+          className="shadow-2xl shadow-blue-500/10"
         />
         <KpiCard
           label="Pendentes"
           value={formatCurrency(cards.pendentes)}
           icon={<Clock size={18} />}
           variant="orange"
+          className="shadow-2xl shadow-amber-500/10"
         />
         <KpiCard
           label="Cashback"
           value={formatCurrency(cards.cashback)}
           icon={<Gift size={18} />}
           variant="purple"
+          className="shadow-2xl shadow-violet-500/10"
         />
         <KpiCard
           label="Comissões"
           value={formatCurrency(cards.comissoes)}
           icon={<Percent size={18} />}
           variant="orange"
+          className="shadow-2xl shadow-orange-500/10"
         />
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-[#0F172A]/85 p-5 shadow-2xl shadow-black/20">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Painel financeiro</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Fluxo de caixa e baixa de transações</h2>
+            <p className="mt-2 text-sm text-slate-400 max-w-2xl">
+              Filtros aplicados em tempo real para priorizar cobranças, validar recebimentos e mapear oportunidades de capital de giro.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-3xl bg-slate-950/80 border border-white/10 p-4 text-center">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Transações</p>
+              <p className="mt-2 text-xl font-semibold text-white">{filteredData.length}</p>
+            </div>
+            <div className="rounded-3xl bg-slate-950/80 border border-white/10 p-4 text-center">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Última</p>
+              <p className="mt-2 text-xl font-semibold text-white">
+                {filteredData[0]?.data_transacao || "-"}
+              </p>
+            </div>
+            <div className="rounded-3xl bg-slate-950/80 border border-white/10 p-4 text-center">
+              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Saldo atual</p>
+              <p className="mt-2 text-xl font-semibold text-white">{formatCurrency(cards.saldo)}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Tabela */}
       <Card className="overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/80 px-4 py-4">
+          <div>
+            <p className="text-sm font-semibold text-white">Transações</p>
+            <p className="text-sm text-slate-400">
+              {filteredData.length} lançamentos encontrados • ordenado por data mais recente
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0F172A]/80 px-3 py-2 text-sm text-slate-300">
+            <Download size={16} className="text-blue-300" />
+            Exporte seus dados direto do painel
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+          <table className="min-w-full border-separate border-spacing-0">
+            <thead className="bg-gradient-to-r from-slate-950/90 to-slate-900/80 text-slate-400">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Código</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Categoria</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Valor</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Descrição</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Parceiro</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ações</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Código</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Tipo</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Categoria</th>
+                <th className="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.3em]">Valor</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Data</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Descrição</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Parceiro</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Status</th>
+                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
-                    Nenhuma transação encontrada
+                  <td colSpan={9} className="px-4 py-12">
+                    <div className="rounded-3xl border border-dashed border-white/10 bg-slate-950/80 p-10 text-center shadow-2xl shadow-black/20">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-500/10 text-blue-300">
+                        <Wallet size={24} />
+                      </div>
+                      <p className="text-lg font-semibold text-white mb-2">Nenhuma transação encontrada</p>
+                      <p className="text-sm text-slate-400 max-w-xl mx-auto">
+                        Ajuste os filtros ou registre um novo lançamento para começar a visualizar fluxo financeiro e previsões de caixa.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredData.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-white">{item.codigo}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        item.tipo === "credito" ? "bg-green-900/20 text-green-800" :
-                        item.tipo === "debito" ? "bg-red-900/20 text-red-800" :
-                        item.tipo.includes("estorno") ? "bg-orange-100 text-orange-800" :
-                        item.tipo === "cashback" ? "bg-purple-100 text-purple-800" :
-                        "bg-gray-100 text-slate-200"
-                      }`}>
+                  <tr key={item.id} className="group border-b border-white/10 transition-colors duration-200 hover:bg-slate-900/80">
+                    <td className="px-4 py-4 text-sm font-semibold text-white whitespace-nowrap">{item.codigo}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <Badge
+                        variant={getTypeBadgeVariant(item.tipo)}
+                        size="sm"
+                        className="uppercase tracking-[0.04em]"
+                      >
                         {TIPOS_TRANSACAO.find((t) => t.value === item.tipo)?.label || item.tipo}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">
+                    <td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">
                       {CATEGORIAS.find((c) => c.value === item.categoria)?.label || item.categoria}
                     </td>
-                    <td className={`px-4 py-3 text-sm font-medium ${
-                      item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "text-green-600" : "text-red-600"
-                    }`}>
-                      {item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "+" : "-"}
-                      {formatCurrency(item.valor)}
+                    <td className={`px-4 py-4 text-right text-sm font-semibold ${item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "text-emerald-300" : "text-red-300"}`}>
+                      {item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "+" : "-"}{formatCurrency(item.valor)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{item.data_transacao}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{item.descricao}</td>
-                    <td className="px-4 py-3 text-sm text-slate-600">{item.parceiro_nome || "-"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        item.status === "confirmado" ? "bg-green-900/20 text-green-800" :
-                        item.status === "pendente" ? "bg-yellow-900/20 text-yellow-800" :
-                        item.status === "estornado" ? "bg-gray-100 text-slate-200" :
-                        item.status === "cancelado" ? "bg-red-900/20 text-red-800" :
-                        "bg-blue-900/20 text-blue-800"
-                      }`}>
+                    <td className="px-4 py-4 text-sm text-slate-400 whitespace-nowrap">{item.data_transacao}</td>
+                    <td className="px-4 py-4 text-sm text-slate-300 max-w-[260px] truncate">{item.descricao}</td>
+                    <td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">{item.parceiro_nome || "-"}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <Badge
+                        variant={getStatusBadgeVariant(item.status)}
+                        size="sm"
+                        className="uppercase tracking-[0.04em]"
+                      >
                         {STATUS.find((s) => s.value === item.status)?.label || item.status}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(item)}
-                          className="p-1.5 hover:bg-gray-200 rounded text-slate-500"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#111827]/90 text-slate-300 transition-all duration-200 hover:border-white/20 hover:bg-white/10 hover:text-white"
                           title="Editar"
                         >
-                          <Eye size={14} />
+                          <Eye size={16} />
                         </button>
                         {item.status === "confirmado" && (
                           <button
                             onClick={() => openEstornoModal(item.id)}
-                            className="p-1.5 hover:bg-orange-100 rounded text-slate-500 hover:text-orange-600"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#111827]/90 text-slate-300 transition-all duration-200 hover:border-orange-300 hover:bg-orange-500/10 hover:text-orange-300"
                             title="Estornar"
                           >
-                            <RotateCcw size={14} />
+                            <RotateCcw size={16} />
                           </button>
                         )}
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 hover:bg-red-900/20 rounded text-slate-500 hover:text-red-600"
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#111827]/90 text-slate-300 transition-all duration-200 hover:border-red-300 hover:bg-red-500/10 hover:text-red-300"
                           title="Excluir"
                         >
-                          <X size={14} />
+                          <X size={16} />
                         </button>
                       </div>
                     </td>
