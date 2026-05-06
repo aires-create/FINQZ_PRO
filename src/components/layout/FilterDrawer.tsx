@@ -149,7 +149,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
 
       {/* Drawer: container fixed inset-y-0 right-0, width responsivo */}
       <div
-        className={`fixed inset-y-0 right-0 w-full sm:max-w-md bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 shadow-2xl z-50 transform transition-transform duration-200 ease-out flex flex-col h-full ${
+        className={`fixed inset-y-0 right-0 w-full sm:max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-2xl border border-white/20 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col h-full ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
@@ -157,32 +157,34 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         aria-labelledby="filter-drawer-title"
       >
         {/* Header: shrink-0, border-b */}
-        <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0F172A]/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#000dff]/10 rounded-lg">
-              <Filter className="w-5 h-5 text-[#000dff]" />
+        <div className="shrink-0 flex items-center justify-between px-6 py-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl border border-white/10 shadow-lg">
+                <Filter className="w-6 h-6 text-blue-400" />
+              </div>
+              <div className="absolute -inset-1 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl blur-lg -z-10" />
             </div>
             <div>
-              <h2 
-                id="filter-drawer-title" 
-                className="text-lg font-semibold text-white"
+              <h2
+                id="filter-drawer-title"
+                className="text-xl font-bold text-white tracking-tight"
               >
                 {title}
               </h2>
               {activeFiltersCount > 0 && (
-                <p className="text-sm text-slate-500">
-                  {activeFiltersCount} filtro{activeFiltersCount !== 1 ? "s" : ""} ativo
-                  {activeFiltersCount !== 1 ? "s" : ""}
+                <p className="text-sm text-slate-400 font-medium">
+                  {activeFiltersCount} filtro{activeFiltersCount !== 1 ? "s" : ""} ativo{activeFiltersCount !== 1 ? "s" : ""}
                 </p>
               )}
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-105"
             aria-label="Fechar filtros"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-slate-400 hover:text-white" />
           </button>
         </div>
 
@@ -431,11 +433,11 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         </div>
 
         {/* Footer: shrink-0 border-t */}
-        <div className="shrink-0 px-6 py-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border-t border-white/10 flex items-center gap-3">
+        <div className="shrink-0 px-6 py-6 bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-xl border-t border-white/20 flex items-center gap-4">
           <Button
             variant="outline"
             onClick={handleClear}
-            className="flex-1"
+            className="flex-1 bg-white/5 hover:bg-white/10 border-white/20 hover:border-white/30 text-slate-300 hover:text-white transition-all duration-200"
             disabled={loading}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -444,7 +446,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
           <Button
             variant="primary"
             onClick={handleApply}
-            className="flex-1"
+            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300"
             loading={loading}
           >
             {loading ? (
@@ -477,22 +479,22 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
     <button
       onClick={onClick}
       className={`
-        inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-        transition-all duration-200 border
-        ${activeCount > 0 
-          ? "bg-[#000dff]/10 border-[#000dff]/30 text-[#000dff]" 
-          : "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20"
+        inline-flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm
+        transition-all duration-300 border shadow-lg hover:shadow-xl
+        ${activeCount > 0
+          ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-400/30 text-blue-300 shadow-blue-500/20 hover:shadow-blue-500/30 hover:border-blue-400/50"
+          : "bg-gradient-to-r from-slate-800/50 to-slate-700/30 backdrop-blur-xl border-white/20 text-slate-300 hover:bg-white/10 hover:border-white/30 hover:text-white shadow-slate-900/20"
         }
       `}
     >
-      <Filter className="w-4 h-4" />
+      <Filter className="w-5 h-5" />
       <span>{label}</span>
       {activeCount > 0 && (
-        <span className="ml-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-[#000dff] text-white text-xs font-bold rounded-full">
+        <span className="ml-1 flex items-center justify-center min-w-[24px] h-6 px-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg shadow-blue-500/30">
           {activeCount > 9 ? "9+" : activeCount}
         </span>
       )}
-      <ChevronDown className={`w-4 h-4 transition-transform ${activeCount > 0 ? "text-[#000dff]" : "text-slate-400"}`} />
+      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${activeCount > 0 ? "text-blue-300" : "text-slate-400"}`} />
     </button>
   );
 };

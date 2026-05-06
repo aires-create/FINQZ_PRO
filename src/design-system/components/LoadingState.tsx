@@ -24,14 +24,31 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   const sizes = sizeConfig[size];
 
   return (
-    <div className={`flex flex-col items-center justify-center py-8 ${className}`}>
-      <Loader2
-        className={`animate-spin text-primary ${sizes.text}`}
-        size={sizes.icon}
-      />
-      {text && (
-        <p className={`text-slate-300 mt-2 ${sizes.text}`}>{text}</p>
-      )}
+    <div className={`flex flex-col items-center justify-center py-20 ${className}`}>
+      <div className="relative mb-8">
+        <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/10 shadow-2xl">
+          <Loader2
+            className="animate-spin text-blue-400"
+            size={32}
+          />
+        </div>
+        <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl -z-10 animate-pulse" />
+      </div>
+
+      <div className="text-center">
+        <h3 className="text-lg font-semibold text-white mb-2 tracking-tight">
+          {text}
+        </h3>
+        <p className="text-slate-400 text-sm">
+          Estamos processando suas informações
+        </p>
+      </div>
+
+      <div className="mt-6 flex space-x-1">
+        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+      </div>
     </div>
   );
 };
