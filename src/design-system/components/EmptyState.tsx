@@ -23,7 +23,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   action,
   className = "",
 }) => {
-  const defaultIcon = <Inbox className="w-12 h-12 text-gray-400" />;
+  const defaultIcon = <Inbox className="w-12 h-12 text-slate-400" />;
 
   return (
     <div
@@ -32,11 +32,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <div className="bg-gray-100 rounded-full p-4 mb-4">
         {icon || defaultIcon}
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 text-center">
+      <h3 className="text-lg font-semibold text-slate-900 text-center">
         {title}
       </h3>
       {description && (
-        <p className="text-sm text-gray-500 text-center mt-1 max-w-sm">
+        <p className="text-sm text-slate-500 text-center mt-1 max-w-sm">
           {description}
         </p>
       )}

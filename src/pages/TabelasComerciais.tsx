@@ -656,7 +656,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               <Table2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Tabelas</p>
+              <p className="text-sm text-slate-500">Total Tabelas</p>
               <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
           </div>
@@ -667,7 +667,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               <Check className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Ativas</p>
+              <p className="text-sm text-slate-500">Ativas</p>
               <p className="text-2xl font-bold text-white">{stats.ativas}</p>
             </div>
           </div>
@@ -678,7 +678,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               <Table2 className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Com Condições</p>
+              <p className="text-sm text-slate-500">Com Condições</p>
               <p className="text-2xl font-bold text-white">{stats.comCondicoes}</p>
             </div>
           </div>
@@ -689,7 +689,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               <Table2 className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Condições</p>
+              <p className="text-sm text-slate-500">Total Condições</p>
               <p className="text-2xl font-bold text-white">{stats.totalCondicoes}</p>
             </div>
           </div>
@@ -701,7 +701,7 @@ export const TabelasComerciaisPage: React.FC = () => {
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar por tabela, código ou banco..."
@@ -769,7 +769,7 @@ export const TabelasComerciaisPage: React.FC = () => {
       {/* Tables List - Grouped by Provider */}
       <div className="bg-[#111827] border border-[#1f2937] rounded-xl overflow-hidden">
         {Object.keys(groupedTables).length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-slate-500">
             Nenhuma tabela comercial encontrada
           </div>
         ) : (
@@ -781,9 +781,9 @@ export const TabelasComerciaisPage: React.FC = () => {
                 className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
               >
                 {expandedGroups.has(providerId) ? (
-                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                  <ChevronDown className="w-5 h-5 text-slate-400" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
                 )}
                 <Building2 className="w-5 h-5 text-blue-600" />
                 <span className="font-medium text-white">{group.provider.name}</span>
@@ -793,7 +793,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     Comercializadora de Energia
                   </span>
                 )}
-                <span className="text-sm text-gray-500">({group.tables.length} tabela{group.tables.length !== 1 ? 's' : ''})</span>
+                <span className="text-sm text-slate-500">({group.tables.length} tabela{group.tables.length !== 1 ? 's' : ''})</span>
               </button>
 
               {/* Group Content */}
@@ -807,14 +807,14 @@ export const TabelasComerciaisPage: React.FC = () => {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-white">{table.name}</span>
-                              <span className="text-sm text-gray-500">({table.code})</span>
+                              <span className="text-sm text-slate-500">({table.code})</span>
                               <span className={`px-2 py-0.5 rounded-full text-xs ${
                                 table.active ? "bg-green-900/20 text-green-700" : "bg-red-900/20 text-red-700"
                               }`}>
                                 {table.active ? "Ativo" : "Inativo"}
                               </span>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1">
+                            <div className="text-sm text-slate-500 mt-1">
                               {table.productName} → {table.subproductName} → {table.modalityLabel}
                             </div>
                             {tableConditions.length > 0 && (
@@ -846,13 +846,13 @@ export const TabelasComerciaisPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleEdit(table)}
-                              className="p-1 text-gray-400 hover:text-blue-600"
+                              className="p-1 text-slate-400 hover:text-blue-600"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(table.id)}
-                              className="p-1 text-gray-400 hover:text-red-600"
+                              className="p-1 text-slate-400 hover:text-red-600"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -878,7 +878,7 @@ export const TabelasComerciaisPage: React.FC = () => {
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Provider Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               {isEnergyProvider ? "Comercializadora de Energia *" : "Banco / Provider *"}
             </label>
             <select
@@ -895,7 +895,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               ))}
             </select>
             {selectedProvider && (
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-slate-500">
                 Tipo: {PROVIDER_TYPE_LABELS[providers.find(p => p.id === selectedProvider)?.type || 'BANK']}
               </p>
             )}
@@ -903,7 +903,7 @@ export const TabelasComerciaisPage: React.FC = () => {
 
           {/* Product Selection - muda conforme tipo de provider */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               {isEnergyProvider ? "Tipo de Energia *" : "Produto *"}
             </label>
             <select
@@ -931,7 +931,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               {/* Tipo de Energia (GD/ACL) */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Modalidade *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Modalidade *</label>
                   <select
                     value={tableForm.energyType}
                     onChange={(e) => setTableForm({ ...tableForm, energyType: e.target.value as 'GD' | 'ACL' })}
@@ -944,7 +944,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Cliente *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Cliente *</label>
                   <select
                     value={tableForm.customerType}
                     onChange={(e) => setTableForm({ ...tableForm, customerType: e.target.value as 'residencial' | 'comercial' | 'industrial' })}
@@ -962,7 +962,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               {/* Região e Distribuidora */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Região *</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Região *</label>
                   <select
                     value={tableForm.region}
                     onChange={(e) => setTableForm({ ...tableForm, region: e.target.value })}
@@ -976,7 +976,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Distribuidora Local</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Distribuidora Local</label>
                   <input
                     type="text"
                     value={tableForm.distributionCompany}
@@ -992,7 +992,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           {/* Subproduct Selection - apenas para crédito */}
           {!isEnergyProvider && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Subproduto *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Subproduto *</label>
               <select
                 value={selectedSubproduct}
                 onChange={(e) => { setSelectedSubproduct(e.target.value); setSelectedModality(""); }}
@@ -1010,7 +1010,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           {/* Modality Selection - apenas para crédito */}
           {!isEnergyProvider && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Modalidade *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Modalidade *</label>
               <select
                 value={selectedModality}
                 onChange={(e) => setSelectedModality(e.target.value)}
@@ -1028,7 +1028,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           {/* Table Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Nome da Tabela *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Nome da Tabela *</label>
               <input
                 type="text"
                 value={tableForm.name}
@@ -1038,7 +1038,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Código *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Código *</label>
               <input
                 type="text"
                 value={tableForm.code}
@@ -1051,7 +1051,7 @@ export const TabelasComerciaisPage: React.FC = () => {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Data Início</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Data Início</label>
               <input
                 type="date"
                 value={tableForm.startDate}
@@ -1060,7 +1060,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Data Fim</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Data Fim</label>
               <input
                 type="date"
                 value={tableForm.endDate}
@@ -1076,7 +1076,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                   onChange={(e) => setTableForm({ ...tableForm, active: e.target.checked })}
                   className="w-4 h-4"
                 />
-                <span className="text-sm text-gray-300">Tabela ativa</span>
+                <span className="text-sm text-slate-300">Tabela ativa</span>
               </label>
             </div>
           </div>
@@ -1094,7 +1094,7 @@ export const TabelasComerciaisPage: React.FC = () => {
             {conditionForms.map((condition, index) => (
               <div key={index} className="bg-gray-50 rounded-lg p-4 mb-3">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-medium text-sm text-gray-300">Condição {index + 1}</span>
+                  <span className="font-medium text-sm text-slate-300">Condição {index + 1}</span>
                   {conditionForms.length > 1 && (
                     <button
                       onClick={() => removeCondition(index)}
@@ -1107,7 +1107,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                 
                 <div className="grid grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Prazo *</label>
+                    <label className="block text-xs text-slate-500 mb-1">Prazo *</label>
                     <input
                       type="number"
                       value={condition.term}
@@ -1117,7 +1117,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Taxa Mensal % *</label>
+                    <label className="block text-xs text-slate-500 mb-1">Taxa Mensal % *</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1128,7 +1128,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">CET %</label>
+                    <label className="block text-xs text-slate-500 mb-1">CET %</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1139,7 +1139,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Comissão % *</label>
+                    <label className="block text-xs text-slate-500 mb-1">Comissão % *</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1153,7 +1153,7 @@ export const TabelasComerciaisPage: React.FC = () => {
 
                 <div className="grid grid-cols-4 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Valor Mín</label>
+                    <label className="block text-xs text-slate-500 mb-1">Valor Mín</label>
                     <input
                       type="number"
                       value={condition.minAmount}
@@ -1163,7 +1163,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Valor Máx</label>
+                    <label className="block text-xs text-slate-500 mb-1">Valor Máx</label>
                     <input
                       type="number"
                       value={condition.maxAmount}
@@ -1173,7 +1173,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Idade Mín</label>
+                    <label className="block text-xs text-slate-500 mb-1">Idade Mín</label>
                     <input
                       type="number"
                       value={condition.minAge}
@@ -1183,7 +1183,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Idade Máx</label>
+                    <label className="block text-xs text-slate-500 mb-1">Idade Máx</label>
                     <input
                       type="number"
                       value={condition.maxAge}
@@ -1195,7 +1195,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                 </div>
 
                 <div className="mt-3">
-                  <label className="block text-xs text-gray-500 mb-1">Observações</label>
+                  <label className="block text-xs text-slate-500 mb-1">Observações</label>
                   <textarea
                     value={condition.notes}
                     onChange={(e) => updateCondition(index, "notes", e.target.value)}
@@ -1235,7 +1235,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                   
                   <div className="grid grid-cols-4 gap-3">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Consumo Mín (kWh) *</label>
+                      <label className="block text-xs text-slate-500 mb-1">Consumo Mín (kWh) *</label>
                       <input
                         type="number"
                         value={condition.minConsumption}
@@ -1245,7 +1245,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Consumo Máx (kWh) *</label>
+                      <label className="block text-xs text-slate-500 mb-1">Consumo Máx (kWh) *</label>
                       <input
                         type="number"
                         value={condition.maxConsumption}
@@ -1255,7 +1255,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Tarifa kWh (R$) *</label>
+                      <label className="block text-xs text-slate-500 mb-1">Tarifa kWh (R$) *</label>
                       <input
                         type="number"
                         step="0.01"
@@ -1266,7 +1266,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Economia (%) *</label>
+                      <label className="block text-xs text-slate-500 mb-1">Economia (%) *</label>
                       <input
                         type="number"
                         step="0.1"
@@ -1280,7 +1280,7 @@ export const TabelasComerciaisPage: React.FC = () => {
 
                   <div className="grid grid-cols-4 gap-3 mt-3">
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Valor Est. Mensal (R$)</label>
+                      <label className="block text-xs text-slate-500 mb-1">Valor Est. Mensal (R$)</label>
                       <input
                         type="number"
                         value={condition.estimatedValue}
@@ -1290,7 +1290,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Prazo Contrato (meses)</label>
+                      <label className="block text-xs text-slate-500 mb-1">Prazo Contrato (meses)</label>
                       <input
                         type="number"
                         value={condition.contractTerm}
@@ -1300,7 +1300,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Multa Rescisão (R$)</label>
+                      <label className="block text-xs text-slate-500 mb-1">Multa Rescisão (R$)</label>
                       <input
                         type="number"
                         value={condition.earlyTerminationFee}
@@ -1310,7 +1310,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Ativo</label>
+                      <label className="block text-xs text-slate-500 mb-1">Ativo</label>
                       <label className="flex items-center gap-2 mt-2">
                         <input
                           type="checkbox"
@@ -1318,13 +1318,13 @@ export const TabelasComerciaisPage: React.FC = () => {
                           onChange={(e) => updateEnergyCondition(index, "active", e.target.checked)}
                           className="w-4 h-4"
                         />
-                        <span className="text-sm text-gray-300">Ativo</span>
+                        <span className="text-sm text-slate-300">Ativo</span>
                       </label>
                     </div>
                   </div>
 
                   <div className="mt-3">
-                    <label className="block text-xs text-gray-500 mb-1">Observações</label>
+                    <label className="block text-xs text-slate-500 mb-1">Observações</label>
                     <textarea
                       value={condition.notes}
                       onChange={(e) => updateEnergyCondition(index, "notes", e.target.value)}

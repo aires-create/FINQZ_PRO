@@ -30,7 +30,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
         size={sizes.icon}
       />
       {text && (
-        <p className={`text-gray-500 mt-2 ${sizes.text}`}>{text}</p>
+        <p className={`text-slate-500 mt-2 ${sizes.text}`}>{text}</p>
       )}
     </div>
   );
@@ -61,7 +61,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
 // Card skeleton
 export const CardSkeleton: React.FC<{ className?: string }> = ({ className = "" }) => (
-  <div className={`bg-white border border-gray-200 rounded-xl p-4 shadow-sm ${className}`}>
+  <div className={`bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-4 shadow-sm ${className}`}>
     <div className="flex items-center gap-3 mb-3">
       <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
       <div className="flex-1">

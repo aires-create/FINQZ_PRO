@@ -354,7 +354,7 @@ export const ParceirosPage: React.FC = () => {
   const renderCreditStatus = () => {
     const status = formData.rdStatus || 'nao_consultado';
     const configs: Record<string, { color: string; bg: string; label: string }> = {
-      nao_consultado: { color: 'text-gray-500', bg: 'bg-gray-400', label: 'Não consultado' },
+      nao_consultado: { color: 'text-slate-500', bg: 'bg-gray-400', label: 'Não consultado' },
       sem_restricao: { color: 'text-green-600', bg: 'bg-green-900/200', label: 'Sem restrição' },
       restricao: { color: 'text-red-600', bg: 'bg-red-900/200', label: 'Com restrição' },
     };
@@ -370,7 +370,7 @@ export const ParceirosPage: React.FC = () => {
   const renderDoNotCallStatus = () => {
     const status = formData.doNotCallStatus || 'nao_consultado';
     const configs: Record<string, { color: string; bg: string; label: string }> = {
-      nao_consultado: { color: 'text-gray-500', bg: 'bg-gray-400', label: 'Não consultado' },
+      nao_consultado: { color: 'text-slate-500', bg: 'bg-gray-400', label: 'Não consultado' },
       liberado: { color: 'text-green-600', bg: 'bg-green-900/200', label: 'Liberado' },
       bloqueado: { color: 'text-yellow-600', bg: 'bg-yellow-900/200', label: 'Bloqueado' },
     };
@@ -734,14 +734,14 @@ export const ParceirosPage: React.FC = () => {
           <table className="w-full min-w-[1100px]">
             <thead>
             <tr className="border-b border-[#1f2937] bg-gray-50">
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">ID/Código</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">Parceiro</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">Tipo</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">Responsável</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">Contato</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-gray-600">Localização</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-gray-600">Ações</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">ID/Código</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Parceiro</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Tipo</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Responsável</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Contato</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Localização</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-slate-600">Ações</th>
             </tr>
           </thead>
             <tbody className="divide-y divide-gray-200">
@@ -759,7 +759,7 @@ export const ParceirosPage: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-300">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-slate-300">
                       {getTipoLabel(parceiro.tipo)}
                     </span>
                   </td>
@@ -773,27 +773,27 @@ export const ParceirosPage: React.FC = () => {
                       {getStatusLabel(parceiro.status)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{parceiro.responsavel || '-'}</td>
+                  <td className="px-4 py-3 text-slate-600">{parceiro.responsavel || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="text-sm">
-                      {parceiro.telefone && <div className="text-gray-600">{parceiro.telefone}</div>}
-                      {parceiro.email && <div className="text-gray-500 text-xs">{parceiro.email}</div>}
+                      {parceiro.telefone && <div className="text-slate-600">{parceiro.telefone}</div>}
+                      {parceiro.email && <div className="text-slate-500 text-xs">{parceiro.email}</div>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-slate-600">
                     {parceiro.cidade || parceiro.estado ? `${parceiro.cidade || ''}${parceiro.cidade && parceiro.estado ? ', ' : ''}${parceiro.estado || ''}` : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-1">
                       <button
                         onClick={() => handleEdit(parceiro)}
-                        className="p-2 text-gray-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg"
+                        className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg"
                       >
                         <Edit size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete(parceiro.id)}
-                        className="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
+                        className="p-2 text-slate-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -833,12 +833,12 @@ export const ParceirosPage: React.FC = () => {
                 <Check size={32} className="text-green-600" />
               </div>
               <h3 className="text-lg font-semibold text-white">Parceiro Criado!</h3>
-              <p className="text-gray-500 text-sm">Credenciais de acesso geradas automaticamente</p>
+              <p className="text-slate-500 text-sm">Credenciais de acesso geradas automaticamente</p>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Login</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Login</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
@@ -850,13 +850,13 @@ export const ParceirosPage: React.FC = () => {
                     onClick={() => copyToClipboard(generatedCredentials.login, 'login')}
                     className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                   >
-                    {copiedField === 'login' ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-gray-600" />}
+                    {copiedField === 'login' ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-slate-600" />}
                   </button>
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Senha</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="password"
@@ -869,7 +869,7 @@ export const ParceirosPage: React.FC = () => {
                     className="p-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                     title="Copiar senha"
                   >
-                    {copiedField === 'senha' ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-gray-600" />}
+                    {copiedField === 'senha' ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-slate-600" />}
                   </button>
                 </div>
               </div>
@@ -897,7 +897,7 @@ export const ParceirosPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-600 bg-[#111827]:hover:text-gray-200"
+                className="p-2 text-slate-500 hover:text-slate-600 bg-[#111827]:hover:text-slate-200"
               >
                 <X size={20} />
               </button>
@@ -906,7 +906,7 @@ export const ParceirosPage: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Nome *
                   </label>
                   <input
@@ -918,7 +918,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Tipo *
                   </label>
                   <select
@@ -933,7 +933,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     CPF/CNPJ
                   </label>
                   <input
@@ -944,7 +944,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Responsável
                   </label>
                   <input
@@ -955,7 +955,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Email
                   </label>
                   <input
@@ -966,7 +966,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Telefone
                   </label>
                   <input
@@ -977,7 +977,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Celular
                   </label>
                   <input
@@ -988,7 +988,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Status *
                   </label>
                   <select
@@ -1003,7 +1003,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Profissão
                   </label>
                   <input
@@ -1014,7 +1014,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Estado Civil
                   </label>
                   <select
@@ -1031,7 +1031,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Sexo
                   </label>
                   <select
@@ -1047,7 +1047,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Data de Nascimento
                   </label>
                   <input
@@ -1060,7 +1060,7 @@ export const ParceirosPage: React.FC = () => {
                 {isCNPJ(formData.cpf_cnpj || "") && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                         Responsável Legal
                       </label>
                       <input
@@ -1071,7 +1071,7 @@ export const ParceirosPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                         CPF do Responsável
                       </label>
                       <input
@@ -1089,7 +1089,7 @@ export const ParceirosPage: React.FC = () => {
                   <h4 className="text-sm font-semibold text-white mb-3 pb-2 border-b border-[#1f2937]">Endereço</h4>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">CEP</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">CEP</label>
                   <input
                     type="text"
                     value={formData.cep}
@@ -1098,7 +1098,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Estado</label>
                   <select
                     value={formData.estado}
                     onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
@@ -1135,7 +1135,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Rua</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Rua</label>
                   <input
                     type="text"
                     value={formData.rua}
@@ -1144,7 +1144,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Número</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Número</label>
                   <input
                     type="text"
                     value={formData.numero}
@@ -1153,7 +1153,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Complemento</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Complemento</label>
                   <input
                     type="text"
                     value={formData.complemento}
@@ -1162,7 +1162,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Bairro</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Bairro</label>
                   <input
                     type="text"
                     value={formData.bairro}
@@ -1171,7 +1171,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Cidade</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Cidade</label>
                   <input
                     type="text"
                     value={formData.cidade}
@@ -1185,7 +1185,7 @@ export const ParceirosPage: React.FC = () => {
                   <h4 className="text-sm font-semibold text-white mb-3 pb-2 border-b border-[#1f2937]">Dados Bancários</h4>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Banco
                   </label>
                   <input
@@ -1197,7 +1197,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Agência
                   </label>
                   <input
@@ -1209,7 +1209,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Conta
                   </label>
                   <input
@@ -1221,7 +1221,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Tipo de Conta
                   </label>
                   <select
@@ -1235,7 +1235,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Titular da Conta
                   </label>
                   <input
@@ -1247,7 +1247,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     CPF/CNPJ do Titular
                   </label>
                   <input
@@ -1261,10 +1261,10 @@ export const ParceirosPage: React.FC = () => {
 
                 {/* Seção PIX */}
                 <div className="md:col-span-2 mt-2">
-                  <h5 className="text-xs font-semibold text-gray-300 mb-2 pb-1 border-b border-gray-100">Chave PIX</h5>
+                  <h5 className="text-xs font-semibold text-slate-300 mb-2 pb-1 border-b border-gray-100">Chave PIX</h5>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Tipo de Chave PIX
                   </label>
                   <select
@@ -1281,7 +1281,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Chave PIX
                   </label>
                   <input
@@ -1295,7 +1295,7 @@ export const ParceirosPage: React.FC = () => {
 
                 {/* Seção de Documentos */}
                 <div className="md:col-span-2 mt-4">
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Documentos (PDF, JPG, PNG)
                   </label>
                   <input
@@ -1313,8 +1313,8 @@ export const ParceirosPage: React.FC = () => {
                           <div className="flex items-center gap-2">
                             {doc.tipo === 'pdf' ? <FileText size={16} className="text-red-500" /> : 
                              doc.tipo === 'imagem' ? <Image size={16} className="text-blue-500" /> : 
-                             <File size={16} className="text-gray-500" />}
-                            <span className="text-sm text-gray-600">{doc.nome}</span>
+                             <File size={16} className="text-slate-500" />}
+                            <span className="text-sm text-slate-600">{doc.nome}</span>
                           </div>
                           <button
                             type="button"
@@ -1330,7 +1330,7 @@ export const ParceirosPage: React.FC = () => {
                 </div>
                 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Observação
                   </label>
                   <textarea
@@ -1347,8 +1347,8 @@ export const ParceirosPage: React.FC = () => {
               {editingParceiro && (
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-[#1f2937] mt-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-300">Acesso do Parceiro</p>
-                    <p className="text-xs text-gray-500">Gerenciar login e senha</p>
+                    <p className="text-sm font-medium text-slate-300">Acesso do Parceiro</p>
+                    <p className="text-xs text-slate-500">Gerenciar login e senha</p>
                   </div>
                   <button
                     type="button"
@@ -1362,7 +1362,7 @@ export const ParceirosPage: React.FC = () => {
 
               {/* Compliance e Consultas */}
               <div className="mt-6 pt-6 border-t border-[#1f2937]">
-                <h4 className="text-sm font-medium text-gray-600 mb-4 flex items-center gap-2">
+                <h4 className="text-sm font-medium text-slate-600 mb-4 flex items-center gap-2">
                   <Shield size={16} />
                   Compliance e Consultas
                 </h4>
@@ -1370,8 +1370,8 @@ export const ParceirosPage: React.FC = () => {
                   {/* Restrição de Crédito */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-300">Restrição de Crédito</p>
-                      <p className="text-xs text-gray-500">Consulta SPC/Serasa por CPF/CNPJ</p>
+                      <p className="text-sm font-medium text-slate-300">Restrição de Crédito</p>
+                      <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {renderCreditStatus()}
@@ -1388,8 +1388,8 @@ export const ParceirosPage: React.FC = () => {
                   {/* Não Perturbe */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-300">Não Perturbe</p>
-                      <p className="text-xs text-gray-500">Bloqueio de contato por telefone</p>
+                      <p className="text-sm font-medium text-slate-300">Não Perturbe</p>
+                      <p className="text-xs text-slate-500">Bloqueio de contato por telefone</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {renderDoNotCallStatus()}
@@ -1409,7 +1409,7 @@ export const ParceirosPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 bg-[#111827]:text-gray-500 hover:bg-gray-100 bg-[#111827]:hover:bg-gray-50 bg-[#111827]:bg-gray-50 rounded-2xl"
+                  className="px-4 py-2 text-slate-600 bg-[#111827]:text-slate-500 hover:bg-gray-100 bg-[#111827]:hover:bg-gray-50 bg-[#111827]:bg-gray-50 rounded-2xl"
                 >
                   Cancelar
                 </button>
@@ -1446,7 +1446,7 @@ export const ParceirosPage: React.FC = () => {
             </div>
             <div className="space-y-6">
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Tipo</label>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Tipo</label>
                 <Select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)}>
                   <option value="">Todos os Tipos</option>
                   {PARCEIRO_TIPOS.map(t => (
@@ -1455,7 +1455,7 @@ export const ParceirosPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Status</label>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Status</label>
                 <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                   <option value="">Todos os Status</option>
                   {PARCEIRO_STATUSES.map(s => (
@@ -1464,7 +1464,7 @@ export const ParceirosPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Cidade</label>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Cidade</label>
                 <Input
                   type="text"
                   value={filterCidade}
@@ -1473,7 +1473,7 @@ export const ParceirosPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Estado</label>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Estado</label>
                 <Input
                   type="text"
                   value={filterEstado}
@@ -1482,7 +1482,7 @@ export const ParceirosPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Responsável</label>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Responsável</label>
                 <Input
                   type="text"
                   value={filterResponsavel}
@@ -1491,7 +1491,7 @@ export const ParceirosPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-300 mb-2 block">Email</label>
+                <label className="text-sm font-medium text-slate-300 mb-2 block">Email</label>
                 <Input
                   type="text"
                   value={filterEmail}

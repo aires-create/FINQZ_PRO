@@ -54,19 +54,19 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="max-w-md w-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg p-8 text-center">
             {/* Icone de erro */}
             <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
               <AlertTriangle className="w-10 h-10 text-red-600" />
             </div>
 
             {/* Título */}
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">
               Algo deu errado
             </h1>
             
             {/* Mensagem de erro amigável */}
-            <p className="text-gray-600 mb-6">
+            <p className="text-slate-600 mb-6">
               Encontramos um problema inesperado. Por favor, tente novamente.
             </p>
 
@@ -91,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
               
               <button
                 onClick={this.handleGoHome}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-slate-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
               >
                 <Home className="w-4 h-4" />
                 Voltar ao Início
@@ -99,7 +99,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Código de erro para suporte */}
-            <p className="text-xs text-gray-400 mt-6">
+            <p className="text-xs text-slate-400 mt-6">
               Se o problema persistir, entre em contato com o suporte.
             </p>
           </div>

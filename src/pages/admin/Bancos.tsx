@@ -291,7 +291,7 @@ export const BancosPage: React.FC = () => {
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Fornecedores</p>
+              <p className="text-sm text-slate-500">Total Fornecedores</p>
               <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
           </div>
@@ -302,7 +302,7 @@ export const BancosPage: React.FC = () => {
               <Check className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Ativos</p>
+              <p className="text-sm text-slate-500">Ativos</p>
               <p className="text-2xl font-bold text-white">{stats.ativos}</p>
             </div>
           </div>
@@ -313,7 +313,7 @@ export const BancosPage: React.FC = () => {
               <Building2 className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Bancos</p>
+              <p className="text-sm text-slate-500">Bancos</p>
               <p className="text-2xl font-bold text-white">{stats.bancos}</p>
             </div>
           </div>
@@ -324,7 +324,7 @@ export const BancosPage: React.FC = () => {
               <Building2 className="w-5 h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Outros</p>
+              <p className="text-sm text-slate-500">Outros</p>
               <p className="text-2xl font-bold text-white">{stats.outras}</p>
             </div>
           </div>
@@ -336,7 +336,7 @@ export const BancosPage: React.FC = () => {
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar por nome, CNPJ ou código..."
@@ -388,19 +388,19 @@ export const BancosPage: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-[#1f2937]">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">CNPJ</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contato</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Código</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nome</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">CNPJ</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Contato</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredFornecedores.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                     Nenhum fornecedor encontrado
                   </td>
                 </tr>
@@ -408,16 +408,16 @@ export const BancosPage: React.FC = () => {
                 filteredFornecedores.map((fornecedor) => (
                   <tr key={fornecedor.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <span className="font-mono text-sm text-gray-600">{fornecedor.codigo || "-"}</span>
+                      <span className="font-mono text-sm text-slate-600">{fornecedor.codigo || "-"}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div>
                         <p className="font-medium text-white">{fornecedor.nome}</p>
-                        <p className="text-sm text-gray-500">{fornecedor.nomeFantasia}</p>
+                        <p className="text-sm text-slate-500">{fornecedor.nomeFantasia}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-sm text-gray-600">{fornecedor.cnpj}</span>
+                      <span className="font-mono text-sm text-slate-600">{fornecedor.cnpj}</span>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -425,15 +425,15 @@ export const BancosPage: React.FC = () => {
                         fornecedor.tipo === "promotora" ? "bg-purple-100 text-purple-700" :
                         fornecedor.tipo === "financeira" ? "bg-green-100 text-green-700" :
                         fornecedor.tipo === "corretora" ? "bg-orange-100 text-orange-700" :
-                        "bg-gray-100 text-gray-300"
+                        "bg-gray-100 text-slate-300"
                       }`}>
                         {tipoLabels[fornecedor.tipo]}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-sm">
-                        {fornecedor.email && <p className="text-gray-600">{fornecedor.email}</p>}
-                        {fornecedor.telefone && <p className="text-gray-500">{fornecedor.telefone}</p>}
+                        {fornecedor.email && <p className="text-slate-600">{fornecedor.email}</p>}
+                        {fornecedor.telefone && <p className="text-slate-500">{fornecedor.telefone}</p>}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -452,14 +452,14 @@ export const BancosPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(fornecedor)}
-                          className="p-1 text-gray-400 hover:text-blue-600"
+                          className="p-1 text-slate-400 hover:text-blue-600"
                           title="Editar"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(fornecedor.id)}
-                          className="p-1 text-gray-400 hover:text-red-600"
+                          className="p-1 text-slate-400 hover:text-red-600"
                           title="Excluir"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -484,7 +484,7 @@ export const BancosPage: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Nome *
               </label>
               <input
@@ -496,7 +496,7 @@ export const BancosPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Nome Fantasia
               </label>
               <input
@@ -511,7 +511,7 @@ export const BancosPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 CNPJ *
               </label>
               <input
@@ -523,7 +523,7 @@ export const BancosPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Código
               </label>
               <input
@@ -537,7 +537,7 @@ export const BancosPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Tipo de Fornecedor
             </label>
             <select
@@ -555,7 +555,7 @@ export const BancosPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Telefone
               </label>
               <input
@@ -567,7 +567,7 @@ export const BancosPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Email
               </label>
               <input
@@ -581,7 +581,7 @@ export const BancosPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Website
             </label>
             <input
@@ -601,7 +601,7 @@ export const BancosPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <label htmlFor="ativo" className="text-sm text-gray-300">
+            <label htmlFor="ativo" className="text-sm text-slate-300">
               Fornecedor ativo
             </label>
           </div>

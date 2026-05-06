@@ -610,7 +610,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
               
               {/* Avatar do Usuário */}
               <div className="border-b border-[#1f2937] pb-6">
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-3">Foto de Perfil</label>
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-3">Foto de Perfil</label>
                 <div className="flex items-center gap-4">
                   <div className="w-20 h-20 rounded-full bg-gray-100 bg-[#111827]:bg-gray-50 border-2 border-[#1f2937] bg-[#111827]:border-[#3388d9] flex items-center justify-center overflow-hidden">
                     {avatarPreview || user?.avatar ? (
@@ -620,7 +620,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         className="w-full h-full object-cover" 
                       />
                     ) : (
-                      <span className="text-2xl font-semibold text-gray-500">
+                      <span className="text-2xl font-semibold text-slate-500">
                         {user?.nome ? user.nome.charAt(0).toUpperCase() : "U"}
                       </span>
                     )}
@@ -652,7 +652,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">Recomendado: imagem quadrada com no mínimo 200x200 pixels</p>
+                <p className="text-xs text-slate-500 mt-2">Recomendado: imagem quadrada com no mínimo 200x200 pixels</p>
               </div>
 
               {/* Informações do Perfil */}
@@ -690,7 +690,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Bio / Descrição</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Bio / Descrição</label>
                   <textarea
                     value={user?.bio || ""}
                     onChange={(e) => updateUserProfile({ bio: e.target.value })}
@@ -710,7 +710,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">Logo da Empresa</label>
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">Logo da Empresa</label>
                 <div className="flex items-center gap-4">
                   <div className="w-20 h-20 rounded-lg bg-gray-100 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] flex items-center justify-center overflow-hidden">
                     {logoPreview || settings.empresaLogo ? (
@@ -720,7 +720,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         className="w-full h-full object-contain" 
                       />
                     ) : (
-                      <Palette size={32} className="text-gray-500" />
+                      <Palette size={32} className="text-slate-500" />
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -750,7 +750,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 bg-[#111827]:text-gray-500 mt-2">
+                <p className="text-xs text-slate-500 bg-[#111827]:text-slate-500 mt-2">
                   Recomendado: imagem quadrada PNG ou JPG, máximo 2MB
                 </p>
               </div>
@@ -766,13 +766,13 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           {activeTab === "tags" && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-white">Gerenciar Tags</h3>
-              <p className="text-sm text-gray-500">Crie e gerencie tags para classificar seus leads e oportunidades</p>
+              <p className="text-sm text-slate-500">Crie e gerencie tags para classificar seus leads e oportunidades</p>
               
               {/* Formulário para criar/editar tag */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-4">
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Nome da Tag</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Nome da Tag</label>
                     <Input
                       value={tagForm.nome}
                       onChange={(e) => setTagForm({ ...tagForm, nome: e.target.value })}
@@ -781,7 +781,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Cor</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Cor</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -830,14 +830,14 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     <div className="flex items-center gap-1">
                       <button 
                         onClick={() => handleEditarTag(tag)}
-                        className="p-1.5 text-gray-400 hover:text-[#000dff] hover:bg-gray-100 rounded transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-[#000dff] hover:bg-gray-100 rounded transition-colors"
                         title="Editar"
                       >
                         <Edit size={14} />
                       </button>
                       <button 
                         onClick={() => handleExcluirTag(tag.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-gray-100 rounded transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-gray-100 rounded transition-colors"
                         title="Excluir"
                       >
                         <Trash2 size={14} />
@@ -848,7 +848,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
               </div>
               
               {tagsList.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-slate-500">
                   Nenhuma tag encontrada. Crie sua primeira tag acima.
                 </div>
               )}
@@ -858,7 +858,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           {activeTab === "pipelines" && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines</h3>
-              <p className="text-sm text-gray-500">Configure os pipelines e etapas do seu funil de vendas</p>
+              <p className="text-sm text-slate-500">Configure os pipelines e etapas do seu funil de vendas</p>
               
               {/* Lista de Pipelines */}
               <div className="space-y-4">
@@ -867,13 +867,13 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     <div className="flex justify-between items-center">
                       <div>
                         <h4 className="font-semibold text-white">{pipeline.nome}</h4>
-                        <p className="text-sm text-gray-500">ID: {pipeline.id}</p>
+                        <p className="text-sm text-slate-500">ID: {pipeline.id}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${pipeline.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${pipeline.ativo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate-500'}`}>
                           {pipeline.ativo ? 'Ativo' : 'Inativo'}
                         </span>
-                        <button className="p-2 text-gray-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg">
+                        <button className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg">
                           <Edit size={16} />
                         </button>
                         <button 
@@ -882,7 +882,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                               p.id === pipeline.id ? { ...p, ativo: !p.ativo } : p
                             ));
                           }}
-                          className="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
+                          className="p-2 text-slate-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -891,7 +891,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     
                     {/* Etapas do Pipeline - Drag & Drop */}
                     <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-300 mb-2">Etapas (arraste para reordenar):</p>
+                      <p className="text-sm font-medium text-slate-300 mb-2">Etapas (arraste para reordenar):</p>
                       <div className="flex gap-2 flex-wrap">
                         {pipeline.etapas
                           ?.filter(e => e.ativo)
@@ -916,7 +916,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                               <span className="w-5 h-5 rounded-full bg-[#000dff] text-white text-xs flex items-center justify-center cursor-grab">
                                 {etapa.ordem}
                               </span>
-                              <span className="text-gray-300">{etapa.nome}</span>
+                              <span className="text-slate-300">{etapa.nome}</span>
                               {etapa.obrigatorios && etapa.obrigatorios.length > 0 && (
                                 <span className="text-xs text-orange-500" title={`Obrigatórios: ${etapa.obrigatorios.join(', ')}`}>
                                   ({etapa.obrigatorios.length})
@@ -924,7 +924,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                               )}
                               <button 
                                 onClick={(e) => { e.stopPropagation(); openStageEditor(pipeline.id, etapa); }}
-                                className="ml-1 p-1 text-gray-400 hover:text-[#000dff] rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="ml-1 p-1 text-slate-400 hover:text-[#000dff] rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                 title="Editar etapa"
                               >
                                 <Edit size={12} />
@@ -967,14 +967,14 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
               <div className="bg-[#111827] rounded-xl p-6 w-full max-w-md shadow-xl">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-white">Editar Etapa</h3>
-                  <button onClick={() => setEditingStage(null)} className="text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setEditingStage(null)} className="text-slate-400 hover:text-slate-600">
                     <X size={20} />
                   </button>
                 </div>
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Nome</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Nome</label>
                     <Input
                       value={stageForm.nome}
                       onChange={(e) => setStageForm({ ...stageForm, nome: e.target.value })}
@@ -983,7 +983,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Cor</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Cor</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1001,11 +1001,11 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Campos Obrigatórios</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Campos Obrigatórios</label>
                     <div className="max-h-48 overflow-y-auto border border-[#1f2937] rounded-lg p-2 space-y-2">
                       {CAMPOS_POR_CATEGORIA.pessoal.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dados Pessoais</p>
+                          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Dados Pessoais</p>
                           <div className="grid grid-cols-2 gap-1">
                             {CAMPOS_POR_CATEGORIA.pessoal.map(campo => (
                               <label key={campo.key} className="flex items-center gap-1 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -1029,7 +1029,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       )}
                       {CAMPOS_POR_CATEGORIA.contato.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Contato</p>
+                          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Contato</p>
                           <div className="grid grid-cols-2 gap-1">
                             {CAMPOS_POR_CATEGORIA.contato.map(campo => (
                               <label key={campo.key} className="flex items-center gap-1 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -1053,7 +1053,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       )}
                       {CAMPOS_POR_CATEGORIA.bancario.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dados Bancários</p>
+                          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Dados Bancários</p>
                           <div className="grid grid-cols-2 gap-1">
                             {CAMPOS_POR_CATEGORIA.bancario.map(campo => (
                               <label key={campo.key} className="flex items-center gap-1 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -1077,7 +1077,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       )}
                       {CAMPOS_POR_CATEGORIA.pix.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">PIX</p>
+                          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">PIX</p>
                           <div className="grid grid-cols-2 gap-1">
                             {CAMPOS_POR_CATEGORIA.pix.map(campo => (
                               <label key={campo.key} className="flex items-center gap-1 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -1101,7 +1101,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       )}
                       {CAMPOS_POR_CATEGORIA.documentos.length > 0 && (
                         <div>
-                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Documentos</p>
+                          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Documentos</p>
                           <div className="grid grid-cols-2 gap-1">
                             {CAMPOS_POR_CATEGORIA.documentos.map(campo => (
                               <label key={campo.key} className="flex items-center gap-1 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -1124,11 +1124,11 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Selecione os campos que são obrigatórios para esta etapa</p>
+                    <p className="text-xs text-slate-500 mt-1">Selecione os campos que são obrigatórios para esta etapa</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Tags (separadas por vírgula)</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Tags (separadas por vírgula)</label>
                     <Input
                       value={stageForm.tags}
                       onChange={(e) => setStageForm({ ...stageForm, tags: e.target.value })}
@@ -1160,12 +1160,12 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   <h4 className="font-medium text-white">Configuração de Email</h4>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-slate-600 mb-4">
                   Configure o envio de emails usando a API do Resend. Obtenha sua chave API em <a href="https://resend.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline inline-flex items-center gap-1">resend.com <ExternalLink className="w-3 h-3" /></a>
                 </p>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Chave API do Resend
                   </label>
                   <div className="relative">
@@ -1179,7 +1179,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
                     >
                       {showApiKey ? <Shield className="w-4 h-4" /> : <Key className="w-4 h-4" />}
                     </button>
@@ -1250,12 +1250,12 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   <h4 className="font-medium text-white">Personalização dos Templates de Email</h4>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-slate-600 mb-4">
                   Customize a aparência dos emails enviados pelo sistema (credenciais de parceiro, reset de senha, etc.)
                 </p>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Nome da Empresa
                   </label>
                   <input
@@ -1268,7 +1268,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Cor Principal dos Emails
                   </label>
                   <div className="flex gap-2 items-center">
@@ -1286,11 +1286,11 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-lg font-mono"
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Cor usada no cabeçalho e botões dos emails</p>
+                  <p className="text-xs text-slate-500 mt-1">Cor usada no cabeçalho e botões dos emails</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     URL do Logo da Empresa
                   </label>
                   <input
@@ -1300,12 +1300,12 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     placeholder="https://seudominio.com/logo.png"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   />
-                  <p className="text-xs text-gray-500 mt-1">URL pública da imagem do logo (recomendado: 200x60px)</p>
+                  <p className="text-xs text-slate-500 mt-1">URL pública da imagem do logo (recomendado: 200x60px)</p>
                 </div>
 
                 {/* Preview */}
                 <div className="mt-4 p-4 bg-[#111827] rounded-lg border border-[#1f2937]">
-                  <p className="text-sm font-medium text-gray-300 mb-2">Preview do Template</p>
+                  <p className="text-sm font-medium text-slate-300 mb-2">Preview do Template</p>
                   <div 
                     className="rounded-lg overflow-hidden border border-[#1f2937]"
                     style={{ background: '#f4f6f8', padding: '20px' }}
@@ -1361,7 +1361,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   <h4 className="font-medium text-white">Webhook</h4>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Webhook URL</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Webhook URL</label>
                   <input
                     type="url"
                     value={settings.webhookUrl}
@@ -1379,7 +1379,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   <h4 className="font-medium text-white">WhatsApp API</h4>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">WhatsApp API Key</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">WhatsApp API Key</label>
                   <input
                     type="password"
                     value={settings.whatsappApiKey}
@@ -1403,7 +1403,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 <label className="flex items-center justify-between p-3 bg-gray-50 bg-[#111827]:bg-gray-50 rounded-lg cursor-pointer">
                   <div>
                     <p className="text-white bg-[#111827]:text-white font-medium">Email de Notificações</p>
-                    <p className="text-sm text-gray-500 bg-[#111827]:text-gray-500">Receba notificações por email</p>
+                    <p className="text-sm text-slate-500 bg-[#111827]:text-slate-500">Receba notificações por email</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1415,7 +1415,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 <label className="flex items-center justify-between p-3 bg-gray-50 bg-[#111827]:bg-gray-50 rounded-lg cursor-pointer">
                   <div>
                     <p className="text-white bg-[#111827]:text-white font-medium">WhatsApp de Notificações</p>
-                    <p className="text-sm text-gray-500 bg-[#111827]:text-gray-500">Receba notificações por WhatsApp</p>
+                    <p className="text-sm text-slate-500 bg-[#111827]:text-slate-500">Receba notificações por WhatsApp</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1427,7 +1427,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 <label className="flex items-center justify-between p-3 bg-gray-50 bg-[#111827]:bg-gray-50 rounded-lg cursor-pointer">
                   <div>
                     <p className="text-white bg-[#111827]:text-white font-medium">Nova Oportunidade</p>
-                    <p className="text-sm text-gray-500 bg-[#111827]:text-gray-500">Notificar quando uma nova oportunidade for criada</p>
+                    <p className="text-sm text-slate-500 bg-[#111827]:text-slate-500">Notificar quando uma nova oportunidade for criada</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1439,7 +1439,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 <label className="flex items-center justify-between p-3 bg-gray-50 bg-[#111827]:bg-gray-50 rounded-lg cursor-pointer">
                   <div>
                     <p className="text-white bg-[#111827]:text-white font-medium">Comissão Paga</p>
-                    <p className="text-sm text-gray-500 bg-[#111827]:text-gray-500">Notificar quando uma comissão for paga</p>
+                    <p className="text-sm text-slate-500 bg-[#111827]:text-slate-500">Notificar quando uma comissão for paga</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1461,7 +1461,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                   <h4 className="font-medium text-white mb-4">Alterar Senha</h4>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Senha Atual</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Senha Atual</label>
                       <input
                         type="password"
                         value={passwordForm.currentPassword}
@@ -1471,7 +1471,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Nova Senha</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Nova Senha</label>
                       <input
                         type="password"
                         value={passwordForm.newPassword}
@@ -1481,7 +1481,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Confirmar Nova Senha</label>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Confirmar Nova Senha</label>
                       <input
                         type="password"
                         value={passwordForm.confirmPassword}
@@ -1522,7 +1522,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">Timeout da Sessão (minutos)</label>
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">Timeout da Sessão (minutos)</label>
                   <input
                     type="number"
                     value={settings.sessaoTimeout}
@@ -1533,7 +1533,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 <label className="flex items-center justify-between p-3 bg-gray-50 bg-[#111827]:bg-gray-50 rounded-lg cursor-pointer">
                   <div>
                     <p className="text-white bg-[#111827]:text-white font-medium">Autenticação em Dois Fatores</p>
-                    <p className="text-sm text-gray-500 bg-[#111827]:text-gray-500">Adicione uma camada extra de segurança</p>
+                    <p className="text-sm text-slate-500 bg-[#111827]:text-slate-500">Adicione uma camada extra de segurança</p>
                   </div>
                   <input
                     type="checkbox"
@@ -1549,7 +1549,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium text-white">Alertas de Login</h4>
-                    <p className="text-sm text-gray-500">Receba notificações sobre atividades de login</p>
+                    <p className="text-sm text-slate-500">Receba notificações sobre atividades de login</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -1572,8 +1572,8 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                       />
                       <div>
-                        <p className="text-sm font-medium text-gray-300">Novo dispositivo</p>
-                        <p className="text-xs text-gray-500">Alertar quando um novo dispositivo acessar a conta</p>
+                        <p className="text-sm font-medium text-slate-300">Novo dispositivo</p>
+                        <p className="text-xs text-slate-500">Alertar quando um novo dispositivo acessar a conta</p>
                       </div>
                     </label>
 
@@ -1585,8 +1585,8 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                       />
                       <div>
-                        <p className="text-sm font-medium text-gray-300">Alteração de senha</p>
-                        <p className="text-xs text-gray-500">Alertar quando a senha for alterada</p>
+                        <p className="text-sm font-medium text-slate-300">Alteração de senha</p>
+                        <p className="text-xs text-slate-500">Alertar quando a senha for alterada</p>
                       </div>
                     </label>
 
@@ -1598,13 +1598,13 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                       />
                       <div>
-                        <p className="text-sm font-medium text-gray-300">Novo endereço IP</p>
-                        <p className="text-xs text-gray-500">Alertar quando houver login de um novo endereço IP</p>
+                        <p className="text-sm font-medium text-slate-300">Novo endereço IP</p>
+                        <p className="text-xs text-slate-500">Alertar quando houver login de um novo endereço IP</p>
                       </div>
                     </label>
 
                     <div className="pt-2 border-t border-[#1f2937]">
-                      <p className="text-sm font-medium text-gray-300 mb-2">Método de notificação</p>
+                      <p className="text-sm font-medium text-slate-300 mb-2">Método de notificação</p>
                       <div className="flex flex-wrap gap-3">
                         <label className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
                           <input
@@ -1613,8 +1613,8 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                             onChange={(e) => setLoginAlerts({ ...loginAlerts, notifyByEmail: e.target.checked })}
                             className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                           />
-                          <Mail size={16} className="text-gray-500" />
-                          <span className="text-sm text-gray-600">E-mail</span>
+                          <Mail size={16} className="text-slate-500" />
+                          <span className="text-sm text-slate-600">E-mail</span>
                         </label>
 
                         <label className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
@@ -1624,8 +1624,8 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                             onChange={(e) => setLoginAlerts({ ...loginAlerts, notifyByPush: e.target.checked })}
                             className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                           />
-                          <Bell size={16} className="text-gray-500" />
-                          <span className="text-sm text-gray-600">Push</span>
+                          <Bell size={16} className="text-slate-500" />
+                          <span className="text-sm text-slate-600">Push</span>
                         </label>
 
                         <label className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
@@ -1635,15 +1635,15 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                             onChange={(e) => setLoginAlerts({ ...loginAlerts, notifyAdmins: e.target.checked })}
                             className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                           />
-                          <Users size={16} className="text-gray-500" />
-                          <span className="text-sm text-gray-600">Notificar administradores</span>
+                          <Users size={16} className="text-slate-500" />
+                          <span className="text-sm text-slate-600">Notificar administradores</span>
                         </label>
                       </div>
                     </div>
 
                     {(loginAlerts.notifyByEmail || loginAlerts.notifyAdmins) && (
                       <div className="pt-2">
-                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
                           {loginAlerts.notifyAdmins ? "E-mail para alertas" : "E-mail de notificação"}
                         </label>
                         <input
@@ -1653,7 +1653,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                           placeholder="seu@email.com"
                           className="w-full max-w-md bg-gray-50 border border-[#1f2937] rounded-lg px-4 py-2 text-white"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-slate-500 mt-1">
                           {loginAlerts.notifyAdmins 
                             ? "Os administradores receberão alertas neste e-mail" 
                             : "Você receberá alertas de login neste e-mail"}
@@ -1676,11 +1676,11 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
             <div className="p-6 border-b border-[#1f2937] dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-white dark:text-white">Gerenciar Permissões por Perfil</h3>
-                <button onClick={() => setEditingPermissions(null)} className="text-gray-500 hover:text-gray-300 dark:hover:text-gray-300">
+                <button onClick={() => setEditingPermissions(null)} className="text-slate-500 hover:text-slate-300 dark:hover:text-slate-300">
                   <X size={20} />
                 </button>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Configure quais ações cada perfil pode executar em cada módulo do sistema.
               </p>
             </div>
@@ -1695,7 +1695,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       selectedProfile === profile.id
                         ? "bg-[#000dff] text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        : "bg-gray-100 dark:bg-gray-800 text-slate-300 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                   >
                     {profile.label}
@@ -1720,7 +1720,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         <div className="flex items-center gap-3">
                           {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                           <span className="font-medium text-white dark:text-white">{module.label}</span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xs text-slate-500 dark:text-slate-400">
                             ({modulePerms.length}/{module.actions.length} ações)
                           </span>
                         </div>
@@ -1751,7 +1751,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                             >
                               <div>
                                 <span className="text-white dark:text-white text-sm">{action.label}</span>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{action.description}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">{action.description}</p>
                               </div>
                               <input
                                 type="checkbox"
@@ -1772,14 +1772,14 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
             <div className="p-6 border-t border-[#1f2937] dark:border-gray-700 flex justify-between">
               <button
                 onClick={resetToDefault}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-white dark:hover:text-white transition-colors"
+                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-white dark:hover:text-white transition-colors"
               >
                 Restaurar Padrão
               </button>
               <div className="flex gap-3">
                 <button
                   onClick={() => setEditingPermissions(null)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-300 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-slate-300 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1802,7 +1802,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           <div className="bg-[#111827] rounded-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Recortar Imagem</h3>
-              <button onClick={handleCropCancel} className="text-gray-500 hover:text-gray-300">
+              <button onClick={handleCropCancel} className="text-slate-500 hover:text-slate-300">
                 <X size={24} />
               </button>
             </div>
@@ -1839,7 +1839,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
               >
                 <Minus size={20} />
               </button>
-              <span className="text-sm text-gray-600 min-w-[60px] text-center">
+              <span className="text-sm text-slate-600 min-w-[60px] text-center">
                 {Math.round(cropScale * 100)}%
               </span>
               <button
@@ -1851,7 +1851,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 text-center mb-4">
+            <p className="text-xs text-slate-500 text-center mb-4">
               Arraste a imagem para posicionar. O resultado será um círculo.
             </p>
 
@@ -1896,7 +1896,7 @@ const AutomationsConfig: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-white">Automações por Pipeline</h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Configure quais ações automáticas executam quando um contrato é assinado em cada pipeline.
           </p>
         </div>
@@ -1904,7 +1904,7 @@ const AutomationsConfig: React.FC = () => {
       
       {/* Seleção de Pipeline */}
       <div className="bg-gray-50 rounded-lg p-4">
-        <label className="block text-sm font-medium text-gray-300 mb-2">Selecione o Pipeline</label>
+        <label className="block text-sm font-medium text-slate-300 mb-2">Selecione o Pipeline</label>
         <div className="grid grid-cols-3 gap-2">
           {pipelines.map((p) => (
             <button
@@ -1920,7 +1920,7 @@ const AutomationsConfig: React.FC = () => {
               }`}
             >
               <div className="font-medium text-sm text-white">{p.nome}</div>
-              <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+              <div className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                 <Zap size={12} />
                 {p.automacoesAtivas} automações ativas
               </div>
@@ -1964,7 +1964,7 @@ const AutomationsConfig: React.FC = () => {
                   </div>
                   <div>
                     <h5 className="font-medium text-white">{automacaoBase.nome}</h5>
-                    <p className="text-xs text-gray-500">{automacaoBase.descricao}</p>
+                    <p className="text-xs text-slate-500">{automacaoBase.descricao}</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">

@@ -102,7 +102,7 @@ const getAcaoIcon = (acao: string): React.ReactNode => {
     case "UPDATE":
       return <Edit className="w-4 h-4 text-yellow-500" />;
     default:
-      return <FileText className="w-4 h-4 text-gray-500" />;
+      return <FileText className="w-4 h-4 text-slate-500" />;
   }
 };
 
@@ -264,7 +264,7 @@ export default function Auditoria() {
             <h2 className="text-xl font-semibold text-white mb-2">
               Acesso Negado
             </h2>
-            <p className="text-gray-600">
+            <p className="text-slate-600">
               Você não tem permissão para acessar os logs de auditoria.
               <br />
               Apenas administradores podem visualizar estas informações.
@@ -287,7 +287,7 @@ export default function Auditoria() {
         <DSCard className="p-4 mb-6">
           <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Período
               </label>
               <Select
@@ -298,7 +298,7 @@ export default function Auditoria() {
             </div>
 
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Usuário
               </label>
               <Select
@@ -315,7 +315,7 @@ export default function Auditoria() {
             </div>
 
             <div className="flex-1 min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Ação
               </label>
               <Select
@@ -326,7 +326,7 @@ export default function Auditoria() {
             </div>
 
             <div className="flex-1 min-w-[150px]">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 Módulo
               </label>
               <Select
@@ -373,7 +373,7 @@ export default function Auditoria() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <label className="flex items-center text-sm text-gray-600">
+              <label className="flex items-center text-sm text-slate-600">
                 <input
                   type="checkbox"
                   checked={showUnresolvedOnly}
@@ -393,7 +393,7 @@ export default function Auditoria() {
               <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
             </div>
           ) : alerts.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center text-slate-500">
               <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
               <p>Nenhum alerta de segurança</p>
             </div>
@@ -414,11 +414,11 @@ export default function Auditoria() {
                       alert.severidade === 'critical' ? 'text-red-600' :
                       alert.severidade === 'high' ? 'text-orange-600' :
                       alert.severidade === 'medium' ? 'text-yellow-600' :
-                      'text-gray-600'
+                      'text-slate-600'
                     }`} />
                     <div>
                       <p className="font-medium text-white">{alert.mensagem}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-slate-500">
                         {alert.usuarioId || 'Sistema'} • {formatDate(alert.createdAt)}
                       </p>
                     </div>
@@ -453,12 +453,12 @@ export default function Auditoria() {
           {loading ? (
             <div className="p-12 text-center">
               <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto" />
-              <p className="mt-2 text-gray-600">Carregando logs...</p>
+              <p className="mt-2 text-slate-600">Carregando logs...</p>
             </div>
           ) : logs.length === 0 ? (
             <div className="p-12 text-center">
-              <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Nenhum log encontrado para os filtros selecionados.</p>
+              <Shield className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600">Nenhum log encontrado para os filtros selecionados.</p>
             </div>
           ) : (
             <>
@@ -467,22 +467,22 @@ export default function Auditoria() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-[#1f2937]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Data/Hora
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Usuário
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Ação
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Módulo
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         ID Registro
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                         Ações
                       </th>
                     </tr>
@@ -497,13 +497,13 @@ export default function Auditoria() {
                       >
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center text-sm text-white">
-                            <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                            <Clock className="w-4 h-4 mr-2 text-slate-400" />
                             {formatDate(log.createdAt)}
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center text-sm text-white">
-                            <User className="w-4 h-4 mr-2 text-gray-400" />
+                            <User className="w-4 h-4 mr-2 text-slate-400" />
                             {log.usuarioId || "Sistema"}
                           </div>
                         </td>
@@ -520,7 +520,7 @@ export default function Auditoria() {
                             {getModuloLabel(log.modulo)}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                           {log.registroId || "-"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-right">
@@ -540,7 +540,7 @@ export default function Auditoria() {
 
               {/* Paginação */}
               <div className="px-4 py-3 bg-[#111827] border-t border-[#1f2937] flex items-center justify-between">
-                <div className="text-sm text-gray-300">
+                <div className="text-sm text-slate-300">
                   Mostrando{" "}
                   <span className="font-medium">
                     {(pagination.page - 1) * pagination.limit + 1}
@@ -587,7 +587,7 @@ export default function Auditoria() {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500">
+                <label className="block text-sm font-medium text-slate-500">
                   Data/Hora
                 </label>
                 <p className="text-white">
@@ -595,13 +595,13 @@ export default function Auditoria() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">
+                <label className="block text-sm font-medium text-slate-500">
                   Usuário ID
                 </label>
                 <p className="text-white">{selectedLog.usuarioId || "Sistema"}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">
+                <label className="block text-sm font-medium text-slate-500">
                   Ação
                 </label>
                 <div className="flex items-center mt-1">
@@ -612,7 +612,7 @@ export default function Auditoria() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">
+                <label className="block text-sm font-medium text-slate-500">
                   Módulo
                 </label>
                 <p className="text-white">
@@ -620,7 +620,7 @@ export default function Auditoria() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500">
+                <label className="block text-sm font-medium text-slate-500">
                   ID do Registro
                 </label>
                 <p className="text-white">
@@ -632,11 +632,11 @@ export default function Auditoria() {
             {/* Dados Antes */}
             {selectedLog.dadosAntes && (
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-sm font-medium text-slate-500 mb-1">
                   Dados Anteriores
                 </label>
                 <div className="bg-gray-50 rounded-lg p-3 max-h-48 overflow-auto">
-                  <pre className="text-xs text-gray-300 whitespace-pre-wrap">
+                  <pre className="text-xs text-slate-300 whitespace-pre-wrap">
                     {JSON.stringify(selectedLog.dadosAntes, null, 2)}
                   </pre>
                 </div>
@@ -646,11 +646,11 @@ export default function Auditoria() {
             {/* Dados Depois */}
             {selectedLog.dadosDepois && (
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-sm font-medium text-slate-500 mb-1">
                   Dados Posteriores
                 </label>
                 <div className="bg-gray-50 rounded-lg p-3 max-h-48 overflow-auto">
-                  <pre className="text-xs text-gray-300 whitespace-pre-wrap">
+                  <pre className="text-xs text-slate-300 whitespace-pre-wrap">
                     {JSON.stringify(selectedLog.dadosDepois, null, 2)}
                   </pre>
                 </div>
@@ -658,7 +658,7 @@ export default function Auditoria() {
             )}
 
             {!selectedLog.dadosAntes && !selectedLog.dadosDepois && (
-              <p className="text-gray-500 text-sm italic">
+              <p className="text-slate-500 text-sm italic">
                 Este log não contém dados detalhados.
               </p>
             )}

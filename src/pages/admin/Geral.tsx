@@ -69,13 +69,13 @@ export const GeralPage: React.FC = () => {
         exportFilename="configuracoes_gerais"
       />
       
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Configurações Gerais</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Configurações Gerais</h3>
           
           {/* Avatar do Usuário */}
           <div className="border-b border-gray-200 pb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Foto de Perfil</label>
+            <label className="block text-sm font-medium text-slate-700 mb-3">Foto de Perfil</label>
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-[#3388d9] flex items-center justify-center overflow-hidden">
                 {avatarPreview || user?.avatar ? (
@@ -85,7 +85,7 @@ export const GeralPage: React.FC = () => {
                     className="w-full h-full object-cover" 
                   />
                 ) : (
-                  <span className="text-2xl font-semibold text-gray-500">
+                  <span className="text-2xl font-semibold text-slate-500">
                     {user?.nome ? user.nome.charAt(0).toUpperCase() : "U"}
                   </span>
                 )}
@@ -117,7 +117,7 @@ export const GeralPage: React.FC = () => {
                 )}
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Recomendado: imagem quadrada com no mínimo 200x200 pixels</p>
+            <p className="text-xs text-slate-500 mt-2">Recomendado: imagem quadrada com no mínimo 200x200 pixels</p>
           </div>
 
           {/* Informações do Perfil */}
@@ -155,7 +155,7 @@ export const GeralPage: React.FC = () => {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bio / Descrição</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Bio / Descrição</label>
               <textarea
                 value={user?.bio || ""}
                 onChange={(e) => updateUserProfile({ bio: e.target.value })}
@@ -177,7 +177,7 @@ export const GeralPage: React.FC = () => {
 
           {/* Tema */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Tema</label>
+            <label className="block text-sm font-medium text-slate-700 mb-3">Tema</label>
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -190,7 +190,7 @@ export const GeralPage: React.FC = () => {
                     : "border-gray-200 hover:border-gray-300"
                 }`}
               >
-                <div className="w-5 h-5 rounded-full bg-white border border-gray-300" />
+                <div className="w-5 h-5 rounded-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-300" />
                 Claro
               </button>
               <button

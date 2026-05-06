@@ -88,7 +88,7 @@ const LogRow: React.FC<{ log: AutomationLog }> = ({ log }) => {
     sucesso: <CheckCircle className="w-4 h-4 text-green-500" />,
     falha: <AlertCircle className="w-4 h-4 text-yellow-500" />,
     erro: <XCircle className="w-4 h-4 text-red-500" />,
-    skipped: <Clock className="w-4 h-4 text-gray-400" />,
+    skipped: <Clock className="w-4 h-4 text-slate-400" />,
   };
   
   return (
@@ -96,9 +96,9 @@ const LogRow: React.FC<{ log: AutomationLog }> = ({ log }) => {
       {statusIcon[log.status]}
       <div className="flex-1">
         <p className="text-sm font-medium text-white">{log.entidadeNome || `Entidade #${log.entidadeId}`}</p>
-        <p className="text-xs text-gray-500">{log.erro || 'Execução bem-sucedida'}</p>
+        <p className="text-xs text-slate-500">{log.erro || 'Execução bem-sucedida'}</p>
       </div>
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-slate-500">
         {new Date(log.timestamp).toLocaleString('pt-BR')}
       </div>
     </div>
@@ -130,22 +130,22 @@ const AutomationCard: React.FC<{
               <StatusBadge status={automation.status} />
             </div>
             {automation.descricao && (
-              <p className="text-sm text-gray-500 mb-3">{automation.descricao}</p>
+              <p className="text-sm text-slate-500 mb-3">{automation.descricao}</p>
             )}
             
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-blue-500" />
-                <span className="text-gray-600">{automationUtils.formatTriggerName(automation.trigger)}</span>
+                <span className="text-slate-600">{automationUtils.formatTriggerName(automation.trigger)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <ArrowRight className="w-4 h-4 text-purple-500" />
-                <span className="text-gray-600">{automationUtils.formatActionName(automation.acao)}</span>
+                <span className="text-slate-600">{automationUtils.formatActionName(automation.acao)}</span>
               </div>
               {automation.condicoes && automation.condicoes.length > 0 && (
                 <div className="flex items-center gap-2">
                   <Settings className="w-4 h-4 text-orange-500" />
-                  <span className="text-gray-600">{automation.condicoes.length} condição(s)</span>
+                  <span className="text-slate-600">{automation.condicoes.length} condição(s)</span>
                 </div>
               )}
             </div>
@@ -176,7 +176,7 @@ const AutomationCard: React.FC<{
         <div className="mt-4 pt-4 border-t border-gray-100">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-4">
-              <span className="text-gray-500">
+              <span className="text-slate-500">
                 Última execução: {automationUtils.formatExecutionDate(automation.ultimaExecucao)}
               </span>
             </div>
@@ -209,12 +209,12 @@ const AutomationCard: React.FC<{
         
         {expanded && (
           <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-500 mb-2">
+            <p className="text-xs font-medium text-slate-500 mb-2">
               Lógica: {automation.condicaoLogica || 'AND'}
             </p>
             <div className="space-y-2">
               {automation.condicoes.map((cond, index) => (
-                <div key={index} className="text-sm text-gray-300">
+                <div key={index} className="text-sm text-slate-300">
                   {cond.campo} {cond.operador} {cond.valor}
                 </div>
               ))}
@@ -340,7 +340,7 @@ const AutomationModal: React.FC<{
         
         {/* Nome */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-300 mb-1">
             Nome *
           </label>
           <input
@@ -354,7 +354,7 @@ const AutomationModal: React.FC<{
         
         {/* Descrição */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-300 mb-1">
             Descrição
           </label>
           <textarea
@@ -368,7 +368,7 @@ const AutomationModal: React.FC<{
         
         {/* Trigger */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-300 mb-1">
             Trigger *
           </label>
           <select
@@ -382,14 +382,14 @@ const AutomationModal: React.FC<{
               </option>
             ))}
           </select>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             {TRIGGER_CONFIG.TRIGGERS.find(t => t.id === formData.trigger)?.descricao}
           </p>
         </div>
         
         {/* Ação */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-slate-300 mb-1">
             Ação *
           </label>
           <select
@@ -414,7 +414,7 @@ const AutomationModal: React.FC<{
         
         {/* Parâmetros da Ação */}
         <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-slate-300 mb-2">
             Parâmetros da Ação
           </label>
           
@@ -534,7 +534,7 @@ const AutomationModal: React.FC<{
         {/* Condições */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-300">
+            <label className="block text-sm font-medium text-slate-300">
               Condições
             </label>
             <button
@@ -608,7 +608,7 @@ const AutomationModal: React.FC<{
               onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded"
             />
-            <span className="text-sm text-gray-300">Automação ativa</span>
+            <span className="text-sm text-slate-300">Automação ativa</span>
           </label>
         </div>
         
@@ -631,7 +631,7 @@ const AutomationModal: React.FC<{
                 <AlertTriangle className="w-6 h-6" />
                 <h3 className="text-lg font-semibold">Confirmar Ação</h3>
               </div>
-              <p className="text-gray-600 mb-6">
+              <p className="text-slate-600 mb-6">
                 Você está criando uma automação que executa "<strong>{automationUtils.formatActionName(formData.acao)}</strong>". 
                 Esta é uma ação potencialmente sensível. Deseja continuar?
               </p>
@@ -772,19 +772,19 @@ const AutomacoesPage: React.FC = () => {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-[#111827] rounded-lg border border-[#1f2937] p-4">
-            <p className="text-sm text-gray-500">Total</p>
+            <p className="text-sm text-slate-500">Total</p>
             <p className="text-2xl font-semibold">{stats.total}</p>
           </div>
           <div className="bg-[#111827] rounded-lg border border-[#1f2937] p-4">
-            <p className="text-sm text-gray-500">Ativas</p>
+            <p className="text-sm text-slate-500">Ativas</p>
             <p className="text-2xl font-semibold text-green-600">{stats.ativas}</p>
           </div>
           <div className="bg-[#111827] rounded-lg border border-[#1f2937] p-4">
-            <p className="text-sm text-gray-500">Pausadas</p>
+            <p className="text-sm text-slate-500">Pausadas</p>
             <p className="text-2xl font-semibold text-yellow-600">{stats.pausadas}</p>
           </div>
           <div className="bg-[#111827] rounded-lg border border-[#1f2937] p-4">
-            <p className="text-sm text-gray-500">Com Erro</p>
+            <p className="text-sm text-slate-500">Com Erro</p>
             <p className="text-2xl font-semibold text-red-600">{stats.comErro}</p>
           </div>
         </div>
@@ -793,7 +793,7 @@ const AutomacoesPage: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar automações..."
@@ -813,9 +813,9 @@ const AutomacoesPage: React.FC = () => {
         {/* Lista de Automações */}
         {filteredAutomations.length === 0 ? (
           <div className="text-center py-12">
-            <Zap className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <Zap className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">Nenhuma automação encontrada</h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-slate-500 mb-4">
               {search ? 'Tente buscar por outro termo' : 'Crie sua primeira automação para começar'}
             </p>
             {!search && (
@@ -855,7 +855,7 @@ const AutomacoesPage: React.FC = () => {
         <div className="p-6">
           <h2 className="text-xl font-semibold mb-4">Logs de Execução</h2>
           {selectedAutomationLogs.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nenhum log encontrado</p>
+            <p className="text-slate-500 text-center py-8">Nenhum log encontrado</p>
           ) : (
             <div className="divide-y divide-gray-100">
               {selectedAutomationLogs.map((log) => (

@@ -171,7 +171,7 @@ const getNivelIcon = (nivel: RoteiroOperacionalNivel) => {
     case "roteiro":
       return <FileText size={18} className="text-orange-600" />;
     default:
-      return <FileText size={18} className="text-gray-600" />;
+      return <FileText size={18} className="text-slate-600" />;
   }
 };
 
@@ -201,9 +201,9 @@ const getPrioridadeColor = (prioridade?: Prioridade) => {
     case "media":
       return "bg-blue-100 text-blue-800";
     case "baixa":
-      return "bg-gray-100 text-gray-200";
+      return "bg-gray-100 text-slate-200";
     default:
-      return "bg-gray-100 text-gray-200";
+      return "bg-gray-100 text-slate-200";
   }
 };
 
@@ -213,11 +213,11 @@ const getStatusColor = (status?: StatusPublicacao) => {
     case "publicado":
       return "bg-green-100 text-green-800";
     case "rascunho":
-      return "bg-gray-100 text-gray-200";
+      return "bg-gray-100 text-slate-200";
     case "arquivado":
       return "bg-yellow-100 text-yellow-800";
     default:
-      return "bg-gray-100 text-gray-200";
+      return "bg-gray-100 text-slate-200";
   }
 };
 
@@ -235,9 +235,9 @@ const getFormatoIcon = (formato?: FormatoConteudo) => {
     case "faq":
       return <HelpCircle size={14} className="text-orange-500" />;
     case "arquivo":
-      return <UploadCloud size={14} className="text-gray-500" />;
+      return <UploadCloud size={14} className="text-slate-500" />;
     default:
-      return <FileText size={14} className="text-gray-500" />;
+      return <FileText size={14} className="text-slate-500" />;
   }
 };
 
@@ -307,9 +307,9 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
         <div className="w-6 h-6 flex items-center justify-center">
           {hasChildren ? (
             isExpanded ? (
-              <ChevronDown size={16} className="text-gray-400" />
+              <ChevronDown size={16} className="text-slate-400" />
             ) : (
-              <ChevronRight size={16} className="text-gray-400" />
+              <ChevronRight size={16} className="text-slate-400" />
             )
           ) : (
             <div className="w-4" />
@@ -325,14 +325,14 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
           
           {/* Badge de tipo */}
           {item.nivel === "roteiro" && item.tipo && (
-            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+            <span className="text-xs px-2 py-0.5 bg-gray-100 text-slate-600 rounded-full">
               {item.tipo}
             </span>
           )}
           
           {/* Badge de formato */}
           {item.formato_conteudo && (
-            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
+            <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-slate-600 rounded-full">
               {getFormatoIcon(item.formato_conteudo)}
               {item.formato_conteudo}
             </span>
@@ -363,7 +363,7 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
 
         {/* Contador de filhos */}
         {hasChildren && (
-          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-slate-400 bg-gray-100 px-2 py-0.5 rounded-full">
             {children.length}
           </span>
         )}
@@ -373,14 +373,14 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => onEdit(item)}
-              className="p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-gray-300"
+              className="p-1.5 hover:bg-gray-200 rounded text-slate-500 hover:text-slate-300"
               title="Editar"
             >
               <Edit size={14} />
             </button>
             <button
               onClick={() => onDuplicate(item.id)}
-              className="p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-gray-300"
+              className="p-1.5 hover:bg-gray-200 rounded text-slate-500 hover:text-slate-300"
               title="Duplicar"
             >
               <Copy size={14} />
@@ -388,7 +388,7 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
             {item.status_publicacao === "rascunho" && (
               <button
                 onClick={() => onPublish(item.id)}
-                className="p-1.5 hover:bg-green-100 rounded text-gray-500 hover:text-green-700"
+                className="p-1.5 hover:bg-green-100 rounded text-slate-500 hover:text-green-700"
                 title="Publicar"
               >
                 <Send size={14} />
@@ -397,7 +397,7 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
             {item.status_publicacao === "publicado" && (
               <button
                 onClick={() => onArchive(item.id)}
-                className="p-1.5 hover:bg-yellow-100 rounded text-gray-500 hover:text-yellow-700"
+                className="p-1.5 hover:bg-yellow-100 rounded text-slate-500 hover:text-yellow-700"
                 title="Arquivar"
               >
                 <Archive size={14} />
@@ -405,14 +405,14 @@ const HierarchyItem: React.FC<HierarchyItemProps> = ({
             )}
             <button
               onClick={() => onToggleStatus(item.id)}
-              className={`p-1.5 rounded ${item.ativo ? 'hover:bg-red-100 text-gray-500 hover:text-red-700' : 'hover:bg-green-100 text-gray-500 hover:text-green-700'}`}
+              className={`p-1.5 rounded ${item.ativo ? 'hover:bg-red-100 text-slate-500 hover:text-red-700' : 'hover:bg-green-100 text-slate-500 hover:text-green-700'}`}
               title={item.ativo ? "Inativar" : "Ativar"}
             >
               {item.ativo ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
             </button>
             <button
               onClick={() => onDelete(item.id)}
-              className="p-1.5 hover:bg-red-100 rounded text-gray-500 hover:text-red-700"
+              className="p-1.5 hover:bg-red-100 rounded text-slate-500 hover:text-red-700"
               title="Excluir"
             >
               <Trash2 size={14} />
@@ -1014,7 +1014,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
         <div className="space-y-4">
           {/* Nível (apenas para visualização/criação) */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Nível
             </label>
             <Select
@@ -1032,7 +1032,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
           {/* Nome */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Nome *
             </label>
             <Input
@@ -1044,7 +1044,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
           {/* Código */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Código
             </label>
             <Input
@@ -1056,7 +1056,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
           {/* Descrição */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-slate-300 mb-1">
               Descrição
             </label>
             <TextArea
@@ -1072,7 +1072,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
             <>
               {/* Resumo */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Resumo
                 </label>
                 <Input
@@ -1084,7 +1084,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Categoria */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Categoria
                 </label>
                 <Select
@@ -1099,7 +1099,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Tipo de conteúdo */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Tipo de Conteúdo
                 </label>
                 <Select
@@ -1114,7 +1114,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Origem tipo */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Tipo de Origem
                 </label>
                 <Select
@@ -1129,7 +1129,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Origem nome */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Nome da Origem
                 </label>
                 <Input
@@ -1141,7 +1141,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Formato do conteúdo */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Formato do Conteúdo
                 </label>
                 <Select
@@ -1158,7 +1158,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               {formData.formato_conteudo === "video" && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       URL do Vídeo
                     </label>
                     <Input
@@ -1168,7 +1168,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       Provedor
                     </label>
                     <Select
@@ -1181,7 +1181,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       URL da Thumbnail
                     </label>
                     <Input
@@ -1191,7 +1191,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       Duração (segundos)
                     </label>
                     <Input
@@ -1207,7 +1207,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               {/* Campos para link */}
               {formData.formato_conteudo === "link" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     URL
                   </label>
                   <Input
@@ -1222,7 +1222,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               {(formData.formato_conteudo === "pdf" || formData.formato_conteudo === "arquivo") && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       Nome do Arquivo
                     </label>
                     <Input
@@ -1232,7 +1232,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       URL do Arquivo
                     </label>
                     <Input
@@ -1242,7 +1242,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       Tipo do Arquivo
                     </label>
                     <Input
@@ -1257,7 +1257,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               {/* Conteúdo (texto) */}
               {(formData.formato_conteudo === "texto" || !formData.formato_conteudo) && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Conteúdo
                   </label>
                   <TextArea
@@ -1271,7 +1271,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Prioridade */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Prioridade
                 </label>
                 <Select
@@ -1293,7 +1293,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, obrigatorio: e.target.checked })}
                   className="rounded border-gray-300"
                 />
-                <label htmlFor="obrigatorio" className="text-sm text-gray-300">
+                <label htmlFor="obrigatorio" className="text-sm text-slate-300">
                   Conteúdo obrigatório
                 </label>
               </div>
@@ -1301,7 +1301,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               {/* Validade */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Validade Início
                   </label>
                   <Input
@@ -1311,7 +1311,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Validade Fim
                   </label>
                   <Input
@@ -1324,7 +1324,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Status publicação */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Status de Publicação
                 </label>
                 <Select
@@ -1336,7 +1336,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
 
               {/* Vínculo com Estrutura Comercial */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Vincular à Estrutura Comercial
                 </label>
                 <Select
@@ -1369,7 +1369,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, ativo: e.target.checked ? 1 : 0 })}
               className="rounded border-gray-300"
             />
-            <label htmlFor="ativo" className="text-sm text-gray-300">
+            <label htmlFor="ativo" className="text-sm text-slate-300">
               Ativo
             </label>
           </div>
@@ -1494,7 +1494,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
         <div className="space-y-3">
           {/* Busca */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1618,7 +1618,7 @@ export const RoteirosOperacionaisPage: React.FC = () => {
               onChange={handleImport}
               className="hidden"
             />
-            <span className="flex items-center gap-2 px-4 py-2 bg-[#111827] border rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-50">
+            <span className="flex items-center gap-2 px-4 py-2 bg-[#111827] border rounded-lg text-sm font-medium text-slate-300 hover:bg-gray-50">
               <Upload size={16} />
               Importar
             </span>
@@ -1630,8 +1630,8 @@ export const RoteirosOperacionaisPage: React.FC = () => {
       <Card className="overflow-hidden">
         <div className="divide-y divide-gray-100">
           {rootItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-              <FileText size={48} className="mb-4 text-gray-300" />
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+              <FileText size={48} className="mb-4 text-slate-300" />
               <p>Nenhum roteiro operacional encontrado</p>
               <Button
                 variant="primary"

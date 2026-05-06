@@ -33,7 +33,7 @@ const statusConfig: Record<
   { bg: string; text: string; label: string }
 > = {
   ativo: { bg: "bg-green-100", text: "text-green-700", label: "Ativo" },
-  inativo: { bg: "bg-gray-100", text: "text-gray-600", label: "Inativo" },
+  inativo: { bg: "bg-gray-100", text: "text-slate-600", label: "Inativo" },
   pendente: { bg: "bg-yellow-100", text: "text-yellow-700", label: "Pendente" },
   aprovado: { bg: "bg-green-100", text: "text-green-700", label: "Aprovado" },
   reprovado: { bg: "bg-red-100", text: "text-red-700", label: "Reprovado" },

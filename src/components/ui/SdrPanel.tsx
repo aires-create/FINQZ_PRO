@@ -53,7 +53,7 @@ const intentLabels: Record<string, { label: string; color: string; icon: React.R
   preco: { label: "Pergunta sobre Preço", color: "bg-purple-100 text-purple-700", icon: <TrendingUp className="w-4 h-4" /> },
   sem_interesse: { label: "Sem Interesse", color: "bg-red-100 text-red-700", icon: <XCircle className="w-4 h-4" /> },
   quer_humano: { label: "Quer Humano", color: "bg-orange-100 text-orange-700", icon: <User className="w-4 h-4" /> },
-  dados_insuficientes: { label: "Dados Insuficientes", color: "bg-gray-100 text-gray-700", icon: <AlertTriangle className="w-4 h-4" /> },
+  dados_insuficientes: { label: "Dados Insuficientes", color: "bg-gray-100 text-slate-700", icon: <AlertTriangle className="w-4 h-4" /> },
 };
 
 const actionLabels: Record<string, string> = {
@@ -166,7 +166,7 @@ export function SdrPanel({
   const intentInfo = decision ? intentLabels[decision.intent] : null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Header */}
       <div
         className="p-3 bg-gradient-to-r from-[#000dff] to-[#3388d9] text-white flex items-center justify-between cursor-pointer"
@@ -176,7 +176,7 @@ export function SdrPanel({
           <Bot className="w-5 h-5" />
           <span className="font-semibold">SDR IA</span>
           {decision && (
-            <span className="bg-white/20 px-2 py-0.5 rounded text-xs">
+            <span className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 px-2 py-0.5 rounded text-xs">
               {intentInfo?.label || decision.intent}
             </span>
           )}
@@ -223,15 +223,15 @@ export function SdrPanel({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${intentInfo?.color || "bg-gray-100 text-gray-700"}`}
+                    className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${intentInfo?.color || "bg-gray-100 text-slate-700"}`}
                   >
                     {intentInfo?.icon}
                     {intentInfo?.label || decision.intent}
                   </span>
                 </div>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-slate-500">
                   Confiança:{" "}
-                  <span className="font-semibold text-gray-700">
+                  <span className="font-semibold text-slate-700">
                     {Math.round(decision.confidence * 100)}%
                   </span>
                 </div>
@@ -253,8 +253,8 @@ export function SdrPanel({
 
               {/* Ação recomendada */}
               <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="text-xs text-gray-500 mb-1">Ação Recomendada</div>
-                <div className="text-sm font-medium text-gray-800">
+                <div className="text-xs text-slate-500 mb-1">Ação Recomendada</div>
+                <div className="text-sm font-medium text-slate-800">
                   {actionLabels[decision.recommended_action] || decision.recommended_action}
                 </div>
               </div>
@@ -266,7 +266,7 @@ export function SdrPanel({
                     <Sparkles className="w-3 h-3" />
                     Resposta Sugerida
                   </div>
-                  <div className="text-sm text-gray-700">{decision.response_text}</div>
+                  <div className="text-sm text-slate-700">{decision.response_text}</div>
                 </div>
               )}
 
@@ -323,8 +323,8 @@ export function SdrPanel({
 
           {/* Estado inicial */}
           {!decision && !error && !isAnalyzing && (
-            <div className="text-center py-4 text-gray-500">
-              <Brain className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+            <div className="text-center py-4 text-slate-500">
+              <Brain className="w-8 h-8 mx-auto mb-2 text-slate-300" />
               <p className="text-sm">
                 Clique em "Analisar Mensagem" para obter insights do SDR IA
               </p>

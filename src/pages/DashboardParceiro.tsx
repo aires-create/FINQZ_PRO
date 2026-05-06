@@ -28,7 +28,7 @@ export const DashboardParceiroPage: React.FC = () => {
   if (!parceiro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Parceiro não encontrado</p>
+        <p className="text-slate-500">Parceiro não encontrado</p>
       </div>
     );
   }
@@ -38,7 +38,7 @@ export const DashboardParceiroPage: React.FC = () => {
     <div className="p-6 space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Olá, {parceiro.nome}!</h1>
-        <p className="text-gray-500">Bem-vindo à sua área de parceiro</p>
+        <p className="text-slate-500">Bem-vindo à sua área de parceiro</p>
       </div>
 
       {/* Stats Grid */}
@@ -50,7 +50,7 @@ export const DashboardParceiroPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-bold text-white">{parceiroOportunidades.length}</p>
-          <p className="text-sm text-gray-500">Total de Operações</p>
+          <p className="text-sm text-slate-500">Total de Operações</p>
         </div>
 
         <div className="bg-[#111827] p-6 rounded-2xl border border-[#1f2937]">
@@ -62,7 +62,7 @@ export const DashboardParceiroPage: React.FC = () => {
           <p className="text-2xl font-bold text-white">
             R$ {valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
           </p>
-          <p className="text-sm text-gray-500">Valor Total</p>
+          <p className="text-sm text-slate-500">Valor Total</p>
         </div>
 
         <div className="bg-[#111827] p-6 rounded-2xl border border-[#1f2937]">
@@ -72,7 +72,7 @@ export const DashboardParceiroPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-bold text-white">{emAnalise}</p>
-          <p className="text-sm text-gray-500">Em Análise</p>
+          <p className="text-sm text-slate-500">Em Análise</p>
         </div>
 
         <div className="bg-[#111827] p-6 rounded-2xl border border-[#1f2937]">
@@ -82,7 +82,7 @@ export const DashboardParceiroPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-bold text-white">{aprovados}</p>
-          <p className="text-sm text-gray-500">Aprovados</p>
+          <p className="text-sm text-slate-500">Aprovados</p>
         </div>
       </div>
 
@@ -90,14 +90,14 @@ export const DashboardParceiroPage: React.FC = () => {
       <div className="bg-[#111827] rounded-2xl border border-[#1f2937] p-6">
         <h2 className="text-lg font-semibold text-white mb-4">Últimas Operações</h2>
         {parceiroOportunidades.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">Nenhuma operação encontrada</p>
+          <p className="text-slate-500 text-center py-8">Nenhuma operação encontrada</p>
         ) : (
           <div className="space-y-3">
             {parceiroOportunidades.slice(0, 5).map((opp) => (
               <div key={opp.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                 <div>
                   <p className="font-medium text-white">{opp.nome}</p>
-                  <p className="text-sm text-gray-500">{opp.produto}</p>
+                  <p className="text-sm text-slate-500">{opp.produto}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-medium text-white">
@@ -106,7 +106,7 @@ export const DashboardParceiroPage: React.FC = () => {
                   <span className={`text-xs px-2 py-1 rounded-full ${
                     opp.status === "aprovado" ? "bg-green-100 text-green-700" :
                     opp.status === "analise" ? "bg-yellow-100 text-yellow-700" :
-                    "bg-gray-100 text-gray-300"
+                    "bg-gray-100 text-slate-300"
                   }`}>
                     {opp.status}
                   </span>

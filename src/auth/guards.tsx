@@ -30,13 +30,13 @@ interface PublicRouteProps {
 // ============================================
 
 export const LoadingScreen: React.FC = () => (
-  <div className="min-h-screen bg-white dark:bg-[#00010b] flex items-center justify-center">
+  <div className="min-h-screen bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 dark:bg-[#00010b] flex items-center justify-center">
     <div className="text-center">
       <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#000dff] to-[#3388d9] rounded-2xl flex items-center justify-center">
         <span className="text-white font-bold text-2xl">F</span>
       </div>
       <div className="w-8 h-8 border-2 border-[#000dff] border-t-transparent rounded-full animate-spin mx-auto"></div>
-      <p className="text-gray-500 dark:text-gray-400 mt-4">Carregando...</p>
+      <p className="text-slate-500 dark:text-slate-400 mt-4">Carregando...</p>
     </div>
   </div>
 );
@@ -53,8 +53,8 @@ export const AccessDenied: React.FC = () => (
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h1>
-      <p className="text-gray-600 mb-6">
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">Acesso Negado</h1>
+      <p className="text-slate-600 mb-6">
         Você não tem permissão para acessar esta página. Entre em contato com o administrador se acredita que isso é um erro.
       </p>
       <a

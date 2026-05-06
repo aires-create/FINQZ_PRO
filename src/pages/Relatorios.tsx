@@ -63,7 +63,7 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, icon, color, variation,
   >
     <div className="flex items-start justify-between">
       <div>
-        <p className="text-sm text-gray-500 mb-1">{label}</p>
+        <p className="text-sm text-slate-500 mb-1">{label}</p>
         <p className="text-xl font-semibold" style={{ color }}>
           {value}
         </p>
@@ -86,10 +86,10 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, icon, color, variation,
 const EmptyState: React.FC<EmptyStateProps> = ({ title, message, icon }) => (
   <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-      {icon || <FileText className="w-8 h-8 text-gray-400" />}
+      {icon || <FileText className="w-8 h-8 text-slate-400" />}
     </div>
     <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
-    <p className="text-gray-500 max-w-md">{message}</p>
+    <p className="text-slate-500 max-w-md">{message}</p>
   </div>
 );
 
@@ -99,7 +99,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ title, message, icon }) => (
 const LoadingState: React.FC = () => (
   <div className="flex flex-col items-center justify-center py-16">
     <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-4" />
-    <p className="text-gray-500">Carregando dados...</p>
+    <p className="text-slate-500">Carregando dados...</p>
   </div>
 );
 
@@ -127,7 +127,7 @@ const ReportFilters: React.FC<{
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Período */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Período</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Período</label>
           <select
             value={filters.periodo}
             onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod)}
@@ -143,7 +143,7 @@ const ReportFilters: React.FC<{
         {filters.periodo === 'personalizado' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Data Início</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Data Início</label>
               <input
                 type="date"
                 value={filters.dataInicio || ''}
@@ -152,7 +152,7 @@ const ReportFilters: React.FC<{
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Data Fim</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Data Fim</label>
               <input
                 type="date"
                 value={filters.dataFim || ''}
@@ -165,7 +165,7 @@ const ReportFilters: React.FC<{
 
         {/* Produto */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Produto</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Produto</label>
           <select
             value={filters.produto || 'todos'}
             onChange={(e) => onChange({ ...filters, produto: e.target.value })}
@@ -180,7 +180,7 @@ const ReportFilters: React.FC<{
 
         {/* Parceiro */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Parceiro</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Parceiro</label>
           <select
             value={filters.parceiro || 'todos'}
             onChange={(e) => onChange({ ...filters, parceiro: e.target.value })}
@@ -195,7 +195,7 @@ const ReportFilters: React.FC<{
 
         {/* Status */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
           <select
             value={filters.status || 'todos'}
             onChange={(e) => onChange({ ...filters, status: e.target.value })}
@@ -210,7 +210,7 @@ const ReportFilters: React.FC<{
 
         {/* Busca */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Buscar</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1">Buscar</label>
           <input
             type="text"
             placeholder="Buscar por nome..."
@@ -372,21 +372,21 @@ const RelatoriosPage: React.FC = () => {
             <table className="w-full bg-[#111827] border border-[#1f2937] rounded-lg">
               <thead>
                 <tr className="bg-gray-50 border-b border-[#1f2937]">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Agrupamento</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Quantidade</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Valor Total</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Comissão</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Ticket Médio</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Agrupamento</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-300">Quantidade</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-300">Valor Total</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-300">Comissão</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-300">Ticket Médio</th>
                 </tr>
               </thead>
               <tbody>
                 {consolidatedData.map((row, index) => (
                   <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-white">{row.label}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 text-right">{reportUtils.formatNumber(row.quantidade)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 text-right">{reportUtils.formatNumber(row.quantidade)}</td>
                     <td className="px-4 py-3 text-sm text-white text-right font-medium">{reportUtils.formatCurrency(row.valorTotal)}</td>
                     <td className="px-4 py-3 text-sm text-green-600 text-right">{reportUtils.formatCurrency(row.comissaoTotal)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 text-right">{reportUtils.formatCurrency(row.ticketMedio || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 text-right">{reportUtils.formatCurrency(row.ticketMedio || 0)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -396,7 +396,7 @@ const RelatoriosPage: React.FC = () => {
                   <td className="px-4 py-3 text-sm text-white text-right">{reportUtils.formatNumber(consolidatedData.reduce((sum, r) => sum + r.quantidade, 0))}</td>
                   <td className="px-4 py-3 text-sm text-white text-right">{reportUtils.formatCurrency(consolidatedData.reduce((sum, r) => sum + r.valorTotal, 0))}</td>
                   <td className="px-4 py-3 text-sm text-green-600 text-right">{reportUtils.formatCurrency(consolidatedData.reduce((sum, r) => sum + r.comissaoTotal, 0))}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">-</td>
+                  <td className="px-4 py-3 text-sm text-slate-600 text-right">-</td>
                 </tr>
               </tfoot>
             </table>
@@ -409,36 +409,36 @@ const RelatoriosPage: React.FC = () => {
             <table className="w-full bg-[#111827] border border-[#1f2937] rounded-lg">
               <thead>
                 <tr className="bg-gray-50 border-b border-[#1f2937]">
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Cliente</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">CPF/CNPJ</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Produto</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Parceiro</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Etapa</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Valor</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-gray-300">Comissão</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300">Criação</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Cliente</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">CPF/CNPJ</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Produto</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Parceiro</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Etapa</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-300">Valor</th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold text-slate-300">Comissão</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-slate-300">Criação</th>
                 </tr>
               </thead>
               <tbody>
                 {analyticalData.map((row) => (
                   <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-white">{row.cliente}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 font-mono">{row.cpfCnpj}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{row.produto}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{row.parceiro}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 font-mono">{row.cpfCnpj}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{row.produto}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{row.parceiro}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         ['encerrado', 'liberacao'].includes(row.etapa) ? 'bg-green-100 text-green-800' :
                         ['aprovacao', 'formalizacao'].includes(row.etapa) ? 'bg-blue-100 text-blue-800' :
                         ['analise', 'documentacao'].includes(row.etapa) ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-200'
+                        'bg-gray-100 text-slate-200'
                       }`}>
                         {row.etapa}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-white text-right font-medium">{reportUtils.formatCurrency(row.valor)}</td>
                     <td className="px-4 py-3 text-sm text-green-600 text-right">{reportUtils.formatCurrency(row.comissao)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{row.dataCriacao}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{row.dataCriacao}</td>
                   </tr>
                 ))}
               </tbody>
@@ -458,7 +458,7 @@ const RelatoriosPage: React.FC = () => {
               
               return (
                 <div key={etapa} className="flex items-center gap-4">
-                  <div className="w-32 text-sm text-gray-600 capitalize">{etapa}</div>
+                  <div className="w-32 text-sm text-slate-600 capitalize">{etapa}</div>
                   <div className="flex-1 bg-gray-200 rounded-full h-6 overflow-hidden">
                     <div 
                       className="h-full rounded-full transition-all duration-500"
@@ -471,7 +471,7 @@ const RelatoriosPage: React.FC = () => {
                     />
                   </div>
                   <div className="w-20 text-right text-sm font-medium">{count}</div>
-                  <div className="w-16 text-right text-sm text-gray-500">{taxa.toFixed(1)}%</div>
+                  <div className="w-16 text-right text-sm text-slate-500">{taxa.toFixed(1)}%</div>
                 </div>
               );
             })}
@@ -513,7 +513,7 @@ const RelatoriosPage: React.FC = () => {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 reportType === type.id
                   ? 'bg-blue-600 text-white'
-                  : 'bg-[#111827] text-gray-300 border border-[#1f2937] hover:bg-gray-50'
+                  : 'bg-[#111827] text-slate-300 border border-[#1f2937] hover:bg-gray-50'
               }`}
             >
               {type.label}

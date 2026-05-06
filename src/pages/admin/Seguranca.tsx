@@ -77,7 +77,7 @@ export const SegurancaPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMostrarSenha(!mostrarSenha)}
-                className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
               >
                 {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -93,7 +93,7 @@ export const SegurancaPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}
-                className="absolute right-3 top-8 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-8 text-slate-400 hover:text-slate-600"
               >
                 {mostrarNovaSenha ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -116,7 +116,7 @@ export const SegurancaPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium text-white">Autenticação de Dois Fatores (2FA)</h4>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-slate-500 mt-1">
                 Adicione uma camada extra de segurança usando um código de verificação
               </p>
             </div>
@@ -138,7 +138,7 @@ export const SegurancaPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h4 className="font-medium text-white">Notificação de Login</h4>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-slate-500 mt-1">
                 Receba um e-mail quando alguém fazer login na sua conta
               </p>
             </div>
@@ -158,7 +158,7 @@ export const SegurancaPage: React.FC = () => {
         {/* Timeout de Sessão */}
         <div className="border-t border-[#1f2937] pt-6">
           <h4 className="font-medium text-white mb-3">Timeout de Sessão</h4>
-          <p className="text-sm text-gray-500 mb-3">
+          <p className="text-sm text-slate-500 mb-3">
             Desconectar automaticamente após inatividade
           </p>
           <select
@@ -183,7 +183,7 @@ export const SegurancaPage: React.FC = () => {
                 <Shield size={18} className="text-green-500" />
                 <div>
                   <p className="text-sm font-medium text-white">Chrome - Windows</p>
-                  <p className="text-xs text-gray-500">São Paulo, SP • Última atividade: agora</p>
+                  <p className="text-xs text-slate-500">São Paulo, SP • Última atividade: agora</p>
                 </div>
               </div>
               <span className="text-xs text-green-600 font-medium">Atual</span>

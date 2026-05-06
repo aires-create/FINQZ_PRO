@@ -175,24 +175,24 @@ export const LoginParceiroPage: React.FC = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-[#000dff] to-[#59a8f0] bg-clip-text text-transparent">
               FINQZ PRO
             </h1>
-            <p className="text-gray-500 mt-1">Área do Parceiro</p>
+            <p className="text-slate-500 mt-1">Área do Parceiro</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+          <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border border-gray-200">
             <div className="text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center">
                 <CheckCircle className="text-green-600" size={32} />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              <h2 className="text-lg font-semibold text-slate-900 mb-2">
                 Senha Redefinida!
               </h2>
-              <p className="text-gray-500 text-sm mb-6">
+              <p className="text-slate-500 text-sm mb-6">
                 Sua nova senha foi definida com sucesso.
               </p>
               
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <p className="text-xs text-gray-500 mb-1">Nova senha:</p>
-                <p className="text-xl font-mono font-bold text-gray-900">{novaSenha}</p>
+                <p className="text-xs text-slate-500 mb-1">Nova senha:</p>
+                <p className="text-xl font-mono font-bold text-slate-900">{novaSenha}</p>
               </div>
 
               <button
@@ -208,7 +208,7 @@ export const LoginParceiroPage: React.FC = () => {
           </div>
 
           <div className="mt-6 text-center">
-            <a href="/parceiro/login" className="text-sm text-gray-500 hover:text-[#000dff]">
+            <a href="/parceiro/login" className="text-sm text-slate-500 hover:text-[#000dff]">
               ← Voltar para login
             </a>
           </div>
@@ -229,19 +229,19 @@ export const LoginParceiroPage: React.FC = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-[#000dff] to-[#59a8f0] bg-clip-text text-transparent">
               FINQZ PRO
             </h1>
-            <p className="text-gray-500 mt-1">Área do Parceiro</p>
+            <p className="text-slate-500 mt-1">Área do Parceiro</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+          <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border border-gray-200">
             <button
               onClick={() => setView("recuperar")}
-              className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4"
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-4"
             >
               <ArrowLeft size={18} />
               Voltar
             </button>
 
-            <h2 className="text-lg font-semibold text-gray-900 mb-6 text-center">
+            <h2 className="text-lg font-semibold text-slate-900 mb-6 text-center">
               Criar nova senha
             </h2>
 
@@ -254,7 +254,7 @@ export const LoginParceiroPage: React.FC = () => {
 
             <form onSubmit={handleNovaSenha} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Nova Senha
                 </label>
                 <div className="relative">
@@ -263,13 +263,13 @@ export const LoginParceiroPage: React.FC = () => {
                     value={novaSenha}
                     onChange={(e) => setNovaSenha(e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:border-[#000dff] transition-colors pr-12"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-900 focus:outline-none focus:border-[#000dff] transition-colors pr-12"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowSenha(!showSenha)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
                   >
                     {showSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -277,7 +277,7 @@ export const LoginParceiroPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Confirmar Senha
                 </label>
                 <input
@@ -285,7 +285,7 @@ export const LoginParceiroPage: React.FC = () => {
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
                   placeholder="Repita a nova senha"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:border-[#000dff] transition-colors"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-900 focus:outline-none focus:border-[#000dff] transition-colors"
                   required
                 />
               </div>
@@ -323,22 +323,22 @@ export const LoginParceiroPage: React.FC = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-[#000dff] to-[#59a8f0] bg-clip-text text-transparent">
               FINQZ PRO
             </h1>
-            <p className="text-gray-500 mt-1">Área do Parceiro</p>
+            <p className="text-slate-500 mt-1">Área do Parceiro</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
+          <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border border-gray-200">
             <button
               onClick={() => setView("login")}
-              className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4"
+              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 mb-4"
             >
               <ArrowLeft size={18} />
               Voltar
             </button>
 
-            <h2 className="text-lg font-semibold text-gray-900 mb-2 text-center">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2 text-center">
               Esqueci minha senha
             </h2>
-            <p className="text-gray-500 text-sm mb-6 text-center">
+            <p className="text-slate-500 text-sm mb-6 text-center">
               Informe seu código de parceiro e email para recuperar o acesso.
             </p>
 
@@ -351,7 +351,7 @@ export const LoginParceiroPage: React.FC = () => {
 
             <form onSubmit={handleRecuperarSenha} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Código do Parceiro
                 </label>
                 <input
@@ -359,13 +359,13 @@ export const LoginParceiroPage: React.FC = () => {
                   value={codigoRecuperacao}
                   onChange={(e) => setCodigoRecuperacao(e.target.value)}
                   placeholder="Ex: 1001"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:border-[#000dff] transition-colors"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-900 focus:outline-none focus:border-[#000dff] transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
                   Email cadastrado
                 </label>
                 <input
@@ -373,7 +373,7 @@ export const LoginParceiroPage: React.FC = () => {
                   value={emailRecuperacao}
                   onChange={(e) => setEmailRecuperacao(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:border-[#000dff] transition-colors"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-900 focus:outline-none focus:border-[#000dff] transition-colors"
                   required
                 />
               </div>
@@ -414,15 +414,15 @@ export const LoginParceiroPage: React.FC = () => {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-[#000dff] to-[#59a8f0] bg-clip-text text-transparent">
             FINQZ PRO
           </h1>
-          <p className="text-gray-500 mt-1">Área do Parceiro</p>
+          <p className="text-slate-500 mt-1">Área do Parceiro</p>
         </div>
 
         {/* Card de Login */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2 text-center">
+        <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg border border-gray-200">
+          <h2 className="text-lg font-semibold text-slate-900 mb-2 text-center">
             FINQZ PRO
           </h2>
-          <p className="text-gray-500 text-sm mb-6 text-center">
+          <p className="text-slate-500 text-sm mb-6 text-center">
             Digite seu código de acesso ou e-mail para continuar
           </p>
 
@@ -435,7 +435,7 @@ export const LoginParceiroPage: React.FC = () => {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Código de Acesso ou E-mail
               </label>
               <input
@@ -443,13 +443,13 @@ export const LoginParceiroPage: React.FC = () => {
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
                 placeholder="FINQZ-0001 ou email@empresa.com"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:border-[#000dff] transition-colors"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-900 focus:outline-none focus:border-[#000dff] transition-colors"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">
                 Senha
               </label>
               <div className="relative">
@@ -458,13 +458,13 @@ export const LoginParceiroPage: React.FC = () => {
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="Digite sua senha"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:border-[#000dff] transition-colors pr-12"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-slate-900 focus:outline-none focus:border-[#000dff] transition-colors pr-12"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowSenha(!showSenha)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
                 >
                   {showSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -497,7 +497,7 @@ export const LoginParceiroPage: React.FC = () => {
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-slate-500">
               É parceiro e ainda não tem acesso?{" "}
               <a href="/app/parceiros" className="text-[#000dff] hover:underline font-medium">
                 Fale com a gente
@@ -508,7 +508,7 @@ export const LoginParceiroPage: React.FC = () => {
 
         {/* Link para área admin */}
         <div className="mt-6 text-center">
-          <a href="/" className="text-sm text-gray-500 hover:text-[#000dff]">
+          <a href="/" className="text-sm text-slate-500 hover:text-[#000dff]">
             ← Voltar para área administrativa
           </a>
         </div>

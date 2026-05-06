@@ -48,18 +48,18 @@ export const cardHoverClasses = "bg-[#111827] border border-[#1f2937] rounded-xl
 
 // Header padrão
 export const headerClasses = "flex items-center justify-between mb-6";
-export const headerTitleClasses = "text-xl font-semibold text-gray-200";
+export const headerTitleClasses = "text-xl font-semibold text-slate-200";
 export const headerActionsClasses = "flex gap-2";
 
 // Botão primário
 export const buttonPrimaryClasses = "bg-[#000dff] hover:bg-[#0011cc] text-white px-4 py-2 rounded-lg font-medium";
 
 // Botão secundário
-export const buttonSecondaryClasses = "border border-[#1f2937] text-gray-300 px-4 py-2 rounded-lg hover:bg-[#1f2937]";
+export const buttonSecondaryClasses = "border border-[#1f2937] text-slate-300 px-4 py-2 rounded-lg hover:bg-[#1f2937]";
 
 // KPI Card
 export const kpiCardClasses = "bg-[#111827] border border-[#1f2937] rounded-xl p-4";
-export const kpiLabelClasses = "text-sm text-gray-400";
+export const kpiLabelClasses = "text-sm text-slate-400";
 export const kpiValueClasses = "text-2xl font-semibold text-white mt-1";
 
 // Input padrão

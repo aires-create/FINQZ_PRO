@@ -348,9 +348,9 @@ export default function Campanhas() {
                           {campanha.tipo.toUpperCase()}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-500 mb-3">{campanha.descricao}</p>
+                      <p className="text-sm text-slate-500 mb-3">{campanha.descricao}</p>
                       
-                      <div className="flex items-center gap-6 text-sm text-gray-600">
+                      <div className="flex items-center gap-6 text-sm text-slate-600">
                         <span className="flex items-center gap-1">
                           <Send className="w-4 h-4" />
                           {campanha.totalEnvios || 0} envios
@@ -458,7 +458,7 @@ export default function Campanhas() {
           <div>
             <label className="block text-sm font-medium mb-1">
               Mensagem 
-              <span className="text-gray-400 font-normal ml-2">(Use {'{{nome}}'} para variável)</span>
+              <span className="text-slate-400 font-normal ml-2">(Use {'{{nome}}'} para variável)</span>
             </label>
             <TextArea
               value={formData.conteudo}
@@ -471,7 +471,7 @@ export default function Campanhas() {
           {/* Preview */}
           {formData.conteudo && (
             <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-xs text-gray-500 mb-1">Preview:</p>
+              <p className="text-xs text-slate-500 mb-1">Preview:</p>
               <p className="text-sm">{getPreview(formData.conteudo, "João Silva")}</p>
             </div>
           )}
@@ -493,7 +493,7 @@ export default function Campanhas() {
                     className="rounded"
                   />
                   <span>{contato.nome}</span>
-                  <span className="text-gray-400 text-sm">{contato.celular}</span>
+                  <span className="text-slate-400 text-sm">{contato.celular}</span>
                 </label>
               ))}
             </div>
@@ -522,7 +522,7 @@ export default function Campanhas() {
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg text-center">
                 <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-sm text-gray-500">Total de Mensagens</p>
+                <p className="text-sm text-slate-500">Total de Mensagens</p>
               </div>
               <div className="bg-green-900/20 p-4 rounded-lg text-center">
                 <p className="text-2xl font-bold text-green-600">{stats.successRate.toFixed(1)}%</p>
@@ -533,7 +533,7 @@ export default function Campanhas() {
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-gray-400" />
+                  <Clock className="w-4 h-4 text-slate-400" />
                   Pendentes
                 </span>
                 <span className="font-medium">{stats.pending}</span>

@@ -333,7 +333,7 @@ export default function Conversas() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Buscar por nome ou telefone..."
@@ -361,7 +361,7 @@ export default function Conversas() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
               showQueue 
                 ? 'bg-[#000dff] text-white' 
-                : 'bg-[#111827] border border-[#1f2937] text-gray-300 hover:bg-gray-50'
+                : 'bg-[#111827] border border-[#1f2937] text-slate-300 hover:bg-gray-50'
             }`}
           >
             <Users className="w-4 h-4" />
@@ -378,7 +378,7 @@ export default function Conversas() {
         {showQueue && (
           <div className="mb-6 bg-[#111827] rounded-xl border border-[#1f2937] overflow-hidden">
             <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-200 flex items-center gap-2">
+              <h3 className="font-semibold text-slate-200 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-orange-500" />
                 Fila de Atendimento
               </h3>
@@ -386,7 +386,7 @@ export default function Conversas() {
                 <button
                   onClick={() => setQueueFilter("waiting")}
                   className={`px-3 py-1 rounded text-sm ${
-                    queueFilter === "waiting" ? "bg-[#000dff] text-white" : "bg-gray-100 text-gray-600"
+                    queueFilter === "waiting" ? "bg-[#000dff] text-white" : "bg-gray-100 text-slate-600"
                   }`}
                 >
                   Aguardando
@@ -394,14 +394,14 @@ export default function Conversas() {
                 <button
                   onClick={() => setQueueFilter("priority")}
                   className={`px-3 py-1 rounded text-sm ${
-                    queueFilter === "priority" ? "bg-[#000dff] text-white" : "bg-gray-100 text-gray-600"
+                    queueFilter === "priority" ? "bg-[#000dff] text-white" : "bg-gray-100 text-slate-600"
                   }`}
                 >
                   Prioridade
                 </button>
                 <button
                   onClick={() => loadQueue()}
-                  className="px-3 py-1 rounded text-sm bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  className="px-3 py-1 rounded text-sm bg-gray-100 text-slate-600 hover:bg-gray-200"
                 >
                   <Filter className="w-4 h-4" />
                 </button>
@@ -409,9 +409,9 @@ export default function Conversas() {
             </div>
             
             {loadingQueue ? (
-              <div className="p-8 text-center text-gray-500">Carregando fila...</div>
+              <div className="p-8 text-center text-slate-500">Carregando fila...</div>
             ) : queueConversas.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">Nenhuma conversa na fila</div>
+              <div className="p-8 text-center text-slate-500">Nenhuma conversa na fila</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {queueConversas.map((conv) => (
@@ -430,14 +430,14 @@ export default function Conversas() {
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-200">{conv.cliente?.nome || 'Cliente'}</p>
-                        <p className="text-sm text-gray-500">{conv.cliente?.celular || conv.providerPhone}</p>
+                        <p className="font-medium text-slate-200">{conv.cliente?.nome || 'Cliente'}</p>
+                        <p className="text-sm text-slate-500">{conv.cliente?.celular || conv.providerPhone}</p>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-slate-500">
                           {conv.waitingTimeFormatted || 'agora'}
                         </p>
                         {conv.unreadCount && conv.unreadCount > 0 && (
@@ -498,22 +498,22 @@ export default function Conversas() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 truncate mt-1">
+                        <p className="text-sm text-slate-500 truncate mt-1">
                           {conv.ultimaMensagem?.content || 'Sem mensagens'}
                         </p>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-slate-400">
                             {conv.cliente?.celular}
                           </span>
-                          <span className="text-gray-300">•</span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-slate-300">•</span>
+                          <span className="text-xs text-slate-400">
                             {conv.lastMessageAt ? formatTime(conv.lastMessageAt) : ''}
                           </span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         {getStatusBadge(conv.conversationStatus)}
-                        <MessageCircle className="w-4 h-4 text-gray-400" />
+                        <MessageCircle className="w-4 h-4 text-slate-400" />
                       </div>
                     </div>
                     {conv.campanha && (
@@ -550,7 +550,7 @@ export default function Conversas() {
                     <h3 className="font-semibold text-white">
                       {selectedConversation.cliente?.nome || 'Cliente'}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-slate-500">
                       {selectedConversation.cliente?.celular}
                     </p>
                   </div>
@@ -604,7 +604,7 @@ export default function Conversas() {
                       className={`p-2 rounded-lg transition-colors ${
                         showSdrPanel 
                           ? 'bg-[#000dff] text-white' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          : 'bg-gray-100 text-slate-600 hover:bg-gray-200'
                       }`}
                       title={showSdrPanel ? "Ocultar SDR IA" : "Mostrar SDR IA"}
                     >
@@ -640,7 +640,7 @@ export default function Conversas() {
                 {loadingMensagens ? (
                   <LoadingState />
                 ) : mensagens.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-gray-400">
+                  <div className="flex items-center justify-center h-full text-slate-400">
                     <p>Nenhuma mensagem nesta conversa</p>
                   </div>
                 ) : (
@@ -664,7 +664,7 @@ export default function Conversas() {
                         </div>
                         <p className="text-sm">{msg.content}</p>
                         <div className={`flex items-center gap-1 mt-1 text-xs ${
-                          msg.direction === 'outbound' ? 'text-blue-200' : 'text-gray-400'
+                          msg.direction === 'outbound' ? 'text-blue-200' : 'text-slate-400'
                         }`}>
                           <span>{formatTime(msg.createdAt)}</span>
                           {msg.direction === 'outbound' && (

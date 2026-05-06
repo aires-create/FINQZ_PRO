@@ -65,7 +65,7 @@ const ScopeIcon: React.FC<{ scope: string }> = ({ scope }) => {
     case 'OWN':
       return <UserCircle size={14} className="text-orange-500" />;
     default:
-      return <UserCircle size={14} className="text-gray-400" />;
+      return <UserCircle size={14} className="text-slate-400" />;
   }
 };
 
@@ -464,21 +464,21 @@ export const UsuariosPage: React.FC = () => {
         <table className="w-full">
           <thead>
             <tr className="border-b border-[#1f2937] bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937]">
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">ID/CÓDIGO</th>
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Usuário</th>
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Email</th>
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Perfil</th>
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Escopo</th>
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Parceiro</th>
-              <th className="text-left text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Status</th>
-              <th className="text-right text-sm font-medium text-gray-500 bg-[#111827]:text-gray-500 p-4">Ações</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">ID/CÓDIGO</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Usuário</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Email</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Perfil</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Escopo</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Parceiro</th>
+              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Status</th>
+              <th className="text-right text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Ações</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsuarios.map((usuario) => (
               <tr key={usuario.id} className="border-b border-gray-100 bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937]">
                 <td className="p-4">
-                  <span className="font-mono text-sm text-gray-500">
+                  <span className="font-mono text-sm text-slate-500">
                     {usuario.access_code || "-"}
                   </span>
                 </td>
@@ -492,7 +492,7 @@ export const UsuariosPage: React.FC = () => {
                     <span className="font-medium text-white bg-[#111827]:text-white">{usuario.nome}</span>
                   </div>
                 </td>
-                <td className="p-4 text-gray-600 bg-[#111827]:text-gray-500">{usuario.email}</td>
+                <td className="p-4 text-slate-600 bg-[#111827]:text-slate-500">{usuario.email}</td>
                 <td className="p-4">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
@@ -500,7 +500,7 @@ export const UsuariosPage: React.FC = () => {
                     </span>
                     <button
                       onClick={() => viewPermissions(usuario.role)}
-                      className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-slate-600"
+                      className="p-1 rounded hover:bg-gray-100 text-slate-400 hover:text-slate-600"
                       title="Ver permissões"
                     >
                       <Eye size={14} />
@@ -510,16 +510,16 @@ export const UsuariosPage: React.FC = () => {
                 <td className="p-4">
                   <div className="flex items-center gap-1">
                     <ScopeIcon scope={usuario.scope || 'GLOBAL'} />
-                    <span className="text-xs text-gray-500">{getScopeLabel(usuario.role)}</span>
+                    <span className="text-xs text-slate-500">{getScopeLabel(usuario.role)}</span>
                   </div>
                 </td>
                 <td className="p-4">
                   {usuario.partner_id ? (
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-slate-600">
                       {Array.isArray(parceiros) ? parceiros.find(p => p.id === usuario.partner_id)?.nome || `- (${usuario.partner_id})` : `- (${usuario.partner_id})`}
                     </span>
                   ) : (
-                    <span className="text-sm text-gray-400">-</span>
+                    <span className="text-sm text-slate-400">-</span>
                   )}
                 </td>
                 <td className="p-4">
@@ -556,7 +556,7 @@ export const UsuariosPage: React.FC = () => {
                     {/* Botão Editar */}
                     <button
                       onClick={() => handleEdit(usuario)}
-                      className="p-2 text-gray-500 hover:text-slate-700 hover:bg-gray-100 rounded-lg"
+                      className="p-2 text-slate-500 hover:text-slate-700 hover:bg-gray-100 rounded-lg"
                       title="Editar usuário"
                     >
                       <Edit size={16} />
@@ -564,7 +564,7 @@ export const UsuariosPage: React.FC = () => {
                     {/* Botão Excluir */}
                     <button
                       onClick={() => handleDelete(usuario.id)}
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-900/20 rounded-lg"
+                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-900/20 rounded-lg"
                       title="Excluir usuário"
                     >
                       <Trash2 size={16} />
@@ -579,7 +579,7 @@ export const UsuariosPage: React.FC = () => {
 
       {filteredUsuarios.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500 bg-[#111827]:text-gray-500">Nenhum usuário encontrado</p>
+          <p className="text-slate-500 bg-[#111827]:text-slate-500">Nenhum usuário encontrado</p>
         </div>
       )}
 
@@ -593,7 +593,7 @@ export const UsuariosPage: React.FC = () => {
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-600 bg-[#111827]:hover:text-gray-200"
+                className="p-2 text-slate-500 hover:text-slate-600 bg-[#111827]:hover:text-slate-200"
               >
                 <X size={20} />
               </button>
@@ -601,7 +601,7 @@ export const UsuariosPage: React.FC = () => {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                   Nome *
                 </label>
                 <input
@@ -614,7 +614,7 @@ export const UsuariosPage: React.FC = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                   Email *
                 </label>
                 <input
@@ -628,7 +628,7 @@ export const UsuariosPage: React.FC = () => {
 
               {/* Tipo de Usuário */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                   Tipo de Usuário *
                 </label>
                 <select
@@ -665,7 +665,7 @@ export const UsuariosPage: React.FC = () => {
               {userType === "parceiro" && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                       Tipo de Parceiro *
                     </label>
                     <select
@@ -682,7 +682,7 @@ export const UsuariosPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                       Parceiro Vinculado *
                     </label>
                     <select
@@ -706,7 +706,7 @@ export const UsuariosPage: React.FC = () => {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                   Papel (Role) *
                 </label>
                 <select
@@ -724,7 +724,7 @@ export const UsuariosPage: React.FC = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                   Código de Acesso
                 </label>
                 <input
@@ -734,7 +734,7 @@ export const UsuariosPage: React.FC = () => {
                   placeholder={editingUsuario ? "" : "Gerado automaticamente"}
                   className={`w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white font-mono ${editingUsuario ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   {editingUsuario ? "Código fixo após criação" : "Gerado automaticamente ao criar"}
                 </p>
               </div>
@@ -742,7 +742,7 @@ export const UsuariosPage: React.FC = () => {
               {/* Campo Status - apenas em modo edição */}
               {editingUsuario && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                     Status
                   </label>
                   <select
@@ -758,7 +758,7 @@ export const UsuariosPage: React.FC = () => {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 bg-[#111827]:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
                   Senha Inicial {editingUsuario ? "(opcional)" : "*"}
                 </label>
                 <input
@@ -775,7 +775,7 @@ export const UsuariosPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 bg-[#111827]:text-gray-500 hover:bg-gray-100 bg-[#111827]:hover:bg-gray-50 bg-[#111827]:bg-gray-50 rounded-2xl"
+                  className="px-4 py-2 text-slate-600 bg-[#111827]:text-slate-500 hover:bg-gray-100 bg-[#111827]:hover:bg-gray-50 bg-[#111827]:bg-gray-50 rounded-2xl"
                 >
                   Cancelar
                 </button>
@@ -806,14 +806,14 @@ export const UsuariosPage: React.FC = () => {
                 </h2>
                 <div className="flex items-center gap-2 mt-1">
                   <ScopeIcon scope={ROLE_SCOPES[selectedRole]} />
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-slate-500">
                     Escopo: {SCOPE_LABELS[ROLE_SCOPES[selectedRole]]}
                   </span>
                 </div>
               </div>
               <button
                 onClick={() => setShowPermissionsModal(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500"
+                className="p-1 rounded-lg hover:bg-gray-100 text-slate-500"
               >
                 <X size={20} />
               </button>
@@ -827,13 +827,13 @@ export const UsuariosPage: React.FC = () => {
                       className="flex items-center gap-2 p-2 rounded-lg bg-gray-50"
                     >
                       <Shield size={14} className="text-[#000dff]" />
-                      <span className="text-sm text-gray-300">
+                      <span className="text-sm text-slate-300">
                         {PERMISSION_LABELS[permission] || permission}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-gray-500 text-sm p-2">
+                  <div className="text-slate-500 text-sm p-2">
                     Selecione um role para ver as permissões
                   </div>
                 )}

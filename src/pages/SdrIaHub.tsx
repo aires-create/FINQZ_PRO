@@ -1111,13 +1111,13 @@ export const SdrIaHubPage: React.FC = () => {
         <div className="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+              <div className="w-16 h-16 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                 <Bot className="w-8 h-8" />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-2xl font-bold">SDR IA Ativo</h2>
-                  <Badge variant="success" className="bg-white/20 text-white border-white/30">
+                  <Badge variant="success" className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 text-white border-white/30">
                     Online
                   </Badge>
                 </div>
@@ -1186,10 +1186,10 @@ export const SdrIaHubPage: React.FC = () => {
                   <button
                     key={i}
                     onClick={() => handleObjectionAction(obj)}
-                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/10 hover:bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <span>{obj.tipo}</span>
-                    <span className="bg-white/20 px-1.5 rounded text-[10px]">{obj.count}</span>
+                    <span className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 px-1.5 rounded text-[10px]">{obj.count}</span>
                     {obj.tipo === 'preço alto' && <DollarSign className="w-3 h-3 text-green-400" />}
                     {obj.tipo === 'preciso pensar' && <Clock className="w-3 h-3 text-blue-400" />}
                     {obj.tipo === 'concorrente' && <Shield className="w-3 h-3 text-purple-400" />}
@@ -1623,7 +1623,7 @@ export const SdrIaHubPage: React.FC = () => {
                       config.autoMode ? 'bg-green-500' : 'bg-slate-600'
                     }`}
                   >
-                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                    <div className={`absolute top-1 w-5 h-5 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-full transition-transform ${
                       config.autoMode ? 'translate-x-8' : 'translate-x-1'
                     }`} />
                   </button>
@@ -1640,7 +1640,7 @@ export const SdrIaHubPage: React.FC = () => {
                       config.assistedResponse ? 'bg-green-500' : 'bg-slate-600'
                     }`}
                   >
-                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                    <div className={`absolute top-1 w-5 h-5 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-full transition-transform ${
                       config.assistedResponse ? 'translate-x-8' : 'translate-x-1'
                     }`} />
                   </button>
@@ -2747,7 +2747,7 @@ export const SdrIaHubPage: React.FC = () => {
                 onClick={() => setHybridAiEnabled(!hybridAiEnabled)}
                 className={`w-12 h-6 rounded-full transition-colors ${hybridAiEnabled ? 'bg-blue-600' : 'bg-slate-600'}`}
               >
-                <div className={`w-5 h-5 rounded-full bg-white transition-transform ${hybridAiEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                <div className={`w-5 h-5 rounded-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 transition-transform ${hybridAiEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
             </div>
 

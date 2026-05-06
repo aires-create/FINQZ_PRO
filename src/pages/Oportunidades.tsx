@@ -1718,7 +1718,7 @@ const OportunidadesPageInner = () => {
   const renderCreditStatus = () => {
     const status = formData.rdStatus || 'nao_consultado';
     const configs: Record<string, { color: string; bg: string; label: string }> = {
-      nao_consultado: { color: 'text-gray-500', bg: 'bg-gray-400', label: 'Não consultado' },
+      nao_consultado: { color: 'text-slate-500', bg: 'bg-gray-400', label: 'Não consultado' },
       sem_restricao: { color: 'text-green-600', bg: 'bg-green-900/200', label: 'Sem restrição' },
       restricao: { color: 'text-red-600', bg: 'bg-red-900/200', label: 'Com restrição' },
     };
@@ -1734,7 +1734,7 @@ const OportunidadesPageInner = () => {
   const renderDoNotCallStatus = () => {
     const status = formData.doNotCallStatus || 'nao_consultado';
     const configs: Record<string, { color: string; bg: string; label: string }> = {
-      nao_consultado: { color: 'text-gray-500', bg: 'bg-gray-400', label: 'Não consultado' },
+      nao_consultado: { color: 'text-slate-500', bg: 'bg-gray-400', label: 'Não consultado' },
       liberado: { color: 'text-green-600', bg: 'bg-green-900/200', label: 'Liberado' },
       bloqueado: { color: 'text-yellow-600', bg: 'bg-yellow-900/200', label: 'Bloqueado' },
     };
@@ -2455,7 +2455,7 @@ const OportunidadesPageInner = () => {
 
                 <button
                   onClick={() => setShowFilterDrawer(false)}
-                  className="text-gray-500 hover:text-black"
+                  className="text-slate-500 hover:text-black"
                 >
                   ✕
                 </button>
@@ -2466,7 +2466,7 @@ const OportunidadesPageInner = () => {
 
                 {/* ================= ETAPA E RESPONSÁVEL ================= */}
                 <div>
-                  <div className="text-xs font-semibold text-gray-400 mb-2">
+                  <div className="text-xs font-semibold text-slate-400 mb-2">
                     OPERACIONAL
                   </div>
 
@@ -2491,7 +2491,7 @@ const OportunidadesPageInner = () => {
 
                 {/* ================= HIERARQUIA COMERCIAL ================= */}
                 <div>
-                  <div className="text-xs font-semibold text-gray-400 mb-2">
+                  <div className="text-xs font-semibold text-slate-400 mb-2">
                     HIERARQUIA COMERCIAL
                   </div>
 
@@ -2548,7 +2548,7 @@ const OportunidadesPageInner = () => {
 
                 {/* ================= DATAS ================= */}
                 <div>
-                  <div className="text-xs font-semibold text-gray-400 mb-2">
+                  <div className="text-xs font-semibold text-slate-400 mb-2">
                     DATAS
                   </div>
 
@@ -2556,7 +2556,7 @@ const OportunidadesPageInner = () => {
 
                     {/* DATA CRIAÇÃO */}
                     <div>
-                      <label className="text-xs text-gray-500">Data Criação</label>
+                      <label className="text-xs text-slate-500">Data Criação</label>
                       <div className="flex gap-2 mt-1">
                         <Input type="date" value={filters.dataCriacaoInicio} onChange={(e)=>updateFilter("dataCriacaoInicio", e.target.value)} placeholder="Início"/>
                         <Input type="date" value={filters.dataCriacaoFim} onChange={(e)=>updateFilter("dataCriacaoFim", e.target.value)} placeholder="Fim"/>
@@ -2565,7 +2565,7 @@ const OportunidadesPageInner = () => {
 
                     {/* DATA MOVIMENTAÇÃO */}
                     <div>
-                      <label className="text-xs text-gray-500">Data Movimentação</label>
+                      <label className="text-xs text-slate-500">Data Movimentação</label>
                       <div className="flex gap-2 mt-1">
                         <Input type="date" value={filters.dataMovimentacaoInicio} onChange={(e)=>updateFilter("dataMovimentacaoInicio", e.target.value)} placeholder="Início"/>
                         <Input type="date" value={filters.dataMovimentacaoFim} onChange={(e)=>updateFilter("dataMovimentacaoFim", e.target.value)} placeholder="Fim"/>
@@ -2574,7 +2574,7 @@ const OportunidadesPageInner = () => {
 
                     {/* DATA INTEGRAÇÃO */}
                     <div>
-                      <label className="text-xs text-gray-500">Data Integração</label>
+                      <label className="text-xs text-slate-500">Data Integração</label>
                       <div className="flex gap-2 mt-1">
                         <Input type="date" value={filters.dataIntegradoInicio} onChange={(e)=>updateFilter("dataIntegradoInicio", e.target.value)} placeholder="Início"/>
                         <Input type="date" value={filters.dataIntegradoFim} onChange={(e)=>updateFilter("dataIntegradoFim", e.target.value)} placeholder="Fim"/>
@@ -2634,7 +2634,7 @@ const OportunidadesPageInner = () => {
                     <h3 className="font-semibold text-white text-sm truncate">
                       {etapa.nome}
                     </h3>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 flex-shrink-0">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-slate-600 flex-shrink-0">
                       {columnOportunidades.length}
                     </span>
                   </div>
@@ -2645,33 +2645,33 @@ const OportunidadesPageInner = () => {
                     {/* Controle de ordenação */}
                     <div className="relative group">
                       <button className="p-1 rounded hover:bg-gray-200 transition-colors" title="Ordenar">
-                        <MoreHorizontal size={14} className="text-gray-500" />
+                        <MoreHorizontal size={14} className="text-slate-500" />
                       </button>
                       <div className="absolute right-0 top-full mt-1 w-40 rounded-lg shadow-lg border z-10 hidden group-hover:block bg-[#111827] border-[#1f2937]">
-                        <div className="px-2 py-1 text-[10px] text-gray-400 border-b border-[#1f2937]">
+                        <div className="px-2 py-1 text-[10px] text-slate-400 border-b border-[#1f2937]">
                           Ordenar por
                         </div>
                         <button
                           onClick={() => setColumnSort(prev => ({ ...prev, [etapa.id]: 'valor_desc' }))}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'valor_desc' ? 'bg-blue-900/20 text-blue-700' : 'text-gray-300 hover:bg-gray-50'}`}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'valor_desc' ? 'bg-blue-900/20 text-blue-700' : 'text-slate-300 hover:bg-gray-50'}`}
                         >
                           <ArrowDown size={12} /> Valor: maior
                         </button>
                         <button
                           onClick={() => setColumnSort(prev => ({ ...prev, [etapa.id]: 'valor_asc' }))}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'valor_asc' ? 'bg-blue-900/20 text-blue-700' : 'text-gray-300 hover:bg-gray-50'}`}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'valor_asc' ? 'bg-blue-900/20 text-blue-700' : 'text-slate-300 hover:bg-gray-50'}`}
                         >
                           <ArrowUp size={12} /> Valor: menor
                         </button>
                         <button
                           onClick={() => setColumnSort(prev => ({ ...prev, [etapa.id]: 'data_desc' }))}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'data_desc' || !columnSort[etapa.id] ? 'bg-blue-900/20 text-blue-700' : 'text-gray-300 hover:bg-gray-50'}`}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'data_desc' || !columnSort[etapa.id] ? 'bg-blue-900/20 text-blue-700' : 'text-slate-300 hover:bg-gray-50'}`}
                         >
                           <Clock size={12} /> Data: mais novo
                         </button>
                         <button
                           onClick={() => setColumnSort(prev => ({ ...prev, [etapa.id]: 'data_asc' }))}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'data_asc' ? 'bg-blue-900/20 text-blue-700' : 'text-gray-300 hover:bg-gray-50'}`}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${columnSort[etapa.id] === 'data_asc' ? 'bg-blue-900/20 text-blue-700' : 'text-slate-300 hover:bg-gray-50'}`}
                         >
                           <Clock size={12} /> Data: mais antigo
                         </button>
@@ -2682,7 +2682,7 @@ const OportunidadesPageInner = () => {
                         <button className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
                           isDark ? "hover:bg-[#1a1a2e]" : "hover:bg-gray-100"
                         }`}>
-                          <MoreVertical size={14} className={isDark ? "text-gray-400" : "text-gray-600"} />
+                          <MoreVertical size={14} className={isDark ? "text-slate-400" : "text-slate-600"} />
                         </button>
                         <div className={`absolute right-0 top-full mt-1 w-32 rounded-lg shadow-lg border z-10 hidden group-hover:block ${
                           isDark ? "bg-[#0a0a12] border-[#1a1a2e]" : "bg-[#111827] border-[#1f2937]"
@@ -2690,7 +2690,7 @@ const OportunidadesPageInner = () => {
                           <button
                             onClick={() => setEditingColumn({ id: coluna.id, nome: coluna.nome })}
                             className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
-                              isDark ? "text-gray-300 hover:bg-[#1a1a2e]" : "text-gray-300 hover:bg-gray-50"
+                              isDark ? "text-slate-300 hover:bg-[#1a1a2e]" : "text-slate-300 hover:bg-gray-50"
                             }`}
                           >
                             <Edit2 size={12} /> Editar
@@ -2778,7 +2778,7 @@ const OportunidadesPageInner = () => {
                     >
                       {/* ID no topo - usa displayId (L-0001) */}
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-gray-400 font-semibold">
+                        <span className="text-[10px] text-slate-400 font-semibold">
                           #{cardData.displayId}
                         </span>
                         <StatusBadge 
@@ -2797,13 +2797,13 @@ const OportunidadesPageInner = () => {
                       
                       {/* Produto */}
                       {cardData.produto && (
-                        <p className="text-xs text-gray-600 truncate">
+                        <p className="text-xs text-slate-600 truncate">
                           {cardData.produto}
                         </p>
                       )}
                       
                       {/* Responsável */}
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-slate-500 truncate">
                         {cardData.responsavel_nome || 'Sem responsável'}
                       </p>
                       
@@ -2815,7 +2815,7 @@ const OportunidadesPageInner = () => {
                       )}
                       
                       {/* Data */}
-                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
                         {formatDate(cardData.createdAt) && (
                           <span className="flex items-center gap-1">
                             <Clock size={10} />
@@ -2852,7 +2852,7 @@ const OportunidadesPageInner = () => {
                             </span>
                           ))}
                           {cardData.tags.length > 2 && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-gray-300">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-200 text-slate-300">
                               +{cardData.tags.length - 2}
                             </span>
                           )}
@@ -2942,7 +2942,7 @@ const OportunidadesPageInner = () => {
               </h2>
               <button
                 onClick={() => { setShowModal(false); setEditingOportunidade(null); }}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                className="p-1 rounded-lg hover:bg-gray-100 text-slate-500 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -2952,43 +2952,43 @@ const OportunidadesPageInner = () => {
             <form onSubmit={editingOportunidade ? handleSubmitEdit : handleSubmit} className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Seção: Dados do Cliente */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados do Cliente</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
                     <input type="text" value={formData.nome ?? ""} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
                     <select value={formData.tipoPessoa ?? "CPF"} onChange={(e) => setFormData({ ...formData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="CPF">Pessoa Física</option>
                       <option value="CNPJ">Pessoa Jurídica</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
                     <input type="text" value={formData.tipoPessoa === "CPF" ? formatCPFInput(formData.cpf_cnpj ?? "") : formatCNPJInput(formData.cpf_cnpj ?? "")} onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={formData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Celular *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
                     <input type="tel" value={formData.celular ?? ""} onChange={(e) => setFormData({ ...formData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Telefone</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
                     <input type="tel" value={formData.telefone ?? ""} onChange={(e) => setFormData({ ...formData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
                     <input type="email" value={formData.email ?? ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   {formData.tipoPessoa === "CPF" ? (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Data Nascimento</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
                       <input type="date" value={formData.data_nascimento ?? ""} onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Data Abertura</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
                       <input type="date" value={formData.data_abertura ?? ""} onChange={(e) => setFormData({ ...formData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                     </div>
                   )}
@@ -2997,24 +2997,24 @@ const OportunidadesPageInner = () => {
               
               {/* Seção: Endereço */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Endereço</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="0" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div className="col-span-2"><label className="block text-xs font-medium text-gray-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Endereço" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Apto, sala..." className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Bairro</label><input type="text" value={formData.bairro ?? ""} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Cidade</label><input type="text" value={formData.cidade ?? ""} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="UF" maxLength={2} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] uppercase" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="0" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Endereço" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Apto, sala..." className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label><input type="text" value={formData.bairro ?? ""} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label><input type="text" value={formData.cidade ?? ""} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="UF" maxLength={2} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] uppercase" /></div>
                 </div>
               </div>
               
               {/* Seção: Oportunidade */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Oportunidade</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Oportunidade</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Produto *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
                     <select 
                       value={formData.productId || formData.produto || ""} 
                       onChange={(e) => {
@@ -3043,7 +3043,7 @@ const OportunidadesPageInner = () => {
                   </div>
                   {/* 🎯 Subproduto */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Subproduto</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Subproduto</label>
                     <select 
                       value={formData.subproductId || ""} 
                       onChange={(e) => {
@@ -3067,7 +3067,7 @@ const OportunidadesPageInner = () => {
                   </div>
                   {/* 🎯 Modalidade */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Modalidade</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Modalidade</label>
                     <select 
                       value={formData.modality || ""} 
                       onChange={(e) => {
@@ -3087,24 +3087,24 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Etapa *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
                     <select value={formData.etapa_id ?? "novo_lead"} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       {OFICIAL_ETAPAS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Valor (R$)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$)</label>
                     <input type="number" value={formData.valor ?? 0} onChange={(e) => setFormData({ ...formData, valor: parseFloat(e.target.value) || 0 })} placeholder="0,00" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Responsável</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Responsável</label>
                     <select value={formData.responsavel_id ?? ""} onChange={(e) => { const sid = e.target.value; const su = availableResponsibles.find((u: any) => u.id === sid); setFormData({ ...formData, responsavel_id: sid || null, responsavel_nome: su?.nome ?? "" }); }} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione</option>
                       {availableResponsibles.map((u: any) => <option key={u.id} value={u.id}>{u.nome}</option>)}
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
                     <textarea value={formData.observacoes ?? ""} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} rows={2} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] resize-none" />
                   </div>
                 </div>
@@ -3112,26 +3112,26 @@ const OportunidadesPageInner = () => {
               
               {/* Seção: Dados Bancários */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados Bancários</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Banco</label><input type="text" value={formData.banco ?? ""} onChange={(e) => setFormData({ ...formData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Agência</label><input type="text" value={formData.agencia ?? ""} onChange={(e) => setFormData({ ...formData, agencia: e.target.value })} placeholder="0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="00000-0" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Corrente</option><option value="poupanca">Poupança</option></select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Nome do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Doc. Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF/CNPJ" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Aleatória</option></select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Banco</label><input type="text" value={formData.banco ?? ""} onChange={(e) => setFormData({ ...formData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Agência</label><input type="text" value={formData.agencia ?? ""} onChange={(e) => setFormData({ ...formData, agencia: e.target.value })} placeholder="0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="00000-0" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Corrente</option><option value="poupanca">Poupança</option></select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Nome do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Doc. Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF/CNPJ" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Aleatória</option></select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                 </div>
               </div>
               
               {/* Seção: Hierarquia */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Hierarquia Comercial</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Hierarquia Comercial</h3>
                 <div className="grid grid-cols-3 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Company</label><select value={selectedRacionalCompany ?? ""} onChange={(e) => handleRacionalCompanyChange(e.target.value ? Number(e.target.value) : null)} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option>{racionalCompanies.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Franquia</label><select value={selectedFranquia ?? ""} onChange={(e) => handleFranquiaChange(e.target.value ? Number(e.target.value) : null)} disabled={!selectedRacionalCompany} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franquias.filter(f => f.racionalCompany_id === selectedRacionalCompany).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Franqueado</label><select value={selectedFranqueado ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setSelectedFranqueado(v); setFormData({ ...formData, franqueado_id: v }); }} disabled={!selectedFranquia} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franqueados.filter(f => f.franquia_id === selectedFranquia).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Company</label><select value={selectedRacionalCompany ?? ""} onChange={(e) => handleRacionalCompanyChange(e.target.value ? Number(e.target.value) : null)} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option>{racionalCompanies.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franquia</label><select value={selectedFranquia ?? ""} onChange={(e) => handleFranquiaChange(e.target.value ? Number(e.target.value) : null)} disabled={!selectedRacionalCompany} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franquias.filter(f => f.racionalCompany_id === selectedRacionalCompany).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franqueado</label><select value={selectedFranqueado ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setSelectedFranqueado(v); setFormData({ ...formData, franqueado_id: v }); }} disabled={!selectedFranquia} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franqueados.filter(f => f.franquia_id === selectedFranquia).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
                 </div>
               </div>
               
@@ -3232,7 +3232,7 @@ const OportunidadesPageInner = () => {
                     <h4 className="text-xs font-semibold text-purple-800 mb-2">📋 Documentos Obrigatórios</h4>
                     <div className="space-y-2">
                       {documentosObrigatorios.map((doc: string) => (
-                        <label key={doc} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                        <label key={doc} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                           <input 
                             type="checkbox" 
                             checked={formData.documentosEnviados?.includes(doc) || false}
@@ -3343,7 +3343,7 @@ const OportunidadesPageInner = () => {
                       <label className="block text-xs font-medium text-green-700 mb-1">Disponibilidade</label>
                       <div className="flex flex-wrap gap-2">
                         {['Manhã', 'Tarde', 'Noite', 'Sabado', 'Domingo'].map((disp) => (
-                          <label key={disp} className="flex items-center gap-1 text-xs text-gray-300 cursor-pointer">
+                          <label key={disp} className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={formData.disponibilidade?.includes(disp) || false}
@@ -3368,7 +3368,7 @@ const OportunidadesPageInner = () => {
                     <h4 className="text-xs font-semibold text-green-800 mb-2">📋 Documentos Obrigatórios</h4>
                     <div className="space-y-2">
                       {documentosObrigatorios.map((doc: string) => (
-                        <label key={doc} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                        <label key={doc} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                           <input 
                             type="checkbox" 
                             checked={formData.documentosEnviados?.includes(doc) || false}
@@ -3401,13 +3401,13 @@ const OportunidadesPageInner = () => {
                     <div className="mb-4 p-3 bg-[#111827] rounded-lg border border-blue-200">
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-xs text-gray-500">Status</span>
+                          <span className="text-xs text-slate-500">Status</span>
                           <p className="font-semibold" style={{ color: getStatusColor(envelopeStatus.status) }}>
                             {getStatusLabel(envelopeStatus.status)}
                           </p>
                         </div>
                         <div className="text-right">
-                          <span className="text-xs text-gray-500">ID</span>
+                          <span className="text-xs text-slate-500">ID</span>
                           <p className="text-xs font-mono">{envelopeStatus.id}</p>
                         </div>
                       </div>
@@ -3448,7 +3448,7 @@ const OportunidadesPageInner = () => {
                           className={`p-2 rounded-lg border text-center transition-all ${
                             selectedProvider === prov.id 
                               ? 'border-blue-500 bg-blue-900/20 text-blue-800' 
-                              : 'border-[#1f2937] bg-[#111827] text-gray-600 hover:bg-gray-50'
+                              : 'border-[#1f2937] bg-[#111827] text-slate-600 hover:bg-gray-50'
                           }`}
                         >
                           <span className="text-lg">{prov.logo}</span>
@@ -3465,7 +3465,7 @@ const OportunidadesPageInner = () => {
                     disabled={signatureLoading || !formData.email}
                     className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
                       signatureLoading || !formData.email
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? 'bg-gray-300 text-slate-500 cursor-not-allowed'
                         : 'bg-[#000dff] text-white hover:bg-[#000dff]/90'
                     }`}
                   >
@@ -3503,10 +3503,10 @@ const OportunidadesPageInner = () => {
               
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Tags</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags</label>
                 <div className="flex flex-wrap gap-2">
                   {listarTags().map((tag) => (
-                    <button key={tag.id} type="button" onClick={() => { const newTags = formData.tags?.includes(tag.id) ? formData.tags.filter((t: string) => t !== tag.id) : [...(formData.tags || []), tag.id]; setFormData({ ...formData, tags: newTags }); }} className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${formData.tags?.includes(tag.id) ? 'text-white ring-2 ring-offset-1' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} style={formData.tags?.includes(tag.id) ? { backgroundColor: tag.cor, ringColor: tag.cor } : {}}>
+                    <button key={tag.id} type="button" onClick={() => { const newTags = formData.tags?.includes(tag.id) ? formData.tags.filter((t: string) => t !== tag.id) : [...(formData.tags || []), tag.id]; setFormData({ ...formData, tags: newTags }); }} className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${formData.tags?.includes(tag.id) ? 'text-white ring-2 ring-offset-1' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`} style={formData.tags?.includes(tag.id) ? { backgroundColor: tag.cor, ringColor: tag.cor } : {}}>
                       {tag.nome}
                     </button>
                   ))}
@@ -3515,7 +3515,7 @@ const OportunidadesPageInner = () => {
 
               {/* Compliance e Consultas */}
               <div className="mt-6 pt-6 border-t border-[#1f2937]">
-                <h4 className="text-sm font-medium text-gray-600 mb-4 flex items-center gap-2">
+                <h4 className="text-sm font-medium text-slate-600 mb-4 flex items-center gap-2">
                   <Shield size={16} />
                   Compliance e Consultas
                 </h4>
@@ -3523,8 +3523,8 @@ const OportunidadesPageInner = () => {
                   {/* Restrição de Crédito */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-300">Restrição de Crédito</p>
-                      <p className="text-xs text-gray-500">Consulta SPC/Serasa por CPF/CNPJ</p>
+                      <p className="text-sm font-medium text-slate-300">Restrição de Crédito</p>
+                      <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {renderCreditStatus()}
@@ -3541,8 +3541,8 @@ const OportunidadesPageInner = () => {
                   {/* Não Perturbe */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-medium text-gray-300">Não Perturbe</p>
-                      <p className="text-xs text-gray-500">Bloqueio de contato por telefone</p>
+                      <p className="text-sm font-medium text-slate-300">Não Perturbe</p>
+                      <p className="text-xs text-slate-500">Bloqueio de contato por telefone</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {renderDoNotCallStatus()}
@@ -3560,7 +3560,7 @@ const OportunidadesPageInner = () => {
               
               {/* Actions */}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModal(false); setEditingOportunidade(null); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-300 hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => { setShowModal(false); setEditingOportunidade(null); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors">Salvar</button>
               </div>
             </form>
@@ -3579,7 +3579,7 @@ const OportunidadesPageInner = () => {
           <div className="w-[480px] h-full bg-[#111827] shadow-2xl overflow-y-auto">
             <div className="p-5 border-b flex items-center justify-between">
               <div>
-                <span className="text-xs font-medium text-gray-500">OPORTUNIDADE</span>
+                <span className="text-xs font-medium text-slate-500">OPORTUNIDADE</span>
                 <h2 className="text-lg font-semibold">#{selectedLead?.displayId ?? selectedLead?.id ?? '-'}</h2>
               </div>
               <button 
@@ -3593,14 +3593,14 @@ const OportunidadesPageInner = () => {
             <div className="p-5 space-y-4">
               {/* Cliente - usa cliente_nome se disponível */}
               <div>
-                <span className="text-xs text-gray-500">Cliente</span>
+                <span className="text-xs text-slate-500">Cliente</span>
                 <p className="font-medium text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem nome'}</p>
               </div>
               
               {/* Produto */}
               {(selectedLead?.produto || selectedLead?.produto_id) && (
                 <div>
-                  <span className="text-xs text-gray-500">Produto</span>
+                  <span className="text-xs text-slate-500">Produto</span>
                   <p className="font-medium text-white">
                     {selectedLead?.produto || `Produto #${selectedLead?.produto_id}`}
                   </p>
@@ -3609,7 +3609,7 @@ const OportunidadesPageInner = () => {
               
               {/* Responsável */}
               <div>
-                <span className="text-xs text-gray-500">Responsável</span>
+                <span className="text-xs text-slate-500">Responsável</span>
                 <p className="font-medium text-white flex items-center gap-2">
                   <User size={14} />
                   {selectedLead?.responsavel_nome || 'Sem responsável'}
@@ -3618,7 +3618,7 @@ const OportunidadesPageInner = () => {
               
               {/* Valor */}
               <div>
-                <span className="text-xs text-gray-500">Valor</span>
+                <span className="text-xs text-slate-500">Valor</span>
                 <p className="text-2xl font-bold text-blue-600">
                   R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}
                 </p>
@@ -3627,14 +3627,14 @@ const OportunidadesPageInner = () => {
               {/* Datas */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="text-xs text-gray-500">Criação</span>
+                  <span className="text-xs text-slate-500">Criação</span>
                   <p className="font-medium text-white flex items-center gap-1">
                     <Clock size={12} />
                     {selectedLead?.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString('pt-BR') : '-'}
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">Última alteração</span>
+                  <span className="text-xs text-slate-500">Última alteração</span>
                   <p className="font-medium text-white flex items-center gap-1">
                     <Calendar size={12} />
                     {selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleDateString('pt-BR') : '-'}
@@ -3664,7 +3664,7 @@ const OportunidadesPageInner = () => {
               {/* Telefone */}
               {selectedLead?.telefone && (
                 <div>
-                  <span className="text-xs text-gray-500">Telefone</span>
+                  <span className="text-xs text-slate-500">Telefone</span>
                   <p className="font-medium text-white">{selectedLead.telefone}</p>
                 </div>
               )}
@@ -3672,7 +3672,7 @@ const OportunidadesPageInner = () => {
               {/* E-mail */}
               {selectedLead?.email && (
                 <div>
-                  <span className="text-xs text-gray-500">E-mail</span>
+                  <span className="text-xs text-slate-500">E-mail</span>
                   <p className="font-medium text-white">{selectedLead.email}</p>
                 </div>
               )}
@@ -3680,7 +3680,7 @@ const OportunidadesPageInner = () => {
               {/* Tags - máximo 2 + N */}
               {selectedLead?.tags?.length > 0 && (
                 <div>
-                  <span className="text-xs text-gray-500">Tags</span>
+                  <span className="text-xs text-slate-500">Tags</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {getTagsByIds(selectedLead.tags).slice(0, 2).map((tag: any) => (
                       <span
@@ -3692,7 +3692,7 @@ const OportunidadesPageInner = () => {
                       </span>
                     ))}
                     {selectedLead.tags.length > 2 && (
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-300">
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-slate-300">
                         +{selectedLead.tags.length - 2}
                       </span>
                     )}
@@ -3703,7 +3703,7 @@ const OportunidadesPageInner = () => {
               {/* Responsável */}
               {selectedLead?.responsavel && (
                 <div>
-                  <span className="text-xs text-gray-500">Responsável</span>
+                  <span className="text-xs text-slate-500">Responsável</span>
                   <p className="font-medium text-white">{selectedLead.responsavel}</p>
                 </div>
               )}
@@ -3711,7 +3711,7 @@ const OportunidadesPageInner = () => {
               {/* Gestor */}
               {selectedLead?.gestor && (
                 <div>
-                  <span className="text-xs text-gray-500">Gestor</span>
+                  <span className="text-xs text-slate-500">Gestor</span>
                   <p className="font-medium text-white">{selectedLead.gestor}</p>
                 </div>
               )}
@@ -3719,14 +3719,14 @@ const OportunidadesPageInner = () => {
               {/* Observações */}
               {selectedLead?.observacoes && (
                 <div>
-                  <span className="text-xs text-gray-500">Observações</span>
+                  <span className="text-xs text-slate-500">Observações</span>
                   <p className="font-medium text-white">{selectedLead.observacoes}</p>
                 </div>
               )}
 
               {/* Ações Rápidas */}
               <div className="pt-4 border-t space-y-3">
-                <span className="text-xs text-gray-500">Ações Rápidas</span>
+                <span className="text-xs text-slate-500">Ações Rápidas</span>
                 
                 {/* Botão Editar - apenas para quem tem permissão */}
                 {canEditOportunidade(selectedLead) && (
@@ -3807,7 +3807,7 @@ const OportunidadesPageInner = () => {
               </h2>
               <button
                 onClick={() => setShowEditDrawerModal(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                className="p-1 rounded-lg hover:bg-gray-100 text-slate-500 transition-colors"
               >
                 <X size={20} />
               </button>
@@ -3816,52 +3816,52 @@ const OportunidadesPageInner = () => {
             <div className="p-4 space-y-4 overflow-y-auto flex-1">
               {/* Seção: Dados do Cliente */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados do Cliente</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
                     <input type="text" value={editDrawerData.nome ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
                     <select value={editDrawerData.tipoPessoa ?? "CPF"} onChange={(e) => setEditDrawerData({ ...editDrawerData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="CPF">Pessoa Física</option>
                       <option value="CNPJ">Pessoa Jurídica</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{editDrawerData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">{editDrawerData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
                     <input type="text" value={editDrawerData.tipoPessoa === "CPF" ? formatCPFInput(editDrawerData.cpf_cnpj ?? "") : formatCNPJInput(editDrawerData.cpf_cnpj ?? "")} onChange={(e) => setEditDrawerData({ ...editDrawerData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={editDrawerData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Celular *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
                     <input type="tel" value={editDrawerData.celular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Telefone</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
                     <input type="tel" value={editDrawerData.telefone ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
                     <input type="email" value={editDrawerData.email ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   {editDrawerData.tipoPessoa === "CPF" ? (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Data Nascimento</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
                       <input type="date" value={editDrawerData.data_nascimento ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Data Abertura</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
                       <input type="date" value={editDrawerData.data_abertura ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                     </div>
                   )}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Profissão</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Profissão</label>
                     <input type="text" value={editDrawerData.profissao ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, profissao: e.target.value })} placeholder="Profissão" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Estado Civil</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Estado Civil</label>
                     <select value={editDrawerData.estado_civil ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, estado_civil: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione</option>
                       <option value="solteiro">Solteiro(a)</option>
@@ -3876,14 +3876,14 @@ const OportunidadesPageInner = () => {
 
               {/* Seção: Endereço */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Endereço</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">CEP</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">CEP</label>
                     <input type="text" value={editDrawerData.cep ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
                     <select value={editDrawerData.estado ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, estado: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione</option>
                       <option value="AC">Acre</option>
@@ -3916,23 +3916,23 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Cidade</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label>
                     <input type="text" value={editDrawerData.cidade ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Endereço</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Endereço</label>
                     <input type="text" value={editDrawerData.rua ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, rua: e.target.value })} placeholder="Rua, Avenida, etc." className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Número</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Número</label>
                     <input type="text" value={editDrawerData.numero ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, numero: e.target.value })} placeholder="Número" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Complemento</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label>
                     <input type="text" value={editDrawerData.complemento ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Bairro</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label>
                     <input type="text" value={editDrawerData.bairro ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                 </div>
@@ -3940,10 +3940,10 @@ const OportunidadesPageInner = () => {
 
               {/* Seção: Dados da Oportunidade */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados da Oportunidade</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados da Oportunidade</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Produto *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
                     <select value={editDrawerData.produto ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, produto: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione um produto</option>
                       {safeProdutos.map((produto) => (
@@ -3954,7 +3954,7 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Etapa *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
                     <select value={editDrawerData.etapa_id && OFICIAL_ETAPAS.some(e => e.key === editDrawerData.etapa_id) ? editDrawerData.etapa_id : "novo_lead"} onChange={(e) => setEditDrawerData({ ...editDrawerData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       {OFICIAL_ETAPAS.map((etapa) => (
                         <option key={etapa.key} value={etapa.key}>
@@ -3964,11 +3964,11 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Valor (R$)</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$)</label>
                     <input type="number" value={editDrawerData.valor ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, valor: parseFloat(e.target.value) || 0 })} placeholder="0,00" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Responsável</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Responsável</label>
                     <select value={editDrawerData.responsavel_id ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, responsavel_id: e.target.value ? Number(e.target.value) : null })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione um responsável</option>
                       {availableResponsibles.map((usuario: any) => (
@@ -3979,7 +3979,7 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
                     <textarea value={editDrawerData.observacoes ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, observacoes: e.target.value })} placeholder="Observações..." rows={3} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] resize-none" />
                   </div>
                 </div>
@@ -3987,22 +3987,22 @@ const OportunidadesPageInner = () => {
 
               {/* Seção: Dados Bancários */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados Bancários</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Banco</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Banco</label>
                     <input type="text" value={editDrawerData.banco ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Agência</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Agência</label>
                     <input type="text" value={editDrawerData.agencia ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Conta</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Conta</label>
                     <input type="text" value={editDrawerData.conta ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Conta</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Conta</label>
                     <select value={editDrawerData.tipoConta ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione</option>
                       <option value="corrente">Conta Corrente</option>
@@ -4010,15 +4010,15 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Nome do Titular</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome do Titular</label>
                     <input type="text" value={editDrawerData.titular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Doc. do Titular</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Doc. do Titular</label>
                     <input type="text" value={editDrawerData.documentoTitular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Chave PIX</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Chave PIX</label>
                     <select value={editDrawerData.pixTipo ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione</option>
                       <option value="cpf">CPF</option>
@@ -4029,7 +4029,7 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Chave PIX</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label>
                     <input type="text" value={editDrawerData.pixChave ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                 </div>
@@ -4037,7 +4037,7 @@ const OportunidadesPageInner = () => {
               
               {/* Tags */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Tags</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {listarTags().map((tag) => (
                     <button
@@ -4052,7 +4052,7 @@ const OportunidadesPageInner = () => {
                       className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
                         editDrawerData.tags?.includes(tag.id)
                           ? "text-white"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-gray-100 text-slate-600"
                       }`}
                       style={editDrawerData.tags?.includes(tag.id) ? { backgroundColor: tag.cor } : {}}
                     >
@@ -4067,7 +4067,7 @@ const OportunidadesPageInner = () => {
                 <button
                   type="button"
                   onClick={() => setShowEditDrawerModal(false)}
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-300 hover:bg-gray-200 transition-colors"
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors"
                 >
                   Cancelar
                 </button>
@@ -4097,17 +4097,17 @@ const OportunidadesPageInner = () => {
             <div className="max-w-7xl mx-auto">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setShowFullscreenModal(false)} className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
-                  <span className="text-gray-300">|</span>
-                  <div><span className="text-xs text-gray-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedLead?.displayId ?? selectedLead?.id ?? '---'}</h1></div>
+                  <button onClick={() => setShowFullscreenModal(false)} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
+                  <span className="text-slate-300">|</span>
+                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedLead?.displayId ?? selectedLead?.id ?? '---'}</h1></div>
                 </div>
               </div>
               <div className="flex items-center gap-6 flex-wrap">
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-gray-500 uppercase">Cliente</span><p className="font-semibold text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem cliente'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-gray-500 uppercase">Produto</span><p className="font-semibold text-white">{selectedLead?.produto || 'Não selecionado'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-gray-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-gray-500 uppercase">Responsável</span><p className="font-semibold text-white">{selectedLead?.responsavel_nome || 'Sem responsável'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-gray-500 uppercase">Valor</span><p className="font-bold text-xl text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Cliente</span><p className="font-semibold text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem cliente'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Produto</span><p className="font-semibold text-white">{selectedLead?.produto || 'Não selecionado'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Responsável</span><p className="font-semibold text-white">{selectedLead?.responsavel_nome || 'Sem responsável'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Valor</span><p className="font-bold text-xl text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>
               </div>
               {/* Observações da Pendência no header */}
               {(selectedLead?.etapa_id === 'pendencia' || selectedLead?.etapa === 'pendencia') && selectedLead?.observacoes && (
@@ -4126,7 +4126,7 @@ const OportunidadesPageInner = () => {
                     <div className="border-b border-[#1f2937] px-4">
                       <div className="flex gap-1">
                         {[{ id: 'tarefas', label: 'Tarefas', icon: Check }, { id: 'anotacoes', label: 'Anotações', icon: FileText }, { id: 'simulador', label: 'Simulador', icon: Calculator }, { id: 'tags', label: 'Tags', icon: Tag }, { id: 'anexos', label: 'Anexos', icon: Paperclip }, { id: 'historico', label: 'Histórico', icon: History }].map((tab) => (
-                          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 ${activeTab === tab.id ? 'border-[#000dff] text-[#000dff]' : 'border-transparent text-gray-500'}`}><tab.icon size={16} />{tab.label}</button>
+                          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 ${activeTab === tab.id ? 'border-[#000dff] text-[#000dff]' : 'border-transparent text-slate-500'}`}><tab.icon size={16} />{tab.label}</button>
                         ))}
                       </div>
                     </div>
@@ -4135,7 +4135,7 @@ const OportunidadesPageInner = () => {
                         <div className="space-y-4">
                           <div className="flex justify-between"><h4 className="font-semibold">Tarefas</h4><button className="px-3 py-1.5 bg-[#000dff] text-white text-sm rounded-lg"><Plus size={14} />Nova tarefa</button></div>
                           {[{ tipo: 'Ligação', responsavel: 'Aires Fernandes', data: '24/04/2026 10:00', status: 'Pendente' }, { tipo: 'Enviar proposta', responsavel: 'Comercial', data: '25/04/2026 14:30', status: 'Agendada' }, { tipo: 'Follow-up', responsavel: 'Aires Fernandes', data: '26/04/2026 09:00', status: 'Concluída' }].map((t, i) => (
-                            <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"><GripVertical size={16} className="text-gray-400" /><div className="flex-1"><div className="flex items-center gap-2"><span className="font-medium">{t.tipo}</span><span className={`px-2 py-0.5 text-xs rounded-full ${t.status === 'Concluída' ? 'bg-green-900/20 text-green-700' : t.status === 'Agendada' ? 'bg-blue-900/20 text-blue-700' : 'bg-yellow-900/20 text-yellow-700'}`}>{t.status}</span></div><div className="text-xs text-gray-500 mt-1"><User size={12} /> {t.responsavel} • <Clock size={12} /> {t.data}</div></div><button className="p-1.5"><MoreVertical size={14} /></button></div>
+                            <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"><GripVertical size={16} className="text-slate-400" /><div className="flex-1"><div className="flex items-center gap-2"><span className="font-medium">{t.tipo}</span><span className={`px-2 py-0.5 text-xs rounded-full ${t.status === 'Concluída' ? 'bg-green-900/20 text-green-700' : t.status === 'Agendada' ? 'bg-blue-900/20 text-blue-700' : 'bg-yellow-900/20 text-yellow-700'}`}>{t.status}</span></div><div className="text-xs text-slate-500 mt-1"><User size={12} /> {t.responsavel} • <Clock size={12} /> {t.data}</div></div><button className="p-1.5"><MoreVertical size={14} /></button></div>
                           ))}
                         </div>
                       )}
@@ -4153,12 +4153,12 @@ const OportunidadesPageInner = () => {
                             <div className="p-3 bg-gray-50 rounded-lg">
                               <div className="flex justify-between mb-1">
                                 <span className="font-medium text-sm">Anotação</span>
-                                <span className="text-xs text-gray-500">{selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleString('pt-BR') : '-'}</span>
+                                <span className="text-xs text-slate-500">{selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleString('pt-BR') : '-'}</span>
                               </div>
                               <p className="text-sm">{selectedLead.observacoes}</p>
                             </div>
                           ) : (
-                            <div className="text-center py-8 text-gray-400">
+                            <div className="text-center py-8 text-slate-400">
                               <FileText size={32} className="mx-auto mb-2 opacity-50" />
                               <p className="text-sm">Nenhuma anotação registrada</p>
                             </div>
@@ -4171,7 +4171,7 @@ const OportunidadesPageInner = () => {
                           
                           {/* Produto atual */}
                           <div className="p-3 bg-gray-50 rounded-lg border">
-                            <span className="text-xs text-gray-500 uppercase font-medium">Produto da Oportunidade</span>
+                            <span className="text-xs text-slate-500 uppercase font-medium">Produto da Oportunidade</span>
                             <p className="font-semibold text-white">{selectedLead?.produto || 'Não definido'}</p>
                           </div>
 
@@ -4181,13 +4181,13 @@ const OportunidadesPageInner = () => {
                             {/* Coluna Esquerda - Entrada */}
                             <div className="space-y-4">
                               <div className="flex items-center gap-2 pb-2 border-b">
-                                <Calculator size={18} className="text-gray-600" />
-                                <span className="font-medium text-gray-300">Entrada</span>
+                                <Calculator size={18} className="text-slate-600" />
+                                <span className="font-medium text-slate-300">Entrada</span>
                               </div>
 
                               {/* Tipo de Simulação */}
                               <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Simulação</label>
+                                <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Simulação</label>
                                 <select 
                                   className="w-full p-2.5 border rounded-lg text-sm bg-[#111827]"
                                   value={tipoSimulacao}
@@ -4206,7 +4206,7 @@ const OportunidadesPageInner = () => {
                                       <CheckCircle size={14} />
                                       Simulação para: {tipoSimulacao.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                     </p>
-                                    <p className="mt-1 text-xs text-gray-500 italic">
+                                    <p className="mt-1 text-xs text-slate-500 italic">
                                       {getHelperText(tipoSimulacao)}
                                     </p>
                                   </>
@@ -4219,16 +4219,16 @@ const OportunidadesPageInner = () => {
                                 {tipoSimulacao === 'emprestimo-garantia' && (
                                   <>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Valor do Veículo (R$)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Valor do Veículo (R$)</label>
                                       <div className="relative">
-                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.valorVeiculo || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, valorVeiculo: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     
                                     {/* Veículo quitado - Toggle */}
                                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                                      <span className="text-sm font-medium text-gray-300">Veículo quitado?</span>
+                                      <span className="text-sm font-medium text-slate-300">Veículo quitado?</span>
                                       <button
                                         type="button"
                                         onClick={() => setSimuladorCampos({...simuladorCampos, veiculoQuitado: !simuladorCampos.veiculoQuitado, saldoDevedor: simuladorCampos.veiculoQuitado ? 0 : simuladorCampos.saldoDevedor})}
@@ -4241,39 +4241,39 @@ const OportunidadesPageInner = () => {
                                     {/* Saldo devedor - apenas se não estiver quitado */}
                                     {!simuladorCampos.veiculoQuitado && (
                                       <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-1">Saldo Devedor (R$)</label>
+                                        <label className="block text-sm font-medium text-slate-300 mb-1">Saldo Devedor (R$)</label>
                                         <div className="relative">
-                                          <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                          <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                           <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.saldoDevedor || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, saldoDevedor: parseFloat(e.target.value) || 0})} />
                                         </div>
                                       </div>
                                     )}
                                     
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Percentual Financiável (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Percentual Financiável (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="80" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.percentualFinanciavel || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, percentualFinanciavel: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Taxa ao Mês (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Taxa ao Mês (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="2,5" step="0.01" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.taxaMes || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, taxaMes: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Prazo (meses)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Prazo (meses)</label>
                                       <div className="relative">
-                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="24" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.prazo || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, prazo: parseInt(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Renda Mensal (R$)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Renda Mensal (R$)</label>
                                       <div className="relative">
-                                        <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.rendaMensal || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, rendaMensal: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
@@ -4284,9 +4284,9 @@ const OportunidadesPageInner = () => {
                                 {tipoSimulacao === 'consignado' && (
                                   <>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Subproduto *</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Subproduto *</label>
                                       <div className="relative">
-                                        <Package size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Package size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <select 
                                           className="w-full pl-9 p-2.5 border rounded-lg text-sm bg-[#111827]"
                                           value={subprodutoConsignado}
@@ -4300,23 +4300,23 @@ const OportunidadesPageInner = () => {
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Renda Líquida Mensal (R$) *</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Renda Líquida Mensal (R$) *</label>
                                       <div className="relative">
-                                        <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={rendaLiquidaMensal || ''} onChange={(e) => setRendaLiquidaMensal(parseFloat(e.target.value) || 0)} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Prazo (meses) *</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Prazo (meses) *</label>
                                       <div className="relative">
-                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="48" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={prazoConsignado || ''} onChange={(e) => setPrazoConsignado(parseInt(e.target.value) || 0)} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Taxa Mensal (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Taxa Mensal (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="1,8" step="0.01" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={taxaMensalConsignado || ''} onChange={(e) => setTaxaMensalConsignado(parseFloat(e.target.value) || 0)} />
                                       </div>
                                     </div>
@@ -4333,23 +4333,23 @@ const OportunidadesPageInner = () => {
                                 {tipoSimulacao === 'fgts' && (
                                   <>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Saldo FGTS (R$)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Saldo FGTS (R$)</label>
                                       <div className="relative">
-                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.saldoFGTS || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, saldoFGTS: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Anos Antecipados</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Anos Antecipados</label>
                                       <div className="relative">
-                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="2" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.parcelasAntecipadas || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, parcelasAntecipadas: parseInt(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Taxa ao Mês (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Taxa ao Mês (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,9" step="0.01" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.taxaMes || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, taxaMes: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
@@ -4360,30 +4360,30 @@ const OportunidadesPageInner = () => {
                                 {tipoSimulacao === 'clt' && (
                                   <>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Salário Bruto (R$)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Salário Bruto (R$)</label>
                                       <div className="relative">
-                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.salarioBruto || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, salarioBruto: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Margem Permitida (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Margem Permitida (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="35" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.margemPermitida || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, margemPermitida: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Taxa ao Mês (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Taxa ao Mês (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="2,0" step="0.01" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.taxaMes || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, taxaMes: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Prazo (meses)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Prazo (meses)</label>
                                       <div className="relative">
-                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="36" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.prazo || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, prazo: parseInt(e.target.value) || 0})} />
                                       </div>
                                     </div>
@@ -4394,23 +4394,23 @@ const OportunidadesPageInner = () => {
                                 {tipoSimulacao === 'emprestimo-pessoal' && (
                                   <>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Valor do Empréstimo (R$)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Valor do Empréstimo (R$)</label>
                                       <div className="relative">
-                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.valorEmprestimoPessoal || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, valorEmprestimoPessoal: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Taxa de Juros ao Mês (%)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Taxa de Juros ao Mês (%)</label>
                                       <div className="relative">
-                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <Percent size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="4,5" step="0.01" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.taxaJurosPessoal || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, taxaJurosPessoal: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
                                     <div>
-                                      <label className="block text-sm font-medium text-gray-300 mb-1">Prazo (meses)</label>
+                                      <label className="block text-sm font-medium text-slate-300 mb-1">Prazo (meses)</label>
                                       <div className="relative">
-                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <CalendarDays size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input type="number" placeholder="24" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.prazoPessoal || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, prazoPessoal: parseInt(e.target.value) || 0})} />
                                       </div>
                                     </div>
@@ -4439,19 +4439,19 @@ const OportunidadesPageInner = () => {
                             <div className="space-y-4">
                               <div className="flex items-center gap-2 pb-2 border-b">
                                 <FileText size={18} className="text-[#000dff]" />
-                                <span className="font-semibold text-gray-200">Resultado da Simulação</span>
+                                <span className="font-semibold text-slate-200">Resultado da Simulação</span>
                               </div>
 
                               {!tipoSimulacao ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-gray-400 border-2 border-dashed rounded-xl bg-gray-50">
+                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 border-2 border-dashed rounded-xl bg-gray-50">
                                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                                     <Calculator size={32} className="opacity-50" />
                                   </div>
                                   <p className="text-sm text-center px-4 font-medium">Selecione um tipo de simulação para começar</p>
-                                  <p className="text-xs text-gray-400 mt-2">Escolha o produto no menu acima</p>
+                                  <p className="text-xs text-slate-400 mt-2">Escolha o produto no menu acima</p>
                                 </div>
                               ) : !simulacaoCalculada ? (
-                                <div className="flex flex-col items-center justify-center h-64 text-gray-400 border-2 border-dashed rounded-xl bg-gray-50">
+                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 border-2 border-dashed rounded-xl bg-gray-50">
                                   <div className="w-16 h-16 bg-blue-900/20 rounded-full flex items-center justify-center mb-3">
                                     <Percent size={32} className="text-blue-400 opacity-70" />
                                   </div>
@@ -4553,7 +4553,7 @@ const OportunidadesPageInner = () => {
                                     <div className="space-y-3 mt-4">
                                       <div className="flex items-center gap-2 pb-2 border-b">
                                         <Calculator size={18} className="text-indigo-600" />
-                                        <span className="font-medium text-gray-300">Margens Consignáveis</span>
+                                        <span className="font-medium text-slate-300">Margens Consignáveis</span>
                                       </div>
                                       
                                       {/* Subproduto selecionado */}
@@ -4585,28 +4585,28 @@ const OportunidadesPageInner = () => {
                                       {/* Detalhes do resultado */}
                                       <div className="grid grid-cols-2 gap-3 mt-2">
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
-                                          <span className="text-xs text-gray-500 font-medium">Margem Disponível</span>
-                                          <p className="text-lg font-bold text-gray-300">R$ {resultadoConsignado.margemDisponivelSubproduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                          <span className="text-xs text-slate-500 font-medium">Margem Disponível</span>
+                                          <p className="text-lg font-bold text-slate-300">R$ {resultadoConsignado.margemDisponivelSubproduto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
-                                          <span className="text-xs text-gray-500 font-medium">Parcela Estimada</span>
-                                          <p className="text-lg font-bold text-gray-300">R$ {resultadoConsignado.parcelaEstimada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                          <span className="text-xs text-slate-500 font-medium">Parcela Estimada</span>
+                                          <p className="text-lg font-bold text-slate-300">R$ {resultadoConsignado.parcelaEstimada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
-                                          <span className="text-xs text-gray-500 font-medium">Valor Liberado Est.</span>
-                                          <p className="text-lg font-bold text-gray-300">R$ {resultadoConsignado.valorLiberadoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                          <span className="text-xs text-slate-500 font-medium">Valor Liberado Est.</span>
+                                          <p className="text-lg font-bold text-slate-300">R$ {resultadoConsignado.valorLiberadoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
-                                          <span className="text-xs text-gray-500 font-medium">Custo Total</span>
-                                          <p className="text-lg font-bold text-gray-300">R$ {resultadoConsignado.custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                          <span className="text-xs text-slate-500 font-medium">Custo Total</span>
+                                          <p className="text-lg font-bold text-slate-300">R$ {resultadoConsignado.custoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
-                                          <span className="text-xs text-gray-500 font-medium">CET Estimado</span>
-                                          <p className="text-lg font-bold text-gray-300">{resultadoConsignado.cetEstimado.toFixed(2)}% a.m.</p>
+                                          <span className="text-xs text-slate-500 font-medium">CET Estimado</span>
+                                          <p className="text-lg font-bold text-slate-300">{resultadoConsignado.cetEstimado.toFixed(2)}% a.m.</p>
                                         </div>
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
-                                          <span className="text-xs text-gray-500 font-medium">Comprometimento</span>
-                                          <p className="text-lg font-bold text-gray-300">{resultadoConsignado.comprometimentoRenda.toFixed(1)}%</p>
+                                          <span className="text-xs text-slate-500 font-medium">Comprometimento</span>
+                                          <p className="text-lg font-bold text-slate-300">{resultadoConsignado.comprometimentoRenda.toFixed(1)}%</p>
                                         </div>
                                       </div>
                                     </div>
@@ -4630,7 +4630,7 @@ const OportunidadesPageInner = () => {
                                               simuladorResultado.comprometimento <= 50 ? 'text-yellow-600' : 'text-red-600'
                                             } />
                                           </div>
-                                          <span className="text-sm font-medium text-gray-300">Comprometimento de Renda</span>
+                                          <span className="text-sm font-medium text-slate-300">Comprometimento de Renda</span>
                                         </div>
                                         <span className={`text-2xl font-bold ${
                                           simuladorResultado.comprometimento <= 30 ? 'text-green-600' : 
@@ -4682,13 +4682,13 @@ const OportunidadesPageInner = () => {
                                       ) : simuladorResultado?.status === 'inviavel' ? (
                                         <XCircle size={20} className="text-red-600" />
                                       ) : (
-                                        <Circle size={20} className="text-gray-400" />
+                                        <Circle size={20} className="text-slate-400" />
                                       )}
                                     </div>
                                     <span className={`text-sm font-semibold ${
                                       simuladorResultado?.status === 'valida' ? 'text-green-700' :
                                       simuladorResultado?.status === 'atencao' ? 'text-yellow-700' :
-                                      simuladorResultado?.status === 'inviavel' ? 'text-red-700' : 'text-gray-300'
+                                      simuladorResultado?.status === 'inviavel' ? 'text-red-700' : 'text-slate-300'
                                     }`}>
                                       {simuladorResultado?.mensagem || 'Aguardando cálculo...'}
                                     </span>
@@ -4696,12 +4696,12 @@ const OportunidadesPageInner = () => {
 
                                   {/* Status da Simulação */}
                                   <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border">
-                                    <span className="text-xs text-gray-500 uppercase">Status:</span>
+                                    <span className="text-xs text-slate-500 uppercase">Status:</span>
                                     <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                                       simulationStatus === 'simulada' ? 'bg-blue-900/20 text-blue-700' :
                                       simulationStatus === 'aceita' ? 'bg-green-900/20 text-green-700' :
                                       simulationStatus === 'recusada' ? 'bg-red-900/20 text-red-700' :
-                                      'bg-gray-100 text-gray-500'
+                                      'bg-gray-100 text-slate-500'
                                     }`}>
                                       {simulationStatus === 'simulada' ? 'Simulada' :
                                        simulationStatus === 'aceita' ? 'Aceita pelo cliente' :
@@ -4709,7 +4709,7 @@ const OportunidadesPageInner = () => {
                                        'Aguardando'}
                                     </span>
                                     {simulationAcceptedAt && (
-                                      <span className="text-xs text-gray-400">
+                                      <span className="text-xs text-slate-400">
                                         em {new Date(simulationAcceptedAt).toLocaleString('pt-BR')}
                                       </span>
                                     )}
@@ -4774,7 +4774,7 @@ const OportunidadesPageInner = () => {
                                     </button>
                                   </div>
                                   <div className="flex gap-2">
-                                    <button className="flex-1 px-3 py-2 bg-gray-100 text-gray-300 text-sm rounded-lg font-medium hover:bg-gray-200">
+                                    <button className="flex-1 px-3 py-2 bg-gray-100 text-slate-300 text-sm rounded-lg font-medium hover:bg-gray-200">
                                       <Save size={14} className="inline mr-1" />Salvar simulação
                                     </button>
                                     <button className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700">
@@ -4796,14 +4796,14 @@ const OportunidadesPageInner = () => {
                             ))}
                           </div>
                           <div className="pt-4 border-t">
-                            <span className="text-sm text-gray-500">Aplicadas:</span>
+                            <span className="text-sm text-slate-500">Aplicadas:</span>
                             <div className="flex gap-2 mt-2 flex-wrap">
                               {selectedLead?.tags && selectedLead.tags.length > 0 ? (
                                 selectedLead.tags.map((tag, i) => (
                                   <span key={i} className="px-3 py-1.5 bg-blue-900/20 text-blue-700 text-sm rounded-full">{tag}</span>
                                 ))
                               ) : (
-                                <span className="text-sm text-gray-400">Nenhuma tag aplicada</span>
+                                <span className="text-sm text-slate-400">Nenhuma tag aplicada</span>
                               )}
                             </div>
                           </div>
@@ -4831,14 +4831,14 @@ const OportunidadesPageInner = () => {
                           </label>
 
                           {anexos.length === 0 ? (
-                            <p className="text-gray-500">Nenhum arquivo anexado.</p>
+                            <p className="text-slate-500">Nenhum arquivo anexado.</p>
                           ) : (
                             <div className="space-y-3">
                               {anexos.map((anexo) => (
                                 <div key={anexo.id} className="flex items-center justify-between p-4 border rounded-xl">
                                   <div>
                                     <p className="font-medium">{anexo.nome}</p>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-slate-500">
                                       {(anexo.tamanho / 1024).toFixed(1)} KB
                                     </p>
                                   </div>
@@ -4867,7 +4867,7 @@ const OportunidadesPageInner = () => {
                               { evento: `Valor: R$ ${Number(selectedLead?.valor ?? 0).toLocaleString('pt-BR')}`, data: selectedLead?.createdAt ? new Date(selectedLead.createdAt).toLocaleString('pt-BR') : '-' },
                               { evento: `Responsável: ${selectedLead?.responsavel_nome || 'Não atribuído'}`, data: selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleString('pt-BR') : '-' }
                             ].map((e, i) => (
-                              <div key={i} className="relative flex gap-4 pb-6"><div className="w-6 h-6 rounded-full bg-[#000dff] border-2 border-white z-10"></div><div><p className="font-medium text-sm">{e.evento}</p><p className="text-xs text-gray-500">{e.data}</p></div></div>
+                              <div key={i} className="relative flex gap-4 pb-6"><div className="w-6 h-6 rounded-full bg-[#000dff] border-2 border-white z-10"></div><div><p className="font-medium text-sm">{e.evento}</p><p className="text-xs text-slate-500">{e.data}</p></div></div>
                             ))}
                           </div>
                         </div>
@@ -4877,8 +4877,8 @@ const OportunidadesPageInner = () => {
                 </div>
                 <div className="lg:col-span-1 space-y-4">
                   <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><User size={16} className="text-[#000dff]" />Ações rápidas</h4><div className="space-y-2">{selectedLead?.telefone && (<><a href={`https://wa.me/55${String(selectedLead.telefone).replace(/\D/g, "")}`} target="_blank" className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-green-900/20 text-green-700 text-sm rounded-lg"><MessageCircle size={16} />WhatsApp</a><a href={`tel:${String(selectedLead.telefone).replace(/\D/g, "")}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-blue-900/20 text-blue-700 text-sm rounded-lg"><Phone size={16} />Ligar</a></>)}{selectedLead?.email && (<a href={`mailto:${selectedLead.email}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-purple-900/20 text-purple-700 text-sm rounded-lg"><Mail size={16} />E-mail</a>)}{canEditOportunidade(selectedLead) && (<button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!selectedLead) { alert("Nenhuma oportunidade selecionada para edição."); return; } handleEditClick(selectedLead); }} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-[#000dff] text-white text-sm rounded-lg"><Edit2 size={16} />Editar</button>)}</div></div>
-                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><FileText size={16} className="text-[#000dff]" />Resumo</h4><div className="space-y-3"><div><span className="text-xs text-gray-500">Valor</span><p className="font-bold text-lg text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>{selectedLead?.telefone && (<div><span className="text-xs text-gray-500">Telefone</span><p className="text-sm">{selectedLead.telefone}</p></div>)}{selectedLead?.email && (<div><span className="text-xs text-gray-500">E-mail</span><p className="text-sm">{selectedLead.email}</p></div>)}<div><span className="text-xs text-gray-500">Criação</span><p className="text-sm">{selectedLead?.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString('pt-BR') : '-'}</p></div><div><span className="text-xs text-gray-500">Última</span><p className="text-sm">{selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleDateString('pt-BR') : '-'}</p></div></div></div>
-                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><Timer size={16} className="text-[#000dff]" />SLA</h4>{(() => { const d = selectedLead?.updatedAt || selectedLead?.createdAt; const dias = d ? Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000) : 0; const s = dias <= 4 ? 'Saudável' : dias <= 9 ? 'Atenção' : 'Crítico'; const c = dias <= 4 ? '#22c55e' : dias <= 9 ? '#f59e0b' : '#ef4444'; return (<div className="text-center"><p className="text-3xl font-bold" style={{color:c}}>{dias}</p><p className="text-sm text-gray-600">{dias === 0 ? 'dia' : 'dias'} sem atuação</p><div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{backgroundColor:c+'20',color:c}}><Circle size={8} fill={c} />{s}</div></div>); })()}</div>
+                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><FileText size={16} className="text-[#000dff]" />Resumo</h4><div className="space-y-3"><div><span className="text-xs text-slate-500">Valor</span><p className="font-bold text-lg text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>{selectedLead?.telefone && (<div><span className="text-xs text-slate-500">Telefone</span><p className="text-sm">{selectedLead.telefone}</p></div>)}{selectedLead?.email && (<div><span className="text-xs text-slate-500">E-mail</span><p className="text-sm">{selectedLead.email}</p></div>)}<div><span className="text-xs text-slate-500">Criação</span><p className="text-sm">{selectedLead?.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString('pt-BR') : '-'}</p></div><div><span className="text-xs text-slate-500">Última</span><p className="text-sm">{selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleDateString('pt-BR') : '-'}</p></div></div></div>
+                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><Timer size={16} className="text-[#000dff]" />SLA</h4>{(() => { const d = selectedLead?.updatedAt || selectedLead?.createdAt; const dias = d ? Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000) : 0; const s = dias <= 4 ? 'Saudável' : dias <= 9 ? 'Atenção' : 'Crítico'; const c = dias <= 4 ? '#22c55e' : dias <= 9 ? '#f59e0b' : '#ef4444'; return (<div className="text-center"><p className="text-3xl font-bold" style={{color:c}}>{dias}</p><p className="text-sm text-slate-600">{dias === 0 ? 'dia' : 'dias'} sem atuação</p><div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{backgroundColor:c+'20',color:c}}><Circle size={8} fill={c} />{s}</div></div>); })()}</div>
                 </div>
               </div>
             </div>
@@ -4894,11 +4894,11 @@ const OportunidadesPageInner = () => {
             onClick={() => setShowFullscreenModal(false)}
           />
           <div className="relative bg-[#111827] rounded-xl shadow-2xl p-8 max-w-md text-center">
-            <AlertCircle size={48} className="mx-auto text-gray-400 mb-4" />
+            <AlertCircle size={48} className="mx-auto text-slate-400 mb-4" />
             <h2 className="text-xl font-semibold text-white mb-2">
               Nenhuma oportunidade selecionada
             </h2>
-            <p className="text-gray-500 mb-6">
+            <p className="text-slate-500 mb-6">
               Selecione uma oportunidade no Kanban para ver os detalhes.
             </p>
             <button
@@ -4933,43 +4933,43 @@ const OportunidadesPageInner = () => {
             <form onSubmit={handleSubmitEdit} className="p-6 space-y-4">
               {/* Seção: Dados do Cliente */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados do Cliente</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Nome *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
                     <input type="text" value={formData.nome ?? ""} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
                     <select value={formData.tipoPessoa ?? "CPF"} onChange={(e) => setFormData({ ...formData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="CPF">Pessoa Física</option>
                       <option value="CNPJ">Pessoa Jurídica</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
                     <input type="text" value={formData.tipoPessoa === "CPF" ? formatCPFInput(formData.cpf_cnpj ?? "") : formatCNPJInput(formData.cpf_cnpj ?? "")} onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={formData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Celular *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
                     <input type="tel" value={formData.celular ?? ""} onChange={(e) => setFormData({ ...formData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Telefone</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
                     <input type="tel" value={formData.telefone ?? ""} onChange={(e) => setFormData({ ...formData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">E-mail</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
                     <input type="email" value={formData.email ?? ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   {formData.tipoPessoa === "CPF" ? (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Data Nascimento</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
                       <input type="date" value={formData.data_nascimento ?? ""} onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Data Abertura</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
                       <input type="date" value={formData.data_abertura ?? ""} onChange={(e) => setFormData({ ...formData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                     </div>
                   )}
@@ -4978,24 +4978,24 @@ const OportunidadesPageInner = () => {
               
               {/* Seção: Endereço */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Endereço</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div className="col-span-2"><label className="block text-xs font-medium text-gray-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Rua" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="Nº" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Bairro</label><input type="text" value={formData.bairro ?? ""} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Cidade</label><input type="text" value={formData.cidade ?? ""} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div className="col-span-2"><label className="block text-xs font-medium text-gray-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="Estado" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Rua" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="Nº" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label><input type="text" value={formData.bairro ?? ""} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label><input type="text" value={formData.cidade ?? ""} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="Estado" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                 </div>
               </div>
               
               {/* Seção: Dados do Negócio */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados do Negócio</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Negócio</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Produto *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
                     <select value={formData.produto ?? ""} onChange={(e) => setFormData({ ...formData, produto: e.target.value })} required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       <option value="">Selecione um produto</option>
                       <option value="consignado">Consignado</option>
@@ -5008,11 +5008,11 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Valor (R$) *</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$) *</label>
                     <input type="number" value={formData.valor ?? 0} onChange={(e) => setFormData({ ...formData, valor: Number(e.target.value) })} placeholder="0,00" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Etapa</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa</label>
                     <select value={formData.etapa_id ?? "novo_lead"} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       {OFICIAL_ETAPAS.map((etapa) => (
                         <option key={etapa.key} value={etapa.key}>{etapa.label}</option>
@@ -5020,7 +5020,7 @@ const OportunidadesPageInner = () => {
                     </select>
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
                     <textarea value={formData.observacoes ?? ""} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} placeholder="Observações..." rows={3} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                 </div>
@@ -5028,23 +5028,23 @@ const OportunidadesPageInner = () => {
               
               {/* Seção: Dados Bancários */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">Dados Bancários</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Banco</label><input type="text" value={formData.banco ?? ""} onChange={(e) => setFormData({ ...formData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Agência</label><input type="text" value={formData.agencia ?? ""} onChange={(e) => setFormData({ ...formData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Conta Corrente</option><option value="poupança">Poupança</option></select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Doc Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Banco</label><input type="text" value={formData.banco ?? ""} onChange={(e) => setFormData({ ...formData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Agência</label><input type="text" value={formData.agencia ?? ""} onChange={(e) => setFormData({ ...formData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Conta Corrente</option><option value="poupança">Poupança</option></select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Doc Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                 </div>
               </div>
               
               {/* Seção: PIX */}
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-gray-200 mb-3">PIX</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">PIX</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Chave Aleatória</option></select></div>
-                  <div><label className="block text-xs font-medium text-gray-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Chave Aleatória</option></select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                 </div>
               </div>
               
@@ -5119,10 +5119,10 @@ const OportunidadesPageInner = () => {
               
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Tags</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags</label>
                 <div className="flex flex-wrap gap-2">
                   {listarTags().map((tag) => (
-                    <button key={tag.id} type="button" onClick={() => { const newTags = formData.tags?.includes(tag.id) ? formData.tags.filter((t: string) => t !== tag.id) : [...(formData.tags || []), tag.id]; setFormData({ ...formData, tags: newTags }); }} className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${formData.tags?.includes(tag.id) ? 'text-white ring-2 ring-offset-1' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} style={formData.tags?.includes(tag.id) ? { backgroundColor: tag.cor, ringColor: tag.cor } : {}}>
+                    <button key={tag.id} type="button" onClick={() => { const newTags = formData.tags?.includes(tag.id) ? formData.tags.filter((t: string) => t !== tag.id) : [...(formData.tags || []), tag.id]; setFormData({ ...formData, tags: newTags }); }} className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${formData.tags?.includes(tag.id) ? 'text-white ring-2 ring-offset-1' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`} style={formData.tags?.includes(tag.id) ? { backgroundColor: tag.cor, ringColor: tag.cor } : {}}>
                       {tag.nome}
                     </button>
                   ))}
@@ -5131,7 +5131,7 @@ const OportunidadesPageInner = () => {
               
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => { setShowOpportunityForm(false); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-300 hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button type="button" onClick={() => { setShowOpportunityForm(false); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors">Salvar alterações</button>
               </div>
             </form>
@@ -5149,7 +5149,7 @@ const PipelineRuntimeError = ({ error }: { error: any }) => (
       <h2 className="text-lg font-semibold text-red-700">
         Erro ao carregar Pipeline
       </h2>
-      <p className="text-sm text-gray-600 mt-2">
+      <p className="text-sm text-slate-600 mt-2">
         A tela foi protegida contra falha total. Verifique o console para detalhes.
       </p>
       <pre className="mt-4 text-xs bg-gray-50 border rounded-lg p-3 overflow-auto">

@@ -40,7 +40,7 @@ const typeConfig: Record<EntityType, { bg: string; icon: React.ReactNode }> = {
   },
   sistema: {
     bg: "bg-gray-100",
-    icon: <Shield className="text-gray-600" />,
+    icon: <Shield className="text-slate-600" />,
   },
 };
 
@@ -77,7 +77,7 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
     <div
       className={`${sizes.container} ${config.bg} rounded-full flex items-center justify-center ${className}`}
     >
-      <span className={`font-medium ${config.bg === "bg-gray-100" ? "text-gray-600" : ""}`}>
+      <span className={`font-medium ${config.bg === "bg-gray-100" ? "text-slate-600" : ""}`}>
         {getInitials(name)}
       </span>
     </div>

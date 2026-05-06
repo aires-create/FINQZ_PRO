@@ -107,7 +107,7 @@ export const IntegracoesPage: React.FC = () => {
           
           {/* API Key */}
           <div className="bg-gray-50 rounded-xl p-4">
-            <label className="block text-sm font-medium text-gray-300 mb-2">Chave API</label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Chave API</label>
             <div className="flex gap-2">
               <Input
                 value={apiKey}
@@ -117,7 +117,7 @@ export const IntegracoesPage: React.FC = () => {
               />
               <Button>Salvar</Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-slate-500 mt-2">
               Sua chave API é usada para autenticar requisições externas. Mantenha em segurança.
             </p>
           </div>
@@ -132,13 +132,13 @@ export const IntegracoesPage: React.FC = () => {
                       <h4 className="font-semibold text-white">{integracao.nome}</h4>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         integracao.status === 'conectado' ? 'bg-green-100 text-green-700' : 
-                        integracao.status === 'erro' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
+                        integracao.status === 'erro' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-slate-500'
                       }`}>
                         {integracao.status === 'conectado' ? 'Conectado' : 
                          integracao.status === 'erro' ? 'Erro' : 'Desconectado'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{integracao.descricao}</p>
+                    <p className="text-sm text-slate-500 mt-1">{integracao.descricao}</p>
                     
                     {/* Storm Test Result */}
                     {integracao.id === 'storm' && stormResult && (
@@ -157,7 +157,7 @@ export const IntegracoesPage: React.FC = () => {
                             {stormResult.message}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-slate-500 mt-1">
                           Última verificação: {new Date(stormResult.checkedAt).toLocaleString('pt-BR')}
                         </p>
                       </div>

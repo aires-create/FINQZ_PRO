@@ -92,13 +92,13 @@ const useAuth = () => useContext(AuthContext);
 
 // Loading component
 const LoadingScreen = () => (
-  <div className="min-h-screen bg-white dark:bg-[#00010b] flex items-center justify-center">
+  <div className="min-h-screen bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 dark:bg-[#00010b] flex items-center justify-center">
     <div className="text-center">
       <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#000dff] to-[#3388d9] rounded-2xl flex items-center justify-center">
         <span className="text-white font-bold text-2xl">F</span>
       </div>
       <div className="w-8 h-8 border-2 border-[#000dff] border-t-transparent rounded-full animate-spin mx-auto"></div>
-      <p className="text-gray-500 dark:text-gray-400 mt-4">Carregando FINQZ PRO...</p>
+      <p className="text-slate-500 dark:text-slate-400 mt-4">Carregando FINQZ PRO...</p>
     </div>
   </div>
 );

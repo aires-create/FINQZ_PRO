@@ -28,11 +28,11 @@ export const Button: React.FC<ButtonProps> = ({
   // Variantes com cores FINQZ
   const variants = {
     primary: "bg-primary text-white hover:bg-primary-hover active:bg-primary-700 focus:ring-primary/30",
-    secondary: "bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300 focus:ring-gray-300",
-    outline: "border border-gray-300 text-gray-700 hover:bg-gray-50 active:bg-gray-100 focus:ring-primary/30",
-    ghost: "text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:ring-gray-300",
+    secondary: "bg-gray-100 text-slate-700 hover:bg-gray-200 active:bg-gray-300 focus:ring-gray-300",
+    outline: "border border-gray-300 text-slate-700 hover:bg-gray-50 active:bg-gray-100 focus:ring-primary/30",
+    ghost: "text-slate-600 hover:bg-gray-100 hover:text-slate-900 focus:ring-gray-300",
     danger: "bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-red-300",
-    filter: "bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50 focus:ring-gray-200",
+    filter: "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 text-slate-700 hover:border-gray-300 hover:bg-gray-50 focus:ring-gray-200",
   };
 
   const sizes = {

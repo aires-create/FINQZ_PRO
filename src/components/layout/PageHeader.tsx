@@ -341,7 +341,7 @@ export function PageHeader({
   ]
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-3 shadow-sm">
       <div className="flex items-center justify-between w-full gap-4 flex-wrap">
         
         {/* Left: Busca + Atualizar */}
@@ -354,7 +354,7 @@ export function PageHeader({
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'kanban' 
                     ? 'bg-[#000dff] text-white shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-200'
+                    : 'text-slate-600 hover:bg-gray-200'
                 }`}
                 title="Kanban"
               >
@@ -365,7 +365,7 @@ export function PageHeader({
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'list' 
                     ? 'bg-[#000dff] text-white shadow-sm' 
-                    : 'text-gray-600 hover:bg-gray-200'
+                    : 'text-slate-600 hover:bg-gray-200'
                 }`}
                 title="Lista"
               >
@@ -380,7 +380,7 @@ export function PageHeader({
           {/* Buscar - opcional */}
           {showSearch && (
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 placeholder="Buscar..."
                 className="h-10 w-[280px] rounded-xl border border-gray-200 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/10"
@@ -392,7 +392,7 @@ export function PageHeader({
           {/* Atualizar - botão fantasma com ícone apenas */}
           <button 
             onClick={onRefresh} 
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100"
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-gray-100"
             title="Atualizar"
           >
             <RefreshCw size={18} />
@@ -412,13 +412,13 @@ export function PageHeader({
                     setShowFilterDropdown(!showFilterDropdown)
                   }
                 }}
-                className={`flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium transition-all ${
+                className={`flex h-10 items-center gap-2 rounded-xl border border-gray-200 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 px-3 text-sm font-medium transition-all ${
                   activeFiltersCount > 0 || showFilterDropdown
                     ? 'border-[#000dff] bg-[#000dff]/5 text-[#000dff]'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    : 'text-slate-700 hover:bg-gray-50'
                 }`}
               >
-                <Filter size={16} className={activeFiltersCount > 0 ? 'text-[#000dff]' : 'text-gray-500'} />
+                <Filter size={16} className={activeFiltersCount > 0 ? 'text-[#000dff]' : 'text-slate-500'} />
                 Filtros
                 {activeFiltersCount > 0 && (
                   <span className="bg-[#000dff] text-white text-xs px-1.5 py-0.5 rounded-full">
@@ -437,9 +437,9 @@ export function PageHeader({
                     className="fixed inset-0 z-40" 
                     onClick={() => setShowFilterDropdown(false)} 
                   />
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl border border-gray-200 shadow-lg z-50 p-4">
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 shadow-lg z-50 p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-gray-900">Filtros</h3>
+                      <h3 className="font-semibold text-slate-900">Filtros</h3>
                       <button 
                         onClick={() => {
                           setLocalFilterValues({})
@@ -453,7 +453,7 @@ export function PageHeader({
                     <div className="space-y-3">
                       {filters.map((filter) => (
                         <div key={filter.key}>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">
                             {filter.label}
                           </label>
                           {filter.type === 'select' && filter.options ? (
@@ -502,9 +502,9 @@ export function PageHeader({
           {onImport && importColumns.length > 0 && (
             <button 
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-all"
+              className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 transition-all"
             >
-              <Upload size={16} className="text-gray-500" />
+              <Upload size={16} className="text-slate-500" />
               {importLabel}
             </button>
           )}
@@ -513,9 +513,9 @@ export function PageHeader({
           <div className="relative">
             <button 
               onClick={() => setShowExportDropdown(!showExportDropdown)}
-              className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 transition-all"
+              className="flex items-center gap-2 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 transition-all"
             >
-              <Download size={16} className="text-gray-500" />
+              <Download size={16} className="text-slate-500" />
               {exportLabel}
               <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
             </button>
@@ -526,12 +526,12 @@ export function PageHeader({
                   className="fixed inset-0 z-40" 
                   onClick={() => setShowExportDropdown(false)} 
                 />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-50 py-2">
+                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 shadow-lg z-50 py-2">
                   {exportOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleExport(option.value)}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-gray-50 transition-colors"
                     >
                       {option.icon}
                       {option.label}
@@ -559,11 +559,11 @@ export function PageHeader({
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)} />
-          <div className="relative w-full max-w-2xl mx-4 bg-white rounded-xl shadow-2xl border border-gray-200 max-h-[80vh] overflow-hidden">
+          <div className="relative w-full max-w-2xl mx-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl border border-gray-200 max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Importar Dados</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Importar Dados</h2>
               <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
-                <X size={20} className="text-gray-500" />
+                <X size={20} className="text-slate-500" />
               </button>
             </div>
             
@@ -574,9 +574,9 @@ export function PageHeader({
                   className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#000dff] transition-colors cursor-pointer"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload size={48} className="mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-600 mb-2">Clique ou arraste o arquivo aqui</p>
-                  <p className="text-xs text-gray-400">Aceitos: CSV, XLSX, XLS</p>
+                  <Upload size={48} className="mx-auto text-slate-400 mb-4" />
+                  <p className="text-slate-600 mb-2">Clique ou arraste o arquivo aqui</p>
+                  <p className="text-xs text-slate-400">Aceitos: CSV, XLSX, XLS</p>
                   <input 
                     ref={fileInputRef}
                     type="file" 
@@ -595,8 +595,8 @@ export function PageHeader({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-900">{importFileName}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-medium text-slate-900">{importFileName}</p>
+                      <p className="text-sm text-slate-500">
                         Total: {importData.length + Object.keys(importErrors).length} linhas • 
                         Válidas: <span className="text-green-600 font-medium">{importData.length}</span> • 
                         Erros: <span className="text-red-600 font-medium">{Object.keys(importErrors).length}</span>
@@ -631,7 +631,7 @@ export function PageHeader({
                       <thead className="bg-gray-50">
                         <tr>
                           {importColumns.slice(0, 5).map(col => (
-                            <th key={col.key} className="px-3 py-2 text-left font-medium text-gray-600">{col.label}</th>
+                            <th key={col.key} className="px-3 py-2 text-left font-medium text-slate-600">{col.label}</th>
                           ))}
                         </tr>
                       </thead>
@@ -639,7 +639,7 @@ export function PageHeader({
                         {importData.slice(0, 5).map((row, i) => (
                           <tr key={i} className="border-t">
                             {importColumns.slice(0, 5).map(col => (
-                              <td key={col.key} className="px-3 py-2 text-gray-700">{row[col.key] || '-'}</td>
+                              <td key={col.key} className="px-3 py-2 text-slate-700">{row[col.key] || '-'}</td>
                             ))}
                           </tr>
                         ))}
@@ -654,7 +654,7 @@ export function PageHeader({
             <div className="p-4 border-t flex justify-end gap-3">
               <button 
                 onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="px-4 py-2 text-sm font-medium text-slate-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancelar
               </button>

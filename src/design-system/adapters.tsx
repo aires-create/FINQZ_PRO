@@ -105,7 +105,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {canView && onView && (
         <button
           onClick={onView}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
           title={viewLabel}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +117,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {canEdit && onEdit && (
         <button
           onClick={onEdit}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
           title={editLabel}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,7 +128,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {canToggle && onToggle && (
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-green-600 hover:bg-green-50 transition-colors"
           title={toggleLabel}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,7 +139,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       {canDelete && onDelete && (
         <button
           onClick={onDelete}
-          className="p-1.5 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
           title={deleteLabel}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,9 +177,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           </div>
         )}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
           {description && (
-            <p className="text-gray-500 mt-0.5">{description}</p>
+            <p className="text-slate-500 mt-0.5">{description}</p>
           )}
         </div>
       </div>
@@ -207,7 +207,7 @@ export const TableContainer: React.FC<TableContainerProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden ${className}`}>
+      <div className={`bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 overflow-hidden ${className}`}>
         <div className="flex items-center justify-center h-64">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
@@ -216,7 +216,7 @@ export const TableContainer: React.FC<TableContainerProps> = ({
   }
 
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm ${className}`}>
+    <div className={`bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 overflow-hidden shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -254,9 +254,9 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
       />
       
       {/* Drawer */}
-      <div className={`w-[420px] bg-white h-full shadow-2xl p-6 overflow-y-auto ${className}`}>
+      <div className={`w-[420px] bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 h-full shadow-2xl p-6 overflow-y-auto ${className}`}>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+          <h2 className="text-xl font-bold text-slate-900">{title}</h2>
           <button 
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -274,7 +274,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
             {onClear && (
               <button
                 onClick={onClear}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-slate-500 hover:text-slate-700"
               >
                 Limpar
               </button>
@@ -355,7 +355,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       <button
         onClick={onExportCSV}
         disabled={disabled}
-        className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Exportar CSV"
       >
         CSV
@@ -363,7 +363,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       <button
         onClick={onExportExcel}
         disabled={disabled}
-        className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Exportar Excel"
       >
         Excel
@@ -371,7 +371,7 @@ export const ExportButtons: React.FC<ExportButtonsProps> = ({
       <button
         onClick={onExportPDF}
         disabled={disabled}
-        className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Exportar PDF"
       >
         PDF
@@ -398,8 +398,8 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ value, onChange }) => {
         onClick={() => onChange('kanban')}
         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
           value === 'kanban'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-900 shadow-sm'
+            : 'text-slate-500 hover:text-slate-700'
         }`}
       >
         Kanban
@@ -408,8 +408,8 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ value, onChange }) => {
         onClick={() => onChange('list')}
         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
           value === 'list'
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'
+            ? 'bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-900 shadow-sm'
+            : 'text-slate-500 hover:text-slate-700'
         }`}
       >
         Lista
@@ -439,7 +439,7 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
       className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
         active
           ? 'bg-blue-600 text-white'
-          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+          : 'bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-300 text-slate-700 hover:bg-gray-50'
       }`}
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,7 +448,7 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
       Filtros
       {count > 0 && (
         <span className={`inline-flex items-center justify-center w-5 h-5 text-xs font-semibold rounded-full ${
-          active ? 'bg-white/20 text-white' : 'bg-blue-600 text-white'
+          active ? 'bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 text-white' : 'bg-blue-600 text-white'
         }`}>
           {count}
         </span>
@@ -500,7 +500,7 @@ export const RefreshButton: React.FC<RefreshButtonProps> = ({
     <button
       onClick={onClick}
       disabled={loading}
-      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
+      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
       title="Atualizar dados"
     >
       <svg 

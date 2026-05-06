@@ -34,7 +34,7 @@
 //   - <select className="border rounded..."> → <Select options={...} />
 //
 // ETAPA 4: Cards
-//   - <div className="bg-white border rounded-xl..."> → <Card />
+//   - <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border rounded-xl..."> → <Card />
 //
 //
 // 🎨 VARIANTES DISPONÍVEIS

@@ -407,21 +407,21 @@ export const FinanceiroPage: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descrição</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parceiro</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Código</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Categoria</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Valor</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Data</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Descrição</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Parceiro</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
                     Nenhuma transação encontrada
                   </td>
                 </tr>
@@ -435,12 +435,12 @@ export const FinanceiroPage: React.FC = () => {
                         item.tipo === "debito" ? "bg-red-900/20 text-red-800" :
                         item.tipo.includes("estorno") ? "bg-orange-100 text-orange-800" :
                         item.tipo === "cashback" ? "bg-purple-100 text-purple-800" :
-                        "bg-gray-100 text-gray-200"
+                        "bg-gray-100 text-slate-200"
                       }`}>
                         {TIPOS_TRANSACAO.find((t) => t.value === item.tipo)?.label || item.tipo}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-slate-600">
                       {CATEGORIAS.find((c) => c.value === item.categoria)?.label || item.categoria}
                     </td>
                     <td className={`px-4 py-3 text-sm font-medium ${
@@ -449,14 +449,14 @@ export const FinanceiroPage: React.FC = () => {
                       {item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "+" : "-"}
                       {formatCurrency(item.valor)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.data_transacao}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">{item.descricao}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.parceiro_nome || "-"}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{item.data_transacao}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600 max-w-xs truncate">{item.descricao}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{item.parceiro_nome || "-"}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-1 rounded-full ${
                         item.status === "confirmado" ? "bg-green-900/20 text-green-800" :
                         item.status === "pendente" ? "bg-yellow-900/20 text-yellow-800" :
-                        item.status === "estornado" ? "bg-gray-100 text-gray-200" :
+                        item.status === "estornado" ? "bg-gray-100 text-slate-200" :
                         item.status === "cancelado" ? "bg-red-900/20 text-red-800" :
                         "bg-blue-900/20 text-blue-800"
                       }`}>
@@ -467,7 +467,7 @@ export const FinanceiroPage: React.FC = () => {
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleEdit(item)}
-                          className="p-1.5 hover:bg-gray-200 rounded text-gray-500"
+                          className="p-1.5 hover:bg-gray-200 rounded text-slate-500"
                           title="Editar"
                         >
                           <Eye size={14} />
@@ -475,7 +475,7 @@ export const FinanceiroPage: React.FC = () => {
                         {item.status === "confirmado" && (
                           <button
                             onClick={() => openEstornoModal(item.id)}
-                            className="p-1.5 hover:bg-orange-100 rounded text-gray-500 hover:text-orange-600"
+                            className="p-1.5 hover:bg-orange-100 rounded text-slate-500 hover:text-orange-600"
                             title="Estornar"
                           >
                             <RotateCcw size={14} />
@@ -483,7 +483,7 @@ export const FinanceiroPage: React.FC = () => {
                         )}
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="p-1.5 hover:bg-red-900/20 rounded text-gray-500 hover:text-red-600"
+                          className="p-1.5 hover:bg-red-900/20 rounded text-slate-500 hover:text-red-600"
                           title="Excluir"
                         >
                           <X size={14} />
@@ -508,7 +508,7 @@ export const FinanceiroPage: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Tipo</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Tipo</label>
               <Select
                 value={formData.tipo || ""}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as TransacaoTipo })}
@@ -516,7 +516,7 @@ export const FinanceiroPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Categoria</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Categoria</label>
               <Select
                 value={formData.categoria || ""}
                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value as TransacaoCategoria })}
@@ -526,7 +526,7 @@ export const FinanceiroPage: React.FC = () => {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Valor</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Valor</label>
               <Input
                 type="number"
                 value={formData.valor || ""}
@@ -535,7 +535,7 @@ export const FinanceiroPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Data</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Data</label>
               <Input
                 type="date"
                 value={formData.data_transacao || ""}
@@ -544,7 +544,7 @@ export const FinanceiroPage: React.FC = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
             <TextArea
               value={formData.descricao || ""}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
@@ -553,7 +553,7 @@ export const FinanceiroPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Parceiro</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Parceiro</label>
             <Select
               value={formData.parceiro_id?.toString() || ""}
               onChange={(e) => {
@@ -572,7 +572,7 @@ export const FinanceiroPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Status</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
             <Select
               value={formData.status || "pendente"}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as TransacaoStatus })}
@@ -600,7 +600,7 @@ export const FinanceiroPage: React.FC = () => {
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Motivo do estorno *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Motivo do estorno *</label>
             <TextArea
               value={estornoMotivo}
               onChange={(e) => setEstornoMotivo(e.target.value)}

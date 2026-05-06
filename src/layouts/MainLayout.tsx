@@ -602,22 +602,24 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
         }`}
       >
         {/* Topbar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <PageIcon className="text-primary" size={20} />
-            <h1 className="text-lg font-semibold text-gray-900">
-              {currentPage.title}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Bell size={20} />
-            </button>
-          </div>
-        </header>
+<header className="h-16 bg-[#0F172A] border-b border-slate-800 flex items-center justify-between px-6">
+  <div className="flex items-center gap-3">
+    <PageIcon className="text-primary" size={20} />
+    
+    <h1 className="text-lg font-semibold text-white">
+      {currentPage.title}
+    </h1>
+  </div>
+
+  <div className="flex items-center gap-4">
+    <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+      <Bell size={20} />
+    </button>
+  </div>
+</header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto bg-background p-6">
+        <div className="flex-1 overflow-auto p-6 bg-[radial-gradient(circle_at_top_left,#123B73_0%,#07111F_35%,#020617_100%)]">
           {children || <Outlet />}
         </div>
       </main>

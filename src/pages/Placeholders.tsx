@@ -21,14 +21,14 @@ const PlaceholderPage: React.FC<PlaceholderProps> = ({ title, description, icon:
         Em Preparação
       </div>
       
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
-      <p className="text-gray-600 max-w-md mb-8">{description}</p>
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
+      <p className="text-slate-600 max-w-md mb-8">{description}</p>
       
-      <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-lg w-full">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">O que será implementado:</h3>
+      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl border border-gray-200 p-6 max-w-lg w-full">
+        <h3 className="text-sm font-semibold text-slate-900 mb-4">O que será implementado:</h3>
         <ul className="space-y-3">
           {features.map((feature, index) => (
-            <li key={index} className="flex items-center gap-3 text-gray-600">
+            <li key={index} className="flex items-center gap-3 text-slate-600">
               <div className="w-2 h-2 bg-primary rounded-full" />
               <span className="text-sm">{feature}</span>
             </li>

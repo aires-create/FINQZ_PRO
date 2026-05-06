@@ -203,7 +203,7 @@ export const PipelinesPage: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines PF Credit</h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 Configure os 8 pipelines de crédito PF: Consignado, CDC, Empréstimo com Garantia, Financiamento, Cartão, Antecipação, Seguro e Consórcio
               </p>
             </div>
@@ -229,11 +229,11 @@ export const PipelinesPage: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <div>
                       <h4 className="font-semibold text-white">{setting.pipelineName}</h4>
-                      <p className="text-sm text-gray-500">ID: {setting.pipelineId} | Code: {setting.pipelineCode}</p>
+                      <p className="text-sm text-slate-500">ID: {setting.pipelineId} | Code: {setting.pipelineCode}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        setting.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                        setting.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate-500'
                       }`}>
                         {setting.active ? 'Ativo' : 'Inativo'}
                       </span>
@@ -241,13 +241,13 @@ export const PipelinesPage: React.FC = () => {
                         <>
                           <button 
                             onClick={() => handleEdit(option.id)}
-                            className="p-2 text-gray-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg"
+                            className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg"
                           >
                             <Edit size={16} />
                           </button>
                           <button 
                             onClick={() => handleToggleAtivo(option.id)}
-                            className="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
+                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
                             title={setting.active ? "Desativar" : "Ativar"}
                           >
                             <Trash2 size={16} />
@@ -260,14 +260,14 @@ export const PipelinesPage: React.FC = () => {
                   {/* Modo Visualização - Etapas */}
                   {!isEditing && (
                     <div className="mt-4">
-                      <p className="text-sm font-medium text-gray-300 mb-2">
+                      <p className="text-sm font-medium text-slate-300 mb-2">
                         Etapas ({setting.stages.length}):
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {setting.stages.map((stage, index) => (
                           <div 
                             key={index}
-                            className="px-3 py-1 bg-gray-100 text-gray-300 rounded-full text-sm flex items-center gap-1"
+                            className="px-3 py-1 bg-gray-100 text-slate-300 rounded-full text-sm flex items-center gap-1"
                           >
                             <span className="w-5 h-5 rounded-full bg-gray-300 text-xs flex items-center justify-center">
                               {index + 1}
@@ -284,7 +284,7 @@ export const PipelinesPage: React.FC = () => {
                     <div className="mt-4 space-y-4">
                       {/* Nome do Pipeline (apenas visual, não editável) */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
                           Nome do Pipeline
                         </label>
                         <Input
@@ -292,7 +292,7 @@ export const PipelinesPage: React.FC = () => {
                           disabled
                           className="bg-gray-50"
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-slate-500 mt-1">
                           O nome é definido pelo catálogo e não pode ser alterado.
                         </p>
                       </div>
@@ -306,7 +306,7 @@ export const PipelinesPage: React.FC = () => {
                           onChange={(e) => setEditForm({ ...editForm, active: e.target.checked })}
                           className="w-4 h-4 text-[#000dff] rounded"
                         />
-                        <label htmlFor={`active-${editForm.pipelineId}`} className="text-sm text-gray-300">
+                        <label htmlFor={`active-${editForm.pipelineId}`} className="text-sm text-slate-300">
                           Pipeline Ativo
                         </label>
                       </div>
@@ -314,7 +314,7 @@ export const PipelinesPage: React.FC = () => {
                       {/* Etapas */}
                       <div>
                         <div className="flex justify-between items-center mb-2">
-                          <p className="text-sm font-medium text-gray-300">
+                          <p className="text-sm font-medium text-slate-300">
                             Etapas (arraste para reordenar):
                           </p>
                           <Button
@@ -342,8 +342,8 @@ export const PipelinesPage: React.FC = () => {
                                   : 'border-[#1f2937] bg-[#111827]'
                               }`}
                             >
-                              <GripVertical size={16} className="text-gray-400 cursor-grab" />
-                              <span className="w-6 h-6 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-600">
+                              <GripVertical size={16} className="text-slate-400 cursor-grab" />
+                              <span className="w-6 h-6 rounded-full bg-gray-200 text-xs flex items-center justify-center text-slate-600">
                                 {index + 1}
                               </span>
                               <Input
@@ -354,7 +354,7 @@ export const PipelinesPage: React.FC = () => {
                               <button
                                 onClick={() => handleRemoveStage(index)}
                                 disabled={editForm.stages.length <= 1}
-                                className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-30"
+                                className="p-1 text-slate-400 hover:text-red-500 disabled:opacity-30"
                               >
                                 <Trash2 size={14} />
                               </button>
@@ -394,24 +394,24 @@ export const PipelinesPage: React.FC = () => {
             <h4 className="font-medium text-white mb-2">Resumo dos Pipelines</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-gray-500">Total de Pipelines:</span>
+                <span className="text-slate-500">Total de Pipelines:</span>
                 <span className="ml-2 font-medium">{uniquePipelines.length}</span>
               </div>
               <div>
-                <span className="text-gray-500">Ativos:</span>
+                <span className="text-slate-500">Ativos:</span>
                 <span className="ml-2 font-medium text-green-600">
                   {Object.values(pipelineSettings).filter(s => s.active).length}
                 </span>
               </div>
               <div>
-                <span className="text-gray-500">Inativos:</span>
-                <span className="ml-2 font-medium text-gray-600">
+                <span className="text-slate-500">Inativos:</span>
+                <span className="ml-2 font-medium text-slate-600">
                   {Object.values(pipelineSettings).filter(s => !s.active).length}
                 </span>
               </div>
               <div>
-                <span className="text-gray-500">Última Atualização:</span>
-                <span className="ml-2 font-medium text-gray-600">
+                <span className="text-slate-500">Última Atualização:</span>
+                <span className="ml-2 font-medium text-slate-600">
                   {new Date().toLocaleDateString('pt-BR')}
                 </span>
               </div>

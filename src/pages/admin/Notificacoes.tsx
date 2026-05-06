@@ -52,9 +52,9 @@ export const NotificacoesPage: React.FC = () => {
         exportFilename="notificacoes"
       />
       
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Notificações</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Notificações</h3>
           
           {/* Lista de Notificações */}
           <div className="space-y-3">
@@ -62,8 +62,8 @@ export const NotificacoesPage: React.FC = () => {
               <div key={notificacao.id} className="border border-gray-200 rounded-xl p-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900">{notificacao.nome}</h4>
-                    <p className="text-sm text-gray-500 mt-1">{notificacao.descricao}</p>
+                    <h4 className="font-semibold text-slate-900">{notificacao.nome}</h4>
+                    <p className="text-sm text-slate-500 mt-1">{notificacao.descricao}</p>
                   </div>
                 </div>
                 
@@ -74,7 +74,7 @@ export const NotificacoesPage: React.FC = () => {
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
                       notificacao.email 
                         ? 'bg-[#000dff]/10 border-[#000dff] text-[#000dff]' 
-                        : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                        : 'border-gray-200 text-slate-400 hover:border-gray-300'
                     }`}
                   >
                     <Mail size={16} />
@@ -87,7 +87,7 @@ export const NotificacoesPage: React.FC = () => {
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
                       notificacao.push 
                         ? 'bg-[#000dff]/10 border-[#000dff] text-[#000dff]' 
-                        : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                        : 'border-gray-200 text-slate-400 hover:border-gray-300'
                     }`}
                   >
                     <Bell size={16} />
@@ -100,7 +100,7 @@ export const NotificacoesPage: React.FC = () => {
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
                       notificacao.sms 
                         ? 'bg-[#000dff]/10 border-[#000dff] text-[#000dff]' 
-                        : 'border-gray-200 text-gray-400 hover:border-gray-300'
+                        : 'border-gray-200 text-slate-400 hover:border-gray-300'
                     }`}
                   >
                     <Smartphone size={16} />

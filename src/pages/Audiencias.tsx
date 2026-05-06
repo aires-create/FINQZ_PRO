@@ -411,7 +411,7 @@ export default function Audiencias() {
         {/* Header com ações */}
         <div className="flex justify-between items-center mb-6">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar audiências..."
@@ -493,7 +493,7 @@ export default function Audiencias() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-white">{audience.name}</h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-500">
                         {audience.type === 'dynamic' ? '🔄 Dinâmico' : '📋 Manual'}
                       </p>
                     </div>
@@ -503,22 +503,22 @@ export default function Audiencias() {
                       e.stopPropagation();
                       handleDeleteAudience(audience.id);
                     }}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 
                 {audience.description && (
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{audience.description}</p>
+                  <p className="text-sm text-slate-600 mb-3 line-clamp-2">{audience.description}</p>
                 )}
                 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-[#000dff]">{audience.totalContacts}</span>
-                    <span className="text-sm text-gray-500">contatos</span>
+                    <span className="text-sm text-slate-500">contatos</span>
                   </div>
-                  <span className="text-xs text-gray-400">{formatDate(audience.createdAt)}</span>
+                  <span className="text-xs text-slate-400">{formatDate(audience.createdAt)}</span>
                 </div>
               </div>
             ))}
@@ -530,7 +530,7 @@ export default function Audiencias() {
           <Modal onClose={() => setShowModal(false)} title="Nova Audiência">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Nome</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Nome</label>
                 <input
                   type="text"
                   value={newAudienceName}
@@ -540,7 +540,7 @@ export default function Audiencias() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
                 <textarea
                   value={newAudienceDesc}
                   onChange={(e) => setNewAudienceDesc(e.target.value)}
@@ -566,7 +566,7 @@ export default function Audiencias() {
           <Modal onClose={() => setShowImportModal(false)} title="Importar CSV" size="lg">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Nome da Audiência</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Nome da Audiência</label>
                 <input
                   type="text"
                   value={newAudienceName}
@@ -576,7 +576,7 @@ export default function Audiencias() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
                 <textarea
                   value={newAudienceDesc}
                   onChange={(e) => setNewAudienceDesc(e.target.value)}
@@ -587,7 +587,7 @@ export default function Audiencias() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Arquivo CSV</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Arquivo CSV</label>
                 <div className="border-2 border-dashed border-[#1f2937] rounded-lg p-6 text-center hover:border-[#000dff] transition-colors">
                   <input
                     ref={fileInputRef}
@@ -596,8 +596,8 @@ export default function Audiencias() {
                     onChange={handleFileUpload}
                     className="hidden"
                   />
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">Clique para selecionar ou arraste o arquivo</p>
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-600 mb-2">Clique para selecionar ou arraste o arquivo</p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="text-sm text-[#000dff] hover:underline"
@@ -613,8 +613,8 @@ export default function Audiencias() {
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-300 mb-2">Formato esperado:</h4>
-                <code className="text-xs text-gray-600">
+                <h4 className="text-sm font-medium text-slate-300 mb-2">Formato esperado:</h4>
+                <code className="text-xs text-slate-600">
                   nome,telefone,email<br/>
                   João Silva,11999999999,joao@email.com<br/>
                   Maria Santos,11988888888,maria@email.com
@@ -642,7 +642,7 @@ export default function Audiencias() {
           <Modal onClose={() => setShowDynamicModal(false)} title="Criar Audiência Dinâmica" size="lg">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Nome da Audiência</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Nome da Audiência</label>
                 <input
                   type="text"
                   value={newAudienceName}
@@ -652,7 +652,7 @@ export default function Audiencias() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
                 <textarea
                   value={newAudienceDesc}
                   onChange={(e) => setNewAudienceDesc(e.target.value)}
@@ -665,7 +665,7 @@ export default function Audiencias() {
               {/* Filter Builder */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-300">Filtros</label>
+                  <label className="block text-sm font-medium text-slate-300">Filtros</label>
                   <button
                     onClick={addFilter}
                     className="text-sm text-[#000dff] hover:underline flex items-center gap-1"
@@ -727,7 +727,7 @@ export default function Audiencias() {
                   ))}
                   
                   {filters.length === 0 && (
-                    <p className="text-sm text-gray-500 text-center py-4">
+                    <p className="text-sm text-slate-500 text-center py-4">
                       Nenhum filtro adicionado. Clique em "Adicionar filtro" para começar.
                     </p>
                   )}
@@ -763,7 +763,7 @@ export default function Audiencias() {
                   {calculating ? (
                     <div className="flex items-center justify-center py-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
-                      <span className="ml-2 text-sm text-gray-500">Calculando...</span>
+                      <span className="ml-2 text-sm text-slate-500">Calculando...</span>
                     </div>
                   ) : (
                     <>
@@ -772,7 +772,7 @@ export default function Audiencias() {
                           <p className="text-sm text-green-600 mb-1">Preview (primeiros {previewContacts.length}):</p>
                           <div className="space-y-1">
                             {previewContacts.map(c => (
-                              <p key={c.id} className="text-sm text-gray-600">• {c.nome || 'Sem nome'} - {c.celular || 'Sem telefone'}</p>
+                              <p key={c.id} className="text-sm text-slate-600">• {c.nome || 'Sem nome'} - {c.celular || 'Sem telefone'}</p>
                             ))}
                           </div>
                         </div>
@@ -825,7 +825,7 @@ export default function Audiencias() {
                 {loadingAllContacts ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#000dff]"></div>
-                    <span className="ml-2 text-gray-500">Carregando...</span>
+                    <span className="ml-2 text-slate-500">Carregando...</span>
                   </div>
                 ) : (
                   <>
@@ -834,7 +834,7 @@ export default function Audiencias() {
                         <div key={c.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                           <div>
                             <p className="font-medium">{c.nome || 'Sem nome'}</p>
-                            <p className="text-sm text-gray-500">{c.celular || 'Sem telefone'}</p>
+                            <p className="text-sm text-slate-500">{c.celular || 'Sem telefone'}</p>
                           </div>
                           {c.status && (
                             <span className={`px-2 py-1 rounded text-xs ${
@@ -891,43 +891,43 @@ export default function Audiencias() {
                 </div>
 
                 {selectedAudience.description && (
-                  <p className="text-gray-600 mb-4">{selectedAudience.description}</p>
+                  <p className="text-slate-600 mb-4">{selectedAudience.description}</p>
                 )}
 
                 <div className="flex gap-4 mb-6">
                   <div className="bg-[#000dff]/10 rounded-lg p-3 text-center flex-1">
                     <span className="text-2xl font-bold text-[#000dff]">{selectedAudience.totalContacts}</span>
-                    <p className="text-xs text-gray-600">Contatos</p>
+                    <p className="text-xs text-slate-600">Contatos</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-3 text-center flex-1">
                     <span className="text-2xl font-bold text-green-600">{members.filter(m => m.status === 'active').length}</span>
-                    <p className="text-xs text-gray-600">Ativos</p>
+                    <p className="text-xs text-slate-600">Ativos</p>
                   </div>
                 </div>
 
-                <h3 className="font-medium text-gray-200 mb-3">Membros</h3>
+                <h3 className="font-medium text-slate-200 mb-3">Membros</h3>
                 
                 {loadingMembers ? (
-                  <div className="text-center py-8 text-gray-500">Carregando...</div>
+                  <div className="text-center py-8 text-slate-500">Carregando...</div>
                 ) : members.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">Nenhum membro ainda</div>
+                  <div className="text-center py-8 text-slate-500">Nenhum membro ainda</div>
                 ) : (
                   <div className="space-y-2">
                     {members.slice(0, 20).map((member) => (
                       <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="font-medium text-gray-200">{member.cliente?.nome}</p>
-                          <p className="text-sm text-gray-500">{member.cliente?.celular}</p>
+                          <p className="font-medium text-slate-200">{member.cliente?.nome}</p>
+                          <p className="text-sm text-slate-500">{member.cliente?.celular}</p>
                         </div>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          member.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                          member.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate-600'
                         }`}>
                           {member.status === 'active' ? 'Ativo' : member.status}
                         </span>
                       </div>
                     ))}
                     {members.length > 20 && (
-                      <p className="text-center text-sm text-gray-500 py-2">
+                      <p className="text-center text-sm text-slate-500 py-2">
                         +{members.length - 20} outros membros
                       </p>
                     )}

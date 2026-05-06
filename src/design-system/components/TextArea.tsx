@@ -30,7 +30,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
   return (
     <div className={`${fullWidth ? "w-full" : ""}`}>
       {label && (
-        <label htmlFor={textareaId} className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label htmlFor={textareaId} className="block text-sm font-medium text-slate-700 mb-1.5">
           {label}
         </label>
       )}
@@ -40,7 +40,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
         {...props}
       />
       {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
-      {helperText && !error && <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>}
+      {helperText && !error && <p className="mt-1.5 text-sm text-slate-500">{helperText}</p>}
     </div>
   );
 };

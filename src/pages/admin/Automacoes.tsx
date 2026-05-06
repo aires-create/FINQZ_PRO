@@ -39,9 +39,9 @@ export const AutomacoesPage: React.FC = () => {
         exportFilename="automacoes"
       />
       
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
+      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900">Automações Disponíveis</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Automações Disponíveis</h3>
           
           {/* Lista de Automações */}
           <div className="space-y-3">
@@ -51,16 +51,16 @@ export const AutomacoesPage: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <Zap size={18} className="text-[#000dff]" />
-                      <h4 className="font-semibold text-gray-900">{automacao.nome}</h4>
+                      <h4 className="font-semibold text-slate-900">{automacao.nome}</h4>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        automacao.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                        automacao.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate-500'
                       }`}>
                         {automacao.ativa ? 'Ativa' : 'Inativa'}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{automacao.descricao}</p>
+                    <p className="text-sm text-slate-500 mt-1">{automacao.descricao}</p>
                     {automacao.pipelineId && (
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-slate-400 mt-2">
                         Pipeline: {initialPipelines.find(p => p.id === automacao.pipelineId)?.nome || automacao.pipelineId}
                       </p>
                     )}
@@ -77,7 +77,7 @@ export const AutomacoesPage: React.FC = () => {
                     >
                       {automacao.ativa ? <Pause size={18} /> : <Play size={18} />}
                     </button>
-                    <button className="p-2 text-gray-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg">
+                    <button className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg">
                       <Edit size={18} />
                     </button>
                   </div>

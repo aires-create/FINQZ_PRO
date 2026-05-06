@@ -145,7 +145,7 @@ export const ApiErrorDisplay = ({
          error.type === 'success' ? '✅' : 'ℹ️'}
       </div>
       <h3 className="text-lg font-semibold mb-2">{error.title}</h3>
-      <p className="text-gray-600 mb-4">{error.message}</p>
+      <p className="text-slate-600 mb-4">{error.message}</p>
       <div className="flex gap-2">
         {onRetry && (
           <button
@@ -157,7 +157,7 @@ export const ApiErrorDisplay = ({
         )}
         <button
           onClick={() => navigate('/')}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+          className="px-4 py-2 bg-gray-200 text-slate-700 rounded hover:bg-gray-300"
         >
           Voltar ao Início
         </button>

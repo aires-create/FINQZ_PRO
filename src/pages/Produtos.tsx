@@ -684,7 +684,7 @@ export const ProdutosPage: React.FC = () => {
               <Package size={18} className="text-primary" />
             </div>
             <div>
-              <div className="text-xs text-gray-500">Total</div>
+              <div className="text-xs text-slate-500">Total</div>
               <div className="text-xl font-semibold text-white">{stats.total}</div>
             </div>
           </div>
@@ -696,7 +696,7 @@ export const ProdutosPage: React.FC = () => {
               <BadgeCheck size={18} className="text-green-600" />
             </div>
             <div>
-              <div className="text-xs text-gray-500">Ativos</div>
+              <div className="text-xs text-slate-500">Ativos</div>
               <div className="text-xl font-semibold text-white">{stats.ativos}</div>
             </div>
           </div>
@@ -708,7 +708,7 @@ export const ProdutosPage: React.FC = () => {
               <BadgeAlert size={18} className="text-red-600" />
             </div>
             <div>
-              <div className="text-xs text-gray-500">Inativos</div>
+              <div className="text-xs text-slate-500">Inativos</div>
               <div className="text-xl font-semibold text-white">{stats.inativos}</div>
             </div>
           </div>
@@ -720,7 +720,7 @@ export const ProdutosPage: React.FC = () => {
               <Percent size={18} className="text-yellow-700" />
             </div>
             <div>
-              <div className="text-xs text-gray-500">Taxa média (a.m.)</div>
+              <div className="text-xs text-slate-500">Taxa média (a.m.)</div>
               <div className="text-xl font-semibold text-white">
                 {formatPercent(stats.taxaMedia, 2)}
               </div>
@@ -734,7 +734,7 @@ export const ProdutosPage: React.FC = () => {
               <DollarSign size={18} className="text-emerald-700" />
             </div>
             <div>
-              <div className="text-xs text-gray-500">Comissão média</div>
+              <div className="text-xs text-slate-500">Comissão média</div>
               <div className="text-xl font-semibold text-white">
                 {formatPercent(stats.comissaoMediaTotal, 2)}
               </div>
@@ -748,7 +748,7 @@ export const ProdutosPage: React.FC = () => {
               <Link2 size={18} className="text-indigo-700" />
             </div>
             <div>
-              <div className="text-xs text-gray-500">Integração (pend/erro)</div>
+              <div className="text-xs text-slate-500">Integração (pend/erro)</div>
               <div className="text-xl font-semibold text-white">
                 {stats.integracaoPendente}
               </div>
@@ -761,8 +761,8 @@ export const ProdutosPage: React.FC = () => {
       <Card className="border-[#1f2937]" padding="none">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <Search size={16} className="text-gray-400" />
-            <div className="text-sm text-gray-600">
+            <Search size={16} className="text-slate-400" />
+            <div className="text-sm text-slate-600">
               Exibindo <span className="font-semibold text-white">{filteredProdutos.length}</span>{" "}
               de <span className="font-semibold text-white">{produtos.length}</span>
             </div>
@@ -780,20 +780,20 @@ export const ProdutosPage: React.FC = () => {
           <table className="w-full min-w-[1200px]">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Produto</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Categoria</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Tipo</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Banco</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Promotora</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Tabela</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Convênio</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Taxa (a.m.)</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Prazo</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Valores</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Comissão</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Integração</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600">Ações</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Produto</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Categoria</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Tipo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Banco</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Promotora</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Tabela</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Convênio</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Taxa (a.m.)</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Prazo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Valores</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Comissão</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Integração</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">Ações</th>
               </tr>
             </thead>
 
@@ -824,7 +824,7 @@ export const ProdutosPage: React.FC = () => {
                           <div className="text-sm font-semibold text-white truncate">
                             {p.nome}
                           </div>
-                          <div className="text-xs text-gray-500 truncate">
+                          <div className="text-xs text-slate-500 truncate">
                             {p.descricao || "Sem descrição"}
                           </div>
                         </div>
@@ -832,53 +832,53 @@ export const ProdutosPage: React.FC = () => {
                     </td>
 
                     <td className="px-4 py-3">
-                      {p.categoria ? <Badge variant="info">{p.categoria}</Badge> : <span className="text-sm text-gray-500">-</span>}
+                      {p.categoria ? <Badge variant="info">{p.categoria}</Badge> : <span className="text-sm text-slate-500">-</span>}
                     </td>
 
                     <td className="px-4 py-3">
                       {p.tipo_produto ? (
                         <Badge variant="primary">{p.tipo_produto}</Badge>
                       ) : (
-                        <span className="text-sm text-gray-500">-</span>
+                        <span className="text-sm text-slate-500">-</span>
                       )}
                     </td>
 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Building2 size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-300">{p.banco || "-"}</span>
+                        <Building2 size={14} className="text-slate-400" />
+                        <span className="text-sm text-slate-300">{p.banco || "-"}</span>
                       </div>
                     </td>
 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Users size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-300">{p.promotora || "-"}</span>
+                        <Users size={14} className="text-slate-400" />
+                        <span className="text-sm text-slate-300">{p.promotora || "-"}</span>
                       </div>
                     </td>
 
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Table2 size={14} className="text-gray-400" />
-                        <span className="text-sm text-gray-300">{p.tabela || "-"}</span>
+                        <Table2 size={14} className="text-slate-400" />
+                        <span className="text-sm text-slate-300">{p.tabela || "-"}</span>
                       </div>
                     </td>
 
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-300">{p.convenio || "-"}</span>
+                      <span className="text-sm text-slate-300">{p.convenio || "-"}</span>
                     </td>
 
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-300">{formatPercent(p.taxa_juros, 2)}</span>
+                      <span className="text-sm text-slate-300">{formatPercent(p.taxa_juros, 2)}</span>
                     </td>
 
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-300">{prazo}</span>
-                      {prazo !== "-" ? <span className="text-xs text-gray-400"> meses</span> : null}
+                      <span className="text-sm text-slate-300">{prazo}</span>
+                      {prazo !== "-" ? <span className="text-xs text-slate-400"> meses</span> : null}
                     </td>
 
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-300">{valores}</span>
+                      <span className="text-sm text-slate-300">{valores}</span>
                     </td>
 
                     <td className="px-4 py-3">
@@ -903,7 +903,7 @@ export const ProdutosPage: React.FC = () => {
                           {integracaoLabel}
                         </Badge>
                       ) : (
-                        <span className="text-sm text-gray-500">-</span>
+                        <span className="text-sm text-slate-500">-</span>
                       )}
                     </td>
 
@@ -914,7 +914,7 @@ export const ProdutosPage: React.FC = () => {
                           onChange={() => toggleProdutoStatus(p.id)}
                           size="sm"
                         />
-                        <span className="text-sm text-gray-300">
+                        <span className="text-sm text-slate-300">
                           {p.ativo === 1 ? "Ativo" : "Inativo"}
                         </span>
                       </div>
@@ -948,11 +948,11 @@ export const ProdutosPage: React.FC = () => {
                 <tr>
                   <td colSpan={14} className="px-4 py-10 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <Package size={26} className="text-gray-300" />
-                      <div className="text-sm font-semibold text-gray-300">
+                      <Package size={26} className="text-slate-300" />
+                      <div className="text-sm font-semibold text-slate-300">
                         Nenhum produto encontrado
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-slate-500">
                         Ajuste os filtros ou crie um novo produto.
                       </div>
                       <div className="mt-2">
@@ -1420,7 +1420,7 @@ export const ProdutosPage: React.FC = () => {
           </div>
 
           {/* Observação para compatibilidade */}
-          <div className="text-xs text-gray-500 pt-1">
+          <div className="text-xs text-slate-500 pt-1">
             Observação: campos de Integração/Automação já estão prontos para API futura e podem
             ser persistidos no estado mesmo antes do type global ser expandido.
           </div>

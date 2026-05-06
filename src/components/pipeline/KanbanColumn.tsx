@@ -55,8 +55,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <h3 className="font-semibold text-sm text-gray-700">{title}</h3>
-          <span className="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+          <h3 className="font-semibold text-sm text-slate-700">{title}</h3>
+          <span className="bg-gray-200 text-slate-600 text-xs px-2 py-0.5 rounded-full">
             {opportunities.length}
           </span>
         </div>
@@ -66,10 +66,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             className="p-1 hover:bg-gray-200 rounded transition-colors"
             title="Adicionar oportunidade"
           >
-            <Plus className="w-4 h-4 text-gray-500" />
+            <Plus className="w-4 h-4 text-slate-500" />
           </button>
           <button className="p-1 hover:bg-gray-200 rounded transition-colors">
-            <MoreHorizontal className="w-4 h-4 text-gray-500" />
+            <MoreHorizontal className="w-4 h-4 text-slate-500" />
           </button>
         </div>
       </div>
@@ -81,16 +81,16 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             key={opp.id}
             draggable
             onClick={() => onCardClick(opp)}
-            className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+            className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-3 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex justify-between items-start mb-2">
-              <span className="font-medium text-sm text-gray-900 line-clamp-2">
+              <span className="font-medium text-sm text-slate-900 line-clamp-2">
                 {opp.nome || 'Sem nome'}
               </span>
             </div>
             
             {opp.telefone && (
-              <p className="text-xs text-gray-500 mb-1">{opp.telefone}</p>
+              <p className="text-xs text-slate-500 mb-1">{opp.telefone}</p>
             )}
             
             {opp.produto && (
@@ -110,7 +110,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         ))}
 
         {opportunities.length === 0 && (
-          <div className="text-center py-8 text-gray-400 text-sm">
+          <div className="text-center py-8 text-slate-400 text-sm">
             Nenhuma oportunidade
           </div>
         )}
@@ -120,8 +120,8 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       {totalValor > 0 && (
         <div className="p-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500">Total</span>
-            <span className="text-sm font-bold text-gray-700">
+            <span className="text-xs text-slate-500">Total</span>
+            <span className="text-sm font-bold text-slate-700">
               {formatCurrency(totalValor)}
             </span>
           </div>

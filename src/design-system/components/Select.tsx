@@ -34,7 +34,7 @@ export const Select: React.FC<SelectProps> = ({
 }) => {
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
 
-  const baseStyles = "w-full px-4 py-2.5 text-sm border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none bg-white";
+  const baseStyles = "w-full px-4 py-2.5 text-sm border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed appearance-none bg-[#0F172A]/80 backdrop-blur-xl border border-white/10";
   
   const stateStyles = error 
     ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
@@ -43,7 +43,7 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div className={`${fullWidth ? "w-full" : ""}`}>
       {label && (
-        <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label htmlFor={selectId} className="block text-sm font-medium text-slate-700 mb-1.5">
           {label}
         </label>
       )}
@@ -74,13 +74,13 @@ export const Select: React.FC<SelectProps> = ({
           )}
         </select>
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
       </div>
       {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
-      {helperText && !error && <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>}
+      {helperText && !error && <p className="mt-1.5 text-sm text-slate-500">{helperText}</p>}
     </div>
   );
 };

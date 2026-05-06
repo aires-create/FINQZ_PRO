@@ -47,14 +47,14 @@ export const Toggle: React.FC<ToggleProps> = ({
       >
         <span
           className={`
-            pointer-events-none inline-block rounded-full bg-white shadow-lg transform transition-transform duration-200
+            pointer-events-none inline-block rounded-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 shadow-lg transform transition-transform duration-200
             ${sizes[size].thumb}
             ${checked ? sizes[size].translate : "translate-x-0.5"}
             ${size === "sm" ? "mt-0.5 ml-0.5" : "mt-1 ml-1"}
           `}
         />
       </button>
-      {label && <span className="text-sm text-gray-700">{label}</span>}
+      {label && <span className="text-sm text-slate-700">{label}</span>}
     </label>
   );
 };

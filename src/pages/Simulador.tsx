@@ -421,8 +421,8 @@ export const SimuladorPage: React.FC = () => {
             {/* Header */}
             <div className="text-center border-b-2 border-blue-600 pb-4 mb-6">
               <h1 className="text-2xl font-bold text-blue-600">FINQZ PRO</h1>
-              <h2 className="text-lg text-gray-600">Proposta Comercial</h2>
-              <p className="text-sm text-gray-500 mt-2">
+              <h2 className="text-lg text-slate-600">Proposta Comercial</h2>
+              <p className="text-sm text-slate-500 mt-2">
                 Data: {new Date().toLocaleDateString('pt-BR')} | Código: {generatedProposalId}
               </p>
             </div>
@@ -485,14 +485,14 @@ export const SimuladorPage: React.FC = () => {
             
             {/* Total Benefit */}
             <div className="bg-green-50 p-4 rounded-lg text-center mb-6">
-              <p className="text-gray-600">Benefício Estimado ao Cliente</p>
+              <p className="text-slate-600">Benefício Estimado ao Cliente</p>
               <p className="text-2xl font-bold text-green-600">R$ {totalBenefit.toLocaleString()}</p>
             </div>
             
             {/* Next Steps */}
             <div className="mb-6">
               <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Próximos Passos</h3>
-              <ol className="list-decimal list-inside text-sm text-gray-300">
+              <ol className="list-decimal list-inside text-sm text-slate-300">
                 <li>Confirmação dos dados cadastrais</li>
                 <li>Análise de crédito (para operações de crédito)</li>
                 <li>Assinatura do contrato</li>
@@ -501,7 +501,7 @@ export const SimuladorPage: React.FC = () => {
             </div>
             
             {/* Footer */}
-            <div className="text-xs text-gray-500 text-center border-t pt-4">
+            <div className="text-xs text-slate-500 text-center border-t pt-4">
               <p className="disclaimer inline-block mb-2">
                 Proposta sujeita à análise cadastral, crédito, disponibilidade comercial e validação documental.
               </p>
@@ -543,14 +543,14 @@ export const SimuladorPage: React.FC = () => {
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
               currentStep >= step 
                 ? "bg-blue-600 text-white" 
-                : "bg-gray-200 text-gray-500"
+                : "bg-gray-200 text-slate-500"
             }`}>
               {currentStep > step ? <Check className="w-5 h-5" /> : step}
             </div>
-            <span className={`ml-2 ${currentStep >= step ? "text-white" : "text-gray-500"}`}>
+            <span className={`ml-2 ${currentStep >= step ? "text-white" : "text-slate-500"}`}>
               {label}
             </span>
-            {step < 3 && <ChevronRight className="w-5 h-5 mx-4 text-gray-300" />}
+            {step < 3 && <ChevronRight className="w-5 h-5 mx-4 text-slate-300" />}
           </div>
         ))}
       </div>
@@ -565,7 +565,7 @@ export const SimuladorPage: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Nome *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Nome *</label>
               <input
                 type="text"
                 value={customerData.name}
@@ -575,7 +575,7 @@ export const SimuladorPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">CPF/CNPJ *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">CPF/CNPJ *</label>
               <input
                 type="text"
                 value={customerData.document}
@@ -585,7 +585,7 @@ export const SimuladorPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Telefone *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Telefone *</label>
               <input
                 type="tel"
                 value={customerData.phone}
@@ -595,7 +595,7 @@ export const SimuladorPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">E-mail *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">E-mail *</label>
               <input
                 type="email"
                 value={customerData.email}
@@ -605,7 +605,7 @@ export const SimuladorPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Tipo *</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Tipo *</label>
               <select
                 value={customerData.type}
                 onChange={(e) => setCustomerData({ ...customerData, type: e.target.value as CustomerType })}
@@ -616,7 +616,7 @@ export const SimuladorPage: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-slate-300 mb-1">
                 {customerData.type === 'PF' ? 'Renda mensal' : 'Faturamento mensal'}
               </label>
               <input
@@ -628,7 +628,7 @@ export const SimuladorPage: React.FC = () => {
               />
             </div>
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-300 mb-1">Cidade</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Cidade</label>
               <input
                 type="text"
                 value={citySearchTerm || customerData.city}
@@ -654,14 +654,14 @@ export const SimuladorPage: React.FC = () => {
                       onClick={() => handleCitySelect(city)}
                     >
                       <span className="font-medium">{city.city}</span>
-                      <span className="text-gray-500 ml-1">- {city.state}</span>
+                      <span className="text-slate-500 ml-1">- {city.state}</span>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Estado</label>
               <input
                 type="text"
                 value={customerData.state}
@@ -687,7 +687,7 @@ export const SimuladorPage: React.FC = () => {
                 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Produto</label>
+                    <label className="block text-xs text-slate-500 mb-1">Produto</label>
                     <select
                       value={creditData.productId}
                       onChange={(e) => setCreditData({ ...creditData, productId: e.target.value, subproductId: '', modality: '' })}
@@ -703,7 +703,7 @@ export const SimuladorPage: React.FC = () => {
                   {creditData.productId && (
                     <>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Subproduto</label>
+                        <label className="block text-xs text-slate-500 mb-1">Subproduto</label>
                         <select
                           value={creditData.subproductId}
                           onChange={(e) => setCreditData({ ...creditData, subproductId: e.target.value, modality: '' })}
@@ -718,7 +718,7 @@ export const SimuladorPage: React.FC = () => {
                       
                       {creditData.subproductId && (
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Modalidade</label>
+                          <label className="block text-xs text-slate-500 mb-1">Modalidade</label>
                           <select
                             value={creditData.modality}
                             onChange={(e) => setCreditData({ ...creditData, modality: e.target.value })}
@@ -733,7 +733,7 @@ export const SimuladorPage: React.FC = () => {
                       )}
                       
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Valor desejado (R$)</label>
+                        <label className="block text-xs text-slate-500 mb-1">Valor desejado (R$)</label>
                         <input
                           type="number"
                           value={creditData.desiredAmount}
@@ -743,7 +743,7 @@ export const SimuladorPage: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Prazo (meses)</label>
+                        <label className="block text-xs text-slate-500 mb-1">Prazo (meses)</label>
                         <input
                           type="number"
                           value={creditData.desiredTerm}
@@ -777,7 +777,7 @@ export const SimuladorPage: React.FC = () => {
                   {energyData.interested && (
                     <>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Tipo</label>
+                        <label className="block text-xs text-slate-500 mb-1">Tipo</label>
                         <select
                           value={energyData.type || ''}
                           onChange={(e) => setEnergyData({ ...energyData, type: e.target.value as EnergyType })}
@@ -790,7 +790,7 @@ export const SimuladorPage: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Tipo de Cliente</label>
+                        <label className="block text-xs text-slate-500 mb-1">Tipo de Cliente</label>
                         <select
                           value={energyData.customerSegment || ''}
                           onChange={(e) => setEnergyData({ ...energyData, customerSegment: e.target.value as CustomerSegment })}
@@ -804,7 +804,7 @@ export const SimuladorPage: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Consumo médio (kWh)</label>
+                        <label className="block text-xs text-slate-500 mb-1">Consumo médio (kWh)</label>
                         <input
                           type="number"
                           value={energyData.averageConsumption || ''}
@@ -815,7 +815,7 @@ export const SimuladorPage: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Valor médio da conta (R$)</label>
+                        <label className="block text-xs text-slate-500 mb-1">Valor médio da conta (R$)</label>
                         <input
                           type="number"
                           value={energyData.averageBillValue || ''}
@@ -855,21 +855,21 @@ export const SimuladorPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-medium text-white mb-2">Cliente</h3>
-              <p className="text-sm text-gray-600">{customerData.name}</p>
-              <p className="text-sm text-gray-600">{customerData.document}</p>
-              <p className="text-sm text-gray-600">{customerData.phone}</p>
-              <p className="text-sm text-gray-600">{customerData.email}</p>
+              <p className="text-sm text-slate-600">{customerData.name}</p>
+              <p className="text-sm text-slate-600">{customerData.document}</p>
+              <p className="text-sm text-slate-600">{customerData.phone}</p>
+              <p className="text-sm text-slate-600">{customerData.email}</p>
             </div>
             
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="font-medium text-white mb-2">Simulação</h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-slate-600">
                 {creditData.productId && 'Crédito: ' + 
                   (products.find(p => p.id === creditData.productId)?.name || '') + 
                   ` - R$ ${creditData.desiredAmount.toLocaleString()} - ${creditData.desiredTerm}x`}
               </p>
               {energyData.interested && (
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   Energia: {energyData.type} - {energyData.customerSegment} - {energyData.averageConsumption} kWh
                 </p>
               )}
@@ -939,7 +939,7 @@ export const SimuladorPage: React.FC = () => {
                               <span className="font-medium">{offer.providerName}</span>
                               {index === 0 && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-slate-600">
                               {offer.productName} - {offer.subproductName} - {offer.modalityLabel}
                             </p>
                           </div>
@@ -947,10 +947,10 @@ export const SimuladorPage: React.FC = () => {
                             <p className="font-semibold text-lg">
                               R$ {offer.approvedAmount.toLocaleString()}
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-slate-600">
                               {offer.term}x de R$ {((offer.approvedAmount * (1 + offer.monthlyRate/100)) / offer.term).toFixed(2)}
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-slate-500">
                               {offer.monthlyRate}% a.m. | CET: {offer.cetRate}%
                             </p>
                           </div>
@@ -986,10 +986,10 @@ export const SimuladorPage: React.FC = () => {
                               <span className="font-medium">{offer.providerName}</span>
                               {index === 0 && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-slate-600">
                               {ENERGY_TYPE_LABELS[offer.energyType]} - {CUSTOMER_SEGMENT_LABELS[offer.customerSegment]}
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-slate-500">
                               {offer.consumptionRange}
                             </p>
                           </div>
@@ -997,7 +997,7 @@ export const SimuladorPage: React.FC = () => {
                             <p className="font-semibold text-lg text-green-600">
                               {offer.savingsPercent}% de economia
                             </p>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-slate-600">
                               R$ {offer.estimatedMonthlySavings.toFixed(2)}/mês economizado
                             </p>
                             <p className={`text-sm ${offer.eligible ? 'text-green-600' : 'text-red-600'}`}>

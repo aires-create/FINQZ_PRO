@@ -98,12 +98,12 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
         </div>
 
         <Card className="rounded-[28px] border-white/10 bg-[#050816] p-3 shadow-2xl shadow-black/30">
-          <div className="rounded-[24px] bg-white p-6 sm:p-8">
+          <div className="rounded-[24px] bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8">
             {mode === "login" && (
               <>
                 <div className="mb-6 text-center">
-                  <h2 className="text-2xl font-semibold text-gray-950">Entrar</h2>
-                  <p className="mt-2 text-sm text-gray-500">
+                  <h2 className="text-2xl font-semibold text-slate-950">Entrar</h2>
+                  <p className="mt-2 text-sm text-slate-500">
                     Use seu código de acesso ou e-mail para continuar.
                   </p>
                 </div>
@@ -137,7 +137,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -161,7 +161,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   >
                     Esqueci minha senha
                   </button>
-                  <span className="text-gray-400">ou use seu código</span>
+                  <span className="text-slate-400">ou use seu código</span>
                 </div>
               </>
             )}
@@ -171,7 +171,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                 <button
                   type="button"
                   onClick={resetToLogin}
-                  className="mb-4 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+                  className="mb-4 flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
                 >
                   <ArrowLeft size={16} />
                   Voltar
@@ -181,8 +181,8 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#000dff]">
                     <KeyRound size={22} />
                   </div>
-                  <h2 className="text-2xl font-semibold text-gray-950">Recuperar acesso</h2>
-                  <p className="mt-2 text-sm text-gray-500">
+                  <h2 className="text-2xl font-semibold text-slate-950">Recuperar acesso</h2>
+                  <p className="mt-2 text-sm text-slate-500">
                     Informe seu código ou e-mail para gerar uma senha temporária.
                   </p>
                 </div>
@@ -216,8 +216,8 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-600">
                     <ShieldCheck size={22} />
                   </div>
-                  <h2 className="text-2xl font-semibold text-gray-950">Acesso liberado</h2>
-                  <p className="mt-2 text-sm text-gray-500">
+                  <h2 className="text-2xl font-semibold text-slate-950">Acesso liberado</h2>
+                  <p className="mt-2 text-sm text-slate-500">
                     Sua senha temporária foi gerada. Use-a para entrar agora.
                   </p>
                 </div>
@@ -225,13 +225,13 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                 <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                   {recoveredAccessCode && (
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500">Código de acesso</p>
-                      <p className="mt-1 font-semibold text-gray-900">{recoveredAccessCode}</p>
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Código de acesso</p>
+                      <p className="mt-1 font-semibold text-slate-900">{recoveredAccessCode}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500">Senha temporária</p>
-                    <p className="mt-1 break-all font-mono text-lg font-bold text-gray-950">{generatedPassword}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Senha temporária</p>
+                    <p className="mt-1 break-all font-mono text-lg font-bold text-slate-950">{generatedPassword}</p>
                   </div>
                 </div>
 

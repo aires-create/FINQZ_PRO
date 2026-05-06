@@ -23,8 +23,8 @@ const iconColorClasses: Record<string, string> = {
   orange: "bg-orange-50 text-orange-600",
   purple: "bg-purple-50 text-purple-600",
   cyan: "bg-cyan-50 text-cyan-600",
-  gray: "bg-gray-100 text-gray-600",
-  default: "bg-gray-100 text-gray-600",
+  gray: "bg-gray-100 text-slate-600",
+  default: "bg-gray-100 text-slate-600",
   // Nomes antigos para compatibilidade
   info: "bg-blue-50 text-blue-600",
   success: "bg-green-50 text-green-600",
@@ -40,8 +40,8 @@ const valueColorClasses: Record<string, string> = {
   orange: "text-orange-600",
   purple: "text-purple-600",
   cyan: "text-cyan-600",
-  gray: "text-gray-900",
-  default: "text-gray-900",
+  gray: "text-slate-900",
+  default: "text-slate-900",
   // Nomes antigos para compatibilidade
   info: "text-blue-600",
   success: "text-green-600",
@@ -68,27 +68,27 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     if (variation === undefined || variation === null) return null;
     if (variation > 0) return <TrendingUp size={12} className="text-green-600" />;
     if (variation < 0) return <TrendingDown size={12} className="text-red-600" />;
-    return <Minus size={12} className="text-gray-400" />;
+    return <Minus size={12} className="text-slate-400" />;
   };
 
   const getVariationColor = () => {
     if (variation === undefined || variation === null) return "";
     if (variation > 0) return "text-green-600";
     if (variation < 0) return "text-red-600";
-    return "text-gray-500";
+    return "text-slate-500";
   };
 
   return (
-    <div className={`rounded-2xl border border-gray-200 bg-white p-4 shadow-sm min-h-[92px] overflow-hidden ${className}`}>
+    <div className={`rounded-2xl border border-gray-200 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-4 shadow-sm min-h-[92px] overflow-hidden ${className}`}>
       <div className="flex h-full items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-gray-500 truncate">{label}</p>
+          <p className="text-xs font-medium text-slate-500 truncate">{label}</p>
           <p className={`mt-1.5 text-lg xl:text-xl font-semibold leading-snug truncate ${valueClasses}`}>{value}</p>
           {(variation !== undefined && variation !== null) && (
             <div className={`mt-1 flex items-center gap-1 text-xs ${getVariationColor()}`}>
               {getVariationIcon()}
               <span>{variation > 0 ? "+" : ""}{variation}%</span>
-              {variationLabel && <span className="text-gray-400 ml-1">{variationLabel}</span>}
+              {variationLabel && <span className="text-slate-400 ml-1">{variationLabel}</span>}
             </div>
           )}
         </div>

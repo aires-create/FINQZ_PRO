@@ -94,7 +94,7 @@ const getNivelIcon = (nivel: EstruturaComercialNivel) => {
     case "condicao_comercial":
       return <DollarSign size={18} className="text-yellow-600" />;
     default:
-      return <Package size={18} className="text-gray-600" />;
+      return <Package size={18} className="text-slate-600" />;
   }
 };
 
@@ -227,7 +227,7 @@ const getVigenciaStatusColor = (status: string) => {
     case "nao_iniciada":
       return "bg-blue-900/20 text-blue-800 border-blue-200";
     default:
-      return "bg-gray-100 text-gray-200 border-[#1f2937]";
+      return "bg-gray-100 text-slate-200 border-[#1f2937]";
   }
 };
 
@@ -860,9 +860,9 @@ const EstruturaComercialPage: React.FC = () => {
           <div className="w-6 h-6 flex items-center justify-center">
             {hasChildren ? (
               isExpanded ? (
-                <ChevronDown size={16} className="text-gray-500" />
+                <ChevronDown size={16} className="text-slate-500" />
               ) : (
-                <ChevronRight size={16} className="text-gray-500" />
+                <ChevronRight size={16} className="text-slate-500" />
               )
             ) : (
               <div className="w-6" />
@@ -887,12 +887,12 @@ const EstruturaComercialPage: React.FC = () => {
               )}
             </div>
             {item.descricao && (
-              <div className="text-xs text-gray-500 truncate">{item.descricao}</div>
+              <div className="text-xs text-slate-500 truncate">{item.descricao}</div>
             )}
           </div>
 
           {/* Informações extras por nível */}
-          <div className="flex items-center gap-4 text-xs text-gray-500">
+          <div className="flex items-center gap-4 text-xs text-slate-500">
             {item.nivel === "condicao_comercial" && (
               <>
                 {item.taxa_juros !== undefined && (
@@ -954,7 +954,7 @@ const EstruturaComercialPage: React.FC = () => {
               onClick={() => handleToggleStatus(item.id)}
               title={item.ativo === 1 ? "Inativar" : "Ativar"}
             >
-              {item.ativo === 1 ? <BadgeCheck size={16} className="text-green-600" /> : <BadgeAlert size={16} className="text-gray-400" />}
+              {item.ativo === 1 ? <BadgeCheck size={16} className="text-green-600" /> : <BadgeAlert size={16} className="text-slate-400" />}
             </Button>
             <Button
               variant="ghost"
@@ -1063,7 +1063,7 @@ const EstruturaComercialPage: React.FC = () => {
 
         {/* Lista hierárquica */}
         <Card className="overflow-hidden">
-          <div className="bg-gray-50 border-b border-[#1f2937] p-3 flex items-center gap-2 text-sm font-medium text-gray-600">
+          <div className="bg-gray-50 border-b border-[#1f2937] p-3 flex items-center gap-2 text-sm font-medium text-slate-600">
             <div className="w-6" />
             <div className="w-6" />
             <div className="flex-1">Nome</div>
@@ -1072,8 +1072,8 @@ const EstruturaComercialPage: React.FC = () => {
           </div>
           <div className="max-h-[600px] overflow-y-auto">
             {rootItems.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Layers size={48} className="mx-auto mb-4 text-gray-300" />
+              <div className="p-8 text-center text-slate-500">
+                <Layers size={48} className="mx-auto mb-4 text-slate-300" />
                 <p>Nenhuma estrutura comercial encontrada</p>
                 <Button className="mt-4" onClick={() => handleCreate("vertical")}>
                   <Plus size={16} className="mr-2" />
@@ -1100,7 +1100,7 @@ const EstruturaComercialPage: React.FC = () => {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "dados"
                 ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-300"
+                : "border-transparent text-slate-500 hover:text-slate-300"
             }`}
             onClick={() => setActiveTab("dados")}
           >
@@ -1110,7 +1110,7 @@ const EstruturaComercialPage: React.FC = () => {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "vigencia"
                 ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-300"
+                : "border-transparent text-slate-500 hover:text-slate-300"
             }`}
             onClick={() => setActiveTab("vigencia")}
           >
@@ -1120,7 +1120,7 @@ const EstruturaComercialPage: React.FC = () => {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === "historico"
                 ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-300"
+                : "border-transparent text-slate-500 hover:text-slate-300"
             }`}
             onClick={() => setActiveTab("historico")}
           >
@@ -1133,7 +1133,7 @@ const EstruturaComercialPage: React.FC = () => {
         <div className="space-y-4">
           {/* Nível */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Nível *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Nível *</label>
             <Select
               value={formData.nivel}
               onChange={(e) => setFormData({ ...formData, nivel: e.target.value as EstruturaComercialNivel })}
@@ -1147,7 +1147,7 @@ const EstruturaComercialPage: React.FC = () => {
 
           {/* Nome */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Nome *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Nome *</label>
             <Input
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
@@ -1157,20 +1157,20 @@ const EstruturaComercialPage: React.FC = () => {
 
           {/* Código externo / integração */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Código externo / integração</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Código externo / integração</label>
             <Input
               value={formData.codigo}
               onChange={(e) => setFormData({ ...formData, codigo: e.target.value.trim() })}
               placeholder={getCodigoPlaceholder(formData.nivel)}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-slate-500">
               {getCodigoHelpText(formData.nivel)}
             </p>
           </div>
 
           {/* Descrição */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
             <TextArea
               value={formData.descricao}
               onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
@@ -1183,7 +1183,7 @@ const EstruturaComercialPage: React.FC = () => {
           {formData.nivel === "fornecedor_originador" && (
             <>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Fornecedor</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Fornecedor</label>
                 <Select
                   value={formData.fornecedor_tipo || ""}
                   onChange={(e) => setFormData({ ...formData, fornecedor_tipo: e.target.value as FornecedorTipo })}
@@ -1195,7 +1195,7 @@ const EstruturaComercialPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Nome do Fornecedor</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Nome do Fornecedor</label>
                 <Input
                   value={formData.fornecedor_nome}
                   onChange={(e) => setFormData({ ...formData, fornecedor_nome: e.target.value })}
@@ -1209,7 +1209,7 @@ const EstruturaComercialPage: React.FC = () => {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Taxa de Juros (%)</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Taxa de Juros (%)</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1219,7 +1219,7 @@ const EstruturaComercialPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Prazo</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Prazo</label>
                   <Input
                     type="number"
                     value={formData.prazo ?? ""}
@@ -1230,7 +1230,7 @@ const EstruturaComercialPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Valor Mínimo</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Valor Mínimo</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1240,7 +1240,7 @@ const EstruturaComercialPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Valor Máximo</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Valor Máximo</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1252,7 +1252,7 @@ const EstruturaComercialPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Coeficiente</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Coeficiente</label>
                   <Input
                     type="number"
                     step="0.0001"
@@ -1262,7 +1262,7 @@ const EstruturaComercialPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Comissão Flat (%)</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Comissão Flat (%)</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -1274,7 +1274,7 @@ const EstruturaComercialPage: React.FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Validade Início</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Validade Início</label>
                   <Input
                     type="date"
                     value={formData.validade_inicio}
@@ -1282,7 +1282,7 @@ const EstruturaComercialPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Validade Fim</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Validade Fim</label>
                   <Input
                     type="date"
                     value={formData.validade_fim}
@@ -1299,7 +1299,7 @@ const EstruturaComercialPage: React.FC = () => {
               checked={formData.ativo === 1}
               onChange={(checked) => setFormData({ ...formData, ativo: checked ? 1 : 0 })}
             />
-            <span className="text-sm text-gray-300">Ativo</span>
+            <span className="text-sm text-slate-300">Ativo</span>
           </div>
 
           {/* Botões */}
@@ -1327,24 +1327,24 @@ const EstruturaComercialPage: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Data de Início</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Data de Início</label>
                   <Input
                     type="date"
                     value={formData.validade_inicio}
                     onChange={(e) => setFormData({ ...formData, validade_inicio: e.target.value })}
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     Data em que a estrutura começa a vigorar
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Data de Fim</label>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Data de Fim</label>
                   <Input
                     type="date"
                     value={formData.validade_fim}
                     onChange={(e) => setFormData({ ...formData, validade_fim: e.target.value })}
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-slate-500">
                     Data em que a estrutura deixa de vigorar
                   </p>
                 </div>
@@ -1354,15 +1354,15 @@ const EstruturaComercialPage: React.FC = () => {
               <div className="mt-4 p-3 bg-[#111827] border border-[#1f2937] rounded-lg">
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="text-gray-500">Início:</span>
+                    <span className="text-slate-500">Início:</span>
                     <span className="ml-2 font-medium">{formatDate(formData.validade_inicio)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Fim:</span>
+                    <span className="text-slate-500">Fim:</span>
                     <span className="ml-2 font-medium">{formatDate(formData.validade_fim)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Duração:</span>
+                    <span className="text-slate-500">Duração:</span>
                     <span className="ml-2 font-medium">
                       {formData.validade_inicio && formData.validade_fim 
                         ? `${Math.ceil((new Date(formData.validade_fim).getTime() - new Date(formData.validade_inicio).getTime()) / (1000 * 60 * 60 * 24))} dias`
@@ -1402,14 +1402,14 @@ const EstruturaComercialPage: React.FC = () => {
                     <div key={item.id} className="bg-[#111827] border border-[#1f2937] rounded-lg p-3">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
-                          <History size={16} className="text-gray-400" />
+                          <History size={16} className="text-slate-400" />
                           <span className="font-medium text-white capitalize">{item.tipo}</span>
                         </div>
-                        <span className="text-xs text-gray-500">{formatDateTime(item.data)}</span>
+                        <span className="text-xs text-slate-500">{formatDateTime(item.data)}</span>
                       </div>
-                      <p className="text-sm text-gray-600 mt-2">{item.descricao}</p>
+                      <p className="text-sm text-slate-600 mt-2">{item.descricao}</p>
                       {item.campo && (
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-2 text-xs text-slate-500">
                           <span className="font-medium">{item.campo}:</span>{" "}
                           <span className="line-through">{item.valor_anterior || "—"}</span>
                           {" → "}
@@ -1420,8 +1420,8 @@ const EstruturaComercialPage: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Clock size={48} className="mx-auto mb-4 text-gray-300" />
+                <div className="text-center py-8 text-slate-500">
+                  <Clock size={48} className="mx-auto mb-4 text-slate-300" />
                   <p>Nenhum histórico registrado</p>
                   <p className="text-sm mt-1">As alterações serão registradas automaticamente</p>
                 </div>
@@ -1457,12 +1457,12 @@ const EstruturaComercialPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Arquivo CSV</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Arquivo CSV</label>
             <input
               type="file"
               accept=".csv"
               onChange={handleImportCSV}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900/20 file:text-blue-700 hover:file:bg-blue-900/20"
+              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900/20 file:text-blue-700 hover:file:bg-blue-900/20"
             />
           </div>
 
@@ -1482,7 +1482,7 @@ const EstruturaComercialPage: React.FC = () => {
         size="md"
       >
         <div className="space-y-4">
-          <p className="text-gray-600">
+          <p className="text-slate-600">
             Escolha o formato de exportação. Serão exportados {filteredEstrutura.length} registros.
           </p>
 

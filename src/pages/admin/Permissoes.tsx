@@ -191,7 +191,7 @@ const NovaRoleModal: React.FC<{
               <h2 className="text-xl font-bold text-white">
                 {isEditing ? "Editar Role" : "Nova Role"}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 {isEditing 
                   ? "Edite as permissões da role selecionada" 
                   : "Crie uma nova role com permissões personalizadas"}
@@ -200,7 +200,7 @@ const NovaRoleModal: React.FC<{
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X size={20} />
           </button>
@@ -217,7 +217,7 @@ const NovaRoleModal: React.FC<{
 
           {/* Nome */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Nome da Role <span className="text-red-500">*</span>
             </label>
             <input
@@ -231,7 +231,7 @@ const NovaRoleModal: React.FC<{
 
           {/* Descrição */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Descrição <span className="text-red-500">*</span>
             </label>
             <textarea
@@ -245,14 +245,14 @@ const NovaRoleModal: React.FC<{
 
           {/* Permissões */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
               Permissões <span className="text-red-500">*</span>
-              <span className="text-gray-400 font-normal ml-2">({selectedPermissions.length} selecionadas)</span>
+              <span className="text-slate-400 font-normal ml-2">({selectedPermissions.length} selecionadas)</span>
             </label>
 
             {/* Busca */}
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
                 type="text"
                 value={searchPermission}
@@ -266,7 +266,7 @@ const NovaRoleModal: React.FC<{
             <div className="space-y-4 max-h-64 overflow-y-auto border border-[#1f2937] rounded-xl p-4">
               {Object.entries(groupedPermissions).map(([categoria, permissions]) => (
                 <div key={categoria}>
-                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                     {categoria}
                   </h4>
                   <div className="space-y-1">
@@ -281,7 +281,7 @@ const NovaRoleModal: React.FC<{
                           onChange={() => togglePermission(permission.id)}
                           className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
                         />
-                        <span className="text-sm text-gray-300">{permission.nome}</span>
+                        <span className="text-sm text-slate-300">{permission.nome}</span>
                       </label>
                     ))}
                   </div>
@@ -296,7 +296,7 @@ const NovaRoleModal: React.FC<{
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-300 bg-[#111827] border border-[#1f2937] rounded-xl hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 text-slate-300 bg-[#111827] border border-[#1f2937] rounded-xl hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </button>
@@ -385,7 +385,7 @@ const PermissoesPage: React.FC = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
           <span>Administração</span>
           <ChevronRight size={16} />
           <span className="text-white">Permissões/Roles</span>
@@ -398,7 +398,7 @@ const PermissoesPage: React.FC = () => {
               </div>
               Permissões/Roles
             </h1>
-            <p className="text-gray-600 mt-1">
+            <p className="text-slate-600 mt-1">
               Gerenciamento de roles e permissões do sistema
             </p>
           </div>
@@ -417,7 +417,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total de Roles</p>
+              <p className="text-sm text-slate-500">Total de Roles</p>
               <p className="text-2xl font-bold text-white">{roles.length}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -428,7 +428,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Roles do Sistema</p>
+              <p className="text-sm text-slate-500">Roles do Sistema</p>
               <p className="text-2xl font-bold text-white">
                 {roles.filter((r) => r.tipo === "sistema").length}
               </p>
@@ -441,7 +441,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Roles Personalizadas</p>
+              <p className="text-sm text-slate-500">Roles Personalizadas</p>
               <p className="text-2xl font-bold text-white">
                 {roles.filter((r) => r.tipo === "personalizada").length}
               </p>
@@ -454,7 +454,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Usuários</p>
+              <p className="text-sm text-slate-500">Total Usuários</p>
               <p className="text-2xl font-bold text-white">
                 {roles.reduce((acc, r) => acc + r.usuarios, 0)}
               </p>
@@ -470,7 +470,7 @@ const PermissoesPage: React.FC = () => {
       <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-4 mb-6">
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Buscar roles por nome ou descrição..."
@@ -487,22 +487,22 @@ const PermissoesPage: React.FC = () => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-[#1f2937]">
             <tr>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Role
               </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Descrição
               </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Tipo
               </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Usuários
               </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Permissões
               </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Ações
               </th>
             </tr>
@@ -521,12 +521,12 @@ const PermissoesPage: React.FC = () => {
                     </div>
                     <div>
                       <p className="font-medium text-white">{role.nome}</p>
-                      <p className="text-xs text-gray-500">Criado em {role.createdAt}</p>
+                      <p className="text-xs text-slate-500">Criado em {role.createdAt}</p>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <p className="text-sm text-gray-600 max-w-xs truncate">{role.descricao}</p>
+                  <p className="text-sm text-slate-600 max-w-xs truncate">{role.descricao}</p>
                 </td>
                 <td className="px-6 py-4 text-center">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -550,7 +550,7 @@ const PermissoesPage: React.FC = () => {
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-2">
                     <button
-                      className="p-2 text-gray-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                       title="Editar"
                       onClick={() => {
                         setEditingRole(role);
@@ -560,14 +560,14 @@ const PermissoesPage: React.FC = () => {
                       <Edit size={16} />
                     </button>
                     <button
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                       title="Duplicar"
                     >
                       <Copy size={16} />
                     </button>
                     {role.tipo === "personalizada" && (
                       <button
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Excluir"
                       >
                         <Trash2 size={16} />
@@ -583,10 +583,10 @@ const PermissoesPage: React.FC = () => {
         {filteredRoles.length === 0 && (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="text-gray-400" size={32} />
+              <Shield className="text-slate-400" size={32} />
             </div>
             <h3 className="text-lg font-medium text-white mb-2">Nenhuma role encontrada</h3>
-            <p className="text-gray-500">
+            <p className="text-slate-500">
               {searchTerm
                 ? "Tente buscar com outros termos"
                 : "Comece criando uma nova role para o sistema"}
