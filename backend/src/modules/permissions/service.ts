@@ -3,6 +3,7 @@
 // ============================================
 
 import { prisma } from '../../database/prisma';
+import { PermissionAction } from '@prisma/client';
 import { AppError, ValidationError } from '../../types';
 import { createModuleLogger } from '../../shared/logger';
 import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionResponse } from './types';
@@ -33,7 +34,7 @@ export class PermissionsService {
           slug: data.slug,
           description: data.description ?? null,
           resource: data.resource,
-          action: data.action,
+          action: data.action.toUpperCase() as PermissionAction,
         },
       });
 
@@ -141,8 +142,8 @@ export class PermissionsService {
       // Check if permission is assigned to roles
       const roleCount = await prisma.role.count({
         where: {
-          permissions: {
-            some: { id: permissionId },
+          rolePermissions: {
+            some: { permissionId },
           },
         },
       });
@@ -173,32 +174,32 @@ export class PermissionsService {
 
       const defaultPermissions = [
         // User permissions
-        { name: 'Create User', slug: 'user:create', resource: 'users', action: 'create' },
-        { name: 'Read User', slug: 'user:read', resource: 'users', action: 'read' },
-        { name: 'Update User', slug: 'user:update', resource: 'users', action: 'update' },
-        { name: 'Delete User', slug: 'user:delete', resource: 'users', action: 'delete' },
+        { name: 'Create User', slug: 'user:create', resource: 'users', action: 'CREATE' as PermissionAction },
+        { name: 'Read User', slug: 'user:read', resource: 'users', action: 'READ' as PermissionAction },
+        { name: 'Update User', slug: 'user:update', resource: 'users', action: 'UPDATE' as PermissionAction },
+        { name: 'Delete User', slug: 'user:delete', resource: 'users', action: 'DELETE' as PermissionAction },
 
         // Role permissions
-        { name: 'Create Role', slug: 'role:create', resource: 'roles', action: 'create' },
-        { name: 'Read Role', slug: 'role:read', resource: 'roles', action: 'read' },
-        { name: 'Update Role', slug: 'role:update', resource: 'roles', action: 'update' },
-        { name: 'Delete Role', slug: 'role:delete', resource: 'roles', action: 'delete' },
+        { name: 'Create Role', slug: 'role:create', resource: 'roles', action: 'CREATE' as PermissionAction },
+        { name: 'Read Role', slug: 'role:read', resource: 'roles', action: 'READ' as PermissionAction },
+        { name: 'Update Role', slug: 'role:update', resource: 'roles', action: 'UPDATE' as PermissionAction },
+        { name: 'Delete Role', slug: 'role:delete', resource: 'roles', action: 'DELETE' as PermissionAction },
 
         // Tenant permissions
-        { name: 'Create Tenant', slug: 'tenant:create', resource: 'tenants', action: 'create' },
-        { name: 'Read Tenant', slug: 'tenant:read', resource: 'tenants', action: 'read' },
-        { name: 'Update Tenant', slug: 'tenant:update', resource: 'tenants', action: 'update' },
-        { name: 'Delete Tenant', slug: 'tenant:delete', resource: 'tenants', action: 'delete' },
+        { name: 'Create Tenant', slug: 'tenant:create', resource: 'tenants', action: 'CREATE' as PermissionAction },
+        { name: 'Read Tenant', slug: 'tenant:read', resource: 'tenants', action: 'READ' as PermissionAction },
+        { name: 'Update Tenant', slug: 'tenant:update', resource: 'tenants', action: 'UPDATE' as PermissionAction },
+        { name: 'Delete Tenant', slug: 'tenant:delete', resource: 'tenants', action: 'DELETE' as PermissionAction },
 
         // Lead permissions
-        { name: 'Create Lead', slug: 'lead:create', resource: 'leads', action: 'create' },
-        { name: 'Read Lead', slug: 'lead:read', resource: 'leads', action: 'read' },
-        { name: 'Update Lead', slug: 'lead:update', resource: 'leads', action: 'update' },
-        { name: 'Delete Lead', slug: 'lead:delete', resource: 'leads', action: 'delete' },
+        { name: 'Create Lead', slug: 'lead:create', resource: 'leads', action: 'CREATE' as PermissionAction },
+        { name: 'Read Lead', slug: 'lead:read', resource: 'leads', action: 'READ' as PermissionAction },
+        { name: 'Update Lead', slug: 'lead:update', resource: 'leads', action: 'UPDATE' as PermissionAction },
+        { name: 'Delete Lead', slug: 'lead:delete', resource: 'leads', action: 'DELETE' as PermissionAction },
 
         // Report permissions
-        { name: 'Read Report', slug: 'report:read', resource: 'reports', action: 'read' },
-        { name: 'Export Report', slug: 'report:export', resource: 'reports', action: 'export' },
+        { name: 'Read Report', slug: 'report:read', resource: 'reports', action: 'READ' as PermissionAction },
+        { name: 'Export Report', slug: 'report:export', resource: 'reports', action: 'EXPORT' as PermissionAction },
       ];
 
       for (const permission of defaultPermissions) {

@@ -39,13 +39,17 @@ export class RolesService {
           isSystem: false,
         },
         include: {
-          permissions: {
+          rolePermissions: {
             select: {
-              id: true,
-              name: true,
-              slug: true,
-              resource: true,
-              action: true,
+              permission: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  resource: true,
+                  action: true,
+                },
+              },
             },
           },
         },
@@ -57,7 +61,10 @@ export class RolesService {
       }
 
       logger.info(`Role created: ${role.id}`);
-      return role as unknown as RoleResponse;
+      return {
+        ...role,
+        permissions: role.rolePermissions.map((rp) => rp.permission),
+      } as unknown as RoleResponse;
     } catch (error) {
       logger.error('Failed to create role:', error);
       throw error;
@@ -75,13 +82,17 @@ export class RolesService {
           tenantId,
         },
         include: {
-          permissions: {
+          rolePermissions: {
             select: {
-              id: true,
-              name: true,
-              slug: true,
-              resource: true,
-              action: true,
+              permission: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  resource: true,
+                  action: true,
+                },
+              },
             },
           },
         },
@@ -91,7 +102,10 @@ export class RolesService {
         throw new AppError('Role not found', 404);
       }
 
-      return role as RoleResponse;
+      return {
+        ...role,
+        permissions: role.rolePermissions.map((rp) => rp.permission),
+      } as unknown as RoleResponse;
     } catch (error) {
       logger.error('Failed to get role:', error);
       throw error;
@@ -107,13 +121,17 @@ export class RolesService {
         prisma.role.findMany({
           where: { tenantId, deletedAt: null },
           include: {
-            permissions: {
+            rolePermissions: {
               select: {
-                id: true,
-                name: true,
-                slug: true,
-                resource: true,
-                action: true,
+                permission: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    resource: true,
+                    action: true,
+                  },
+                },
               },
             },
           },
@@ -126,7 +144,13 @@ export class RolesService {
         }),
       ]);
 
-      return { roles: roles as RoleResponse[], total };
+      return {
+        roles: roles.map((role) => ({
+          ...role,
+          permissions: role.rolePermissions.map((rp) => rp.permission),
+        })) as RoleResponse[],
+        total,
+      };
     } catch (error) {
       logger.error('Failed to get roles:', error);
       throw error;
@@ -169,13 +193,17 @@ export class RolesService {
         where: { id: roleId },
         data: updateData,
         include: {
-          permissions: {
+          rolePermissions: {
             select: {
-              id: true,
-              name: true,
-              slug: true,
-              resource: true,
-              action: true,
+              permission: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  resource: true,
+                  action: true,
+                },
+              },
             },
           },
         },
@@ -261,8 +289,8 @@ export class RolesService {
       await prisma.role.update({
         where: { id: roleId },
         data: {
-          permissions: {
-            set: permissions.map((p) => ({ id: p.id })),
+          rolePermissions: {
+            set: permissions.map((p) => ({ roleId_permissionId: { roleId, permissionId: p.id } })),
           },
         },
       });
