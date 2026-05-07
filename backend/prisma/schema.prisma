@@ -1,0 +1,263 @@
+// ============================================
+// FINQZ PRO - Prisma Schema
+// Enterprise SaaS Fintech Database Schema
+// ============================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// SHARED MODELS
+// ============================================
+
+// Multi-tenant base model
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  @unique
+  logo        String?
+  settings    Json?    // Company-specific settings
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  leads       Lead[]
+  partners    Partner[]
+  proposals   Proposal[]
+  commissions Commission[]
+
+  @@map("companies")
+}
+
+// Role-based access control
+model Role {
+  id          String   @id @default(cuid())
+  name        String   // admin, manager, user, partner
+  description String?
+  permissions Permission[]
+  isSystem    Boolean  @default(false) // Cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+
+  @@map("roles")
+}
+
+// Permissions for RBAC
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "users:read", "leads:create"
+  description String?
+  resource    String   // e.g., "users", "leads", "proposals"
+  action      String   // e.g., "read", "create", "update", "delete"
+  createdAt   DateTime @default(now())
+
+  // Relations
+  roles       Role[]
+
+  @@map("permissions")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  avatar        String?
+  phone         String?
+  isActive      Boolean   @default(true)
+  isEmailVerified Boolean @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Multi-tenant
+  companyId     String
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // RBAC
+  roleId        String
+  role          Role     @relation(fields: [roleId], references: [id])
+
+  // Relations
+  leads         Lead[]
+  partners      Partner[]
+  proposals     Proposal[]
+  approvedCommissions Commission[] @relation("CommissionApprovedBy")
+  paidCommissions     Commission[] @relation("CommissionPaidBy")
+
+  @@unique([email, companyId])
+  @@index([companyId])
+  @@index([roleId])
+  @@map("users")
+}
+
+// ============================================
+// CRM MODULE
+// ============================================
+
+model Lead {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  cpf         String?  @unique
+  birthDate   DateTime?
+  address     Json?    // Structured address data
+  occupation  String?
+  income      Float?
+  score       Int?     // Lead scoring
+  status      String   @default("prospect") // prospect, contact, negotiation, converted, lost
+  source      String?  // How they found us
+  notes       String?
+  tags        Json?    // Array of tags
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Multi-tenant
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Relations
+  assignedToId String?
+  assignedTo   User?    @relation(fields: [assignedToId], references: [id])
+  proposals    Proposal[]
+
+  @@unique([email, companyId])
+  @@index([companyId])
+  @@index([status])
+  @@index([cpf])
+  @@map("leads")
+}
+
+// ============================================
+// PARTNERS MODULE
+// ============================================
+
+model Partner {
+  id              String   @id @default(cuid())
+  code            String   @unique // P-0001 format
+  name            String
+  type            String   // company, franchise, partner
+  document        String?  // CPF/CNPJ
+  email           String?
+  phone           String?
+  address         Json?    // Structured address
+  bankData        Json?    // Banking information
+  commissionRates Json?    // Commission structure
+  status          String   @default("active") // active, inactive, suspended
+  contractStart   DateTime?
+  contractEnd     DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Multi-tenant
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Relations
+  managedById     String?
+  managedBy       User?    @relation(fields: [managedById], references: [id])
+  proposals       Proposal[]
+  commissions     Commission[]
+
+  @@index([companyId])
+  @@index([code])
+  @@index([status])
+  @@map("partners")
+}
+
+// ============================================
+// PROPOSALS MODULE
+// ============================================
+
+model Proposal {
+  id          String   @id @default(cuid())
+  number      String   @unique // Auto-generated proposal number
+  title       String
+  description String?
+  value       Float
+  status      String   @default("draft") // draft, sent, approved, rejected, cancelled
+  validUntil  DateTime?
+  documents   Json?    // Array of document URLs
+  metadata    Json?    // Additional proposal data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Multi-tenant
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Relations
+  leadId      String?
+  lead        Lead?    @relation(fields: [leadId], references: [id])
+  partnerId   String?
+  partner     Partner? @relation(fields: [partnerId], references: [id])
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  @@index([companyId])
+  @@index([leadId])
+  @@index([partnerId])
+  @@index([status])
+  @@map("proposals")
+}
+
+// ============================================
+// COMMISSIONS MODULE
+// ============================================
+
+model Commission {
+  id            String   @id @default(cuid())
+  amount        Float
+  percentage    Float?
+  type          String   // sale, referral, bonus, adjustment
+  status        String   @default("pending") // pending, approved, paid, cancelled
+  description   String?
+  referenceDate DateTime // When the commission was earned
+  paidAt        DateTime?
+  dueDate       DateTime?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Multi-tenant
+  companyId     String
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Relations
+  partnerId     String
+  partner       Partner  @relation(fields: [partnerId], references: [id])
+  approvedById  String?
+  approvedBy    User?    @relation("CommissionApprovedBy", fields: [approvedById], references: [id])
+  paidById      String?
+  paidBy        User?    @relation("CommissionPaidBy", fields: [paidById], references: [id])
+
+  @@index([companyId])
+  @@index([partnerId])
+  @@index([status])
+  @@map("commissions")
+}
+// Additional indexes can be added here as needed
+
+// Example additional indexes (uncomment when needed):
+// @@index([companyId, status])
+// @@index([createdAt])
+// @@index([email])
