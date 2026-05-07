@@ -702,7 +702,7 @@ export const ParceirosPage: React.FC = () => {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3 lg:gap-4">
         <KpiCard
           label="Total de Parceiros"
           value={parceiros.length}
@@ -733,30 +733,30 @@ export const ParceirosPage: React.FC = () => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <div className="rounded-3xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-2xl shadow-black/20">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
+        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0F172A]/90 p-4 sm:p-5 shadow-2xl shadow-black/20">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Resumo de Parceiros</p>
-          <h3 className="mt-3 text-2xl font-bold text-white">Visão geral da carteira</h3>
-          <p className="mt-2 text-sm text-slate-400 leading-relaxed">
+          <h3 className="mt-2 sm:mt-3 text-xl sm:text-2xl font-bold text-white">Visão geral da carteira</h3>
+          <p className="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed">
             Acompanhe os status-chave, a performance de franquias e maior visibilidade de contatos ativos em um painel premium.
           </p>
         </div>
-        <div className="rounded-3xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-2xl shadow-black/20">
+        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0F172A]/90 p-4 sm:p-5 shadow-2xl shadow-black/20">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Parceiros ativos</p>
-          <p className="mt-3 text-3xl font-semibold text-emerald-300">{parceiros.filter(p => p.status === 'ativo').length}</p>
-          <p className="mt-2 text-sm text-slate-400">Parceiros em operação e com contato regular.</p>
+          <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-emerald-300">{parceiros.filter(p => p.status === 'ativo').length}</p>
+          <p className="mt-2 text-xs sm:text-sm text-slate-400">Parceiros em operação e com contato regular.</p>
         </div>
-        <div className="rounded-3xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-2xl shadow-black/20">
+        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0F172A]/90 p-4 sm:p-5 shadow-2xl shadow-black/20">
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Franquias cadastradas</p>
-          <p className="mt-3 text-3xl font-semibold text-violet-300">{parceiros.filter(p => p.tipo === 'franquia').length}</p>
-          <p className="mt-2 text-sm text-slate-400">Contagem de unidades franqueadas no sistema.</p>
+          <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-violet-300">{parceiros.filter(p => p.tipo === 'franquia').length}</p>
+          <p className="mt-2 text-xs sm:text-sm text-slate-400">Contagem de unidades franqueadas no sistema.</p>
         </div>
       </div>
 
       {/* Partners List - Apenas Lista */}
-      <div className="hidden md:block rounded-3xl border border-white/10 bg-[#0F172A]/90 shadow-2xl shadow-black/20 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-full lg:min-w-[1100px]">
+      <div className="hidden md:block rounded-3xl border border-white/10 bg-[#0F172A]/90 shadow-2xl shadow-black/20 overflow-x-auto">
+        <div className="min-w-full overflow-x-auto">
+          <table className="w-full min-w-[1100px]">
             <thead>
             <tr className="border-b border-white/10 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950">
               <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">ID/Código</th>
@@ -833,19 +833,19 @@ export const ParceirosPage: React.FC = () => {
       </div>
 
       {/* Mobile Cards View */}
-      <div className="md:hidden space-y-4">
+      <div className="md:hidden space-y-3 sm:space-y-4">
         {filteredParceiros.map((parceiro) => (
-          <div key={parceiro.id} className="rounded-3xl border border-white/10 bg-[#0F172A]/90 p-5 shadow-2xl shadow-black/20">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
+          <div key={parceiro.id} className="rounded-2xl border border-white/10 bg-[#0F172A]/90 p-3 sm:p-4 shadow-2xl shadow-black/20">
+            <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <EntityAvatar 
                   name={parceiro.nome} 
                   type={parceiro.tipo === 'franquia' ? 'empresa' : 'parceiro'} 
                   size="sm" 
                 />
-                <div>
-                  <h3 className="font-medium text-white">{parceiro.nome}</h3>
-                  <p className="text-sm text-slate-400">{normalizeCodigoParceiro(parceiro.codigo)}</p>
+                <div className="min-w-0">
+                  <h3 className="font-medium text-white text-sm sm:text-base truncate">{parceiro.nome}</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">{normalizeCodigoParceiro(parceiro.codigo)}</p>
                 </div>
               </div>
               <Badge
@@ -853,53 +853,52 @@ export const ParceirosPage: React.FC = () => {
                   parceiro.status === 'ativo' ? 'success' :
                   parceiro.status === 'inativo' ? 'danger' : 'warning'
                 }
-                className="uppercase tracking-[0.04em]"
+                className="uppercase tracking-[0.04em] flex-shrink-0 text-xs"
               >
                 {getStatusLabel(parceiro.status)}
               </Badge>
             </div>
-            <div className="space-y-2 mb-4">
+            <div className="space-y-2 mb-3 sm:mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Tipo:</span>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-slate-300 border border-[#374151]">
-                  {getTipoLabel(parceiro.tipo)}
+                <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Tipo:</span>
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-slate-300 border border-[#374151]">                  {getTipoLabel(parceiro.tipo)}
                 </span>
               </div>
               {parceiro.responsavel && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Responsável:</span>
-                  <span className="text-sm text-slate-300">{parceiro.responsavel}</span>
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Resp:</span>
+                  <span className="text-xs sm:text-sm text-slate-300 line-clamp-1">{parceiro.responsavel}</span>
                 </div>
               )}
               {(parceiro.telefone || parceiro.email) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Contato:</span>
-                  <div className="text-sm">
-                    {parceiro.telefone && <div className="text-slate-300">{parceiro.telefone}</div>}
-                    {parceiro.email && <div className="text-slate-400 text-xs">{parceiro.email}</div>}
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Contato:</span>
+                  <div className="text-xs sm:text-sm space-y-0.5 min-w-0">
+                    {parceiro.telefone && <div className="text-slate-300 truncate">{parceiro.telefone}</div>}
+                    {parceiro.email && <div className="text-slate-400 text-xs truncate">{parceiro.email}</div>}
                   </div>
                 </div>
               )}
               {(parceiro.cidade || parceiro.estado) && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em]">Localização:</span>
-                  <span className="text-sm text-slate-300">
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Local:</span>
+                  <span className="text-xs sm:text-sm text-slate-300 truncate">
                     {parceiro.cidade || parceiro.estado ? `${parceiro.cidade || ''}${parceiro.cidade && parceiro.estado ? ', ' : ''}${parceiro.estado || ''}` : '-'}
                   </span>
                 </div>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-2 pt-2 sm:pt-3 border-t border-white/5">
               <button
                 onClick={() => handleEdit(parceiro as Parceiro)}
-                className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[#3388d9]/10 text-[#3388d9] border border-[#3388d9]/20 rounded-xl hover:bg-[#3388d9]/20 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-[#3388d9]/10 text-[#3388d9] border border-[#3388d9]/20 rounded-lg sm:rounded-xl hover:bg-[#3388d9]/20 transition-colors text-xs sm:text-sm font-medium"
               >
                 <Edit size={16} />
                 Editar
               </button>
               <button
                 onClick={() => handleDelete((parceiro as Parceiro).id)}
-                className="w-full sm:flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg sm:rounded-xl hover:bg-red-500/20 transition-colors text-xs sm:text-sm font-medium"
               >
                 <Trash2 size={16} />
                 Excluir
@@ -929,59 +928,59 @@ export const ParceirosPage: React.FC = () => {
 
       {/* Modal de Credenciais */}
       {showCredentials && generatedCredentials && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] rounded-2xl p-6 w-full max-w-md border border-[#1f2937]">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check size={32} className="text-green-600" />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-[#111827] rounded-2xl p-4 sm:p-6 w-full max-w-md border border-[#1f2937] max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-4 sm:mb-6">
+              <div className="w-12 sm:w-16 h-12 sm:h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Check size={24} className="text-green-600" />
               </div>
-              <h3 className="text-lg font-semibold text-white">Parceiro Criado!</h3>
-              <p className="text-slate-500 text-sm">Credenciais de acesso geradas automaticamente</p>
+              <h3 className="text-base sm:text-lg font-semibold text-white">Parceiro Criado!</h3>
+              <p className="text-slate-500 text-xs sm:text-sm">Credenciais de acesso geradas automaticamente</p>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Login</label>
+                <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Login</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={generatedCredentials.login}
                     readOnly
-                    className="flex-1 px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white font-mono focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9]"
+                    className="flex-1 px-3 sm:px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-lg sm:rounded-xl text-white font-mono text-xs sm:text-sm focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9]"
                   />
                   <button
                     onClick={() => copyToClipboard(generatedCredentials.login, 'login')}
-                    className="p-2 bg-[#1f2937] hover:bg-[#374151] rounded-xl transition-colors"
+                    className="p-2 bg-[#1f2937] hover:bg-[#374151] rounded-lg transition-colors flex-shrink-0"
                   >
-                    {copiedField === 'login' ? <Check size={18} className="text-green-400" /> : <Copy size={18} className="text-slate-400" />}
+                    {copiedField === 'login' ? <Check size={16} className="text-green-400" /> : <Copy size={16} className="text-slate-400" />}
                   </button>
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
+                <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Senha</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="password"
                     value={generatedCredentials.senha}
                     readOnly
-                    className="flex-1 px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white font-mono focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9]"
+                    className="flex-1 px-3 sm:px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-lg sm:rounded-xl text-white font-mono text-xs sm:text-sm focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9]"
                   />
                   <button
                     onClick={() => copyToClipboard(generatedCredentials.senha, 'senha')}
-                    className="p-2 bg-[#1f2937] hover:bg-[#374151] rounded-xl transition-colors"
+                    className="p-2 bg-[#1f2937] hover:bg-[#374151] rounded-lg transition-colors flex-shrink-0"
                     title="Copiar senha"
                   >
-                    {copiedField === 'senha' ? <Check size={18} className="text-green-400" /> : <Copy size={18} className="text-slate-400" />}
+                    {copiedField === 'senha' ? <Check size={16} className="text-green-400" /> : <Copy size={16} className="text-slate-400" />}
                   </button>
                 </div>
               </div>
             </div>
             
-            <div className="mt-6 flex justify-end">
+            <div className="mt-4 sm:mt-6 flex justify-end">
               <button
                 onClick={() => setShowCredentials(false)}
-                className="px-4 py-2 bg-primary text-white rounded-2xl hover:bg-primary/90"
+                className="px-4 py-2 bg-[#3388d9] text-white rounded-lg sm:rounded-2xl hover:bg-[#2673c8] text-xs sm:text-sm font-medium"
               >
                 Fechar
               </button>
@@ -992,21 +991,21 @@ export const ParceirosPage: React.FC = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] bg-[#111827]:bg-[#111827] bg-[#111827]:bg-[#111827] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#1f2937] bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937]">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-[#111827] rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto border border-[#1f2937]">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white bg-[#111827]:text-white">
+              <h3 className="text-lg sm:text-xl font-semibold text-white">
                 {editingParceiro ? "Editar Parceiro" : "Novo Parceiro"}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-2 text-slate-500 hover:text-slate-600 bg-[#111827]:hover:text-slate-200"
+                className="p-2 text-slate-500 hover:text-slate-200 transition-colors flex-shrink-0"
               >
                 <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
@@ -1106,24 +1105,24 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Profissão
                   </label>
                   <input
                     type="text"
                     value={formData.profissao}
                     onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Estado Civil
                   </label>
                   <select
                     value={formData.estado_civil}
                     onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
-                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="solteiro">Solteiro(a)</option>
@@ -1134,13 +1133,13 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Sexo
                   </label>
                   <select
                     value={formData.sexo}
                     onChange={(e) => setFormData({ ...formData, sexo: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="masculino">Masculino</option>
@@ -1150,62 +1149,62 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Data de Nascimento
                   </label>
                   <input
                     type="date"
                     value={formData.data_nascimento}
                     onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                    className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 {isCNPJ(formData.cpf_cnpj || "") && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                      <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                         Responsável Legal
                       </label>
                       <input
                         type="text"
                         value={formData.responsavel_legal}
                         onChange={(e) => setFormData({ ...formData, responsavel_legal: e.target.value })}
-                        className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                      <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                         CPF do Responsável
                       </label>
                       <input
                         type="text"
                         value={formData.cpf_responsavel}
                         onChange={(e) => setFormData({ ...formData, cpf_responsavel: e.target.value })}
-                        className="w-full px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-2xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                       />
                     </div>
                   </>
                 )}
                 
                 {/* Seção de Endereço */}
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-sm font-semibold text-white mb-3 pb-2 border-b border-[#1f2937]">Endereço</h4>
+                <div className="sm:col-span-2 mt-2 sm:mt-4">
+                  <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 pb-2 border-b border-[#1f2937]">Endereço</h4>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">CEP</label>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">CEP</label>
                   <input
                     type="text"
                     value={formData.cep}
                     onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Estado</label>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Estado</label>
                   <select
                     value={formData.estado}
                     onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="AC">Acre</option>
@@ -1237,58 +1236,58 @@ export const ParceirosPage: React.FC = () => {
                     <option value="TO">Tocantins</option>
                   </select>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Rua</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Rua</label>
                   <input
                     type="text"
                     value={formData.rua}
                     onChange={(e) => setFormData({ ...formData, rua: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Número</label>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Número</label>
                   <input
                     type="text"
                     value={formData.numero}
                     onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Complemento</label>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Complemento</label>
                   <input
                     type="text"
                     value={formData.complemento}
                     onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Bairro</label>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Bairro</label>
                   <input
                     type="text"
                     value={formData.bairro}
                     onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Cidade</label>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">Cidade</label>
                   <input
                     type="text"
                     value={formData.cidade}
                     onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                    className="w-full px-4 py-2 bg-gray-50 border border-[#1f2937] rounded-2xl text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 
                 {/* Seção de Dados Bancários */}
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-sm font-semibold text-white mb-3 pb-2 border-b border-[#1f2937]">Dados Bancários</h4>
+                <div className="sm:col-span-2 mt-2 sm:mt-4">
+                  <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 pb-2 border-b border-[#1f2937]">Dados Bancários</h4>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Banco
                   </label>
                   <input
@@ -1296,11 +1295,11 @@ export const ParceirosPage: React.FC = () => {
                     value={formData.banco}
                     onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
                     placeholder="Nome do banco"
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Agência
                   </label>
                   <input
@@ -1308,11 +1307,11 @@ export const ParceirosPage: React.FC = () => {
                     value={formData.agencia}
                     onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
                     placeholder="Número da agência"
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Conta
                   </label>
                   <input
@@ -1320,17 +1319,17 @@ export const ParceirosPage: React.FC = () => {
                     value={formData.conta}
                     onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
                     placeholder="Número da conta"
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Tipo de Conta
                   </label>
                   <select
                     value={formData.tipoConta}
                     onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="corrente">Conta Corrente</option>
@@ -1338,7 +1337,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Titular da Conta
                   </label>
                   <input
@@ -1346,11 +1345,11 @@ export const ParceirosPage: React.FC = () => {
                     value={formData.titular}
                     onChange={(e) => setFormData({ ...formData, titular: e.target.value })}
                     placeholder="Nome do titular"
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     CPF/CNPJ do Titular
                   </label>
                   <input
@@ -1358,22 +1357,22 @@ export const ParceirosPage: React.FC = () => {
                     value={formData.documentoTitular}
                     onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })}
                     placeholder="CPF ou CNPJ do titular"
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
 
                 {/* Seção PIX */}
-                <div className="md:col-span-2 mt-2">
-                  <h5 className="text-xs font-semibold text-slate-300 mb-2 pb-1 border-b border-gray-100">Chave PIX</h5>
+                <div className="sm:col-span-2 mt-2">
+                  <h5 className="text-xs sm:text-sm font-semibold text-slate-300 mb-2 pb-1 border-b border-gray-100">Chave PIX</h5>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Tipo de Chave PIX
                   </label>
                   <select
                     value={formData.pixTipo}
                     onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value as any })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   >
                     <option value="">Selecione</option>
                     <option value="cpf">CPF</option>
@@ -1384,7 +1383,7 @@ export const ParceirosPage: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Chave PIX
                   </label>
                   <input
@@ -1392,13 +1391,13 @@ export const ParceirosPage: React.FC = () => {
                     value={formData.pixChave}
                     onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })}
                     placeholder="Valor da chave PIX"
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors"
                   />
                 </div>
 
                 {/* Seção de Documentos */}
-                <div className="md:col-span-2 mt-4">
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                <div className="sm:col-span-2 mt-2 sm:mt-4">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Documentos (PDF, JPG, PNG)
                   </label>
                   <input
@@ -1407,22 +1406,22 @@ export const ParceirosPage: React.FC = () => {
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={handleDocumentUpload}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-xs sm:text-sm text-white"
                   />
                   {documentos.length > 0 && (
                     <div className="mt-2 space-y-2">
                       {documentos.map((doc, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 bg-[#111827]:bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            {doc.tipo === 'pdf' ? <FileText size={16} className="text-red-500" /> : 
-                             doc.tipo === 'imagem' ? <Image size={16} className="text-blue-500" /> : 
-                             <File size={16} className="text-slate-500" />}
-                            <span className="text-sm text-slate-600">{doc.nome}</span>
+                        <div key={index} className="flex items-center justify-between p-2 sm:p-3 bg-[#0F172A] rounded-lg border border-[#1f2937]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {doc.tipo === 'pdf' ? <FileText size={16} className="text-red-500 flex-shrink-0" /> : 
+                             doc.tipo === 'imagem' ? <Image size={16} className="text-blue-500 flex-shrink-0" /> : 
+                             <File size={16} className="text-slate-500 flex-shrink-0" />}
+                            <span className="text-xs sm:text-sm text-slate-300 truncate">{doc.nome}</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => removeDocumento(index)}
-                            className="p-1 text-red-500 hover:text-red-700"
+                            className="p-1 text-red-500 hover:text-red-700 flex-shrink-0 ml-2"
                           >
                             <X size={16} />
                           </button>
@@ -1432,8 +1431,8 @@ export const ParceirosPage: React.FC = () => {
                   )}
                 </div>
                 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Observação
                   </label>
                   <textarea
@@ -1441,22 +1440,22 @@ export const ParceirosPage: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
                     rows={3}
                     placeholder="Observações sobre o parceiro..."
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-[#0F172A] border border-[#1f2937] rounded-xl sm:rounded-2xl text-sm sm:text-base text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-colors resize-none"
                   />
                 </div>
               </div>
 
               {/* Botão de Reset de Senha - apenas quando editando */}
               {editingParceiro && (
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-[#1f2937] mt-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-[#111827]/50 rounded-xl border border-[#1f2937] mt-2 sm:mt-4 gap-3">
                   <div>
-                    <p className="text-sm font-medium text-slate-300">Acesso do Parceiro</p>
+                    <p className="text-xs sm:text-sm font-medium text-slate-300">Acesso do Parceiro</p>
                     <p className="text-xs text-slate-500">Gerenciar login e senha</p>
                   </div>
                   <button
                     type="button"
                     onClick={handleResetSenha}
-                    className="px-3 py-2 bg-red-900/200 text-white text-sm rounded-xl hover:bg-red-600"
+                    className="px-3 sm:px-4 py-2 sm:py-2.5 bg-red-900/30 text-red-300 text-xs sm:text-sm rounded-lg sm:rounded-xl hover:bg-red-900/50 transition-colors whitespace-nowrap"
                   >
                     Resetar Senha
                   </button>
@@ -1464,24 +1463,24 @@ export const ParceirosPage: React.FC = () => {
               )}
 
               {/* Compliance e Consultas */}
-              <div className="mt-6 pt-6 border-t border-[#1f2937]">
-                <h4 className="text-sm font-medium text-slate-600 mb-4 flex items-center gap-2">
+              <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#1f2937]">
+                <h4 className="text-xs sm:text-sm font-medium text-slate-400 mb-3 sm:mb-4 flex items-center gap-2">
                   <Shield size={16} />
                   Compliance e Consultas
                 </h4>
-                <div className="space-y-4">
+                <div className="space-y-2 sm:space-y-3">
                   {/* Restrição de Crédito */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">Restrição de Crédito</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-[#111827]/50 rounded-lg border border-[#1f2937] gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-slate-300">Restrição de Crédito</p>
                       <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-between sm:justify-end">
                       {renderCreditStatus()}
                       <button
                         type="button"
                         onClick={handleConsultCredit}
-                        className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
+                        className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-[#1f2937] transition-colors whitespace-nowrap"
                       >
                         Consultar
                       </button>
@@ -1489,17 +1488,17 @@ export const ParceirosPage: React.FC = () => {
                   </div>
 
                   {/* Não Perturbe */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">Não Perturbe</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-[#111827]/50 rounded-lg border border-[#1f2937] gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-slate-300">Não Perturbe</p>
                       <p className="text-xs text-slate-500">Bloqueio de contato por telefone</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-between sm:justify-end">
                       {renderDoNotCallStatus()}
                       <button
                         type="button"
                         onClick={handleConsultDoNotCall}
-                        className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
+                        className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-[#1f2937] transition-colors whitespace-nowrap"
                       >
                         Consultar
                       </button>
@@ -1508,17 +1507,17 @@ export const ParceirosPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4 mt-3 sm:mt-4 border-t border-[#1f2937]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 bg-[#111827]:text-slate-500 hover:bg-gray-100 bg-[#111827]:hover:bg-gray-50 bg-[#111827]:bg-gray-50 rounded-2xl"
+                  className="w-full sm:flex-1 px-4 py-2 sm:py-2.5 text-slate-400 hover:text-slate-300 bg-[#111827]/50 hover:bg-[#1f2937] rounded-lg sm:rounded-2xl text-sm sm:text-base transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white rounded-2xl hover:bg-primary/90"
+                  className="w-full sm:flex-1 px-4 py-2 sm:py-2.5 bg-[#3388d9] hover:bg-[#2673c8] text-white font-medium rounded-lg sm:rounded-2xl text-sm sm:text-base transition-colors"
                 >
                   {editingParceiro ? "Salvar" : "Criar"}
                 </button>
@@ -1537,23 +1536,23 @@ export const ParceirosPage: React.FC = () => {
             className="flex-1 bg-black/40"
             onClick={() => setOpenFilterDrawer(false)}
           />
-          <div className="w-full max-w-sm bg-[#0F172A]/95 backdrop-blur-2xl h-full shadow-2xl p-6 overflow-y-auto border-l border-white/10">
-            <div className="flex justify-between items-center mb-6">
+          <div className="w-full max-w-sm bg-[#0F172A]/95 backdrop-blur-2xl h-full shadow-2xl p-3 sm:p-4 lg:p-6 overflow-y-auto border-l border-white/10">
+            <div className="flex justify-between items-start mb-3 sm:mb-4 lg:mb-6 gap-2">
               <div>
                 <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Painel de filtros</p>
-                <h2 className="text-2xl font-bold text-white">Refinar parceiros</h2>
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">Refinar parceiros</h2>
               </div>
               <button 
                 onClick={() => setOpenFilterDrawer(false)}
-                className="p-3 rounded-2xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors"
+                className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors flex-shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">Tipo</label>
-                <Select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)}>
+                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Tipo</label>
+                <Select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} className="text-xs sm:text-sm">
                   <option value="">Todos os Tipos</option>
                   {PARCEIRO_TIPOS.map(t => (
                     <option key={t.key} value={t.key}>{t.label}</option>
@@ -1561,8 +1560,8 @@ export const ParceirosPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">Status</label>
-                <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Status</label>
+                <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="text-xs sm:text-sm">
                   <option value="">Todos os Status</option>
                   {PARCEIRO_STATUSES.map(s => (
                     <option key={s.key} value={s.key}>{s.label}</option>
@@ -1570,46 +1569,50 @@ export const ParceirosPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">Cidade</label>
+                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Cidade</label>
                 <Input
                   type="text"
                   value={filterCidade}
                   onChange={(e) => setFilterCidade(e.target.value)}
                   placeholder="Filtrar por cidade"
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">Estado</label>
+                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Estado</label>
                 <Input
                   type="text"
                   value={filterEstado}
                   onChange={(e) => setFilterEstado(e.target.value)}
                   placeholder="UF (ex: SP, RJ)"
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">Responsável</label>
+                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Responsável</label>
                 <Input
                   type="text"
                   value={filterResponsavel}
                   onChange={(e) => setFilterResponsavel(e.target.value)}
                   placeholder="Filtrar por responsável"
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-300 mb-2 block">Email</label>
+                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Email</label>
                 <Input
                   type="text"
                   value={filterEmail}
                   onChange={(e) => setFilterEmail(e.target.value)}
                   placeholder="Filtrar por email"
+                  className="text-xs sm:text-sm"
                 />
               </div>
-              <div className="flex justify-between pt-4 border-t border-white/10">
-                <Button variant="outline" onClick={() => { setFilterTipo(""); setFilterStatus(""); setFilterCidade(""); setFilterEstado(""); setFilterResponsavel(""); setFilterEmail(""); }} className="text-slate-300">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-white/10">
+                <Button variant="outline" onClick={() => { setFilterTipo(""); setFilterStatus(""); setFilterCidade(""); setFilterEstado(""); setFilterResponsavel(""); setFilterEmail(""); }} className="text-slate-300 text-xs sm:text-sm w-full sm:flex-1">
                   Limpar
                 </Button>
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm w-full sm:flex-1">
                   Aplicar
                 </Button>
               </div>

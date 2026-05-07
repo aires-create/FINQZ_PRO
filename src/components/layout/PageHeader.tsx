@@ -281,7 +281,7 @@ export function PageHeader({
       })
       
       // Processar linhas
-      const processedData: any[] = {}
+      const processedData: Record<number, any> = {}
       const errors: Record<number, string> = {}
       
       dataRows.forEach((row, rowIndex) => {
@@ -342,10 +342,10 @@ export function PageHeader({
 
   return (
     <div className="rounded-2xl border border-white/10 bg-[#0F172A]/80 backdrop-blur-xl p-3 shadow-sm">
-      <div className="flex items-center justify-between w-full gap-4 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between w-full">
         
         {/* Left: Busca + Atualizar */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           {/* Kanban / Lista Toggle */}
           {view && setView && (
             <div className="flex bg-[#111827]/90 rounded-lg p-1 border border-white/10">
@@ -379,11 +379,11 @@ export function PageHeader({
 
           {/* Buscar - opcional */}
           {showSearch && (
-            <div className="relative">
+            <div className="relative min-w-0">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 placeholder="Buscar..."
-                className="h-10 w-full sm:w-[280px] rounded-xl border border-white/10 bg-[#0F172A] text-slate-100 placeholder:text-slate-400 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/20"
+                className="h-10 w-full max-w-[280px] rounded-xl border border-white/10 bg-[#0F172A] text-slate-100 placeholder:text-slate-400 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/20"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             </div>
@@ -400,7 +400,7 @@ export function PageHeader({
         </div>
 
         {/* Right: Ações */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex flex-wrap items-center gap-3 ml-auto justify-end min-w-0">
           {/* Filtros Dropdown - opcional */}
           {showFilter && (filters.length > 0 || onOpenFilters) && (
             <div className="relative">
@@ -626,11 +626,11 @@ export function PageHeader({
                   )}
 
                   {/* Preview da tabela */}
-                  <div className="border rounded-lg overflow-hidden">
+                          <div className="border rounded-lg overflow-hidden">
                     <table className="w-full text-sm">
                       <thead className="bg-[#0F172A]">
                         <tr>
-                          {columns.map((col) => (
+                          {importColumns.slice(0, 5).map((col) => (
                             <th key={col.key} className="px-3 py-2 text-left font-medium text-slate-300">{col.label}</th>
                           ))}
                         </tr>
