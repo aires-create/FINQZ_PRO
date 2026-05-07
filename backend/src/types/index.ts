@@ -41,7 +41,7 @@ export interface SearchQuery extends PaginationQuery {
 // Authentication Types
 export interface JWTPayload {
   userId: string;
-  companyId: string;
+  tenantId: string;
   roleId: string;
   email: string;
   iat?: number;
@@ -53,6 +53,14 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName?: string;
+  companyName?: string;
+}
+
 export interface AuthResponse {
   user: {
     id: string;
@@ -60,7 +68,8 @@ export interface AuthResponse {
     firstName: string;
     lastName: string;
     role: string;
-    company: string;
+    tenantId: string;
+    tenantName: string;
   };
   tokens: {
     accessToken: string;
@@ -74,7 +83,7 @@ export interface RefreshTokenRequest {
 
 // Multi-tenant Types
 export interface TenantContext {
-  companyId: string;
+  tenantId: string;
   userId: string;
   roleId: string;
 }
@@ -103,14 +112,14 @@ export class ValidationError extends AppError {
 }
 
 export class AuthenticationError extends AppError {
-  constructor(message: string = 'Authentication required') {
-    super(message, 401);
+  constructor(message: string = 'Authentication required', statusCode: number = 401) {
+    super(message, statusCode);
   }
 }
 
 export class AuthorizationError extends AppError {
-  constructor(message: string = 'Insufficient permissions') {
-    super(message, 403);
+  constructor(message: string = 'Insufficient permissions', statusCode: number = 403) {
+    super(message, statusCode);
   }
 }
 

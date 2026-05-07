@@ -1,6 +1,7 @@
 // ============================================
 // FINQZ PRO - Prisma Schema
 // Enterprise SaaS Fintech Database Schema
+// Multi-tenant, RBAC, UUID-based, Soft-delete
 // ============================================
 
 generator client {
@@ -13,58 +14,111 @@ datasource db {
 }
 
 // ============================================
-// SHARED MODELS
+// MULTI-TENANT CORE
 // ============================================
 
-// Multi-tenant base model
-model Company {
-  id          String   @id @default(cuid())
-  name        String
-  domain      String?  @unique
-  logo        String?
-  settings    Json?    // Company-specific settings
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+/// Tenant (Company) - Multi-tenant isolation
+model Tenant {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  domain    String?   @unique
+  plan      String    @default("standard") // basic, standard, premium, enterprise
+  settings  Json? // Tenant-specific settings
+  isActive  Boolean   @default(true)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
-  users       User[]
-  leads       Lead[]
-  partners    Partner[]
-  proposals   Proposal[]
-  commissions Commission[]
+  users         User[]
+  roles         Role[]
+  customers     Customer[]
+  leads         Lead[]
+  opportunities Opportunity[]
+  pipelines     Pipeline[]
+  stages        Stage[]
+  activities    Activity[]
+  bankProposals BankProposal[]
+  auditLogs     AuditLog[]
+  commissions   Commission[]
+  partners      Partner[]
 
-  @@map("companies")
+  @@index([domain])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("tenants")
 }
 
-// Role-based access control
+/// Partner - Commercial partner hierarchy
+model Partner {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String    @unique
+  name      String
+  type      String
+  document  String?
+  email     String?
+  phone     String?
+  status    String    @default("active")
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  companyId String @db.Uuid
+  company   Tenant @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  managedById String? @db.Uuid
+  managedBy   User?   @relation(fields: [managedById], references: [id])
+
+  customers Customer[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("partners")
+}
+
+// ============================================
+// RBAC - ROLE BASED ACCESS CONTROL
+// ============================================
+
+/// Role - RBAC roles with granular permissions
 model Role {
-  id          String   @id @default(cuid())
-  name        String   // admin, manager, user, partner
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  slug        String
   description String?
   permissions Permission[]
-  isSystem    Boolean  @default(false) // Cannot be deleted
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isSystem    Boolean      @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
-  users       User[]
+  users User[]
 
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([isSystem])
   @@map("roles")
 }
 
-// Permissions for RBAC
+/// Permission - Granular permissions for RBAC
 model Permission {
-  id          String   @id @default(cuid())
-  name        String   @unique // e.g., "users:read", "leads:create"
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  slug        String   @unique
   description String?
-  resource    String   // e.g., "users", "leads", "proposals"
-  action      String   // e.g., "read", "create", "update", "delete"
+  resource    String
+  action      String
   createdAt   DateTime @default(now())
 
   // Relations
-  roles       Role[]
+  roles Role[]
 
+  @@index([resource, action])
   @@map("permissions")
 }
 
@@ -72,192 +126,473 @@ model Permission {
 // USER MANAGEMENT
 // ============================================
 
+/// User - Application users
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  firstName     String
-  lastName      String
-  avatar        String?
-  phone         String?
-  isActive      Boolean   @default(true)
-  isEmailVerified Boolean @default(false)
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email           String
+  emailNormalized String
+  password        String
+  firstName       String
+  lastName        String
+  phone           String?
+  department      String?
+  jobTitle        String?
+
+  // Account status
+  isActive        Boolean   @default(true)
+  isEmailVerified Boolean   @default(false)
+  lastLoginAt     DateTime?
+
+  // Security & audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Multi-tenant
-  companyId     String
-  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // RBAC
-  roleId        String
-  role          Role     @relation(fields: [roleId], references: [id])
+  roleId String @db.Uuid
+  role   Role   @relation(fields: [roleId], references: [id])
 
   // Relations
-  leads         Lead[]
-  partners      Partner[]
-  proposals     Proposal[]
-  approvedCommissions Commission[] @relation("CommissionApprovedBy")
-  paidCommissions     Commission[] @relation("CommissionPaidBy")
+  createdLeads       Lead[]         @relation("LeadCreatedBy")
+  ownedLeads         Lead[]         @relation("LeadOwner")
+  ownedOpportunities Opportunity[]  @relation("OpportunityOwner")
+  createdProposals   BankProposal[] @relation("ProposalCreatedBy")
+  activities         Activity[]
+  commissions        Commission[]
+  auditLogs          AuditLog[]
+  Partner            Partner[]
+  refreshTokens      RefreshToken[]
 
-  @@unique([email, companyId])
-  @@index([companyId])
-  @@index([roleId])
+  @@unique([tenantId, emailNormalized])
+  @@index([tenantId])
+  @@index([email])
+  @@index([isActive])
+  @@index([deletedAt])
   @@map("users")
 }
 
 // ============================================
-// CRM MODULE
+// LEADS & CUSTOMERS
 // ============================================
 
+/// Lead - Sales leads and prospects
 model Lead {
-  id          String   @id @default(cuid())
-  firstName   String
-  lastName    String
-  email       String?
-  phone       String?
-  cpf         String?  @unique
-  birthDate   DateTime?
-  address     Json?    // Structured address data
-  occupation  String?
-  income      Float?
-  score       Int?     // Lead scoring
-  status      String   @default("prospect") // prospect, contact, negotiation, converted, lost
-  source      String?  // How they found us
-  notes       String?
-  tags        Json?    // Array of tags
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstName       String
+  lastName        String
+  email           String?
+  emailNormalized String?
+  phone           String?
+  cpf             String?
+  birthDate       DateTime?
+  address         Json?
+  income          Float?
+
+  // Lead qualification
+  score  Int     @default(0)
+  status String  @default("prospect") // prospect, contact, qualified, negotiation, converted, lost
+  source String?
+  notes  String?
+  tags   Json? // JSON array of tags
+
+  // Audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Multi-tenant
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
-  assignedToId String?
-  assignedTo   User?    @relation(fields: [assignedToId], references: [id])
-  proposals    Proposal[]
+  // Relationships
+  createdById String @db.Uuid
+  creator     User   @relation("LeadCreatedBy", fields: [createdById], references: [id])
 
-  @@unique([email, companyId])
-  @@index([companyId])
+  ownerId String? @db.Uuid
+  owner   User?   @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  // Domain relations
+  opportunities Opportunity[]
+  activities    Activity[]
+  bankProposals BankProposal[]
+
+  @@unique([tenantId, cpf])
+  @@unique([tenantId, emailNormalized])
+  @@index([tenantId])
   @@index([status])
   @@index([cpf])
+  @@index([score])
+  @@index([createdById])
+  @@index([ownerId])
+  @@index([deletedAt])
   @@map("leads")
 }
 
-// ============================================
-// PARTNERS MODULE
-// ============================================
+/// Customer - Active customers
+model Customer {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerCode  String    @unique
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
+  cpf           String    @unique
+  document      String?
+  birthDate     DateTime?
+  monthlyIncome Float?
+  annualIncome  Float?
 
-model Partner {
-  id              String   @id @default(cuid())
-  code            String   @unique // P-0001 format
-  name            String
-  type            String   // company, franchise, partner
-  document        String?  // CPF/CNPJ
-  email           String?
-  phone           String?
-  address         Json?    // Structured address
-  bankData        Json?    // Banking information
-  commissionRates Json?    // Commission structure
-  status          String   @default("active") // active, inactive, suspended
-  contractStart   DateTime?
-  contractEnd     DateTime?
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // KYC
+  kycStatus     String    @default("pending") // pending, approved, rejected, review
+  kycVerifiedAt DateTime?
+
+  // Risk assessment
+  riskLevel String  @default("medium") // low, medium, high
+  isActive  Boolean @default(true)
+
+  // Audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Multi-tenant
-  companyId       String
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
-  managedById     String?
-  managedBy       User?    @relation(fields: [managedById], references: [id])
-  proposals       Proposal[]
-  commissions     Commission[]
+  partnerId String?  @db.Uuid
+  partner   Partner? @relation(fields: [partnerId], references: [id])
 
-  @@index([companyId])
-  @@index([code])
-  @@index([status])
-  @@map("partners")
+  customerId     String?    @db.Uuid
+  customer       Customer?  @relation("CustomerHierarchy", fields: [customerId], references: [id])
+  childCustomers Customer[] @relation("CustomerHierarchy")
+
+  // Domain relations
+  opportunities Opportunity[]
+  activities    Activity[]
+  bankProposals BankProposal[]
+  commissions   Commission[]
+
+  @@index([tenantId])
+  @@index([cpf])
+  @@index([customerCode])
+  @@index([kycStatus])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("customers")
 }
 
 // ============================================
-// PROPOSALS MODULE
+// SALES PIPELINE
 // ============================================
 
-model Proposal {
-  id          String   @id @default(cuid())
-  number      String   @unique // Auto-generated proposal number
-  title       String
+/// Pipeline - Sales process definition
+model Pipeline {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
   description String?
-  value       Float
-  status      String   @default("draft") // draft, sent, approved, rejected, cancelled
-  validUntil  DateTime?
-  documents   Json?    // Array of document URLs
-  metadata    Json?    // Additional proposal data
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isDefault   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Multi-tenant
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
-  leadId      String?
-  lead        Lead?    @relation(fields: [leadId], references: [id])
-  partnerId   String?
-  partner     Partner? @relation(fields: [partnerId], references: [id])
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
+  stages Stage[]
 
-  @@index([companyId])
-  @@index([leadId])
-  @@index([partnerId])
+  @@index([tenantId])
+  @@index([isDefault])
+  @@index([isActive])
+  @@map("pipelines")
+}
+
+/// Stage - Pipeline stages
+model Stage {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  order     Int       @default(0)
+  isWon     Boolean   @default(false)
+  isLost    Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Foreign keys
+  pipelineId String   @db.Uuid
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  opportunities Opportunity[]
+
+  @@index([pipelineId])
+  @@index([tenantId])
+  @@index([order])
+  @@map("stages")
+}
+
+/// Opportunity - Sales opportunities
+model Opportunity {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String
+  description       String?
+  amount            Float
+  currency          String    @default("BRL")
+  probability       Int       @default(50) // 0-100
+  status            String    @default("open") // open, won, lost, suspended
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+
+  // Audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  leadId String? @db.Uuid
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  customerId String?   @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  stageId String @db.Uuid
+  stage   Stage  @relation(fields: [stageId], references: [id])
+
+  ownerId String? @db.Uuid
+  owner   User?   @relation("OpportunityOwner", fields: [ownerId], references: [id])
+
+  // Domain relations
+  activities    Activity[]
+  bankProposals BankProposal[]
+
+  @@index([tenantId])
   @@index([status])
-  @@map("proposals")
+  @@index([stageId])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([ownerId])
+  @@index([deletedAt])
+  @@map("opportunities")
 }
 
 // ============================================
-// COMMISSIONS MODULE
+// INTERACTIONS & ACTIVITIES
 // ============================================
 
-model Commission {
-  id            String   @id @default(cuid())
-  amount        Float
-  percentage    Float?
-  type          String   // sale, referral, bonus, adjustment
-  status        String   @default("pending") // pending, approved, paid, cancelled
-  description   String?
-  referenceDate DateTime // When the commission was earned
-  paidAt        DateTime?
-  dueDate       DateTime?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+/// Activity - Customer interactions (calls, emails, meetings, etc)
+model Activity {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type         String    @default("note") // call, email, meeting, task, note, custom
+  title        String
+  description  String?
+  status       String    @default("pending") // completed, pending, cancelled
+  scheduledFor DateTime?
+  completedAt  DateTime?
+  duration     Int? // minutes
+  notes        String?
+  attachments  Json?
+
+  // Audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Multi-tenant
-  companyId     String
-  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
-  partnerId     String
-  partner       Partner  @relation(fields: [partnerId], references: [id])
-  approvedById  String?
-  approvedBy    User?    @relation("CommissionApprovedBy", fields: [approvedById], references: [id])
-  paidById      String?
-  paidBy        User?    @relation("CommissionPaidBy", fields: [paidById], references: [id])
+  // Relationships
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
 
-  @@index([companyId])
-  @@index([partnerId])
+  leadId String? @db.Uuid
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  opportunityId String?      @db.Uuid
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+  Customer      Customer?    @relation(fields: [customerId], references: [id])
+  customerId    String?      @db.Uuid
+
+  @@index([tenantId])
+  @@index([type])
   @@index([status])
+  @@index([userId])
+  @@index([leadId])
+  @@index([opportunityId])
+  @@index([deletedAt])
+  @@map("activities")
+}
+
+// ============================================
+// BANKING & PROPOSALS
+// ============================================
+
+/// BankProposal - Financing proposals
+model BankProposal {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proposalNumber String @unique
+  productType    String // credit_line, business_loan, etc
+  title          String
+  status         String @default("draft") // draft, sent, accepted, rejected, expired, cancelled
+  amount         Float
+  interestRate   Float
+  term           Int // months
+  monthlyPayment Float
+  totalCost      Float
+
+  // KYC
+  kycStatus     String    @default("pending") // pending, approved, rejected
+  kycVerifiedAt DateTime?
+  kycExpireAt   DateTime?
+
+  // Documents & Fees
+  documentsProvided Json? // {identity, address, income, etc}
+  fees              Json? // {origination, insurance, etc}
+
+  // Audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  leadId String? @db.Uuid
+  lead   Lead?   @relation(fields: [leadId], references: [id])
+
+  customerId String?   @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  opportunityId String?      @db.Uuid
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  createdById String @db.Uuid
+  creator     User   @relation("ProposalCreatedBy", fields: [createdById], references: [id])
+
+  @@index([tenantId])
+  @@index([proposalNumber])
+  @@index([status])
+  @@index([kycStatus])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([opportunityId])
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("bank_proposals")
+}
+
+/// Commission - Sales commissions
+model Commission {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commissionNumber String    @unique
+  type             String    @default("sale") // sale, referral, bonus, adjustment
+  amount           Float
+  percentage       Float
+  status           String    @default("pending") // pending, approved, paid, cancelled
+  referenceDate    DateTime
+  approvedAt       DateTime?
+  paidAt           DateTime?
+  dueDate          DateTime
+
+  // Audit
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  customerId String?   @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([commissionNumber])
+  @@index([status])
+  @@index([type])
+  @@index([userId])
+  @@index([customerId])
+  @@index([deletedAt])
   @@map("commissions")
 }
-// Additional indexes can be added here as needed
 
-// Example additional indexes (uncomment when needed):
-// @@index([companyId, status])
-// @@index([createdAt])
-// @@index([email])
+// ============================================
+// AUDIT & COMPLIANCE
+// ============================================
+
+/// AuditLog - Immutable audit trail
+model AuditLog {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  action      String // CREATE, READ, UPDATE, DELETE
+  entity      String // Model name
+  entityId    String  @db.Uuid
+  changes     Json? // {before: {}, after: {}}
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  userId String? @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([action])
+  @@index([entity])
+  @@index([entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// AUTHENTICATION - REFRESH TOKENS
+// ============================================
+
+/// RefreshToken - JWT refresh token storage for token rotation
+model RefreshToken {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token     String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  revokedReason String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relationships
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@map("refresh_tokens")
+}

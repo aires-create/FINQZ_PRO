@@ -10,6 +10,7 @@ import { config } from './config/app';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestLogger } from './shared/logger';
 import { testDatabaseConnection } from './database/prisma';
+import { setupSwagger } from './config/swagger';
 
 // Import routes (will be created later)
 import authRoutes from './modules/auth/routes';
@@ -123,34 +124,19 @@ app.use(`${API_PREFIX}/banking`, bankingRoutes);
 // ============================================
 
 // 404 handler
+// ============================================
+// DEVELOPMENT HELPERS & API DOCUMENTATION
+// ============================================
+
+if (config.nodeEnv === 'development') {
+  console.log('🔧 Setting up Swagger API documentation...');
+  setupSwagger(app);
+  console.log('✅ Swagger API documentation setup complete');
+}
+
 app.use(notFoundHandler);
 
 // Global error handler (must be last)
 app.use(errorHandler);
-
-// ============================================
-// DEVELOPMENT HELPERS
-// ============================================
-
-if (config.nodeEnv === 'development') {
-  // API documentation endpoint
-  app.get('/api-docs', (req, res) => {
-    res.json({
-      message: 'API Documentation',
-      endpoints: {
-        health: 'GET /health',
-        auth: 'POST /api/v1/auth/login',
-        users: 'GET /api/v1/users',
-        crm: 'GET /api/v1/crm/leads',
-        partners: 'GET /api/v1/partners',
-        proposals: 'GET /api/v1/proposals',
-        commissions: 'GET /api/v1/commissions',
-        financial: 'GET /api/v1/financial',
-        analytics: 'GET /api/v1/analytics',
-        banking: 'GET /api/v1/banking',
-      },
-    });
-  });
-}
 
 export default app;

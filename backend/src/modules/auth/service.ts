@@ -2,66 +2,197 @@
 // FINQZ PRO - Auth Service
 // ============================================
 
-import bcrypt from 'bcryptjs';
-import * as jwt from 'jsonwebtoken';
 import { prisma } from '../../database/prisma';
-import { config } from '../../config/app';
-import { AuthenticationError, AppError } from '../../types';
+import { AppError, AuthenticationError, ValidationError } from '../../types';
 import { createModuleLogger } from '../../shared/logger';
-import type { LoginRequest, AuthResponse, RefreshTokenRequest } from './types';
+import {
+  generateTokens,
+  generateAccessToken,
+  verifyRefreshToken,
+  JWTPayload,
+  TokenPair,
+} from '../../utils/jwt';
+import {
+  hashPassword,
+  verifyPassword,
+  validatePasswordStrength,
+  isCommonPassword,
+} from '../../utils/password';
+import type {
+  LoginRequest,
+  RegisterRequest,
+  AuthResponse,
+  RefreshTokenRequest,
+  ChangePasswordRequest,
+} from './types';
 
 const logger = createModuleLogger('AuthService');
 
 export class AuthService {
-  // Generate JWT tokens
-  private generateTokens(payload: { userId: string; companyId: string; roleId: string; email: string }) {
-    const accessToken = jwt.sign(payload, config.jwt.secret as any, {
-      expiresIn: config.jwt.expiresIn as any,
-    });
+  /**
+   * Register a new user
+   */
+  async register(data: RegisterRequest): Promise<AuthResponse> {
+    try {
+      logger.info(`Register attempt for email: ${data.email}`);
 
-    const refreshToken = jwt.sign(payload, config.jwt.refreshSecret as any, {
-      expiresIn: config.jwt.refreshExpiresIn as any,
-    });
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(data.password);
+      if (!passwordValidation.isValid) {
+        throw new ValidationError('Password does not meet requirements', passwordValidation.errors);
+      }
 
-    return { accessToken, refreshToken };
+      // Check for common passwords
+      if (isCommonPassword(data.password)) {
+        throw new ValidationError('Password is too common', ['Please choose a stronger password']);
+      }
+
+      // Normalize email
+      const emailNormalized = data.email.toLowerCase().trim();
+
+      // Check if user already exists
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          emailNormalized: emailNormalized,
+        },
+      });
+
+      if (existingUser) {
+        throw new ValidationError('User already exists', ['Email already registered']);
+      }
+
+      // Get or create tenant
+      let tenant = await prisma.tenant.findFirst({
+        where: { isActive: true },
+      });
+
+      if (!tenant) {
+        // Create default tenant if none exists
+        const domain = emailNormalized.split('@')[1] || null;
+        tenant = await prisma.tenant.create({
+          data: {
+            name: data.companyName || 'Default Company',
+            domain,
+            isActive: true,
+          },
+        });
+      }
+
+      // Get default role
+      let role = await prisma.role.findFirst({
+        where: {
+          tenantId: tenant.id,
+          slug: 'user',
+        },
+      });
+
+      if (!role) {
+        // Create default role if it doesn't exist
+        role = await prisma.role.create({
+          data: {
+            name: 'User',
+            slug: 'user',
+            tenantId: tenant.id,
+            isSystem: true,
+          },
+        });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(data.password);
+
+      // Create user
+      const user = await prisma.user.create({
+        data: {
+          email: data.email,
+          emailNormalized,
+          password: hashedPassword,
+          firstName: data.firstName,
+          lastName: data.lastName || '',
+          tenantId: tenant.id,
+          roleId: role.id,
+          isActive: true,
+        },
+        include: {
+          role: true,
+          tenant: true,
+        },
+      });
+
+      // Generate tokens
+      const tokens = generateTokens({
+        userId: user.id,
+        tenantId: user.tenantId,
+        roleId: user.roleId,
+        email: user.email,
+      });
+
+      // Store refresh token in database
+      const refreshTokenData = this.parseTokenExpiry(tokens.refreshToken);
+      await prisma.refreshToken.create({
+        data: {
+          token: tokens.refreshToken,
+          userId: user.id,
+          expiresAt: refreshTokenData.expiresAt,
+        },
+      });
+
+      logger.info(`User registered successfully: ${user.id}`);
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role.name,
+          tenantId: user.tenantId,
+          tenantName: user.tenant.name,
+        },
+        tokens,
+      };
+    } catch (error) {
+      logger.error('Registration failed:', error);
+      throw error;
+    }
   }
 
-  // Hash password
-  private async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, config.bcryptRounds);
-  }
-
-  // Verify password
-  private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
-  }
-
-  // Login user
+  /**
+   * Login user
+   */
   async login(data: LoginRequest): Promise<AuthResponse> {
     try {
       logger.info(`Login attempt for email: ${data.email}`);
 
-      // Find user with company and role
-      const user = await prisma.user.findUnique({
-        where: { email: data.email },
+      // Normalize email
+      const emailNormalized = data.email.toLowerCase().trim();
+
+      // Find user with tenant and role
+      const user = await prisma.user.findFirst({
+        where: { emailNormalized },
         include: {
-          company: true,
+          tenant: true,
           role: true,
         },
       });
 
       if (!user) {
-        throw new AuthenticationError('Invalid credentials');
+        throw new AuthenticationError('Invalid credentials', 401);
       }
 
       if (!user.isActive) {
-        throw new AuthenticationError('Account is deactivated');
+        throw new AuthenticationError('Account is deactivated', 401);
+      }
+
+      // Verify tenant is active
+      if (!user.tenant.isActive) {
+        throw new AuthenticationError('Tenant is not active', 401);
       }
 
       // Verify password
-      const isValidPassword = await this.verifyPassword(data.password, user.password);
+      const isValidPassword = await verifyPassword(data.password, user.password);
       if (!isValidPassword) {
-        throw new AuthenticationError('Invalid credentials');
+        throw new AuthenticationError('Invalid credentials', 401);
       }
 
       // Update last login
@@ -71,11 +202,21 @@ export class AuthService {
       });
 
       // Generate tokens
-      const tokens = this.generateTokens({
+      const tokens = generateTokens({
         userId: user.id,
-        companyId: user.companyId,
+        tenantId: user.tenantId,
         roleId: user.roleId,
         email: user.email,
+      });
+
+      // Store refresh token in database
+      const refreshTokenData = this.parseTokenExpiry(tokens.refreshToken);
+      await prisma.refreshToken.create({
+        data: {
+          token: tokens.refreshToken,
+          userId: user.id,
+          expiresAt: refreshTokenData.expiresAt,
+        },
       });
 
       logger.info(`Login successful for user: ${user.id}`);
@@ -87,7 +228,8 @@ export class AuthService {
           firstName: user.firstName,
           lastName: user.lastName,
           role: user.role.name,
-          companyId: user.companyId,
+          tenantId: user.tenantId,
+          tenantName: user.tenant.name,
         },
         tokens,
       };
@@ -97,13 +239,34 @@ export class AuthService {
     }
   }
 
-  // Refresh access token
-  async refreshToken(data: RefreshTokenRequest): Promise<{ accessToken: string; refreshToken: string }> {
+  /**
+   * Refresh access token
+   */
+  async refreshToken(data: RefreshTokenRequest): Promise<TokenPair> {
     try {
       logger.info('Token refresh attempt');
 
-      // Verify refresh token
-      const decoded = jwt.verify(data.refreshToken, config.jwt.refreshSecret) as any;
+      // Verify refresh token signature
+      const decoded = verifyRefreshToken(data.refreshToken);
+
+      // Check if refresh token exists in database
+      const storedToken = await prisma.refreshToken.findUnique({
+        where: { token: data.refreshToken },
+      });
+
+      if (!storedToken) {
+        throw new AuthenticationError('Refresh token not found', 401);
+      }
+
+      // Check if token is revoked
+      if (storedToken.revokedAt) {
+        throw new AuthenticationError('Refresh token has been revoked', 401);
+      }
+
+      // Check if token is expired
+      if (new Date() > storedToken.expiresAt) {
+        throw new AuthenticationError('Refresh token is expired', 401);
+      }
 
       // Check if user still exists and is active
       const user = await prisma.user.findUnique({
@@ -111,22 +274,38 @@ export class AuthService {
         select: {
           id: true,
           isActive: true,
-          companyId: true,
+          tenantId: true,
           roleId: true,
           email: true,
         },
       });
 
       if (!user || !user.isActive) {
-        throw new AuthenticationError('Invalid refresh token');
+        throw new AuthenticationError('User not found or inactive', 401);
       }
 
       // Generate new tokens
-      const tokens = this.generateTokens({
+      const tokens = generateTokens({
         userId: user.id,
-        companyId: user.companyId,
+        tenantId: user.tenantId,
         roleId: user.roleId,
         email: user.email,
+      });
+
+      // Revoke old refresh token
+      await prisma.refreshToken.update({
+        where: { token: data.refreshToken },
+        data: { revokedAt: new Date(), revokedReason: 'Token rotated' },
+      });
+
+      // Store new refresh token
+      const newRefreshTokenData = this.parseTokenExpiry(tokens.refreshToken);
+      await prisma.refreshToken.create({
+        data: {
+          token: tokens.refreshToken,
+          userId: user.id,
+          expiresAt: newRefreshTokenData.expiresAt,
+        },
       });
 
       logger.info(`Token refresh successful for user: ${user.id}`);
@@ -134,14 +313,22 @@ export class AuthService {
       return tokens;
     } catch (error) {
       logger.error('Token refresh failed:', error);
-      throw new AuthenticationError('Invalid refresh token');
+      throw error;
     }
   }
 
-  // Change password
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+  /**
+   * Change password
+   */
+  async changePassword(userId: string, data: ChangePasswordRequest): Promise<void> {
     try {
       logger.info(`Password change attempt for user: ${userId}`);
+
+      // Validate new password strength
+      const passwordValidation = validatePasswordStrength(data.newPassword);
+      if (!passwordValidation.isValid) {
+        throw new ValidationError('New password does not meet requirements', passwordValidation.errors);
+      }
 
       const user = await prisma.user.findUnique({
         where: { id: userId },
@@ -152,22 +339,34 @@ export class AuthService {
       }
 
       // Verify current password
-      const isValidPassword = await this.verifyPassword(currentPassword, user.password);
+      const isValidPassword = await verifyPassword(data.currentPassword, user.password);
       if (!isValidPassword) {
-        throw new AuthenticationError('Current password is incorrect');
+        throw new AuthenticationError('Current password is incorrect', 401);
       }
 
       // Hash new password
-      const hashedPassword = await this.hashPassword(newPassword);
+      const hashedPassword = await hashPassword(data.newPassword);
 
-      // Update password
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          password: hashedPassword,
-          updatedAt: new Date(),
-        },
-      });
+      // Update password and revoke all refresh tokens
+      await Promise.all([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            password: hashedPassword,
+            updatedAt: new Date(),
+          },
+        }),
+        prisma.refreshToken.updateMany({
+          where: {
+            userId: userId,
+            revokedAt: null,
+          },
+          data: {
+            revokedAt: new Date(),
+            revokedReason: 'Password changed',
+          },
+        }),
+      ]);
 
       logger.info(`Password changed successfully for user: ${userId}`);
     } catch (error) {
@@ -176,29 +375,70 @@ export class AuthService {
     }
   }
 
-  // Validate token (for middleware)
-  async validateToken(token: string): Promise<any> {
+  /**
+   * Logout (revoke refresh token)
+   */
+  async logout(refreshToken: string): Promise<void> {
     try {
-      const decoded = jwt.verify(token, config.jwt.secret) as any;
+      logger.info('Logout attempt');
 
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: {
-          id: true,
-          isActive: true,
-          companyId: true,
-          roleId: true,
-          email: true,
+      await prisma.refreshToken.update({
+        where: { token: refreshToken },
+        data: { revokedAt: new Date(), revokedReason: 'User logout' },
+      });
+
+      logger.info('Logout successful');
+    } catch (error) {
+      logger.error('Logout failed:', error);
+      // Don't throw error on logout failure
+    }
+  }
+
+  /**
+   * Logout all sessions (revoke all refresh tokens)
+   */
+  async logoutAll(userId: string): Promise<void> {
+    try {
+      logger.info(`Logout all sessions for user: ${userId}`);
+
+      await prisma.refreshToken.updateMany({
+        where: {
+          userId: userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokedReason: 'Logout all sessions',
         },
       });
 
-      if (!user || !user.isActive) {
-        throw new AuthenticationError('Token invalid');
-      }
-
-      return decoded;
+      logger.info(`All sessions logged out for user: ${userId}`);
     } catch (error) {
-      throw new AuthenticationError('Token invalid');
+      logger.error('Logout all sessions failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse JWT token expiry
+   */
+  private parseTokenExpiry(token: string): { expiresAt: Date } {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      throw new AppError('Invalid token format', 400);
+    }
+
+    try {
+      const payload = parts[1];
+      if (!payload) {
+        throw new AppError('Invalid token payload', 400);
+      }
+      const decoded = JSON.parse(Buffer.from(payload, 'base64').toString());
+      return {
+        expiresAt: new Date(decoded.exp * 1000),
+      };
+    } catch (error) {
+      throw new AppError('Failed to parse token expiry', 400);
     }
   }
 }

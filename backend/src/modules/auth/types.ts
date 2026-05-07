@@ -11,7 +11,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   firstName: string;
-  lastName: string;
+  lastName?: string;
   companyName?: string;
 }
 
@@ -22,7 +22,8 @@ export interface AuthResponse {
     firstName: string;
     lastName: string;
     role: string;
-    companyId: string;
+    tenantId: string;
+    tenantName: string;
   };
   tokens: {
     accessToken: string;
@@ -46,4 +47,8 @@ export interface ResetPasswordRequest {
 export interface ResetPasswordConfirmRequest {
   token: string;
   newPassword: string;
+}
+
+export interface LogoutRequest {
+  refreshToken: string;
 }
