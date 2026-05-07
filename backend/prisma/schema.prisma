@@ -80,24 +80,47 @@ model Partner {
 // RBAC - ROLE BASED ACCESS CONTROL
 // ============================================
 
+enum RoleType {
+  SYSTEM
+  ADMIN
+  MANAGER
+  USER
+  AUDITOR
+  SUPPORT
+}
+
+enum PermissionAction {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+  EXPORT
+  VIEW
+  APPROVE
+  ASSIGN
+  REVOKE
+}
+
 /// Role - RBAC roles with granular permissions
 model Role {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   slug        String
+  type        RoleType         @default(USER)
   description String?
-  permissions Permission[]
-  isSystem    Boolean      @default(false)
+  isSystem    Boolean          @default(false)
   deletedAt   DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
-  users User[]
+  users      User[]
+  userRoles  UserRole[]
+  rolePermissions RolePermission[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -107,19 +130,43 @@ model Role {
 
 /// Permission - Granular permissions for RBAC
 model Permission {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   @unique
-  slug        String   @unique
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String           @unique
+  slug        String           @unique
   description String?
   resource    String
-  action      String
-  createdAt   DateTime @default(now())
+  action      PermissionAction
+  createdAt   DateTime         @default(now())
 
   // Relations
-  roles Role[]
+  rolePermissions RolePermission[]
 
   @@index([resource, action])
   @@map("permissions")
+}
+
+model RolePermission {
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId       String     @db.Uuid
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId String     @db.Uuid
+  createdAt    DateTime   @default(now())
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String @db.Uuid
+  role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId     String @db.Uuid
+  assignedAt DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
 }
 
 // ============================================
@@ -155,6 +202,7 @@ model User {
   // RBAC
   roleId String @db.Uuid
   role   Role   @relation(fields: [roleId], references: [id])
+  userRoles UserRole[]
 
   // Relations
   createdLeads       Lead[]         @relation("LeadCreatedBy")

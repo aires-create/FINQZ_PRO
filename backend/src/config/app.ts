@@ -1,94 +1,59 @@
-// ============================================
-// FINQZ PRO - Application Configuration
-// ============================================
-
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
-// Environment validation
-const requiredEnvVars = [
-  'DATABASE_URL',
-  'JWT_SECRET',
-  'JWT_REFRESH_SECRET'
-];
-
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    throw new Error(`Missing required environment variable: ${envVar}`);
-  }
+export interface AppConfig {
+  nodeEnv: string;
+  host: string;
+  port: number;
+  cors: {
+    origin: string | string[];
+    methods: string[];
+    credentials: boolean;
+  };
+  jwt: {
+    secret: string;
+    refreshSecret: string;
+    expiresIn: string;
+    refreshExpiresIn: string;
+  };
+  bcryptRounds: number;
+  logging: {
+    level: string;
+    file: string;
+  };
+  swagger: {
+    title: string;
+    version: string;
+    description: string;
+    path: string;
+  };
 }
 
-export const config = {
-  // Server Configuration
+export const config: AppConfig = {
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3001', 10),
-  host: process.env.HOST || 'localhost',
-
-  // Database
-  databaseUrl: process.env.DATABASE_URL!,
-
-  // JWT Configuration
+  host: process.env.HOST || '0.0.0.0',
+  port: Number(process.env.PORT ?? 4000),
+  cors: {
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) : ['*'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+    credentials: true,
+  },
   jwt: {
-    secret: process.env.JWT_SECRET!,
-    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    refreshSecret: process.env.JWT_REFRESH_SECRET!,
+    secret: process.env.JWT_SECRET || 'supersecret',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'refreshsupersecret',
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
-
-  // CORS
-  cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-    credentials: process.env.CORS_CREDENTIALS === 'true',
-  },
-
-  // Rate Limiting
-  rateLimit: {
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
-    maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
-  },
-
-  // Logging
+  bcryptRounds: Number(process.env.BCRYPT_ROUNDS ?? 10),
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     file: process.env.LOG_FILE || 'logs/app.log',
   },
-
-  // Security
-  bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
-
-  // File Upload
-  upload: {
-    path: process.env.UPLOAD_PATH || 'uploads/',
-    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10), // 10MB
+  swagger: {
+    title: process.env.SWAGGER_TITLE || 'FINQZ PRO API',
+    version: process.env.SWAGGER_VERSION || '1.0.0',
+    description: process.env.SWAGGER_DESCRIPTION || 'FINQZ PRO backend API documentation',
+    path: process.env.SWAGGER_PATH || '/api-docs',
   },
-
-  // Multi-tenant
-  multiTenant: {
-    defaultCompanyId: process.env.DEFAULT_COMPANY_ID || '1',
-    mode: process.env.TENANT_MODE || 'multi-tenant',
-  },
-
-  // External APIs (optional)
-  apis: {
-    openai: process.env.OPENAI_API_KEY,
-    stripe: {
-      secret: process.env.STRIPE_SECRET_KEY,
-      publishable: process.env.STRIPE_PUBLISHABLE_KEY,
-    },
-    creditCheck: {
-      url: process.env.CREDIT_CHECK_API_URL,
-      key: process.env.CREDIT_CHECK_API_KEY,
-    },
-  },
-
-  // Monitoring
-  monitoring: {
-    sentryDsn: process.env.SENTRY_DSN,
-    newRelicKey: process.env.NEW_RELIC_LICENSE_KEY,
-  },
-} as const;
-
-// Type-safe config access
-export type Config = typeof config;
+};
