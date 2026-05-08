@@ -191,6 +191,18 @@ export class PermissionsService {
         { name: 'Update Tenant', slug: 'tenant:update', resource: 'tenants', action: 'UPDATE' as PermissionAction },
         { name: 'Delete Tenant', slug: 'tenant:delete', resource: 'tenants', action: 'DELETE' as PermissionAction },
 
+        // Organization permissions
+        { name: 'Create Organization', slug: 'organization:create', resource: 'organizations', action: 'CREATE' as PermissionAction },
+        { name: 'Read Organization', slug: 'organization:read', resource: 'organizations', action: 'READ' as PermissionAction },
+        { name: 'Update Organization', slug: 'organization:update', resource: 'organizations', action: 'UPDATE' as PermissionAction },
+        { name: 'Delete Organization', slug: 'organization:delete', resource: 'organizations', action: 'DELETE' as PermissionAction },
+
+        // Membership permissions
+        { name: 'Create Membership', slug: 'membership:create', resource: 'memberships', action: 'CREATE' as PermissionAction },
+        { name: 'Read Membership', slug: 'membership:read', resource: 'memberships', action: 'READ' as PermissionAction },
+        { name: 'Update Membership', slug: 'membership:update', resource: 'memberships', action: 'UPDATE' as PermissionAction },
+        { name: 'Delete Membership', slug: 'membership:delete', resource: 'memberships', action: 'DELETE' as PermissionAction },
+
         // Lead permissions
         { name: 'Create Lead', slug: 'lead:create', resource: 'leads', action: 'CREATE' as PermissionAction },
         { name: 'Read Lead', slug: 'lead:read', resource: 'leads', action: 'READ' as PermissionAction },

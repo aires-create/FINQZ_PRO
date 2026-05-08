@@ -9,7 +9,7 @@ import { ValidationError } from '../types';
 // Generic validation middleware
 export const validate = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const { error } = schema.validate(req.body, {
+    const { error, value } = schema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
       convert: true,
@@ -20,6 +20,7 @@ export const validate = (schema: Joi.ObjectSchema) => {
       throw new ValidationError('Validation failed', errors);
     }
 
+    req.body = value;
     next();
   };
 };
@@ -164,7 +165,7 @@ export const schemas = {
 // Query parameter validation middleware
 export const validateQuery = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const { error } = schema.validate(req.query, {
+    const { error, value } = schema.validate(req.query, {
       abortEarly: false,
       stripUnknown: true,
       convert: true,
@@ -175,6 +176,7 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
       throw new ValidationError('Query validation failed', errors);
     }
 
+    req.query = value;
     next();
   };
 };
@@ -182,7 +184,7 @@ export const validateQuery = (schema: Joi.ObjectSchema) => {
 // Params validation middleware
 export const validateParams = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const { error } = schema.validate(req.params, {
+    const { error, value } = schema.validate(req.params, {
       abortEarly: false,
       stripUnknown: true,
       convert: true,
@@ -193,6 +195,7 @@ export const validateParams = (schema: Joi.ObjectSchema) => {
       throw new ValidationError('Parameter validation failed', errors);
     }
 
+    req.params = value;
     next();
   };
 };
