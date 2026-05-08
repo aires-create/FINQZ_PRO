@@ -1,4 +1,4 @@
-import { PrismaClient, PermissionAction, RoleType } from '@prisma/client';
+import { Prisma, PrismaClient, PermissionAction, RoleType } from '@prisma/client';
 import { hashPassword } from '../src/utils/password';
 import { createModuleLogger } from '../src/shared/logger';
 
@@ -19,7 +19,26 @@ interface RoleData {
   type: RoleType;
   description?: string;
   isSystem: boolean;
+  priority: number;
+  parentSlug?: string;
   permissions: string[]; // permission slugs
+}
+
+interface OrganizationData {
+  name: string;
+  code: string;
+  description?: string;
+  type: string;
+  level: number;
+  parentCode?: string; // Reference to parent by code
+  settings?: any;
+}
+
+interface MembershipData {
+  userEmail: string;
+  organizationCode: string;
+  role: string;
+  permissions?: any;
 }
 
 interface UserData {
@@ -51,8 +70,14 @@ async function seedRBAC(): Promise<void> {
     // 4. Create role-permission relations
     await createRolePermissions(roles, permissions);
 
-    // 5. Create default SUPER_ADMIN user
+    // 5. Create organizations
+    const organizations = await createOrganizations(tenant.id);
+
+    // 6. Create default SUPER_ADMIN user
     await createDefaultSuperAdmin(tenant.id, roles);
+
+    // 7. Create memberships
+    await createMemberships(tenant.id, organizations);
 
     logger.info('RBAC seed process completed successfully');
   } catch (error) {
@@ -185,6 +210,66 @@ async function createPermissions() {
       slug: 'permission:delete',
       description: 'Delete permissions',
       resource: 'permissions',
+      action: PermissionAction.DELETE,
+    },
+
+    // Organization permissions
+    {
+      name: 'Create Organization',
+      slug: 'organization:create',
+      description: 'Create tenant organizations',
+      resource: 'organizations',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Read Organization',
+      slug: 'organization:read',
+      description: 'View tenant organizations',
+      resource: 'organizations',
+      action: PermissionAction.READ,
+    },
+    {
+      name: 'Update Organization',
+      slug: 'organization:update',
+      description: 'Update tenant organizations',
+      resource: 'organizations',
+      action: PermissionAction.UPDATE,
+    },
+    {
+      name: 'Delete Organization',
+      slug: 'organization:delete',
+      description: 'Delete tenant organizations',
+      resource: 'organizations',
+      action: PermissionAction.DELETE,
+    },
+
+    // Membership permissions
+    {
+      name: 'Create Membership',
+      slug: 'membership:create',
+      description: 'Invite users into organizations',
+      resource: 'memberships',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Read Membership',
+      slug: 'membership:read',
+      description: 'View organization memberships',
+      resource: 'memberships',
+      action: PermissionAction.READ,
+    },
+    {
+      name: 'Update Membership',
+      slug: 'membership:update',
+      description: 'Update organization memberships',
+      resource: 'memberships',
+      action: PermissionAction.UPDATE,
+    },
+    {
+      name: 'Delete Membership',
+      slug: 'membership:delete',
+      description: 'Remove organization memberships',
+      resource: 'memberships',
       action: PermissionAction.DELETE,
     },
 
@@ -517,6 +602,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       type: RoleType.SYSTEM,
       description: 'Full system access with all permissions',
       isSystem: true,
+      priority: 100,
+      parentSlug: 'admin',
       permissions: Object.keys(permissions), // All permissions
     },
     {
@@ -525,6 +612,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       type: RoleType.ADMIN,
       description: 'Administrative access to most system features',
       isSystem: true,
+      priority: 80,
+      parentSlug: 'manager',
       permissions: [
         // User management
         'user:create', 'user:read', 'user:update', 'user:delete',
@@ -532,6 +621,10 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'role:create', 'role:read', 'role:update', 'role:delete',
         // Permission management
         'permission:create', 'permission:read', 'permission:update', 'permission:delete',
+        // Organization management
+        'organization:create', 'organization:read', 'organization:update', 'organization:delete',
+        // Membership management
+        'membership:create', 'membership:read', 'membership:update', 'membership:delete',
         // Tenant management
         'tenant:create', 'tenant:read', 'tenant:update', 'tenant:delete',
         // Lead management
@@ -560,9 +653,15 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       type: RoleType.MANAGER,
       description: 'Management access to operational features',
       isSystem: true,
+      priority: 60,
+      parentSlug: 'user',
       permissions: [
         // User management (limited)
         'user:read', 'user:update',
+        // Organization management
+        'organization:create', 'organization:read', 'organization:update',
+        // Membership management
+        'membership:create', 'membership:read', 'membership:update',
         // Lead management
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         // Customer management
@@ -587,8 +686,11 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       type: RoleType.USER,
       description: 'Standard user access',
       isSystem: true,
+      priority: 10,
       permissions: [
         // Lead management (limited)
+        'organization:read',
+        'membership:read',
         'lead:create', 'lead:read', 'lead:update',
         // Customer management (limited)
         'customer:read', 'customer:update',
@@ -612,11 +714,15 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       type: RoleType.AUDITOR,
       description: 'Read-only access for auditing purposes',
       isSystem: true,
+      priority: 20,
+      parentSlug: 'user',
       permissions: [
         // Read-only permissions
         'user:read',
         'role:read',
         'permission:read',
+        'organization:read',
+        'membership:read',
         'tenant:read',
         'lead:read',
         'customer:read',
@@ -635,9 +741,14 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       type: RoleType.SUPPORT,
       description: 'Support team access',
       isSystem: true,
+      priority: 30,
+      parentSlug: 'user',
       permissions: [
         // User support
         'user:read', 'user:update',
+        // Organization support
+        'organization:read',
+        'membership:read', 'membership:update',
         // Lead support
         'lead:read', 'lead:update',
         // Customer support
@@ -670,17 +781,33 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
           slug: role.slug,
         },
       },
-      update: {},
+      update: {
+        name: role.name,
+        type: role.type,
+        description: role.description ?? null,
+        isSystem: role.isSystem,
+        priority: role.priority,
+      },
       create: {
         name: role.name,
         slug: role.slug,
         type: role.type,
-        description: role.description,
+        description: role.description ?? null,
         isSystem: role.isSystem,
+        priority: role.priority,
         tenantId,
       },
     });
     roles[role.slug] = createdRole;
+  }
+
+  for (const role of roleData) {
+    if (role.parentSlug && roles[role.slug] && roles[role.parentSlug]) {
+      roles[role.slug] = await prisma.role.update({
+        where: { id: roles[role.slug].id },
+        data: { parentId: roles[role.parentSlug].id },
+      });
+    }
   }
 
   logger.info(`Created/updated ${Object.keys(roles).length} roles`);
@@ -704,6 +831,8 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
         'user:create', 'user:read', 'user:update', 'user:delete',
         'role:create', 'role:read', 'role:update', 'role:delete',
         'permission:create', 'permission:read', 'permission:update', 'permission:delete',
+        'organization:create', 'organization:read', 'organization:update', 'organization:delete',
+        'membership:create', 'membership:read', 'membership:update', 'membership:delete',
         'tenant:create', 'tenant:read', 'tenant:update', 'tenant:delete',
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
@@ -720,6 +849,8 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
       roleSlug: 'manager',
       permissionSlugs: [
         'user:read', 'user:update',
+        'organization:create', 'organization:read', 'organization:update',
+        'membership:create', 'membership:read', 'membership:update',
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
         'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
@@ -733,6 +864,8 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
     {
       roleSlug: 'user',
       permissionSlugs: [
+        'organization:read',
+        'membership:read',
         'lead:create', 'lead:read', 'lead:update',
         'customer:read', 'customer:update',
         'opportunity:create', 'opportunity:read', 'opportunity:update',
@@ -749,6 +882,8 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
         'user:read',
         'role:read',
         'permission:read',
+        'organization:read',
+        'membership:read',
         'tenant:read',
         'lead:read',
         'customer:read',
@@ -765,6 +900,8 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
       roleSlug: 'support',
       permissionSlugs: [
         'user:read', 'user:update',
+        'organization:read',
+        'membership:read', 'membership:update',
         'lead:read', 'lead:update',
         'customer:read', 'customer:update',
         'opportunity:read', 'opportunity:update',
@@ -809,6 +946,302 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
   }
 
   logger.info('Role-permission relationships created');
+}
+
+/**
+ * Create organizations with hierarchy
+ */
+async function createOrganizations(tenantId: string) {
+  logger.info('Creating organizations...');
+
+  const organizationData: OrganizationData[] = [
+    // Root level organizations
+    {
+      name: 'Executive Office',
+      code: 'EXEC',
+      description: 'Executive leadership and strategic oversight',
+      type: 'department',
+      level: 1,
+      settings: { priority: 'high', budget: 'unlimited' }
+    },
+    {
+      name: 'Information Technology',
+      code: 'IT',
+      description: 'Technology infrastructure and development',
+      type: 'department',
+      level: 1,
+      settings: { priority: 'high', budget: 'large' }
+    },
+    {
+      name: 'Sales & Marketing',
+      code: 'SALES',
+      description: 'Sales, marketing and business development',
+      type: 'department',
+      level: 1,
+      settings: { priority: 'high', budget: 'large' }
+    },
+    {
+      name: 'Customer Success',
+      code: 'CS',
+      description: 'Customer support and success management',
+      type: 'department',
+      level: 1,
+      settings: { priority: 'medium', budget: 'medium' }
+    },
+    {
+      name: 'Finance & Operations',
+      code: 'FINOPS',
+      description: 'Financial management and operations',
+      type: 'department',
+      level: 1,
+      settings: { priority: 'high', budget: 'large' }
+    },
+
+    // IT Sub-organizations
+    {
+      name: 'Software Development',
+      code: 'DEV',
+      description: 'Application development and engineering',
+      type: 'division',
+      level: 2,
+      parentCode: 'IT',
+      settings: { priority: 'high', technologies: ['typescript', 'react', 'node'] }
+    },
+    {
+      name: 'DevOps & Infrastructure',
+      code: 'DEVOPS',
+      description: 'Infrastructure, deployment and operations',
+      type: 'division',
+      level: 2,
+      parentCode: 'IT',
+      settings: { priority: 'high', technologies: ['aws', 'docker', 'kubernetes'] }
+    },
+    {
+      name: 'Quality Assurance',
+      code: 'QA',
+      description: 'Testing and quality assurance',
+      type: 'team',
+      level: 2,
+      parentCode: 'IT',
+      settings: { priority: 'medium', methodologies: ['agile', 'tdd'] }
+    },
+
+    // Sales Sub-organizations
+    {
+      name: 'Business Development',
+      code: 'BD',
+      description: 'New business acquisition and partnerships',
+      type: 'division',
+      level: 2,
+      parentCode: 'SALES',
+      settings: { priority: 'high', focus: 'enterprise' }
+    },
+    {
+      name: 'Account Management',
+      code: 'AM',
+      description: 'Existing customer account management',
+      type: 'division',
+      level: 2,
+      parentCode: 'SALES',
+      settings: { priority: 'high', focus: 'retention' }
+    },
+
+    // Development Teams
+    {
+      name: 'Frontend Team',
+      code: 'FE',
+      description: 'User interface and experience development',
+      type: 'team',
+      level: 3,
+      parentCode: 'DEV',
+      settings: { priority: 'high', stack: ['react', 'typescript', 'tailwind'] }
+    },
+    {
+      name: 'Backend Team',
+      code: 'BE',
+      description: 'API and server-side development',
+      type: 'team',
+      level: 3,
+      parentCode: 'DEV',
+      settings: { priority: 'high', stack: ['node', 'typescript', 'postgresql'] }
+    },
+    {
+      name: 'Mobile Team',
+      code: 'MOBILE',
+      description: 'Mobile application development',
+      type: 'team',
+      level: 3,
+      parentCode: 'DEV',
+      settings: { priority: 'medium', stack: ['react-native', 'typescript'] }
+    }
+  ];
+
+  const organizations: Record<string, any> = {};
+
+  // First pass: Create all organizations
+  for (const org of organizationData) {
+    const organization = await prisma.organization.upsert({
+      where: {
+        tenantId_code: {
+          tenantId,
+          code: org.code
+        }
+      },
+      update: {
+        name: org.name,
+        description: org.description ?? null,
+        type: org.type,
+        level: org.level,
+        settings: org.settings ?? Prisma.JsonNull,
+      },
+      create: {
+        name: org.name,
+        code: org.code,
+        description: org.description ?? null,
+        type: org.type,
+        level: org.level,
+        settings: org.settings ?? Prisma.JsonNull,
+        tenantId
+      }
+    });
+    organizations[org.code] = organization;
+  }
+
+  // Second pass: Set parent relationships
+  for (const org of organizationData) {
+    if (org.parentCode && organizations[org.parentCode]) {
+      await prisma.organization.update({
+        where: { id: organizations[org.code].id },
+        data: { parentId: organizations[org.parentCode].id }
+      });
+    }
+  }
+
+  logger.info(`Created/updated ${Object.keys(organizations).length} organizations`);
+  return organizations;
+}
+
+/**
+ * Create memberships for users in organizations
+ */
+async function createMemberships(tenantId: string, organizations: Record<string, any>) {
+  logger.info('Creating memberships...');
+
+  const membershipData: MembershipData[] = [
+    // Executive Office
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'EXEC',
+      role: 'owner',
+      permissions: { all: true }
+    },
+
+    // IT Department
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'IT',
+      role: 'admin',
+      permissions: { manage_users: true, manage_budget: true }
+    },
+
+    // Development Teams
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'DEV',
+      role: 'admin',
+      permissions: { manage_projects: true, code_review: true }
+    },
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'FE',
+      role: 'admin',
+      permissions: { deploy_frontend: true, ui_review: true }
+    },
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'BE',
+      role: 'admin',
+      permissions: { deploy_backend: true, api_review: true }
+    },
+
+    // Sales Department
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'SALES',
+      role: 'admin',
+      permissions: { manage_deals: true, approve_discounts: true }
+    },
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'BD',
+      role: 'manager',
+      permissions: { create_leads: true, negotiate_contracts: true }
+    },
+
+    // Customer Success
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'CS',
+      role: 'manager',
+      permissions: { manage_tickets: true, escalate_issues: true }
+    },
+
+    // Finance & Operations
+    {
+      userEmail: 'admin@finqz-pro.com',
+      organizationCode: 'FINOPS',
+      role: 'manager',
+      permissions: { approve_expenses: true, manage_budget: true }
+    }
+  ];
+
+  for (const membership of membershipData) {
+    // Get user
+    const user = await prisma.user.findFirst({
+      where: {
+        emailNormalized: membership.userEmail.toLowerCase().trim(),
+        tenantId
+      }
+    });
+
+    if (!user) {
+      logger.warn(`User ${membership.userEmail} not found, skipping membership`);
+      continue;
+    }
+
+    // Get organization
+    const organization = organizations[membership.organizationCode];
+    if (!organization) {
+      logger.warn(`Organization ${membership.organizationCode} not found, skipping membership`);
+      continue;
+    }
+
+    // Create membership
+    await prisma.membership.upsert({
+      where: {
+        userId_organizationId: {
+          userId: user.id,
+          organizationId: organization.id
+        }
+      },
+      update: {
+        role: membership.role,
+        permissions: membership.permissions,
+        isActive: true,
+        deletedAt: null
+      },
+      create: {
+        userId: user.id,
+        organizationId: organization.id,
+        role: membership.role,
+        permissions: membership.permissions,
+        invitedById: user.id, // Self-invited for seed
+        tenantId
+      }
+    });
+  }
+
+  logger.info('Memberships created');
 }
 
 /**

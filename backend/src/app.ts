@@ -9,6 +9,7 @@ import { config } from './config/app';
 import { swaggerSpec } from './config/swagger';
 import { requestLogger } from './shared/logger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
+import { requestContext } from './middlewares/requestContext';
 
 import authRoutes from './modules/auth/routes';
 import analyticsRoutes from './modules/analytics/routes';
@@ -21,10 +22,13 @@ import permissionsRoutes from './modules/permissions/routes';
 import proposalsRoutes from './modules/proposals/routes';
 import rolesRoutes from './modules/roles/routes';
 import usersRoutes from './modules/users/routes';
+import organizationsRoutes from './modules/organizations/routes';
+import membershipsRoutes from './modules/memberships/routes';
 
 const app = express();
 const apiPrefix = '/api/v1';
 
+app.use(requestContext);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -62,6 +66,8 @@ app.use(`${apiPrefix}/permissions`, permissionsRoutes);
 app.use(`${apiPrefix}/proposals`, proposalsRoutes);
 app.use(`${apiPrefix}/roles`, rolesRoutes);
 app.use(`${apiPrefix}/users`, usersRoutes);
+app.use(`${apiPrefix}/organizations`, organizationsRoutes);
+app.use(`${apiPrefix}/memberships`, membershipsRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

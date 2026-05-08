@@ -42,11 +42,88 @@ model Tenant {
   auditLogs     AuditLog[]
   commissions   Commission[]
   partners      Partner[]
+  organizations Organization[]
+  memberships   Membership[]
 
   @@index([domain])
   @@index([isActive])
   @@index([deletedAt])
   @@map("tenants")
+}
+
+/// Organization - Hierarchical organization structure within tenant
+model Organization {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  code        String    // Unique code within tenant
+  description String?
+  type        String    @default("department") // department, division, team, unit
+  level       Int       @default(1) // Hierarchy level (1=root, 2=child, etc.)
+
+  // Hierarchy
+  parentId String?     @db.Uuid
+  parent   Organization? @relation("OrganizationHierarchy", fields: [parentId], references: [id])
+  children Organization[] @relation("OrganizationHierarchy")
+
+  // Settings
+  settings    Json? // Organization-specific settings
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Multi-tenant
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  memberships Membership[]
+  users       User[]
+  auditLogs   AuditLog[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([type])
+  @@index([level])
+  @@index([isActive])
+  @@map("organizations")
+}
+
+/// Membership - User organization membership and roles
+model Membership {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role          String    @default("member") // member, admin, owner, manager
+  permissions   Json? // Additional granular permissions
+  isActive      Boolean   @default(true)
+  joinedAt      DateTime  @default(now())
+  invitedAt     DateTime?
+  invitedById   String?   @db.Uuid
+  invitedBy     User?     @relation("MembershipInvitedBy", fields: [invitedById], references: [id])
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Multi-tenant relationships
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Relations
+  auditLogs AuditLog[]
+
+  @@unique([userId, organizationId])
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([role])
+  @@index([isActive])
+  @@map("memberships")
 }
 
 /// Partner - Commercial partner hierarchy
@@ -101,17 +178,23 @@ enum PermissionAction {
   REVOKE
 }
 
-/// Role - RBAC roles with granular permissions
+/// Role - RBAC roles with granular permissions and hierarchy
 model Role {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   slug        String
   type        RoleType         @default(USER)
   description String?
+  priority    Int              @default(0) // Role priority for hierarchy (higher = more permissions)
   isSystem    Boolean          @default(false)
   deletedAt   DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  // Role Hierarchy
+  parentId String? @db.Uuid
+  parent   Role?   @relation("RoleHierarchy", fields: [parentId], references: [id])
+  children Role[]  @relation("RoleHierarchy")
 
   // Multi-tenant
   tenantId String @db.Uuid
@@ -124,6 +207,8 @@ model Role {
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+  @@index([parentId])
+  @@index([priority])
   @@index([isSystem])
   @@map("roles")
 }
@@ -184,11 +269,13 @@ model User {
   phone           String?
   department      String?
   jobTitle        String?
+  avatar          String?
 
   // Account status
   isActive        Boolean   @default(true)
   isEmailVerified Boolean   @default(false)
   lastLoginAt     DateTime?
+  lastLoginIp     String?
 
   // Security & audit
   deletedAt DateTime?
@@ -198,6 +285,10 @@ model User {
   // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Organization membership
+  organizationId String?      @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   // RBAC
   roleId String @db.Uuid
@@ -214,9 +305,12 @@ model User {
   auditLogs          AuditLog[]
   Partner            Partner[]
   refreshTokens      RefreshToken[]
+  memberships        Membership[]
+  invitedMemberships Membership[]   @relation("MembershipInvitedBy")
 
   @@unique([tenantId, emailNormalized])
   @@index([tenantId])
+  @@index([organizationId])
   @@index([email])
   @@index([isActive])
   @@index([deletedAt])
@@ -588,17 +682,23 @@ model Commission {
 // AUDIT & COMPLIANCE
 // ============================================
 
-/// AuditLog - Immutable audit trail
+/// AuditLog - Immutable audit trail with enhanced enterprise features
 model AuditLog {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  action      String // CREATE, READ, UPDATE, DELETE
+  action      String // CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, etc.
   entity      String // Model name
-  entityId    String  @db.Uuid
+  entityId    String?
   changes     Json? // {before: {}, after: {}}
   description String?
   ipAddress   String?
   userAgent   String?
-  metadata    Json?
+  sessionId   String? // Session tracking
+  requestId   String? // Request correlation ID
+  metadata    Json? // Additional context (API version, client info, etc.)
+
+  // Compliance & Security
+  riskLevel   String? @default("low") // low, medium, high, critical
+  complianceTags Json? // GDPR, SOX, etc.
 
   createdAt DateTime @default(now())
 
@@ -606,16 +706,27 @@ model AuditLog {
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relationships
+  // Organization context
+  organizationId String? @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // User context
   userId String? @db.Uuid
   user   User?   @relation(fields: [userId], references: [id])
 
+  // Membership context
+  membershipId String? @db.Uuid
+  membership   Membership? @relation(fields: [membershipId], references: [id])
+
   @@index([tenantId])
+  @@index([organizationId])
   @@index([action])
   @@index([entity])
   @@index([entityId])
   @@index([userId])
+  @@index([membershipId])
   @@index([createdAt])
+  @@index([riskLevel])
   @@map("audit_logs")
 }
 
