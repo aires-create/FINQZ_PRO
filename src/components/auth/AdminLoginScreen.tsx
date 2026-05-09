@@ -87,29 +87,29 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4">
+    <div className="finqz-shell flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#000dff] to-[#59a8f0] rounded-2xl flex items-center justify-center shadow-lg shadow-[#000dff]/20">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-[#59a8f0] shadow-lg shadow-primary/20">
             <span className="text-white font-bold text-3xl">F</span>
           </div>
-          <h1 className="text-3xl font-bold text-[#3b5bfd]">FINQZ PRO</h1>
-          <p className="text-white/60 mt-2">Acesso administrativo</p>
+          <h1 className="text-3xl font-bold text-primary">FINQZ PRO</h1>
+          <p className="mt-2 text-[var(--text-muted)]">Acesso administrativo</p>
         </div>
 
-        <Card className="rounded-[28px] border-white/10 bg-[#050816] p-3 shadow-2xl shadow-black/30">
-          <div className="rounded-[24px] bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 p-6 sm:p-8">
+        <Card padding="none" className="p-2">
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-6 backdrop-blur-xl sm:p-8">
             {mode === "login" && (
               <>
                 <div className="mb-6 text-center">
-                  <h2 className="text-2xl font-semibold text-slate-950">Entrar</h2>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <h2 className="text-2xl font-semibold text-[var(--text-primary)]">Entrar</h2>
+                  <p className="mt-2 text-sm text-[var(--text-muted)]">
                     Use seu código de acesso ou e-mail para continuar.
                   </p>
                 </div>
 
                 {error && (
-                  <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -137,14 +137,14 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                       aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
 
-                  <Button type="submit" size="lg" loading={loading} className="w-full rounded-2xl py-3 text-base">
+                  <Button type="submit" size="lg" loading={loading} className="w-full rounded-lg py-3 text-base">
                     Entrar
                   </Button>
                 </form>
@@ -157,11 +157,11 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                       setError("");
                       setRecoveryIdentifier(identifier);
                     }}
-                    className="font-medium text-[#000dff] hover:text-[#0000cc]"
+                    className="font-medium text-primary hover:text-primary-hover"
                   >
                     Esqueci minha senha
                   </button>
-                  <span className="text-slate-400">ou use seu código</span>
+                  <span className="text-[var(--text-muted)]">ou use seu código</span>
                 </div>
               </>
             )}
@@ -171,24 +171,24 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                 <button
                   type="button"
                   onClick={resetToLogin}
-                  className="mb-4 flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+                  className="mb-4 flex items-center gap-2 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
                   <ArrowLeft size={16} />
                   Voltar
                 </button>
 
                 <div className="mb-6 text-center">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#000dff]">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <KeyRound size={22} />
                   </div>
-                  <h2 className="text-2xl font-semibold text-slate-950">Recuperar acesso</h2>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <h2 className="text-2xl font-semibold text-[var(--text-primary)]">Recuperar acesso</h2>
+                  <p className="mt-2 text-sm text-[var(--text-muted)]">
                     Informe seu código ou e-mail para gerar uma senha temporária.
                   </p>
                 </div>
 
                 {error && (
-                  <div className="mb-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -203,7 +203,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                     required
                   />
 
-                  <Button type="submit" size="lg" loading={loading} className="w-full rounded-2xl py-3 text-base">
+                  <Button type="submit" size="lg" loading={loading} className="w-full rounded-lg py-3 text-base">
                     Gerar senha temporária
                   </Button>
                 </form>
@@ -213,16 +213,16 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
             {mode === "success" && (
               <>
                 <div className="mb-6 text-center">
-                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-green-50 text-green-600">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-300">
                     <ShieldCheck size={22} />
                   </div>
-                  <h2 className="text-2xl font-semibold text-slate-950">Acesso liberado</h2>
-                  <p className="mt-2 text-sm text-slate-500">
+                  <h2 className="text-2xl font-semibold text-[var(--text-primary)]">Acesso liberado</h2>
+                  <p className="mt-2 text-sm text-[var(--text-muted)]">
                     Sua senha temporária foi gerada. Use-a para entrar agora.
                   </p>
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="space-y-3 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4">
                   {recoveredAccessCode && (
                     <div>
                       <p className="text-xs uppercase tracking-wide text-slate-500">Código de acesso</p>
@@ -235,7 +235,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   </div>
                 </div>
 
-                <Button type="button" size="lg" className="mt-6 w-full rounded-2xl py-3 text-base" onClick={resetToLogin}>
+                <Button type="button" size="lg" className="mt-6 w-full rounded-lg py-3 text-base" onClick={resetToLogin}>
                   Voltar e entrar
                 </Button>
               </>

@@ -53,26 +53,26 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg p-8 text-center">
+        <div className="finqz-shell flex min-h-screen items-center justify-center p-4">
+          <div className="finqz-card w-full max-w-md p-8 text-center">
             {/* Icone de erro */}
-            <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-lg bg-red-500/10">
               <AlertTriangle className="w-10 h-10 text-red-600" />
             </div>
 
             {/* Título */}
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">
               Algo deu errado
             </h1>
             
             {/* Mensagem de erro amigável */}
-            <p className="text-slate-600 mb-6">
+            <p className="text-[var(--text-secondary)] mb-6">
               Encontramos um problema inesperado. Por favor, tente novamente.
             </p>
 
             {/* Detalhes técnicos em desenvolvimento */}
           {import.meta.env.DEV && this.state.error && (
-              <div className="mb-6 p-4 bg-gray-100 rounded-lg text-left">
+              <div className="mb-6 rounded-lg bg-[var(--bg-elevated)] p-4 text-left">
                 <p className="text-sm font-mono text-red-600 break-words">
                   {this.state.error.message}
                 </p>
@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={this.handleReload}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#000dff] text-white rounded-xl font-medium hover:bg-[#0000cc] transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-white transition-colors hover:bg-primary-hover"
               >
                 <RefreshCw className="w-4 h-4" />
                 Recarregar Página
@@ -91,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
               
               <button
                 onClick={this.handleGoHome}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-slate-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-6 py-3 font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
               >
                 <Home className="w-4 h-4" />
                 Voltar ao Início
@@ -99,7 +99,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Código de erro para suporte */}
-            <p className="text-xs text-slate-400 mt-6">
+            <p className="text-xs text-[var(--text-muted)] mt-6">
               Se o problema persistir, entre em contato com o suporte.
             </p>
           </div>

@@ -1,7 +1,7 @@
 // Design System - TextArea Component
 // PADRÃO OFICIAL: Use este componente em todo o sistema
 
-import React from "react";
+import React, { useId } from "react";
 
 export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
@@ -19,18 +19,31 @@ export const TextArea: React.FC<TextAreaProps> = ({
   id,
   ...props
 }) => {
-  const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
+  const generatedId = useId();
+  const textareaId = id || generatedId;
 
-  const baseStyles = "w-full px-4 py-2.5 text-sm border rounded-lg bg-[#0F172A] text-slate-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-[#111827] disabled:text-slate-400 disabled:cursor-not-allowed resize-none";
-  
-  const stateStyles = error 
-    ? "border-red-500 text-white focus:border-red-500 focus:ring-red-500/20" 
-    : "border-white/10 hover:border-white/20";
+  const baseStyles = `
+    min-h-[100px] w-full resize-y rounded-xl border
+    bg-white dark:bg-slate-900 px-4 py-3
+    text-sm text-slate-900 dark:text-slate-100
+    transition-all duration-200 ease-in-out
+    placeholder:text-slate-500 dark:placeholder:text-slate-400
+    focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20
+    disabled:cursor-not-allowed disabled:opacity-50
+    hover:border-slate-300 dark:hover:border-slate-600
+  `;
+
+  const stateStyles = error
+    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20 hover:border-red-500"
+    : "border-slate-300 dark:border-slate-700";
 
   return (
     <div className={`${fullWidth ? "w-full" : ""}`}>
       {label && (
-        <label htmlFor={textareaId} className="block text-sm font-medium text-slate-200 mb-1.5">
+        <label
+          htmlFor={textareaId}
+          className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+        >
           {label}
         </label>
       )}
@@ -39,8 +52,17 @@ export const TextArea: React.FC<TextAreaProps> = ({
         className={`${baseStyles} ${stateStyles} ${className}`}
         {...props}
       />
-      {error && <p className="mt-1.5 text-sm text-red-400">{error}</p>}
-      {helperText && !error && <p className="mt-1.5 text-sm text-slate-400">{helperText}</p>}
+      {error && (
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+          <span className="w-1 h-1 bg-red-500 rounded-full flex-shrink-0"></span>
+          {error}
+        </p>
+      )}
+      {helperText && !error && (
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          {helperText}
+        </p>
+      )}
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react"
 import { Search, RefreshCw, Plus, Filter, Download, LayoutGrid, List, X, ChevronDown, FileSpreadsheet, FileText, File, Upload, AlertCircle, CheckCircle } from "lucide-react"
 import { FilterField } from "./FilterDrawer"
+import { zIndex } from "../../config/zIndex"
 
 type FilterConfig = {
   label: string
@@ -341,20 +342,20 @@ export function PageHeader({
   ]
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0F172A]/80 backdrop-blur-xl p-3 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between w-full">
+    <div className="finqz-card p-3">
+      <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         
         {/* Left: Busca + Atualizar */}
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {/* Kanban / Lista Toggle */}
           {view && setView && (
-            <div className="flex bg-[#111827]/90 rounded-lg p-1 border border-white/10">
+            <div className="flex rounded-lg border border-slate-700/60 bg-[#111827] p-1">
               <button
                 onClick={() => setView('kanban')}
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'kanban' 
-                    ? 'bg-[#000dff] text-white shadow-sm' 
-                    : 'text-slate-300 hover:bg-white/10'
+                    ? 'bg-primary text-white shadow-sm' 
+                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-white'
                 }`}
                 title="Kanban"
               >
@@ -364,8 +365,8 @@ export function PageHeader({
                 onClick={() => setView('list')}
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'list' 
-                    ? 'bg-[#000dff] text-white shadow-sm' 
-                    : 'text-slate-300 hover:bg-white/10'
+                    ? 'bg-primary text-white shadow-sm' 
+                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-white'
                 }`}
                 title="Lista"
               >
@@ -383,7 +384,7 @@ export function PageHeader({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 placeholder="Buscar..."
-                className="h-10 w-full max-w-[280px] rounded-xl border border-white/10 bg-[#0F172A] text-slate-100 placeholder:text-slate-400 pl-10 pr-3 text-sm outline-none focus:border-[#000dff] focus:ring-2 focus:ring-[#000dff]/20"
+                className="h-10 w-full min-w-[220px] max-w-[320px] rounded-lg border border-slate-700/60 bg-[#111827] pl-10 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-primary focus:ring-2 focus:ring-primary/20"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             </div>
@@ -392,7 +393,7 @@ export function PageHeader({
           {/* Atualizar - botão fantasma com ícone apenas */}
           <button 
             onClick={onRefresh} 
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-300 hover:bg-white/10"
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
             title="Atualizar"
           >
             <RefreshCw size={18} />
@@ -400,7 +401,7 @@ export function PageHeader({
         </div>
 
         {/* Right: Ações */}
-        <div className="flex flex-wrap items-center gap-3 ml-auto justify-end min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 lg:ml-auto">
           {/* Filtros Dropdown - opcional */}
           {showFilter && (filters.length > 0 || onOpenFilters) && (
             <div className="relative">
@@ -412,16 +413,16 @@ export function PageHeader({
                     setShowFilterDropdown(!showFilterDropdown)
                   }
                 }}
-                className={`flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-[#0F172A]/80 backdrop-blur-xl px-3 text-sm font-medium transition-all ${
+                className={`flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors ${
                   activeFiltersCount > 0 || showFilterDropdown
-                    ? 'border-[#000dff] bg-[#000dff]/5 text-[#000dff]'
-                    : 'text-slate-300 hover:bg-white/10'
+                    ? 'border-primary bg-primary/10 text-slate-100'
+                    : 'border-slate-700/60 bg-[#111827] text-slate-300 hover:bg-white/[0.06]'
                 }`}
               >
-                <Filter size={16} className={activeFiltersCount > 0 ? 'text-[#000dff]' : 'text-slate-500'} />
+                <Filter size={16} className={activeFiltersCount > 0 ? 'text-primary-soft' : 'text-slate-500'} />
                 Filtros
                 {activeFiltersCount > 0 && (
-                  <span className="bg-[#000dff] text-white text-xs px-1.5 py-0.5 rounded-full">
+                  <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-white">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -434,10 +435,14 @@ export function PageHeader({
               {showFilterDropdown && filters.length > 0 && (
                 <>
                   <div 
-                    className="fixed inset-0 z-40" 
+                    className="fixed inset-0" 
+                    style={{ zIndex: zIndex.backdrop }}
                     onClick={() => setShowFilterDropdown(false)} 
                   />
-                  <div className="absolute right-0 top-full mt-2 w-72 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg z-50 p-4">
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-72 rounded-lg border border-slate-700/70 bg-[#0F172A] p-4 shadow-panel"
+                    style={{ zIndex: zIndex.dropdown }}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-slate-100">Filtros</h3>
                       <button 
@@ -445,7 +450,7 @@ export function PageHeader({
                           setLocalFilterValues({})
                           filters.forEach(f => onFilterChange?.(f.key, ''))
                         }}
-                        className="text-xs text-[#000dff] hover:underline"
+                        className="text-xs font-semibold text-primary-soft hover:text-white"
                       >
                         Limpar todos
                       </button>
@@ -460,7 +465,7 @@ export function PageHeader({
                             <select
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                              className="w-full border border-white/10 rounded-lg bg-[#0F172A] text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+                              className="w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20"
                             >
                               <option value="">{filter.placeholder || 'Selecione...'}</option>
                               {filter.options.map((opt) => (
@@ -473,14 +478,14 @@ export function PageHeader({
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
                               placeholder={filter.placeholder}
-                              className="w-full border border-white/10 rounded-lg bg-[#0F172A] text-slate-100 placeholder:text-slate-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+                              className="w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                           ) : filter.type === 'date' ? (
                             <input
                               type="date"
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                              className="w-full border border-white/10 rounded-lg bg-[#0F172A] text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+                              className="w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                           ) : null}
                         </div>
@@ -488,7 +493,7 @@ export function PageHeader({
                     </div>
                     <button
                       onClick={() => setShowFilterDropdown(false)}
-                      className="w-full mt-4 bg-[#000dff] text-white py-2 rounded-lg text-sm font-medium hover:bg-[#000dcc] transition-all"
+                      className="mt-4 w-full rounded-lg bg-primary py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
                     >
                       Aplicar Filtros
                     </button>
@@ -502,7 +507,7 @@ export function PageHeader({
           {onImport && importColumns.length > 0 && (
             <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 transition-all"
+              className="flex h-10 items-center gap-2 rounded-lg border border-slate-700/60 bg-[#111827] px-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               <Upload size={16} className="text-slate-500" />
               {importLabel}
@@ -513,7 +518,7 @@ export function PageHeader({
           <div className="relative">
             <button 
               onClick={() => setShowExportDropdown(!showExportDropdown)}
-              className="flex items-center gap-2 border border-white/10 hover:border-white/20 hover:bg-white/5 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 transition-all"
+              className="flex h-10 items-center gap-2 rounded-lg border border-slate-700/60 bg-[#111827] px-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
             >
               <Download size={16} className="text-slate-500" />
               {exportLabel}
@@ -523,15 +528,19 @@ export function PageHeader({
             {showExportDropdown && (
               <>
                 <div 
-                  className="fixed inset-0 z-40" 
+                  className="fixed inset-0" 
+                  style={{ zIndex: zIndex.backdrop }}
                   onClick={() => setShowExportDropdown(false)} 
                 />
-                <div className="absolute right-0 top-full mt-2 w-48 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg z-50 py-2">
+                <div 
+                  className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-slate-700/70 bg-[#0F172A] py-2 shadow-panel"
+                  style={{ zIndex: zIndex.dropdown }}
+                >
                   {exportOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => handleExport(option.value)}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-200 hover:bg-white/5 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-white/[0.06]"
                     >
                       {option.icon}
                       {option.label}
@@ -546,7 +555,7 @@ export function PageHeader({
           {onCreate && (
             <button 
               onClick={onCreate} 
-              className="flex h-10 items-center gap-2 rounded-xl bg-[#000dff] px-4 text-sm font-semibold text-white hover:bg-[#000dff]/90"
+              className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             >
               <Plus size={16} />
               {createLabel}
@@ -557,12 +566,18 @@ export function PageHeader({
 
       {/* Modal de Importação */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)} />
-          <div className="relative w-full max-w-2xl mx-4 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
+        <div 
+          className="fixed inset-0 flex items-center justify-center" 
+          style={{ zIndex: zIndex.modal }}
+        >
+          <div 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
+            onClick={() => setShowImportModal(false)} 
+          />
+          <div className="relative mx-4 max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-lg border border-slate-700/70 bg-[#0F172A] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-700/60 p-4">
               <h2 className="text-lg font-semibold text-slate-100">Importar Dados</h2>
-              <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-white/10 rounded-lg">
+              <button onClick={() => setShowImportModal(false)} className="rounded-lg p-1 transition-colors hover:bg-white/[0.06]">
                 <X size={20} className="text-slate-300" />
               </button>
             </div>
@@ -571,7 +586,7 @@ export function PageHeader({
               {/* Upload de arquivo */}
               {!importData.length && (
                 <div 
-                  className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-[#000dff] transition-colors cursor-pointer"
+                  className="cursor-pointer rounded-lg border-2 border-dashed border-slate-700/70 p-8 text-center transition-colors hover:border-primary"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload size={48} className="mx-auto text-slate-400 mb-4" />
@@ -598,13 +613,13 @@ export function PageHeader({
                       <p className="font-medium text-slate-100">{importFileName}</p>
                       <p className="text-sm text-slate-500">
                         Total: {importData.length + Object.keys(importErrors).length} linhas • 
-                        Válidas: <span className="text-green-600 font-medium">{importData.length}</span> • 
-                        Erros: <span className="text-red-600 font-medium">{Object.keys(importErrors).length}</span>
+                        Válidas: <span className="font-medium text-emerald-300">{importData.length}</span> • 
+                        Erros: <span className="font-medium text-red-300">{Object.keys(importErrors).length}</span>
                       </p>
                     </div>
                     <button 
                       onClick={() => { setImportData([]); setImportErrors({}); setImportFileName(''); }}
-                      className="text-sm text-[#000dff] hover:underline"
+                      className="text-sm font-semibold text-primary-soft hover:text-white"
                     >
                       Carregar outro arquivo
                     </button>
@@ -612,9 +627,9 @@ export function PageHeader({
 
                   {/* Lista de erros */}
                   {Object.keys(importErrors).length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <p className="text-sm font-medium text-red-700 mb-2">Erros encontrados:</p>
-                      <ul className="text-xs text-red-600 space-y-1">
+                    <div className="rounded-lg border border-red-500/20 bg-red-950/30 p-3">
+                      <p className="mb-2 text-sm font-medium text-red-200">Erros encontrados:</p>
+                      <ul className="space-y-1 text-xs text-red-300">
                         {Object.entries(importErrors).slice(0, 5).map(([row, error]) => (
                           <li key={row}>Linha {parseInt(row) + 2}: {error}</li>
                         ))}
@@ -626,7 +641,7 @@ export function PageHeader({
                   )}
 
                   {/* Preview da tabela */}
-                          <div className="border rounded-lg overflow-hidden">
+                          <div className="overflow-hidden rounded-lg border border-slate-700/60">
                     <table className="w-full text-sm">
                       <thead className="bg-[#0F172A]">
                         <tr>
@@ -637,7 +652,7 @@ export function PageHeader({
                       </thead>
                       <tbody>
                         {importData.slice(0, 5).map((row, i) => (
-                          <tr key={i} className="border-t">
+                          <tr key={i} className="border-t border-slate-700/60">
                             {importColumns.slice(0, 5).map(col => (
                               <td key={col.key} className="px-3 py-2 text-slate-200">{row[col.key] || '-'}</td>
                             ))}
@@ -651,17 +666,17 @@ export function PageHeader({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t flex justify-end gap-3">
+            <div className="flex justify-end gap-3 border-t border-slate-700/60 p-4">
               <button 
                 onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-sm font-medium text-slate-200 bg-[#111827] rounded-lg hover:bg-white/5"
+                className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/[0.06]"
               >
                 Cancelar
               </button>
               <button 
                 onClick={handleConfirmImport}
                 disabled={importData.length === 0}
-                className="px-4 py-2 text-sm font-medium text-white bg-[#000dff] rounded-lg hover:bg-[#000dcc] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Importar {importData.length} {importData.length === 1 ? 'linha' : 'linhas'}
               </button>

@@ -23,22 +23,22 @@ export const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   // Base styles
-  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)] disabled:cursor-not-allowed disabled:opacity-50";
 
   // Variantes com cores FINQZ
   const variants = {
-    primary: "bg-primary text-white hover:bg-primary-hover active:bg-[#0009e0] focus:ring-primary/30",
-    secondary: "bg-[#111827] border border-white/10 text-slate-200 hover:bg-[#0F172A] active:bg-[#0B1523] focus:ring-primary/20",
-    outline: "border border-white/10 text-slate-200 hover:bg-white/5 active:bg-white/10 focus:ring-primary/20",
-    ghost: "text-slate-200 hover:bg-white/5 focus:ring-primary/20",
-    danger: "bg-[#7f1d1d] text-white hover:bg-[#991b1b] active:bg-[#7f1d1d] focus:ring-red-300/20",
-    filter: "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-200 hover:bg-white/5 focus:ring-primary/20",
+    primary: "border border-primary bg-primary text-white shadow-sm shadow-primary/20 hover:bg-primary-hover",
+    secondary: "border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm hover:bg-[var(--bg-surface-hover)]",
+    outline: "border border-[var(--border-default)] bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]",
+    ghost: "border border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]",
+    danger: "border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 dark:text-red-100",
+    filter: "border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm hover:bg-[var(--bg-surface-hover)]",
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-sm gap-1.5",
-    md: "px-4 py-2 text-sm gap-2",
-    lg: "px-6 py-3 text-base gap-2",
+    sm: "h-8 px-3 text-xs gap-1.5",
+    md: "h-10 px-4 text-sm gap-2",
+    lg: "h-11 px-5 text-sm gap-2",
   };
 
   return (

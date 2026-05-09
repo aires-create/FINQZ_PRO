@@ -12,11 +12,17 @@ export * from "../../design-system/components/StatusBadge";
 export * from "../../design-system/components/Modal";
 export * from "../../design-system/components/Toggle";
 export * from "../../design-system/components/TextArea";
+export * from "../../design-system/components/Table";
 export * from "../../design-system/components/KpiCard";
 export * from "../../design-system/components/EntityAvatar";
 export * from "../../design-system/components/EmptyState";
 export * from "../../design-system/components/LoadingState";
 export * from "../../design-system/components/ErrorState";
+
+// Novos componentes para importação/exportação
+export * from "../../design-system/components/Dropzone";
+export * from "../../design-system/components/ImportModal";
+export * from "../../design-system/components/ExportMenu";
 
 // Layout components
 export * from "../layout/PageHeader";

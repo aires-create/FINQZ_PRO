@@ -484,7 +484,7 @@ export const SimuladorPage: React.FC = () => {
             )}
             
             {/* Total Benefit */}
-            <div className="bg-green-50 p-4 rounded-lg text-center mb-6">
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-4 rounded-lg text-center mb-6">
               <p className="text-slate-600">Benefício Estimado ao Cliente</p>
               <p className="text-2xl font-bold text-green-600">R$ {totalBenefit.toLocaleString()}</p>
             </div>
@@ -666,7 +666,7 @@ export const SimuladorPage: React.FC = () => {
                 type="text"
                 value={customerData.state}
                 onChange={(e) => setCustomerData({ ...customerData, state: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800"
                 placeholder="UF"
                 maxLength={2}
               />
@@ -679,7 +679,7 @@ export const SimuladorPage: React.FC = () => {
             
             <div className="grid grid-cols-2 gap-6">
               {/* Crédito */}
-              <div className={`p-4 rounded-lg border-2 ${creditData.productId ? 'border-blue-500 bg-blue-50' : 'border-[#1f2937]'}`}>
+              <div className={`p-4 rounded-lg border-2 transition-all ${creditData.productId ? 'border-blue-500 bg-blue-500/10 dark:bg-blue-950/30' : 'border-[#1f2937]'}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <DollarSign className="w-5 h-5 text-green-600" />
                   <span className="font-medium">Crédito</span>
@@ -757,7 +757,7 @@ export const SimuladorPage: React.FC = () => {
               </div>
               
               {/* Energia */}
-              <div className={`p-4 rounded-lg border-2 ${energyData.interested ? 'border-yellow-500 bg-yellow-50' : 'border-[#1f2937]'}`}>
+              <div className={`p-4 rounded-lg border-2 transition-all ${energyData.interested ? 'border-yellow-500 bg-yellow-500/10 dark:bg-yellow-950/30' : 'border-[#1f2937]'}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="w-5 h-5 text-yellow-500" />
                   <span className="font-medium">Energia</span>
@@ -900,7 +900,7 @@ export const SimuladorPage: React.FC = () => {
         <div className="space-y-6">
           {proposalAccepted ? (
             // Proposta Aceita
-            <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-8 text-center rounded-xl">
               <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check className="w-8 h-8 text-white" />
               </div>
@@ -928,8 +928,8 @@ export const SimuladorPage: React.FC = () => {
                         key={offer.conditionId}
                         className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                           selectedCreditOffer?.conditionId === offer.conditionId
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-[#1f2937] hover:border-gray-300'
+                            ? 'border-blue-500 bg-blue-500/10 dark:bg-blue-950/30'
+                            : 'border-[#1f2937] hover:border-slate-600 dark:hover:border-slate-500'
                         }`}
                         onClick={() => setSelectedCreditOffer(offer)}
                       >
@@ -975,8 +975,8 @@ export const SimuladorPage: React.FC = () => {
                         key={offer.conditionId}
                         className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                           selectedEnergyOffer?.conditionId === offer.conditionId
-                            ? 'border-yellow-500 bg-yellow-50'
-                            : 'border-[#1f2937] hover:border-gray-300'
+                            ? 'border-yellow-500 bg-yellow-500/10 dark:bg-yellow-950/30'
+                            : 'border-[#1f2937] hover:border-slate-600 dark:hover:border-slate-500'
                         }`}
                         onClick={() => setSelectedEnergyOffer(offer)}
                       >

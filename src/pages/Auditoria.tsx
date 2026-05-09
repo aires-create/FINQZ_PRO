@@ -463,114 +463,102 @@ export default function Auditoria() {
           ) : (
             <>
               {/* Tabela */}
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-[#1f2937]">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Data/Hora
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Usuário
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Ação
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Módulo
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        ID Registro
-                      </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Ações
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-[#111827] divide-y divide-gray-200">
-                    {logs.map((log) => (
-                      <tr
-                        key={log.id}
-                        className={`hover:bg-gray-50 ${
-                          isAcaoCritica(log.acao) ? "bg-red-50" : ""
-                        }`}
-                      >
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center text-sm text-white">
-                            <Clock className="w-4 h-4 mr-2 text-slate-400" />
-                            {formatDate(log.createdAt)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center text-sm text-white">
-                            <User className="w-4 h-4 mr-2 text-slate-400" />
-                            {log.usuarioId || "Sistema"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {getAcaoIcon(log.acao)}
-                            <span className="ml-2 text-sm font-medium">
-                              {getAcaoLabel(log.acao)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <Badge variant="outline">
-                            {getModuloLabel(log.modulo)}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
-                          {log.registroId || "-"}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetail(log)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table
+                columns={[
+                  {
+                    key: "createdAt",
+                    header: "Data/Hora",
+                    render: (value) => (
+                      <div className="flex items-center text-sm text-slate-900 dark:text-slate-100">
+                        <Clock className="w-4 h-4 mr-2 text-slate-400" />
+                        {formatDate(value)}
+                      </div>
+                    ),
+                    width: "180px"
+                  },
+                  {
+                    key: "usuarioId",
+                    header: "Usuário",
+                    render: (value) => (
+                      <div className="flex items-center text-sm text-slate-900 dark:text-slate-100">
+                        <User className="w-4 h-4 mr-2 text-slate-400" />
+                        {value || "Sistema"}
+                      </div>
+                    )
+                  },
+                  {
+                    key: "acao",
+                    header: "Ação",
+                    render: (value) => (
+                      <div className="flex items-center">
+                        {getAcaoIcon(value)}
+                        <span className="ml-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {getAcaoLabel(value)}
+                        </span>
+                      </div>
+                    )
+                  },
+                  {
+                    key: "modulo",
+                    header: "Módulo",
+                    render: (value) => (
+                      <Badge variant="outline">
+                        {getModuloLabel(value)}
+                      </Badge>
+                    ),
+                    width: "120px"
+                  },
+                  {
+                    key: "registroId",
+                    header: "ID Registro",
+                    render: (value) => (
+                      <span className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                        {value || "-"}
+                      </span>
+                    ),
+                    width: "120px"
+                  },
+                  {
+                    key: "actions",
+                    header: "Ações",
+                    render: (value, row) => (
+                      <div className="flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetail(row);
+                          }}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ),
+                    width: "80px",
+                    align: "right"
+                  }
+                ]}
+                data={logs}
+                density="normal"
+                striped={true}
+                hoverable={true}
+                onRowClick={(row) => handleViewDetail(row)}
+              />
 
               {/* Paginação */}
-              <div className="px-4 py-3 bg-[#111827] border-t border-[#1f2937] flex items-center justify-between">
-                <div className="text-sm text-slate-300">
-                  Mostrando{" "}
-                  <span className="font-medium">
-                    {(pagination.page - 1) * pagination.limit + 1}
-                  </span>{" "}
-                  a{" "}
-                  <span className="font-medium">
-                    {Math.min(pagination.page * pagination.limit, pagination.total)}
-                  </span>{" "}
-                  de <span className="font-medium">{pagination.total}</span>{" "}
-                  resultados
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page <= 1}
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pagination.page >= pagination.totalPages}
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
+              <TablePagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                pageSize={pagination.limit}
+                onPageChange={handlePageChange}
+                showPageSizeSelector={true}
+                onPageSizeChange={(newSize) => {
+                  // Implementar mudança de pageSize se necessário
+                  console.log('Page size changed to:', newSize);
+                }}
+              />
             </>
           )}
         </DSCard>

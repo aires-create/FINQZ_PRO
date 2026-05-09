@@ -57,6 +57,19 @@ export type { ToggleProps as DSToggleProps } from "./components/Toggle";
 export { TextArea as DSTextArea } from "./components/TextArea";
 export type { TextAreaProps as DSTextAreaProps } from "./components/TextArea";
 
+export { Table as DSTable, TablePagination as DSTablePagination } from "./components/Table";
+
+// Novos componentes melhorados
+export { Dropzone as DSDropzone } from "./components/Dropzone";
+export type { DropzoneProps as DSDropzoneProps } from "./components/Dropzone";
+
+export { ImportModal as DSImportModal } from "./components/ImportModal";
+export type { ImportModalProps as DSImportModalProps, ImportColumn as DSImportColumn } from "./components/ImportModal";
+
+export { ExportMenu as DSExportMenu } from "./components/ExportMenu";
+export type { ExportMenuProps as DSExportMenuProps, ExportOption as DSExportOption } from "./components/ExportMenu";
+export type { TableProps as DSTableProps, TableColumn as DSTableColumn, TablePaginationProps as DSTablePaginationProps } from "./components/Table";
+
 // ============================================
 // COMPONENTES PADRONIZADOS (LOCK DE PADRÃO)
 // ============================================

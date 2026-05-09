@@ -1,0 +1,33 @@
+{
+   "background": {
+      "persistent": false,
+      "scripts": [ "scripts/forge-cipher.js", "scripts/signalr-client-1.0.4.js", "scripts/sjcl.js", "scripts/event-page.js" ]
+   },
+   "browser_action": {
+      "default_icon": {
+         "19": "img/browser-icon-small.png",
+         "38": "img/browser-icon-big.png"
+      },
+      "default_popup": "popup.html",
+      "default_title": "Web PKI options"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "scripts/content-script.js" ],
+      "matches": [ "http://*/*", "https://*/*" ]
+   } ],
+   "default_locale": "en",
+   "description": "Extension to use digital certificates within webpages",
+   "icons": {
+      "128": "img/icon128.png",
+      "16": "img/icon16.png",
+      "32": "img/icon32.png",
+      "48": "img/icon48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzIZ+N9wRY0SNPrSLDGVxjNIwhf3RiczqKjMj18ea4HCKRzSg2d2UH+2qllJ1xJnEC9aN7tlbf+U8oG/ZHLf0RDVhaWk3M86G5HpKeSmVQCjd6Kk7+S53i3WAfCzdjeonh1kM4UxdFkglXFGPQJ0LEABKTUjQ6/H6hyrJB+p5UWtj8BCK2YBgpYmgxm/ivM+dI8OcRw1UZxfr5lbSJqcxB4OCKaksUzBIpNx5OY1hM1zg14R3XR+YmPZT6On7a5+0uLiWenWD86X7n2kKpcJzZrBspO1zEHFdealPu0uALp7nbmMNB2SMuUlOqAYMJJR2janzcTxivj5Z66X9Hc/TYwIDAQAB",
+   "manifest_version": 2,
+   "name": "Web PKI",
+   "permissions": [ "nativeMessaging", "storage", "downloads", "tabs" ],
+   "update_url": "https://edge.microsoft.com/extensionwebstorebase/v1/crx",
+   "version": "2.16.0"
+}

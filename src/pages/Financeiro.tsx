@@ -337,7 +337,7 @@ export const FinanceiroPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="app-page">
       {/* Header Padronizado */}
       <PageHeader
         onSearch={setSearchQuery}
@@ -379,7 +379,7 @@ export const FinanceiroPage: React.FC = () => {
       />
 
       {/* Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         <KpiCard
           label="Receitas"
           value={formatCurrency(cards.totalCreditos)}
@@ -424,52 +424,52 @@ export const FinanceiroPage: React.FC = () => {
         />
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-[#0F172A]/85 p-5 shadow-2xl shadow-black/20">
+      <div className="finqz-card p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Painel financeiro</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Fluxo de caixa e baixa de transações</h2>
-            <p className="mt-2 text-sm text-slate-400 max-w-2xl">
+            <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Fluxo de caixa e baixa de transações</h2>
+            <p className="mt-2 text-sm text-[var(--text-secondary)] max-w-2xl">
               Filtros aplicados em tempo real para priorizar cobranças, validar recebimentos e mapear oportunidades de capital de giro.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-3xl bg-slate-950/80 border border-white/10 p-4 text-center">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Transações</p>
-              <p className="mt-2 text-xl font-semibold text-white">{filteredData.length}</p>
+            <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center shadow-sm">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Transações</p>
+              <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{filteredData.length}</p>
             </div>
-            <div className="rounded-3xl bg-slate-950/80 border border-white/10 p-4 text-center">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Última</p>
-              <p className="mt-2 text-xl font-semibold text-white">
+            <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center shadow-sm">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Última</p>
+              <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
                 {filteredData[0]?.data_transacao || "-"}
               </p>
             </div>
-            <div className="rounded-3xl bg-slate-950/80 border border-white/10 p-4 text-center">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Saldo atual</p>
-              <p className="mt-2 text-xl font-semibold text-white">{formatCurrency(cards.saldo)}</p>
+            <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center shadow-sm">
+              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Saldo atual</p>
+              <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{formatCurrency(cards.saldo)}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabela */}
-      <Card className="overflow-hidden">
-        <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-950/80 px-4 py-4">
+      <Card className="overflow-hidden" padding="none">
+        <div className="flex flex-col justify-between gap-3 border-b border-[var(--border-muted)] bg-[var(--bg-surface-strong)] px-4 py-4 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-semibold text-white">Transações</p>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm font-semibold text-[var(--text-primary)]">Transações</p>
+            <p className="text-sm text-[var(--text-secondary)]">
               {filteredData.length} lançamentos encontrados • ordenado por data mais recente
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0F172A]/80 px-3 py-2 text-sm text-slate-300">
-            <Download size={16} className="text-blue-300" />
+          <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] shadow-sm">
+            <Download size={16} className="text-blue-500 dark:text-blue-300" />
             Exporte seus dados direto do painel
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-0">
-            <thead className="bg-gradient-to-r from-slate-950/90 to-slate-900/80 text-slate-400">
+          <table className="min-w-[1120px] border-separate border-spacing-0">
+            <thead>
               <tr>
                 <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Código</th>
                 <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Tipo</th>
@@ -486,12 +486,12 @@ export const FinanceiroPage: React.FC = () => {
               {filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12">
-                    <div className="rounded-3xl border border-dashed border-white/10 bg-slate-950/80 p-10 text-center shadow-2xl shadow-black/20">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-blue-500/10 text-blue-300">
+                    <div className="rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] p-10 text-center shadow-sm">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 dark:text-blue-300">
                         <Wallet size={24} />
                       </div>
-                      <p className="text-lg font-semibold text-white mb-2">Nenhuma transação encontrada</p>
-                      <p className="text-sm text-slate-400 max-w-xl mx-auto">
+                      <p className="text-lg font-semibold text-[var(--text-primary)] mb-2">Nenhuma transação encontrada</p>
+                      <p className="text-sm text-[var(--text-secondary)] max-w-xl mx-auto">
                         Ajuste os filtros ou registre um novo lançamento para começar a visualizar fluxo financeiro e previsões de caixa.
                       </p>
                     </div>
@@ -499,8 +499,8 @@ export const FinanceiroPage: React.FC = () => {
                 </tr>
               ) : (
                 filteredData.map((item) => (
-                  <tr key={item.id} className="group border-b border-white/10 transition-colors duration-200 hover:bg-slate-900/80">
-                    <td className="px-4 py-4 text-sm font-semibold text-white whitespace-nowrap">{item.codigo}</td>
+                  <tr key={item.id} className="group border-b border-[var(--border-muted)] transition-colors duration-200 hover:bg-[var(--bg-surface-hover)]">
+                    <td className="px-4 py-4 text-sm font-semibold text-[var(--text-primary)] whitespace-nowrap">{item.codigo}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <Badge
                         variant={getTypeBadgeVariant(item.tipo)}
@@ -510,15 +510,15 @@ export const FinanceiroPage: React.FC = () => {
                         {TIPOS_TRANSACAO.find((t) => t.value === item.tipo)?.label || item.tipo}
                       </Badge>
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">
+                    <td className="px-4 py-4 text-sm text-[var(--text-secondary)] whitespace-nowrap">
                       {CATEGORIAS.find((c) => c.value === item.categoria)?.label || item.categoria}
                     </td>
                     <td className={`px-4 py-4 text-right text-sm font-semibold ${item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "text-emerald-300" : "text-red-300"}`}>
                       {item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "+" : "-"}{formatCurrency(item.valor)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-slate-400 whitespace-nowrap">{item.data_transacao}</td>
-                    <td className="px-4 py-4 text-sm text-slate-300 max-w-[260px] truncate">{item.descricao}</td>
-                    <td className="px-4 py-4 text-sm text-slate-300 whitespace-nowrap">{item.parceiro_nome || "-"}</td>
+                    <td className="px-4 py-4 text-sm text-[var(--text-muted)] whitespace-nowrap">{item.data_transacao}</td>
+                    <td className="px-4 py-4 text-sm text-[var(--text-secondary)] max-w-[260px] truncate">{item.descricao}</td>
+                    <td className="px-4 py-4 text-sm text-[var(--text-secondary)] whitespace-nowrap">{item.parceiro_nome || "-"}</td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <Badge
                         variant={getStatusBadgeVariant(item.status)}
@@ -532,7 +532,7 @@ export const FinanceiroPage: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEdit(item)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#111827]/90 text-slate-300 transition-all duration-200 hover:border-white/20 hover:bg-white/10 hover:text-white"
+                          className="finqz-control h-10 w-10"
                           title="Editar"
                         >
                           <Eye size={16} />
@@ -540,7 +540,7 @@ export const FinanceiroPage: React.FC = () => {
                         {item.status === "confirmado" && (
                           <button
                             onClick={() => openEstornoModal(item.id)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#111827]/90 text-slate-300 transition-all duration-200 hover:border-orange-300 hover:bg-orange-500/10 hover:text-orange-300"
+                            className="finqz-control h-10 w-10 hover:border-orange-300 hover:bg-orange-500/10 hover:text-orange-500"
                             title="Estornar"
                           >
                             <RotateCcw size={16} />
@@ -548,7 +548,7 @@ export const FinanceiroPage: React.FC = () => {
                         )}
                         <button
                           onClick={() => handleDelete(item.id)}
-                          className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-[#111827]/90 text-slate-300 transition-all duration-200 hover:border-red-300 hover:bg-red-500/10 hover:text-red-300"
+                          className="finqz-control h-10 w-10 hover:border-red-300 hover:bg-red-500/10 hover:text-red-500"
                           title="Excluir"
                         >
                           <X size={16} />

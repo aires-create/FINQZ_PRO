@@ -4,7 +4,7 @@ import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Cale
 import api from "../api/client";
 import useAppStore from "../store";
 import type { Cliente } from "../types";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { USE_MOCKS } from "../config/environment";
 import { useTenantFilter } from "../hooks/useTenantFilter";
@@ -78,6 +78,9 @@ export const ClientesPage: React.FC = () => {
   // Histórico de alterações
   const [showHistory, setShowHistory] = useState(false);
   const [historyCliente, setHistoryCliente] = useState<Cliente | null>(null);
+
+  // Import/Export
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [clienteHistory, setClienteHistory] = useState<Array<{
     data: number;
     campo: string;
@@ -179,6 +182,41 @@ export const ClientesPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Definições para importação/exportação
+  const importColumns = [
+    { key: 'nome', label: 'Nome', required: true },
+    { key: 'cpf_cnpj', label: 'CPF/CNPJ', required: false },
+    { key: 'email', label: 'Email', required: false },
+    { key: 'telefone', label: 'Telefone', required: false },
+    { key: 'celular', label: 'Celular', required: false },
+    { key: 'cep', label: 'CEP', required: false },
+    { key: 'rua', label: 'Rua', required: false },
+    { key: 'numero', label: 'Número', required: false },
+    { key: 'complemento', label: 'Complemento', required: false },
+    { key: 'bairro', label: 'Bairro', required: false },
+    { key: 'cidade', label: 'Cidade', required: false },
+    { key: 'estado', label: 'Estado', required: false },
+    { key: 'profissao', label: 'Profissão', required: false },
+  ];
+
+  const exportColumns = [
+    { key: 'codigo', label: 'Código' },
+    { key: 'nome', label: 'Nome' },
+    { key: 'cpf_cnpj', label: 'CPF/CNPJ' },
+    { key: 'email', label: 'Email' },
+    { key: 'telefone', label: 'Telefone' },
+    { key: 'celular', label: 'Celular' },
+    { key: 'cep', label: 'CEP' },
+    { key: 'rua', label: 'Rua' },
+    { key: 'numero', label: 'Número' },
+    { key: 'complemento', label: 'Complemento' },
+    { key: 'bairro', label: 'Bairro' },
+    { key: 'cidade', label: 'Cidade' },
+    { key: 'estado', label: 'Estado' },
+    { key: 'profissao', label: 'Profissão' },
+    { key: 'status', label: 'Status' },
+  ];
 
   // Função para processar importação de clientes
   const handleImportClientes = (importData: any[]) => {
@@ -924,6 +962,17 @@ export const ClientesPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Handler para exportação usando componente compartilhado
+  const handleExportClientes = (format: string) => {
+    if (format === 'csv') {
+      exportClientes();
+    } else {
+      // Para outros formatos, usar a lógica padrão do ExportMenu
+      // Por enquanto, apenas CSV é suportado customizado
+      exportClientes();
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -932,24 +981,6 @@ export const ClientesPage: React.FC = () => {
         onRefresh={loadClientes}
         onCreate={handleNewCliente}
         createLabel="Novo Cliente"
-        onImport={handleImportClientes}
-        importLabel="Importar Clientes"
-        importColumns={[
-          { key: 'nome', label: 'Nome', required: true },
-          { key: 'cpf_cnpj', label: 'CPF/CNPJ', required: false },
-          { key: 'email', label: 'Email', required: false },
-          { key: 'telefone', label: 'Telefone', required: false },
-          { key: 'celular', label: 'Celular', required: false },
-          { key: 'cep', label: 'CEP', required: false },
-          { key: 'rua', label: 'Rua', required: false },
-          { key: 'numero', label: 'Número', required: false },
-          { key: 'complemento', label: 'Complemento', required: false },
-          { key: 'bairro', label: 'Bairro', required: false },
-          { key: 'cidade', label: 'Cidade', required: false },
-          { key: 'estado', label: 'Estado', required: false },
-          { key: 'profissao', label: 'Profissão', required: false },
-          { key: 'tags', label: 'Tags', required: false },
-        ]}
         // Ativar FilterDrawer (padrão premium)
         onOpenFilters={() => setOpenFilterDrawer(true)}
         filters={[
@@ -970,17 +1001,26 @@ export const ClientesPage: React.FC = () => {
           if (key === 'cidade') setFilterCidade(value)
           if (key === 'estado') setFilterEstado(value)
         }}
-        exportData={filteredClientes}
-        exportLabel="Exportar"
-        exportColumns={[
-          { key: 'nome', label: 'Nome' },
-          { key: 'cpf_cnpj', label: 'CPF/CNPJ' },
-          { key: 'email', label: 'Email' },
-          { key: 'telefone', label: 'Telefone' },
-          { key: 'cidade', label: 'Cidade' },
-          { key: 'estado', label: 'Estado' },
-        ]}
-        exportFilename="clientes"
+        extra={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportModalOpen(true)}
+              className="flex items-center gap-1"
+            >
+              <Download size={14} />
+              Importar
+            </Button>
+            <ExportMenu
+              data={filteredClientes}
+              columns={exportColumns}
+              filename="clientes"
+              onExport={handleExportClientes}
+              label="Exportar"
+            />
+          </div>
+        }
       />
 
       {/* Stats Cards - Design System KpiCard */}
@@ -1909,6 +1949,17 @@ export const ClientesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de importação */}
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportClientes}
+        columns={importColumns}
+        title="Importar Clientes"
+        description="Importe clientes a partir de um arquivo CSV. Campo obrigatório: nome."
+        acceptedTypes={['.csv']}
+      />
     </div>
   );
 };

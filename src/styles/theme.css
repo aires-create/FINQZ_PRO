@@ -1,22 +1,111 @@
 :root {
-  --bg-primary: #020617;
-  --bg-secondary: #0B1120;
-  --bg-surface: #111827;
-  --bg-surface-soft: rgba(15, 23, 42, 0.88);
-  --bg-surface-strong: #0F172A;
-  --bg-surface-hover: rgba(255, 255, 255, 0.06);
+  color-scheme: light;
 
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-muted: rgba(255, 255, 255, 0.10);
+  --bg-primary: #eaf4fb;
+  --bg-secondary: #dcebf8;
+  --bg-canvas: #eef7ff;
+  --bg-app-gradient:
+    radial-gradient(circle at 18% 4%, rgba(56, 189, 248, 0.22), transparent 32%),
+    radial-gradient(circle at 82% 12%, rgba(37, 99, 235, 0.14), transparent 30%),
+    linear-gradient(135deg, #f3fbff 0%, #e9f3fc 45%, #dbe9f8 100%);
 
-  --text-primary: #F8FAFC;
-  --text-secondary: #CBD5E1;
-  --text-muted: #94A3B8;
-  --placeholder: #94A3B8;
+  --bg-surface: rgba(255, 255, 255, 0.78);
+  --bg-surface-soft: rgba(255, 255, 255, 0.64);
+  --bg-surface-strong: #f8fbff;
+  --bg-surface-hover: rgba(37, 99, 235, 0.08);
+  --bg-elevated: rgba(255, 255, 255, 0.94);
 
-  --color-primary: #000DFF;
-  --color-primary-hover: #0011CC;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-danger: #EF4444;
+  --border-default: rgba(64, 105, 157, 0.18);
+  --border-muted: rgba(64, 105, 157, 0.12);
+  --border-strong: rgba(37, 99, 235, 0.32);
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-subtle: #8294aa;
+  --placeholder: #7b8ca3;
+
+  --color-primary: #0b4fb3;
+  --color-primary-hover: #083f90;
+  --color-primary-soft: #3388d9;
+  --color-primary-faint: rgba(51, 136, 217, 0.14);
+  --color-success: #079669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
+
+  --sidebar-bg: linear-gradient(180deg, rgba(210, 232, 249, 0.94) 0%, rgba(172, 203, 235, 0.95) 100%);
+  --sidebar-border: rgba(37, 99, 235, 0.18);
+  --sidebar-text: #0f172a;
+  --sidebar-muted: #315f8c;
+  --sidebar-accent: #0b4fb3;
+  --topbar-bg: rgba(239, 248, 255, 0.78);
+  --nav-active-bg: rgba(37, 99, 235, 0.14);
+  --nav-active-text: #0b4fb3;
+  --nav-hover-bg: rgba(255, 255, 255, 0.58);
+
+  --chart-line: #0b4fb3;
+  --chart-line-2: #34b6df;
+  --chart-fill: rgba(51, 136, 217, 0.18);
+
+  --radius-card: 8px;
+  --radius-control: 8px;
+  --shadow-panel: 0 14px 34px rgba(31, 70, 119, 0.13);
+  --shadow-card: 0 18px 42px rgba(31, 70, 119, 0.16);
+  --shadow-control: 0 10px 22px rgba(31, 70, 119, 0.12);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --bg-primary: #020b16;
+  --bg-secondary: #06162a;
+  --bg-canvas: #020617;
+  --bg-app-gradient:
+    radial-gradient(circle at 18% 4%, rgba(56, 189, 248, 0.13), transparent 30%),
+    radial-gradient(circle at 82% 12%, rgba(0, 13, 255, 0.16), transparent 32%),
+    linear-gradient(135deg, #06162a 0%, #020b16 48%, #020617 100%);
+
+  --bg-surface: rgba(15, 23, 42, 0.82);
+  --bg-surface-soft: rgba(15, 23, 42, 0.66);
+  --bg-surface-strong: #111827;
+  --bg-surface-hover: rgba(51, 136, 217, 0.11);
+  --bg-elevated: rgba(17, 24, 39, 0.96);
+
+  --border-default: rgba(148, 163, 184, 0.18);
+  --border-muted: rgba(148, 163, 184, 0.12);
+  --border-strong: rgba(203, 213, 225, 0.24);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --placeholder: #64748b;
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: #67b7f7;
+  --color-primary-faint: rgba(51, 136, 217, 0.18);
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #38bdf8;
+
+  --sidebar-bg: linear-gradient(180deg, #071f3d 0%, #06182e 58%, #051225 100%);
+  --sidebar-border: rgba(148, 163, 184, 0.12);
+  --sidebar-text: #e5f1ff;
+  --sidebar-muted: #7f9ac7;
+  --sidebar-accent: #67b7f7;
+  --topbar-bg: rgba(7, 17, 31, 0.82);
+  --nav-active-bg: rgba(37, 99, 235, 0.42);
+  --nav-active-text: #f8fafc;
+  --nav-hover-bg: rgba(255, 255, 255, 0.06);
+
+  --chart-line: #88c7ff;
+  --chart-line-2: #43e0d1;
+  --chart-fill: rgba(56, 189, 248, 0.18);
+
+  --shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.28);
+  --shadow-card: 0 22px 56px rgba(0, 0, 0, 0.34);
+  --shadow-control: 0 14px 30px rgba(0, 0, 0, 0.24);
 }

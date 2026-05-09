@@ -19,12 +19,12 @@ export const Badge: React.FC<BadgeProps> = ({
   const baseStyles = "inline-flex items-center font-medium rounded-full";
 
   const variants = {
-    default: "bg-slate-800/90 text-slate-100 border border-white/10",
+    default: "bg-[var(--bg-surface-hover)] text-[var(--text-secondary)] border border-[var(--border-default)]",
     primary: "bg-primary/10 text-primary border border-primary/20",
-    success: "bg-emerald-900/20 text-emerald-200 border border-emerald-500/20",
-    warning: "bg-amber-900/20 text-amber-200 border border-amber-500/20",
-    danger: "bg-red-900/20 text-red-200 border border-red-500/20",
-    info: "bg-blue-900/20 text-blue-200 border border-blue-500/20",
+    success: "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 dark:text-emerald-200",
+    warning: "bg-amber-500/10 text-amber-700 border border-amber-500/20 dark:text-amber-200",
+    danger: "bg-red-500/10 text-red-700 border border-red-500/20 dark:text-red-200",
+    info: "bg-blue-500/10 text-blue-700 border border-blue-500/20 dark:text-blue-200",
   };
 
   const sizes = {

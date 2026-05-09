@@ -1039,19 +1039,19 @@ export const SdrIaHubPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="app-page">
       <PageHeader
         title="SDR IA"
         subtitle="Centro de controle operacional"
         actions={
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700">
+            <div className="finqz-control px-3 py-1.5">
               {status.online ? (
                 <Wifi className="w-4 h-4 text-green-400" />
               ) : (
                 <WifiOff className="w-4 h-4 text-red-400" />
               )}
-              <span className="text-slate-300 text-sm">
+              <span className="text-sm text-[var(--text-secondary)]">
                 {status.latência}ms
               </span>
               <Badge variant={status.apiStatus === 'online' ? 'success' : 'error'}>
@@ -1062,7 +1062,7 @@ export const SdrIaHubPage: React.FC = () => {
         }
       />
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-5">
         {/* Quick Action Buttons */}
         <div className="flex flex-wrap gap-3">
           <button
@@ -1108,88 +1108,88 @@ export const SdrIaHubPage: React.FC = () => {
         )}
 
         {/* Status Banner - Professional SaaS */}
-        <div className="bg-[#111827] border border-[#1f2937] rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
+        <div className="finqz-card p-5 sm:p-6">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+              <div className="finqz-icon-badge h-16 w-16 rounded-2xl">
                 <Bot className="w-8 h-8" />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-bold">SDR IA Ativo</h2>
-                  <Badge variant="success" className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 text-white border-white/30">
+                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">SDR IA Ativo</h2>
+                  <Badge variant="success">
                     Online
                   </Badge>
                 </div>
-                <p className="text-blue-100">
+                <p className="text-[var(--text-secondary)]">
                   {config.autoMode ? "Modo automático ativado" : "Modo manual"}
                   {config.assistedResponse ? " • Resposta assistida ativada" : ""}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center gap-1">
+                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
                   <Flame className="w-5 h-5 text-orange-300" />
                   {metrics.leadsQuentes} 🔥
                 </div>
-                <div className="text-blue-100 text-sm">Leads Quentes</div>
+                <div className="text-[var(--text-secondary)] text-sm">Leads Quentes</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center gap-1">
+                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
                   <AlertTriangle className="w-5 h-5 text-yellow-300" />
                   {metrics.leadsEmRisco} ⚠️
                 </div>
-                <div className="text-blue-100 text-sm">Leads em Risco</div>
+                <div className="text-[var(--text-secondary)] text-sm">Leads em Risco</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center gap-1">
+                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
                   <DollarSign className="w-5 h-5 text-green-300" />
                   {metrics.leadsProximoFechar} 💰
                 </div>
-                <div className="text-blue-100 text-sm">Próximos de Fechar</div>
+                <div className="text-[var(--text-secondary)] text-sm">Próximos de Fechar</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center gap-1">
+                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
                   <CheckCircle className="w-5 h-5 text-green-300" />
                   {metrics.conversoesHoje}
                 </div>
-                <div className="text-blue-100 text-sm">Conversões Hoje</div>
+                <div className="text-[var(--text-secondary)] text-sm">Conversões Hoje</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center gap-1">
+                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
                   <Gauge className="w-5 h-5 text-purple-300" />
                   {metrics.scoreMedio}%
                 </div>
-                <div className="text-blue-100 text-sm">Score Médio</div>
+                <div className="text-[var(--text-secondary)] text-sm">Score Médio</div>
               </div>
             </div>
           </div>
           
           {/* Status Row */}
-          <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm">
+          <div className="mt-5 flex flex-col gap-4 border-t border-[var(--border-muted)] pt-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-200" />
-                <span className="text-blue-100">Melhor horário: <strong className="text-white">{metrics.melhorHorario}</strong></span>
+                <span className="text-[var(--text-secondary)]">Melhor horário: <strong className="text-[var(--text-primary)]">{metrics.melhorHorario}</strong></span>
               </div>
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-green-200" />
-                <span className="text-blue-100">Uptime: <strong className="text-white">{status.uptime.toFixed(1)}%</strong></span>
+                <span className="text-[var(--text-secondary)]">Uptime: <strong className="text-[var(--text-primary)]">{status.uptime.toFixed(1)}%</strong></span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-blue-200">Objeções detectadas:</span>
-              <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-[var(--text-muted)]">Objeções detectadas:</span>
+              <div className="flex flex-wrap gap-2">
                 {metrics.objecoes.map((obj, i) => (
                   <button
                     key={i}
                     onClick={() => handleObjectionAction(obj)}
-                    className="px-3 py-1.5 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/10 hover:bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 rounded-lg text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="finqz-control px-3 py-1.5 text-xs"
                   >
                     <span>{obj.tipo}</span>
-                    <span className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 px-1.5 rounded text-[10px]">{obj.count}</span>
+                    <span className="rounded border border-[var(--border-muted)] bg-[var(--bg-surface-strong)] px-1.5 text-[10px]">{obj.count}</span>
                     {obj.tipo === 'preço alto' && <DollarSign className="w-3 h-3 text-green-400" />}
                     {obj.tipo === 'preciso pensar' && <Clock className="w-3 h-3 text-blue-400" />}
                     {obj.tipo === 'concorrente' && <Shield className="w-3 h-3 text-purple-400" />}
@@ -1201,7 +1201,7 @@ export const SdrIaHubPage: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-slate-700 pb-2 overflow-x-auto">
+        <div className="flex gap-2 border-b border-[var(--border-muted)] pb-2 overflow-x-auto">
           {[
             { id: 'metrics', label: 'Métricas', icon: Activity },
             { id: 'config', label: 'Configuração', icon: Settings },
@@ -1216,7 +1216,7 @@ export const SdrIaHubPage: React.FC = () => {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)]'
               }`}
             >
               <tab.icon className="w-4 h-4" />

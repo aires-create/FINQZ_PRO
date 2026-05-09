@@ -41,6 +41,8 @@ import {
   Key,
   Table2,
   Calculator,
+  Moon,
+  Sun,
 } from "lucide-react";
 import useAppStore from "../store";
 import { createEdgeSpark } from "@edgespark/client";
@@ -317,7 +319,7 @@ const legacyMenuItems: MenuItem[] = [
 ];
 
 export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.ReactNode }> = ({ customMenuItems, children }) => {
-  const { sidebarOpen, setSidebarOpen, user } = useAppStore();
+  const { sidebarOpen, setSidebarOpen, user, theme, toggleTheme } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -411,13 +413,37 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     }
   }, [profileMenuOpen]);
 
+  useEffect(() => {
+    const mobileMedia = window.matchMedia("(max-width: 1023px)");
+    const syncSidebarForViewport = () => {
+      if (mobileMedia.matches) {
+        setSidebarOpen(false);
+      }
+    };
+
+    syncSidebarForViewport();
+    mobileMedia.addEventListener("change", syncSidebarForViewport);
+
+    return () => mobileMedia.removeEventListener("change", syncSidebarForViewport);
+  }, [setSidebarOpen]);
+
   // Obter configuração da página atual
   const currentPage = pageConfig[location.pathname] || { title: "FINQZ PRO", icon: LayoutDashboard };
   const PageIcon = currentPage.icon;
+  const currentGroup = filteredMenuGroups.find((group) =>
+    group.items.some((item) => item.path === location.pathname)
+  );
+  const currentArea = currentGroup?.id === "dashboard" ? "Visão geral" : currentGroup?.label || "Workspace";
 
   const handleLogout = async () => {
     await client.auth.signOut();
     navigate("/");
+  };
+
+  const closeSidebarOnMobile = () => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
   };
 
   // ============================================
@@ -429,198 +455,225 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
   // Primary: #1D2BFF
 
   return (
-    <div className="h-screen flex bg-background">
-      {/* Sidebar - Estilo Fintech Escuro */}
+    <div className="finqz-shell flex h-screen overflow-hidden">
+      {sidebarOpen && (
+        <button
+          aria-label="Fechar navegação"
+          className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <aside
-        className={`fixed left-0 top-0 h-full bg-secondary-900 border-r border-secondary-800 transition-all duration-300 z-50 flex flex-col ${
-          sidebarOpen ? "w-64" : "w-20"
+        className={`finqz-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r transition-all duration-300 lg:translate-x-0 ${
+          sidebarOpen ? "w-72 translate-x-0 lg:w-72" : "-translate-x-full lg:w-20"
         }`}
       >
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-secondary-800">
-          {sidebarOpen && (
-            <div className="flex items-center gap-3">
-              {/* Logo FINQZ - Flat azul */}
-              <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/30">
-                <span className="text-white font-bold text-lg">F</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-lg text-white tracking-tight">
-                  FINQZ
-                </span>
-                <span className="text-[10px] text-secondary-400 uppercase tracking-wider">
-                  PRO
-                </span>
-              </div>
+        <div className="flex h-16 items-center justify-between border-b border-[var(--sidebar-border)] px-4">
+          <div className={`flex items-center gap-3 ${sidebarOpen ? "" : "lg:justify-center lg:w-full"}`}>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm shadow-primary/25">
+              <span className="text-lg font-bold text-white">F</span>
             </div>
-          )}
+            {sidebarOpen && (
+              <div className="min-w-0">
+                <div className="text-base font-bold tracking-tight text-[var(--sidebar-text)]">FINQZ</div>
+                <div className="text-[10px] font-semibold uppercase text-[var(--sidebar-muted)]">PRO</div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg text-secondary-400 hover:text-white hover:bg-secondary-800 transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--sidebar-muted)] transition-colors hover:bg-[var(--nav-hover-bg)] hover:text-[var(--sidebar-text)]"
+            aria-label={sidebarOpen ? "Recolher navegação" : "Expandir navegação"}
           >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
-        {/* Menu Items - Com Grupos Colapsáveis */}
-        <nav className="p-3 space-y-1 overflow-y-auto flex-1">
+        <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
           {filteredMenuGroups.map((group) => {
             const GroupIcon = group.icon;
             const isExpanded = expandedGroups.includes(group.id);
             const isActive = group.items.some((item) => item.path === location.pathname);
+            const primaryItem = group.items[0];
 
-            // Se não tem permissão para nenhum item do grupo, ocultar
-            // Por agora, exibimos todos (a validação de permissão é feita no item)
+            if (!sidebarOpen && primaryItem) {
+              return (
+                <NavLink
+                  key={group.id}
+                  to={primaryItem.path}
+                  title={group.label}
+                  onClick={closeSidebarOnMobile}
+                  className={`mb-1 flex h-11 items-center justify-center rounded-lg transition-colors ${
+                    isActive
+                      ? "finqz-nav-active"
+                      : "finqz-nav-idle"
+                  }`}
+                >
+                  <GroupIcon size={19} />
+                </NavLink>
+              );
+            }
 
             return (
-              <div key={group.id} className="mb-1">
-                {/* Grupo Colapsável */}
-                {group.id !== "dashboard" && (
-                  <button
-                    onClick={() => toggleGroup(group.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-primary/20 text-primary"
-                        : "text-secondary-400 hover:text-white hover:bg-secondary-800"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <GroupIcon size={18} />
-                      {sidebarOpen && (
-                        <span className="font-medium text-sm">{group.label}</span>
-                      )}
-                    </div>
-                    {sidebarOpen && (
-                      isExpanded ? (
-                        <ChevronDown size={16} />
-                      ) : (
-                        <ChevronRight size={16} />
-                      )
-                    )}
-                  </button>
-                )}
+              <div key={group.id} className="space-y-1">
+                {group.id === "dashboard" ? (
+                  group.items.map((item) => {
+                    const ItemIcon = item.icon;
+                    const isItemActive = location.pathname === item.path;
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={closeSidebarOnMobile}
+                        className={`flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-semibold transition-colors ${
+                          isItemActive
+                            ? "finqz-nav-active"
+                            : "finqz-nav-idle"
+                        }`}
+                      >
+                        <ItemIcon size={17} />
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    );
+                  })
+                ) : (
+                  <>
+                    <button
+                      onClick={() => toggleGroup(group.id)}
+                      className={`flex h-9 w-full items-center justify-between rounded-lg px-3 text-xs font-semibold uppercase transition-colors ${
+                        isActive
+                          ? "finqz-nav-active"
+                          : "finqz-nav-idle"
+                      }`}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <GroupIcon size={15} />
+                        <span className="truncate">{group.label}</span>
+                      </span>
+                      {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                    </button>
 
-                {/* Itens do Grupo */}
-                {sidebarOpen && isExpanded && (
-                  <div className="ml-3 mt-1 space-y-0.5">
-                    {group.items.map((item) => {
-                      const ItemIcon = item.icon;
-                      const isItemActive = location.pathname === item.path;
-                      
-                      return (
-                        <NavLink
-                          key={item.path}
-                          to={item.path}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isItemActive
-                              ? "bg-primary text-white"
-                              : "text-secondary-400 hover:text-white hover:bg-secondary-800"
-                          }`}
-                        >
-                          <ItemIcon size={16} />
-                          <span>{item.label}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
+                    {isExpanded && (
+                      <div className="space-y-1 pl-2">
+                        {group.items.map((item) => {
+                          const ItemIcon = item.icon;
+                          const isItemActive = location.pathname === item.path;
+
+                          return (
+                            <NavLink
+                              key={item.path}
+                              to={item.path}
+                              onClick={closeSidebarOnMobile}
+                              className={`flex h-9 items-center gap-3 rounded-lg px-3 text-sm transition-colors ${
+                                isItemActive
+                                  ? "finqz-nav-active"
+                                  : "finqz-nav-idle"
+                              }`}
+                            >
+                              <ItemIcon size={16} />
+                              <span className="truncate">{item.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );
           })}
-
-          {/* Itens Legados (apenas ícone quando colapsado) */}
-          {!sidebarOpen && (
-            <div className="mt-4 pt-4 border-t border-secondary-800">
-              {filteredLegacyItems.map((item) => {
-                const ItemIcon = item.icon;
-                const isItemActive = location.pathname === item.path;
-                
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center justify-center p-2 rounded-lg text-sm transition-colors mb-1 ${
-                      isItemActive
-                        ? "bg-primary text-white"
-                        : "text-secondary-400 hover:text-white hover:bg-secondary-800"
-                    }`}
-                    title={item.label}
-                  >
-                    <ItemIcon size={18} />
-                  </NavLink>
-                );
-              })}
-            </div>
-          )}
         </nav>
 
-        {/* User Profile */}
-        <div className="p-3 border-t border-secondary-800">
+        <div className="border-t border-[var(--sidebar-border)] p-3">
           <button
             onClick={(e) => {
               e.stopPropagation();
               setProfileMenuOpen(!profileMenuOpen);
             }}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary-800 transition-colors"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--nav-hover-bg)]"
           >
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-white text-sm font-medium">
-                {user?.name?.charAt(0) || "U"}
-              </span>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-white shadow-sm shadow-primary/20">
+              {user?.name?.charAt(0) || "U"}
             </div>
             {sidebarOpen && (
-              <div className="flex-1 text-left">
-                <p className="text-white text-sm font-medium truncate">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--sidebar-text)]">
                   {user?.name || "Usuário"}
                 </p>
-                <p className="text-secondary-400 text-xs truncate">
+                <p className="truncate text-xs text-[var(--sidebar-muted)]">
                   {user?.email || "usuario@finqz.com"}
                 </p>
               </div>
             )}
           </button>
 
-          {/* Profile Menu Dropdown */}
           {profileMenuOpen && sidebarOpen && (
-            <div className="absolute bottom-16 left-4 right-4 bg-secondary-800 rounded-lg shadow-lg py-2 z-50">
+            <div className="finqz-menu absolute bottom-16 left-4 right-4 z-50">
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-2 text-secondary-400 hover:text-white hover:bg-secondary-700 transition-colors"
+                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
               >
                 <LogOut size={16} />
-                <span className="text-sm">Sair</span>
+                Sair
               </button>
             </div>
           )}
         </div>
       </aside>
 
-      {/* Main Content */}
       <main
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-20"
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${
+          sidebarOpen ? "lg:ml-72" : "lg:ml-20"
         }`}
       >
-        {/* Topbar */}
-<header className="h-16 bg-[#0F172A] border-b border-slate-800 flex items-center justify-between px-6">
-  <div className="flex items-center gap-3">
-    <PageIcon className="text-primary" size={20} />
-    
-    <h1 className="text-lg font-semibold text-white">
-      {currentPage.title}
-    </h1>
-  </div>
+        <header className="finqz-topbar flex min-h-16 items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)] lg:hidden"
+              aria-label="Abrir navegação"
+            >
+              <Menu size={18} />
+            </button>
+            <div className="finqz-icon-badge h-10 w-10">
+              <PageIcon size={19} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold uppercase text-[var(--text-muted)]">{currentArea}</p>
+              <h1 className="truncate text-base font-semibold tracking-tight text-[var(--text-primary)] sm:text-lg">
+                {currentPage.title}
+              </h1>
+            </div>
+          </div>
 
-  <div className="flex items-center gap-4">
-    <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
-      <Bell size={20} />
-    </button>
-  </div>
-</header>
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-xs text-[var(--text-muted)] shadow-sm md:flex">
+              <Shield size={14} className="text-emerald-500 dark:text-emerald-300" />
+              Enterprise
+            </div>
+            <button
+              onClick={toggleTheme}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
+              title={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+              aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
+              title="Notificações"
+            >
+              <Bell size={18} />
+            </button>
+          </div>
+        </header>
 
-        {/* Page Content */}
-        <div className="flex-1 overflow-auto p-6 bg-[radial-gradient(circle_at_top_left,#123B73_0%,#07111F_35%,#020617_100%)]">
-          {children || <Outlet />}
+        <div className="flex-1 overflow-auto bg-transparent">
+          <div className="px-4 py-5 sm:px-6 lg:px-8">
+            {children || <Outlet />}
+          </div>
         </div>
       </main>
     </div>

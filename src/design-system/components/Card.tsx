@@ -18,31 +18,16 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const paddingStyles = {
     none: "",
-    sm: "p-4",
-    md: "p-6",
-    lg: "p-8",
+    sm: "p-3 sm:p-4",
+    md: "p-4 sm:p-5",
+    lg: "p-5 sm:p-6",
   };
 
-  const hoverStyles = hover
-    ? "hover:shadow-2xl hover:shadow-blue-500/10 hover:border-white/20 hover:-translate-y-0.5 transition-all duration-300 ease-out"
-    : "";
+  const hoverStyles = hover ? "finqz-card-hover" : "";
 
   return (
-    <div className={`
-      bg-gradient-to-br from-[#0F172A]/90 via-[#0F172A]/80 to-[#1E293B]/60
-      backdrop-blur-2xl
-      border border-white/10
-      rounded-2xl
-      shadow-xl shadow-black/20
-      ${paddingStyles[padding]}
-      ${hoverStyles}
-      ${className}
-    `}>
-      {/* Subtle inner glow */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-      <div className="relative">
-        {children}
-      </div>
+    <div className={`finqz-card ${paddingStyles[padding]} ${hoverStyles} ${className}`}>
+      {children}
     </div>
   );
 };
@@ -54,7 +39,7 @@ export interface CardHeaderProps {
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = "" }) => (
-  <div className={`mb-6 ${className}`}>{children}</div>
+  <div className={`mb-4 flex min-w-0 flex-col gap-1 ${className}`}>{children}</div>
 );
 
 // Card Title
@@ -64,7 +49,7 @@ export interface CardTitleProps {
 }
 
 export const CardTitle: React.FC<CardTitleProps> = ({ children, className = "" }) => (
-  <h3 className={`text-xl font-bold text-white tracking-tight ${className}`}>{children}</h3>
+  <h3 className={`text-heading-md text-[var(--text-primary)] ${className}`}>{children}</h3>
 );
 
 // Card Description
@@ -74,7 +59,7 @@ export interface CardDescriptionProps {
 }
 
 export const CardDescription: React.FC<CardDescriptionProps> = ({ children, className = "" }) => (
-  <p className={`text-sm text-slate-400 mt-2 leading-relaxed ${className}`}>{children}</p>
+  <p className={`text-body-sm text-[var(--text-muted)] ${className}`}>{children}</p>
 );
 
 // Card Content
@@ -94,7 +79,7 @@ export interface CardFooterProps {
 }
 
 export const CardFooter: React.FC<CardFooterProps> = ({ children, className = "" }) => (
-  <div className={`mt-6 pt-6 border-t border-white/10 ${className}`}>{children}</div>
+  <div className={`mt-5 border-t border-[var(--border-muted)] pt-4 ${className}`}>{children}</div>
 );
 
 export default Card;

@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import { Plus, Search, Edit, Trash2, X, User, Shield, ToggleLeft, ToggleRight, UserCheck, UserX, Eye, Globe, Building2, Store, UserCircle, Lock, Unlock } from "lucide-react";
 import useAppStore from "../store";
 import { Role, ROLE_LABELS, ROLE_PERMISSIONS, ROLE_SCOPES, SCOPE_LABELS, Permission, PERMISSION_LABELS } from "../types";
-import { Button, Card as DSCard, Input, Select } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Table } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
 
@@ -460,387 +460,353 @@ export const UsuariosPage: React.FC = () => {
       />
 
       {/* Users Table */}
-      <div className="bg-[#111827] bg-[#111827]:bg-[#111827] bg-[#111827]:bg-[#111827] rounded-2xl border border-[#1f2937] bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937] overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[#1f2937] bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937]">
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">ID/CÓDIGO</th>
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Usuário</th>
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Email</th>
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Perfil</th>
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Escopo</th>
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Parceiro</th>
-              <th className="text-left text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Status</th>
-              <th className="text-right text-sm font-medium text-slate-500 bg-[#111827]:text-slate-500 p-4">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsuarios.map((usuario) => (
-              <tr key={usuario.id} className="border-b border-gray-100 bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937]">
-                <td className="p-4">
-                  <span className="font-mono text-sm text-slate-500">
-                    {usuario.access_code || "-"}
+      <Table
+        columns={[
+          {
+            key: "access_code",
+            header: "ID/CÓDIGO",
+            render: (value) => (
+              <span className="font-mono text-sm text-slate-500 dark:text-slate-400">
+                {value || "-"}
+              </span>
+            ),
+            width: "120px"
+          },
+          {
+            key: "nome",
+            header: "Usuário",
+            render: (value, row) => (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">
+                    {value.charAt(0).toUpperCase()}
                   </span>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#000dff] to-[#3388d9] rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">
-                        {usuario.nome.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="font-medium text-white bg-[#111827]:text-white">{usuario.nome}</span>
-                  </div>
-                </td>
-                <td className="p-4 text-slate-600 bg-[#111827]:text-slate-500">{usuario.email}</td>
-                <td className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                      {getRoleLabel(usuario.role)}
-                    </span>
-                    <button
-                      onClick={() => viewPermissions(usuario.role)}
-                      className="p-1 rounded hover:bg-gray-100 text-slate-400 hover:text-slate-600"
-                      title="Ver permissões"
-                    >
-                      <Eye size={14} />
-                    </button>
-                  </div>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center gap-1">
-                    <ScopeIcon scope={usuario.scope || 'GLOBAL'} />
-                    <span className="text-xs text-slate-500">{getScopeLabel(usuario.role)}</span>
-                  </div>
-                </td>
-                <td className="p-4">
-                  {usuario.partner_id ? (
-                    <span className="text-sm text-slate-600">
-                      {Array.isArray(parceiros) ? parceiros.find(p => p.id === usuario.partner_id)?.nome || `- (${usuario.partner_id})` : `- (${usuario.partner_id})`}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-slate-400">-</span>
-                  )}
-                </td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    usuario.status === "ATIVO" ? "bg-green-900/20 text-green-700" : 
-                    usuario.status === "INATIVO" ? "bg-yellow-900/20 text-yellow-700" : 
-                    "bg-red-900/20 text-red-700"
-                  }`}>
-                    {usuario.status === "ATIVO" ? "Ativo" : usuario.status === "INATIVO" ? "Inativo" : "Bloqueado"}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <div className="flex items-center justify-end gap-1">
-                    {/* Botão Desbloquear (se bloqueado) */}
-                    {usuario.status === "BLOQUEADO" && (
-                      <button
-                        onClick={() => handleUnlockUser(usuario.id)}
-                        className="p-2 text-green-500 hover:text-green-700 hover:bg-green-900/20 rounded-lg"
-                        title="Desbloquear usuário"
-                      >
-                        <Unlock size={16} />
-                      </button>
-                    )}
-                    {/* Botão Bloquear (se ativo) */}
-                    {usuario.status === "ATIVO" && (
-                      <button
-                        onClick={() => handleBlockUser(usuario.id)}
-                        className="p-2 text-orange-500 hover:text-orange-700 hover:bg-orange-50 rounded-lg"
-                        title="Bloquear usuário"
-                      >
-                        <Lock size={16} />
-                      </button>
-                    )}
-                    {/* Botão Editar */}
-                    <button
-                      onClick={() => handleEdit(usuario)}
-                      className="p-2 text-slate-500 hover:text-slate-700 hover:bg-gray-100 rounded-lg"
-                      title="Editar usuário"
-                    >
-                      <Edit size={16} />
-                    </button>
-                    {/* Botão Excluir */}
-                    <button
-                      onClick={() => handleDelete(usuario.id)}
-                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-900/20 rounded-lg"
-                      title="Excluir usuário"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {filteredUsuarios.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-slate-500 bg-[#111827]:text-slate-500">Nenhum usuário encontrado</p>
-        </div>
-      )}
+                </div>
+                <span className="font-medium text-slate-900 dark:text-slate-100">{value}</span>
+              </div>
+            )
+          },
+          {
+            key: "email",
+            header: "Email",
+            render: (value) => (
+              <span className="text-slate-600 dark:text-slate-400">{value}</span>
+            )
+          },
+          {
+            key: "role",
+            header: "Perfil",
+            render: (value, row) => (
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  {getRoleLabel(value)}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    viewPermissions(value);
+                  }}
+                  className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  title="Ver permissões"
+                >
+                  <Eye size={14} />
+                </button>
+              </div>
+            )
+          },
+          {
+            key: "scope",
+            header: "Escopo",
+            render: (value, row) => (
+              <div className="flex items-center gap-1">
+                <ScopeIcon scope={value || 'GLOBAL'} />
+                <span className="text-xs text-slate-500 dark:text-slate-400">{getScopeLabel(row.role)}</span>
+              </div>
+            ),
+            width: "100px"
+          },
+          {
+            key: "partner_id",
+            header: "Parceiro",
+            render: (value) => {
+              if (!value) return <span className="text-slate-400 dark:text-slate-500">-</span>;
+              const partner = Array.isArray(parceiros) ? parceiros.find(p => p.id === value) : null;
+              return (
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {partner?.nome || `- (${value})`}
+                </span>
+              );
+            }
+          },
+          {
+            key: "status",
+            header: "Status",
+            render: (value) => (
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                value === "ATIVO" ? "bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400" :
+                value === "INATIVO" ? "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400" :
+                "bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400"
+              }`}>
+                {value === "ATIVO" ? "Ativo" : value === "INATIVO" ? "Inativo" : "Bloqueado"}
+              </span>
+            ),
+            width: "100px"
+          },
+          {
+            key: "actions",
+            header: "Ações",
+            render: (value, row) => (
+              <div className="flex items-center justify-end gap-1">
+                {/* Botão Desbloquear (se bloqueado) */}
+                {row.status === "BLOQUEADO" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleUnlockUser(row.id);
+                    }}
+                    className="p-2 text-green-500 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
+                    title="Desbloquear usuário"
+                  >
+                    <Unlock size={16} />
+                  </button>
+                )}
+                {/* Botão Bloquear (se ativo) */}
+                {row.status === "ATIVO" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleBlockUser(row.id);
+                    }}
+                    className="p-2 text-orange-500 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
+                    title="Bloquear usuário"
+                  >
+                    <Lock size={16} />
+                  </button>
+                )}
+                {/* Botão Editar */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEdit(row);
+                  }}
+                  className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  title="Editar usuário"
+                >
+                  <Edit size={16} />
+                </button>
+                {/* Botão Excluir */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(row.id);
+                  }}
+                  className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  title="Excluir usuário"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ),
+            width: "140px",
+            align: "right"
+          }
+        ]}
+        data={filteredUsuarios}
+        density="normal"
+        striped={true}
+        hoverable={true}
+        onRowClick={(row) => handleEdit(row)}
+      />
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] bg-[#111827]:bg-[#111827] bg-[#111827]:bg-[#111827] rounded-2xl p-6 w-full max-w-md border border-[#1f2937] bg-[#111827]:border-[#1f2937] bg-[#111827]:border-[#1f2937]">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white bg-[#111827]:text-white">
-                {editingUsuario ? "Editar Usuário" : "Novo Usuário"}
-              </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 text-slate-500 hover:text-slate-600 bg-[#111827]:hover:text-slate-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                  Nome *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
-                />
-              </div>
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title={editingUsuario ? "Editar Usuário" : "Novo Usuário"}
+          size="md"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Input
+              label="Nome *"
+              type="text"
+              required
+              value={formData.nome}
+              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+            />
 
-              {/* Tipo de Usuário */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                  Tipo de Usuário *
-                </label>
-                <select
+            <Input
+              label="Email *"
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+
+            {/* Tipo de Usuário */}
+            <Select
+              label="Tipo de Usuário *"
+              required
+              value={userType}
+              onChange={(e) => {
+                const newType = e.target.value as "interno" | "parceiro";
+                setUserType(newType);
+                // Reset partner fields when changing type
+                setFormData({ ...formData, partner_id: undefined });
+                // Regenerate access code based on new type
+                const existingCodes = usuarios.map(u => u.access_code).filter(Boolean);
+                if (newType === "interno") {
+                  const internalCodes = existingCodes.filter(c => c.startsWith('FINQZ-')).map(c => parseInt(c.match(/^FINQZ-(\d{4})$/)?.[1] || "0")).filter(n => n > 0 && n <= 999);
+                  let nextCode = 1;
+                  while (internalCodes.includes(nextCode) && nextCode <= 999) nextCode++;
+                  setFormData(prev => ({ ...prev, access_code: `FINQZ-${String(nextCode).padStart(4, '0')}`, partner_id: undefined }));
+                } else {
+                  const partnerCodes = existingCodes.filter(c => c.startsWith('P-')).map(c => parseInt(c.match(/^P-(\d{4})$/)?.[1] || "0")).filter(n => n >= 1001);
+                  let nextCode = 1001;
+                  while (partnerCodes.includes(nextCode) && nextCode <= 9999) nextCode++;
+                  setFormData(prev => ({ ...prev, access_code: `P-${String(nextCode).padStart(4, '0')}`, role: "ROLE_GERENTE_FRANQUIA" }));
+                }
+              }}
+              disabled={!!editingUsuario}
+              options={[
+                { value: "interno", label: "Interno FINQZ" },
+                { value: "parceiro", label: "Parceiro" }
+              ]}
+            />
+
+            {/* Campos de Parceiro - apenas se for usuário parceiro */}
+            {userType === "parceiro" && (
+              <>
+                <Select
+                  label="Tipo de Parceiro *"
                   required
-                  value={userType}
-                  onChange={(e) => {
-                    const newType = e.target.value as "interno" | "parceiro";
-                    setUserType(newType);
-                    // Reset partner fields when changing type
-                    setFormData({ ...formData, partner_id: undefined });
-                    // Regenerate access code based on new type
-                    const existingCodes = usuarios.map(u => u.access_code).filter(Boolean);
-                    if (newType === "interno") {
-                      const internalCodes = existingCodes.filter(c => c.startsWith('FINQZ-')).map(c => parseInt(c.match(/^FINQZ-(\d{4})$/)?.[1] || "0")).filter(n => n > 0 && n <= 999);
-                      let nextCode = 1;
-                      while (internalCodes.includes(nextCode) && nextCode <= 999) nextCode++;
-                      setFormData(prev => ({ ...prev, access_code: `FINQZ-${String(nextCode).padStart(4, '0')}`, partner_id: undefined }));
-                    } else {
-                      const partnerCodes = existingCodes.filter(c => c.startsWith('P-')).map(c => parseInt(c.match(/^P-(\d{4})$/)?.[1] || "0")).filter(n => n >= 1001);
-                      let nextCode = 1001;
-                      while (partnerCodes.includes(nextCode) && nextCode <= 9999) nextCode++;
-                      setFormData(prev => ({ ...prev, access_code: `P-${String(nextCode).padStart(4, '0')}`, role: "ROLE_GERENTE_FRANQUIA" }));
-                    }
-                  }}
+                  value={partnerType}
+                  onChange={(e) => setPartnerType(e.target.value as "COMPANY" | "FRANQUIA" | "FRANQUEADO")}
                   disabled={!!editingUsuario}
-                  className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white disabled:opacity-50"
-                >
-                  <option value="interno">Interno FINQZ</option>
-                  <option value="parceiro">Parceiro</option>
-                </select>
-              </div>
+                  options={[
+                    { value: "COMPANY", label: "Company" },
+                    { value: "FRANQUIA", label: "Franquia" },
+                    { value: "FRANQUEADO", label: "Franqueado" }
+                  ]}
+                />
 
-              {/* Campos de Parceiro - apenas se for usuário parceiro */}
-              {userType === "parceiro" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                      Tipo de Parceiro *
-                    </label>
-                    <select
-                      required
-                      value={partnerType}
-                      onChange={(e) => setPartnerType(e.target.value as "COMPANY" | "FRANQUIA" | "FRANQUEADO")}
-                      disabled={!!editingUsuario}
-                      className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white disabled:opacity-50"
-                    >
-                      <option value="COMPANY">Company</option>
-                      <option value="FRANQUIA">Franquia</option>
-                      <option value="FRANQUEADO">Franqueado</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                      Parceiro Vinculado *
-                    </label>
-                    <select
-                      required
-                      value={formData.partner_id || ""}
-                      onChange={(e) => setFormData({ ...formData, partner_id: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
-                    >
-                      <option value="">Selecione um parceiro</option>
-                      {parceiros
-                        .filter(p => p.tipo === partnerType && p.status === "ativo")
-                        .map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.nome} ({p.tipo})
-                          </option>
-                        ))
-                      }
-                    </select>
-                  </div>
-                </>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                  Papel (Role) *
-                </label>
-                <select
+                <Select
+                  label="Parceiro Vinculado *"
                   required
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
-                  className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
-                >
-                  {USER_ROLES.map((role) => (
-                    <option key={role} value={role}>
-                      {ROLE_LABELS[role]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                  Código de Acesso
-                </label>
-                <input
-                  type="text"
-                  value={formData.access_code}
-                  readOnly={!!editingUsuario}
-                  placeholder={editingUsuario ? "" : "Gerado automaticamente"}
-                  className={`w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white font-mono ${editingUsuario ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  value={formData.partner_id?.toString() || ""}
+                  onChange={(e) => setFormData({ ...formData, partner_id: parseInt(e.target.value) })}
+                  options={[
+                    { value: "", label: "Selecione um parceiro" },
+                    ...parceiros
+                      .filter(p => p.tipo === partnerType && p.status === "ativo")
+                      .map(p => ({
+                        value: p.id.toString(),
+                        label: `${p.nome} (${p.tipo})`
+                      }))
+                  ]}
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  {editingUsuario ? "Código fixo após criação" : "Gerado automaticamente ao criar"}
-                </p>
-              </div>
-              
-              {/* Campo Status - apenas em modo edição */}
-              {editingUsuario && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as UserStatus })}
-                    className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
-                  >
-                    <option value="ATIVO">Ativo</option>
-                    <option value="INATIVO">Inativo</option>
-                    <option value="BLOQUEADO">Bloqueado</option>
-                  </select>
-                </div>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
-                  Senha Inicial {editingUsuario ? "(opcional)" : "*"}
-                </label>
-                <input
-                  type="password"
-                  required={!editingUsuario}
-                  value={formData.senha}
-                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-50 bg-[#111827]:bg-gray-50 bg-[#111827]:bg-gray-50 border border-[#1f2937] bg-[#111827]:border-[#3388d9] rounded-2xl text-white bg-[#111827]:text-white"
-                  placeholder={editingUsuario ? "Deixe em branco para manter" : ""}
-                />
-              </div>
+              </>
+            )}
 
-              <div className="flex justify-end gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-slate-600 bg-[#111827]:text-slate-500 hover:bg-gray-100 bg-[#111827]:hover:bg-gray-50 bg-[#111827]:bg-gray-50 rounded-2xl"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#000dff] text-white rounded-2xl hover:bg-[#000dff]/90"
-                >
-                  {editingUsuario ? "Salvar" : "Criar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <Select
+              label="Papel (Role) *"
+              required
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value as Role })}
+              options={USER_ROLES.map((role) => ({
+                value: role,
+                label: ROLE_LABELS[role]
+              }))}
+            />
+
+            <Input
+              label="Código de Acesso"
+              type="text"
+              value={formData.access_code}
+              readOnly={!!editingUsuario}
+              placeholder={editingUsuario ? "" : "Gerado automaticamente"}
+              helperText={editingUsuario ? "Código fixo após criação" : "Gerado automaticamente ao criar"}
+            />
+
+            {/* Campo Status - apenas em modo edição */}
+            {editingUsuario && (
+              <Select
+                label="Status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as UserStatus })}
+                options={[
+                  { value: "ATIVO", label: "Ativo" },
+                  { value: "INATIVO", label: "Inativo" },
+                  { value: "BLOQUEADO", label: "Bloqueado" }
+                ]}
+              />
+            )}
+
+            <Input
+              label={`Senha Inicial ${editingUsuario ? "(opcional)" : "*"}`}
+              type="password"
+              required={!editingUsuario}
+              value={formData.senha}
+              onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+              placeholder={editingUsuario ? "Deixe em branco para manter" : ""}
+            />
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+              >
+                {editingUsuario ? "Salvar" : "Criar"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {/* Modal de Permissões */}
       {showPermissionsModal && selectedRole && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowPermissionsModal(false)}
-          />
-          <div className="relative w-full max-w-lg mx-4 rounded-xl shadow-2xl bg-[#111827] border border-[#1f2937] max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Permissões: {ROLE_LABELS[selectedRole]}
-                </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <ScopeIcon scope={ROLE_SCOPES[selectedRole]} />
-                  <span className="text-sm text-slate-500">
-                    Escopo: {SCOPE_LABELS[ROLE_SCOPES[selectedRole]]}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowPermissionsModal(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-slate-500"
-              >
-                <X size={20} />
-              </button>
+        <Modal
+          isOpen={showPermissionsModal}
+          onClose={() => setShowPermissionsModal(false)}
+          title={`Permissões: ${ROLE_LABELS[selectedRole]}`}
+          size="lg"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+              <ScopeIcon scope={ROLE_SCOPES[selectedRole]} />
+              <span className="text-sm text-slate-600 dark:text-slate-400">
+                Escopo: {SCOPE_LABELS[ROLE_SCOPES[selectedRole]]}
+              </span>
             </div>
-            <div className="p-4 overflow-y-auto flex-1">
-              <div className="grid grid-cols-1 gap-2">
-                {selectedRole && ROLE_PERMISSIONS[selectedRole] ? (
-                  ROLE_PERMISSIONS[selectedRole].map((permission) => (
-                    <div
-                      key={permission}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-gray-50"
-                    >
-                      <Shield size={14} className="text-[#000dff]" />
-                      <span className="text-sm text-slate-300">
-                        {PERMISSION_LABELS[permission] || permission}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-slate-500 text-sm p-2">
-                    Selecione um role para ver as permissões
+
+            <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
+              {selectedRole && ROLE_PERMISSIONS[selectedRole] ? (
+                ROLE_PERMISSIONS[selectedRole].map((permission) => (
+                  <div
+                    key={permission}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <Shield size={16} className="text-primary flex-shrink-0" />
+                    <span className="text-sm text-slate-700 dark:text-slate-300">
+                      {PERMISSION_LABELS[permission] || permission}
+                    </span>
                   </div>
-                )}
-              </div>
+                ))
+              ) : (
+                <div className="text-slate-500 dark:text-slate-400 text-sm p-4 text-center">
+                  Selecione um role para ver as permissões
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Filter Drawer */}

@@ -23,25 +23,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   action,
   className = "",
 }) => {
-  const defaultIcon = <Inbox className="w-12 h-12 text-slate-400" />;
+  const defaultIcon = <Inbox className="h-8 w-8 text-[var(--color-primary-soft)]" />;
 
   return (
     <div
-      className={`flex flex-col items-center justify-center py-20 px-6 text-center ${className}`}
+      className={`finqz-card flex flex-col items-center justify-center border-dashed px-6 py-14 text-center ${className}`}
     >
-      <div className="relative mb-8">
-        <div className="w-24 h-24 bg-gradient-to-br from-slate-800/50 to-slate-900/30 rounded-3xl flex items-center justify-center backdrop-blur-xl border border-white/10 shadow-2xl">
-          {icon || defaultIcon}
-        </div>
-        <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl -z-10" />
+      <div className="finqz-icon-badge mb-5 h-14 w-14">
+        {icon || defaultIcon}
       </div>
 
-      <h3 className="text-xl font-bold text-white mb-3 tracking-tight">
+      <h3 className="mb-2 text-lg font-semibold tracking-tight text-[var(--text-primary)]">
         {title}
       </h3>
 
       {description && (
-        <p className="text-slate-400 max-w-md leading-relaxed mb-6">
+        <p className="mb-5 max-w-md text-sm leading-6 text-[var(--text-muted)]">
           {description}
         </p>
       )}
@@ -50,7 +47,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Button
           variant="primary"
           onClick={action.onClick}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300"
         >
           {action.label}
         </Button>

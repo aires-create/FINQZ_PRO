@@ -679,24 +679,31 @@ const RelatoriosPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0A0F1C] via-[#0F172A] to-[#1E293B] p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="app-page">
+      <div className="space-y-6">
 
         {/* HEADER SECTION */}
-        <div className="space-y-2">
-          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent tracking-tight">
-            📊 Relatórios
-          </h1>
-          <p className="text-slate-400 text-sm lg:text-base">
-            Análises detalhadas e insights do seu negócio
-          </p>
+        <div className="finqz-card p-5 sm:p-6">
+          <div className="flex items-center gap-4">
+            <div className="finqz-icon-badge h-12 w-12">
+              <FileBarChart className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
+                Relatórios
+              </h1>
+              <p className="mt-1 text-sm text-[var(--text-secondary)] sm:text-base">
+                Análises detalhadas e insights do seu negócio
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* MAIN CONTENT CARD */}
-        <div className="bg-gradient-to-br from-[#0F172A]/90 via-[#0F172A]/80 to-[#1E293B]/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl shadow-blue-500/5 overflow-hidden">
+        <div className="finqz-card overflow-hidden">
 
           {/* Abas de tipo de relatório premium */}
-          <div className="border-b border-white/10 p-6">
+          <div className="border-b border-[var(--border-muted)] p-5 sm:p-6">
             <div className="flex flex-wrap gap-3">
               {REPORT_CONFIG.TYPES.map(type => (
                 <button
@@ -706,7 +713,7 @@ const RelatoriosPage: React.FC = () => {
                     group relative px-6 py-3 rounded-2xl text-sm font-semibold tracking-wide transition-all duration-300
                     ${reportType === type.id
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25'
-                      : 'bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 hover:border-white/20 hover:text-white'
+                      : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-surface-hover)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
                     }
                   `}
                 >
@@ -715,7 +722,7 @@ const RelatoriosPage: React.FC = () => {
                       p-1.5 rounded-lg transition-all duration-300
                       ${reportType === type.id
                         ? 'bg-white/20'
-                        : 'bg-white/10 group-hover:bg-white/20'
+                        : 'bg-[var(--color-primary-faint)] group-hover:bg-[var(--bg-surface-hover)]'
                       }
                     `}>
                       {type.id === 'producao' && <BarChart className="w-4 h-4" />}
@@ -738,18 +745,18 @@ const RelatoriosPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="space-y-6 p-5 sm:p-6">
 
             {/* Toolbar premium */}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {['consolidado', 'analitico'].includes(reportType) && (
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-slate-300">Agrupar por:</label>
+                    <label className="text-sm font-medium text-[var(--text-secondary)]">Agrupar por:</label>
                     <select
                       value={groupBy}
                       onChange={(e) => setGroupBy(e.target.value as GroupByOption)}
-                      className="px-4 py-2 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white text-sm focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+                      className="px-4 py-2 text-sm"
                     >
                       {REPORT_CONFIG.GROUP_BY.map(option => (
                         <option key={option.id} value={option.id}>Agrupar por {option.label}</option>
@@ -764,7 +771,7 @@ const RelatoriosPage: React.FC = () => {
                   onClick={() => setOpenFilterDrawer(true)}
                   variant="outline"
                   size="sm"
-                  className="bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30 text-slate-300 hover:text-white transition-all duration-200"
+                  className="finqz-control"
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Filtros
@@ -774,7 +781,7 @@ const RelatoriosPage: React.FC = () => {
                   onClick={handleExportCSV}
                   variant="outline"
                   size="sm"
-                  className="bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30 text-slate-300 hover:text-white transition-all duration-200"
+                  className="finqz-control"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Exportar
@@ -820,7 +827,7 @@ const RelatoriosPage: React.FC = () => {
             )}
 
             {/* Report Content */}
-            <div className="bg-gradient-to-br from-[#0F172A]/50 to-[#1E293B]/30 backdrop-blur-xl border border-white/5 rounded-2xl p-6">
+            <div className="finqz-surface p-5 sm:p-6">
               {renderReportContent()}
             </div>
 

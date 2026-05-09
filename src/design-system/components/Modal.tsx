@@ -1,8 +1,10 @@
 // Design System - Modal Component
 // PADRÃO OFICIAL: Use este componente em todo o sistema
+// Suporte completo dark/light mode e z-index global
 
 import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { zIndex } from "../../config/zIndex";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -11,6 +13,8 @@ export interface ModalProps {
   children: React.ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   showCloseButton?: boolean;
+  closeOnOverlayClick?: boolean;
+  closeOnEsc?: boolean;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -20,12 +24,16 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   size = "md",
   showCloseButton = true,
+  closeOnOverlayClick = true,
+  closeOnEsc = true,
 }) => {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (closeOnEsc && e.key === "Escape") {
+        onClose();
+      }
     };
 
     if (isOpen) {
@@ -37,44 +45,76 @@ export const Modal: React.FC<ModalProps> = ({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, closeOnEsc]);
 
   if (!isOpen) return null;
 
   const sizes = {
-    sm: "max-w-md",
+    sm: "max-w-sm",
     md: "max-w-lg",
     lg: "max-w-2xl",
     xl: "max-w-4xl",
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === overlayRef.current) onClose();
+    if (closeOnOverlayClick && e.target === overlayRef.current) {
+      onClose();
+    }
   };
 
   return (
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+      style={{ zIndex: zIndex.modal }}
+      className="fixed inset-0 flex items-center justify-center p-4
+                 bg-black/50 dark:bg-black/60 
+                 backdrop-blur-md backdrop-saturate-150
+                 animate-in fade-in duration-200"
     >
       <div
-        className={`${sizes[size]} w-full mx-4 bg-[#0F172A]/85 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl animate-in zoom-in-95 duration-200`}
+        className={`${sizes[size]} w-full
+                    bg-white dark:bg-slate-900
+                    border border-slate-200/50 dark:border-slate-700/50
+                    rounded-2xl shadow-2xl dark:shadow-2xl dark:shadow-black/50
+                    animate-in zoom-in-95 duration-200 ease-out
+                    max-h-[90vh] overflow-hidden
+                    flex flex-col`}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#111827]">
-            {title && <h2 className="text-lg font-semibold text-white">{title}</h2>}
+          <div className="flex items-center justify-between
+                          px-6 py-4 sm:py-5
+                          border-b border-slate-200/60 dark:border-slate-700/60
+                          bg-slate-50/50 dark:bg-slate-800/50
+                          flex-shrink-0">
+            {title && (
+              <h2 className="text-lg sm:text-xl font-semibold
+                             text-slate-900 dark:text-slate-100
+                             tracking-tight pr-4">
+                {title}
+              </h2>
+            )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                className="flex items-center justify-center flex-shrink-0
+                           w-8 h-8 rounded-lg
+                           text-slate-500 hover:text-slate-700
+                           dark:text-slate-400 dark:hover:text-slate-200
+                           hover:bg-slate-100 dark:hover:bg-slate-800
+                           transition-all duration-200 ease-in-out
+                           focus:outline-none focus:ring-2 focus:ring-primary/20
+                           active:scale-95"
+                aria-label="Fechar modal"
               >
-                <X size={20} />
+                <X size={18} strokeWidth={2.5} />
               </button>
             )}
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="px-6 py-6 overflow-y-auto flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );

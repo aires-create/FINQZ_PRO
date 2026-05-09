@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, X, Building2, Store, User, ToggleLeft, ToggleRight, UserCheck, UserX, Grid, List, Upload, Copy, Check, FileText, Image, File, Handshake, Shield } from "lucide-react";
 import useAppStore from "../store";
 import type { Parceiro } from "../types";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { API_BASE_URL } from "../config/environment";
 import { useTenantFilter } from "../hooks/useTenantFilter";
@@ -63,6 +63,9 @@ export const ParceirosPage: React.FC = () => {
   // Estado do Drawer de Filtros
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
 
+  // Import/Export
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
   // Chave para persistência no localStorage
   const PARCEIROS_STORAGE_KEY = 'finqz_pro_parceiros';
 
@@ -85,6 +88,41 @@ export const ParceirosPage: React.FC = () => {
       console.error('Erro ao persistir parceiros:', error);
     }
   }, [parceiros]);
+
+  // Definições para importação/exportação
+  const importColumns = [
+    { key: 'nome', label: 'Nome', required: true },
+    { key: 'tipo', label: 'Tipo', required: false },
+    { key: 'email', label: 'Email', required: false },
+    { key: 'telefone', label: 'Telefone', required: false },
+    { key: 'celular', label: 'Celular', required: false },
+    { key: 'cep', label: 'CEP', required: false },
+    { key: 'rua', label: 'Rua', required: false },
+    { key: 'numero', label: 'Número', required: false },
+    { key: 'complemento', label: 'Complemento', required: false },
+    { key: 'bairro', label: 'Bairro', required: false },
+    { key: 'cidade', label: 'Cidade', required: false },
+    { key: 'estado', label: 'Estado', required: false },
+    { key: 'responsavel', label: 'Responsável', required: false },
+  ];
+
+  const exportColumns = [
+    { key: 'codigo', label: 'Código' },
+    { key: 'nome', label: 'Nome' },
+    { key: 'tipo', label: 'Tipo' },
+    { key: 'email', label: 'Email' },
+    { key: 'telefone', label: 'Telefone' },
+    { key: 'celular', label: 'Celular' },
+    { key: 'cep', label: 'CEP' },
+    { key: 'rua', label: 'Rua' },
+    { key: 'numero', label: 'Número' },
+    { key: 'complemento', label: 'Complemento' },
+    { key: 'bairro', label: 'Bairro' },
+    { key: 'cidade', label: 'Cidade' },
+    { key: 'estado', label: 'Estado' },
+    { key: 'responsavel', label: 'Responsável' },
+    { key: 'status', label: 'Status' },
+  ];
 
   // Função para processar importação de parceiros
   const handleImportParceiros = (importData: any[]) => {
@@ -135,6 +173,44 @@ export const ParceirosPage: React.FC = () => {
     updatedParceiros.forEach((p, i) => addParceiro({ ...p, id: now + i }));
     
     alert(`${newParceiros.length} parceiro(s) importado(s) com sucesso!`);
+  };
+
+  // Handler para exportação usando componente compartilhado
+  const handleExportParceiros = (format: string) => {
+    // Por enquanto, apenas CSV é suportado
+    // Futuramente pode ser expandido para outros formatos
+    const headers = ["Código", "Nome", "Tipo", "Email", "Telefone", "Celular", "CEP", "Rua", "Número", "Complemento", "Bairro", "Cidade", "Estado", "Responsável", "Status"];
+    
+    const csvContent = [
+      headers.join(","),
+      ...filteredParceiros.map((parceiro) => [
+        `"${normalizeCodigoParceiro(parceiro.codigo)}"`,
+        `"${parceiro.nome || ""}"`,
+        `"${parceiro.tipo || ""}"`,
+        `"${parceiro.email || ""}"`,
+        `"${parceiro.telefone || ""}"`,
+        `"${parceiro.celular || ""}"`,
+        `"${parceiro.cep || ""}"`,
+        `"${parceiro.rua || ""}"`,
+        `"${parceiro.numero || ""}"`,
+        `"${parceiro.complemento || ""}"`,
+        `"${parceiro.bairro || ""}"`,
+        `"${parceiro.cidade || ""}"`,
+        `"${parceiro.estado || ""}"`,
+        `"${parceiro.responsavel || ""}"`,
+        `"${parceiro.status || ""}"`,
+      ].join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `parceiros_${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const safeParceiros = Array.isArray(parceiros) ? parceiros : [];
@@ -639,26 +715,6 @@ export const ParceirosPage: React.FC = () => {
           setShowModal(true);
         }}
         createLabel="Novo Parceiro"
-        onImport={handleImportParceiros}
-        importLabel="Importar Parceiros"
-        importColumns={[
-          { key: 'nome', label: 'Nome', required: true },
-          { key: 'tipo', label: 'Tipo', required: false },
-          { key: 'cpf_cnpj', label: 'CPF/CNPJ', required: false },
-          { key: 'responsavel', label: 'Responsável', required: false },
-          { key: 'email', label: 'Email', required: false },
-          { key: 'telefone', label: 'Telefone', required: false },
-          { key: 'celular', label: 'Celular', required: false },
-          { key: 'cep', label: 'CEP', required: false },
-          { key: 'rua', label: 'Rua', required: false },
-          { key: 'numero', label: 'Número', required: false },
-          { key: 'complemento', label: 'Complemento', required: false },
-          { key: 'bairro', label: 'Bairro', required: false },
-          { key: 'cidade', label: 'Cidade', required: false },
-          { key: 'estado', label: 'Estado', required: false },
-          { key: 'status', label: 'Status', required: false },
-          { key: 'observacao', label: 'Observação', required: false },
-        ]}
         // Ativar FilterDrawer (padrão premium)
         onOpenFilters={() => setOpenFilterDrawer(true)}
         filters={[
@@ -689,16 +745,26 @@ export const ParceirosPage: React.FC = () => {
           if (key === 'responsavel') setFilterResponsavel(value)
           if (key === 'email') setFilterEmail(value)
         }}
-        exportData={filteredParceiros}
-        exportColumns={[
-          { key: 'nome', label: 'Nome' },
-          { key: 'tipo', label: 'Tipo' },
-          { key: 'email', label: 'Email' },
-          { key: 'telefone', label: 'Telefone' },
-          { key: 'cidade', label: 'Cidade' },
-          { key: 'estado', label: 'Estado' },
-        ]}
-        exportFilename="parceiros"
+        extra={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportModalOpen(true)}
+              className="flex items-center gap-1"
+            >
+              <Upload size={14} />
+              Importar
+            </Button>
+            <ExportMenu
+              data={filteredParceiros}
+              columns={exportColumns}
+              filename="parceiros"
+              onExport={handleExportParceiros}
+              label="Exportar"
+            />
+          </div>
+        }
       />
 
       {/* KPI Cards */}
@@ -928,8 +994,8 @@ export const ParceirosPage: React.FC = () => {
 
       {/* Modal de Credenciais */}
       {showCredentials && generatedCredentials && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-[#111827] rounded-2xl p-4 sm:p-6 w-full max-w-md border border-[#1f2937] max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="finqz-card w-full max-w-md overflow-y-auto p-4 sm:p-6 max-h-[90vh]">
             <div className="text-center mb-4 sm:mb-6">
               <div className="w-12 sm:w-16 h-12 sm:h-16 bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <Check size={24} className="text-green-600" />
@@ -991,8 +1057,8 @@ export const ParceirosPage: React.FC = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-[#111827] rounded-2xl p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto border border-[#1f2937]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-sm sm:p-4">
+          <div className="finqz-card w-full max-w-3xl max-h-[95vh] overflow-y-auto p-4 sm:max-h-[90vh] sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg sm:text-xl font-semibold text-white">
                 {editingParceiro ? "Editar Parceiro" : "Novo Parceiro"}
@@ -1620,6 +1686,17 @@ export const ParceirosPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de importação */}
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportParceiros}
+        columns={importColumns}
+        title="Importar Parceiros"
+        description="Importe parceiros a partir de um arquivo CSV. Campo obrigatório: nome."
+        acceptedTypes={['.csv']}
+      />
     </div>
   );
 };

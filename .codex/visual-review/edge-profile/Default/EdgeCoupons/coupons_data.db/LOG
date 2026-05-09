@@ -1,0 +1,5 @@
+2026/05/08-16:30:21.597 6734 Creating DB C:\Users\aires\OneDrive\Desktop\FINQZ_PRO\.codex\visual-review\edge-profile\Default\EdgeCoupons/coupons_data.db since it was missing.
+2026/05/08-16:30:21.773 6734 Reusing MANIFEST C:\Users\aires\OneDrive\Desktop\FINQZ_PRO\.codex\visual-review\edge-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/05/08-16:30:26.649 1d00 Level-0 table #5: started
+2026/05/08-16:30:26.656 1d00 Level-0 table #5: 682156 bytes OK
+2026/05/08-16:30:26.659 1d00 Delete type=0 #3

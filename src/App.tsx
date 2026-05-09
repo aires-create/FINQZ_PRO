@@ -61,8 +61,11 @@ import { generateSecurePassword } from "./utils/auth";
 
 // Page loader for lazy-loaded routes
 const PageLoader = () => (
-  <div className="min-h-[400px] flex items-center justify-center">
-    <div className="w-8 h-8 border-2 border-[#000dff] border-t-transparent rounded-full animate-spin"></div>
+  <div className="flex min-h-[400px] items-center justify-center">
+    <div className="finqz-card flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-secondary)]">
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      Carregando módulo...
+    </div>
   </div>
 );
 
@@ -92,13 +95,13 @@ const useAuth = () => useContext(AuthContext);
 
 // Loading component
 const LoadingScreen = () => (
-  <div className="min-h-screen bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 dark:bg-[#00010b] flex items-center justify-center">
+  <div className="finqz-shell flex min-h-screen items-center justify-center">
     <div className="text-center">
-      <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#000dff] to-[#3388d9] rounded-2xl flex items-center justify-center">
-        <span className="text-white font-bold text-2xl">F</span>
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-primary shadow-sm shadow-primary/25">
+        <span className="text-2xl font-bold text-white">F</span>
       </div>
-      <div className="w-8 h-8 border-2 border-[#000dff] border-t-transparent rounded-full animate-spin mx-auto"></div>
-      <p className="text-slate-500 dark:text-slate-400 mt-4">Carregando FINQZ PRO...</p>
+      <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <p className="mt-4 text-sm text-[var(--text-muted)]">Carregando FINQZ PRO...</p>
     </div>
   </div>
 );

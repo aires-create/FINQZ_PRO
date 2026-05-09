@@ -23,15 +23,15 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 }) => {
   return (
     <div
-      className={`flex flex-col items-center justify-center py-12 px-4 ${className}`}
+      className={`flex flex-col items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 px-6 py-12 text-center ${className}`}
     >
-      <div className="bg-red-100 rounded-full p-4 mb-4">
-        <AlertCircle className="w-12 h-12 text-red-600" />
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10">
+        <AlertCircle className="h-6 w-6 text-red-500 dark:text-red-300" />
       </div>
-      <h3 className="text-lg font-semibold text-slate-900 text-center">
+      <h3 className="text-center text-lg font-semibold text-[var(--text-primary)]">
         {title}
       </h3>
-      <p className="text-sm text-slate-500 text-center mt-1 max-w-sm">
+      <p className="mt-1 max-w-sm text-center text-sm leading-6 text-[var(--text-muted)]">
         {message}
       </p>
       {action ? (
@@ -61,7 +61,7 @@ export const ErrorMessage: React.FC<{
   message: string;
   className?: string;
 }> = ({ message, className = "" }) => (
-  <div className={`flex items-center gap-2 text-red-600 text-sm ${className}`}>
+  <div className={`flex items-center gap-2 text-sm text-red-500 dark:text-red-300 ${className}`}>
     <AlertCircle size={16} />
     <span>{message}</span>
   </div>

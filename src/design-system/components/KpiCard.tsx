@@ -17,36 +17,36 @@ export interface KpiCardProps {
 
 // Mapeamento de cores para ícone (fundo suave)
 const iconColorClasses: Record<string, string> = {
-  blue: "bg-blue-950/30 text-blue-300",
-  green: "bg-emerald-950/30 text-emerald-300",
-  red: "bg-red-950/30 text-red-300",
-  orange: "bg-orange-950/30 text-orange-300",
-  purple: "bg-violet-950/30 text-violet-300",
-  cyan: "bg-cyan-950/30 text-cyan-300",
-  gray: "bg-white/10 text-slate-200",
-  default: "bg-white/10 text-slate-200",
+  blue: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-300",
+  green: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-300",
+  red: "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-300",
+  orange: "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-300",
+  purple: "bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-300",
+  cyan: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20 dark:text-cyan-300",
+  gray: "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-200",
+  default: "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-200",
   // Nomes antigos para compatibilidade
-  info: "bg-blue-950/30 text-blue-300",
-  success: "bg-emerald-950/30 text-emerald-300",
-  warning: "bg-orange-950/30 text-orange-300",
-  danger: "bg-red-950/30 text-red-300",
+  info: "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-300",
+  success: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-300",
+  warning: "bg-orange-500/10 text-orange-600 border-orange-500/20 dark:text-orange-300",
+  danger: "bg-red-500/10 text-red-600 border-red-500/20 dark:text-red-300",
 };
 
 // Mapeamento de cores para o valor (mesma cor do ícone)
 const valueColorClasses: Record<string, string> = {
-  blue: "text-blue-300",
-  green: "text-emerald-300",
-  red: "text-red-300",
-  orange: "text-orange-300",
-  purple: "text-violet-300",
-  cyan: "text-cyan-300",
-  gray: "text-slate-200",
-  default: "text-slate-200",
+  blue: "text-blue-700 dark:text-blue-300",
+  green: "text-emerald-700 dark:text-emerald-300",
+  red: "text-red-700 dark:text-red-300",
+  orange: "text-amber-700 dark:text-amber-300",
+  purple: "text-violet-700 dark:text-violet-300",
+  cyan: "text-cyan-700 dark:text-cyan-300",
+  gray: "text-[var(--text-primary)]",
+  default: "text-[var(--text-primary)]",
   // Nomes antigos para compatibilidade
-  info: "text-blue-300",
-  success: "text-emerald-300",
-  warning: "text-orange-300",
-  danger: "text-red-300",
+  info: "text-blue-700 dark:text-blue-300",
+  success: "text-emerald-700 dark:text-emerald-300",
+  warning: "text-orange-700 dark:text-orange-300",
+  danger: "text-red-700 dark:text-red-300",
 };
 
 export const KpiCard: React.FC<KpiCardProps> = ({
@@ -66,34 +66,36 @@ export const KpiCard: React.FC<KpiCardProps> = ({
 
   const getVariationIcon = () => {
     if (variation === undefined || variation === null) return null;
-    if (variation > 0) return <TrendingUp size={12} className="text-green-600" />;
-    if (variation < 0) return <TrendingDown size={12} className="text-red-600" />;
-    return <Minus size={12} className="text-slate-400" />;
+    if (variation > 0) return <TrendingUp size={12} className="text-emerald-500 dark:text-emerald-300" />;
+    if (variation < 0) return <TrendingDown size={12} className="text-red-500 dark:text-red-300" />;
+    return <Minus size={12} className="text-[var(--text-muted)]" />;
   };
 
   const getVariationColor = () => {
     if (variation === undefined || variation === null) return "";
-    if (variation > 0) return "text-green-600";
-    if (variation < 0) return "text-red-600";
-    return "text-slate-500";
+    if (variation > 0) return "text-emerald-600 dark:text-emerald-300";
+    if (variation < 0) return "text-red-600 dark:text-red-300";
+    return "text-[var(--text-muted)]";
   };
 
   return (
-    <div className={`rounded-2xl border border-white/10 bg-[#111827] backdrop-blur-xl p-4 shadow-sm min-h-[92px] overflow-hidden ${className}`}>
+    <div className={`finqz-kpi-card min-h-[104px] ${className}`}>
       <div className="flex h-full items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium text-slate-500 truncate">{label}</p>
-          <p className={`mt-1.5 text-lg xl:text-xl font-semibold leading-snug truncate ${valueClasses}`}>{value}</p>
+          <p className="truncate text-xs font-semibold uppercase text-[var(--text-muted)]">{label}</p>
+          <p className={`mt-2 max-w-full text-[clamp(1.3rem,1.6vw,1.75rem)] font-semibold leading-tight ${valueClasses}`}>
+            {value}
+          </p>
           {(variation !== undefined && variation !== null) && (
             <div className={`mt-1 flex items-center gap-1 text-xs ${getVariationColor()}`}>
               {getVariationIcon()}
               <span>{variation > 0 ? "+" : ""}{variation}%</span>
-              {variationLabel && <span className="text-slate-400 ml-1">{variationLabel}</span>}
+              {variationLabel && <span className="ml-1 text-[var(--text-muted)]">{variationLabel}</span>}
             </div>
           )}
         </div>
         {icon && (
-          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${iconClasses}`}>
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${iconClasses}`}>
             {icon}
           </div>
         )}

@@ -50,6 +50,8 @@ import {
   Modal,
   Toggle,
   KpiCard,
+  ImportModal,
+  ExportMenu,
 } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
@@ -390,7 +392,6 @@ const EstruturaComercialPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<"dados" | "vigencia" | "historico">("dados");
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [exportModalOpen, setExportModalOpen] = useState(false);
 
   // Filtros
   const [filtroVertical, setFiltroVertical] = useState<string>("");
@@ -420,6 +421,54 @@ const EstruturaComercialPage: React.FC = () => {
     codigo: "",
     ativo: 1,
   });
+
+  // Definições para importação/exportação
+  const importColumns = [
+    { key: "codigo", label: "Código", required: false },
+    { key: "vertical", label: "Vertical", required: true },
+    { key: "produto", label: "Produto", required: true },
+    { key: "subproduto", label: "Subproduto", required: false },
+    { key: "fornecedor_tipo", label: "Tipo Fornecedor", required: false },
+    { key: "fornecedor_nome", label: "Nome Fornecedor", required: false },
+    { key: "tabela_nome", label: "Nome Tabela", required: false },
+    { key: "tabela_codigo", label: "Código Tabela", required: false },
+    { key: "taxa_juros", label: "Taxa Juros", required: false, validate: (value: string) => {
+      const num = parseFloat(value);
+      return isNaN(num) || num < 0 ? "Deve ser um número positivo" : null;
+    }},
+    { key: "prazo", label: "Prazo", required: false, validate: (value: string) => {
+      const num = parseInt(value);
+      return isNaN(num) || num <= 0 ? "Deve ser um número inteiro positivo" : null;
+    }},
+    { key: "valor_minimo", label: "Valor Mínimo", required: false, validate: (value: string) => {
+      const num = parseFloat(value);
+      return isNaN(num) || num < 0 ? "Deve ser um número positivo" : null;
+    }},
+    { key: "valor_maximo", label: "Valor Máximo", required: false, validate: (value: string) => {
+      const num = parseFloat(value);
+      return isNaN(num) || num < 0 ? "Deve ser um número positivo" : null;
+    }},
+    { key: "validade_inicio", label: "Data Início", required: false },
+    { key: "validade_fim", label: "Data Fim", required: false },
+  ];
+
+  const exportColumns = [
+    { key: "codigo", label: "Código" },
+    { key: "vertical", label: "Vertical" },
+    { key: "produto_nome", label: "Produto" },
+    { key: "subproduto_nome", label: "Subproduto" },
+    { key: "fornecedor_tipo", label: "Tipo Fornecedor" },
+    { key: "fornecedor_nome", label: "Nome Fornecedor" },
+    { key: "tabela_nome", label: "Nome Tabela" },
+    { key: "tabela_codigo", label: "Código Tabela" },
+    { key: "taxa_juros", label: "Taxa Juros" },
+    { key: "prazo", label: "Prazo" },
+    { key: "valor_minimo", label: "Valor Mínimo" },
+    { key: "valor_maximo", label: "Valor Máximo" },
+    { key: "validade_inicio", label: "Data Início" },
+    { key: "validade_fim", label: "Data Fim" },
+    { key: "ativo", label: "Ativo" },
+  ];
 
   // Buscar itens pais para select
   const verticais = useMemo(() => 
@@ -720,126 +769,51 @@ const EstruturaComercialPage: React.FC = () => {
     toggleEstruturaComercialStatus(id);
   };
 
-  // Exportar CSV
-  const handleExportCSV = () => {
-    const headers = [
-      "codigo", "vertical", "produto", "subproduto", "fornecedor_tipo", "fornecedor_nome",
-      "tabela_nome", "tabela_codigo", "taxa_juros", "prazo", "valor_minimo", "valor_maximo",
-      "coeficiente", "comissao_flat", "comissao_bonus", "comissao_adiantamento", "comissao_total",
-      "validade_inicio", "validade_fim", "ativo", "sync_status", "automation_enabled"
-    ];
+  // Handler para importação usando componente compartilhado
+  const handleImportEstrutura = (data: any[]) => {
+    if (!data || data.length === 0) {
+      alert("Nenhum dado encontrado para importar.");
+      return;
+    }
 
-    const rows = filteredEstrutura.map((item) => [
-      item.codigo || "",
-      item.vertical || "",
-      item.produto_nome || "",
-      item.subproduto_nome || "",
-      item.fornecedor_tipo || "",
-      item.fornecedor_nome || "",
-      item.tabela_nome || "",
-      item.tabela_codigo || "",
-      item.taxa_juros?.toString() || "",
-      item.prazo?.toString() || "",
-      item.valor_minimo?.toString() || "",
-      item.valor_maximo?.toString() || "",
-      item.coeficiente?.toString() || "",
-      item.comissao_flat?.toString() || "",
-      item.comissao_bonus?.toString() || "",
-      item.comissao_adiantamento?.toString() || "",
-      item.comissao_total?.toString() || "",
-      item.validade_inicio || "",
-      item.validade_fim || "",
-      item.ativo?.toString() || "",
-      item.sync_status || "",
-      item.automation_enabled?.toString() || "",
-    ]);
+    const newItems: EstruturaComercial[] = data.map((row, index) => {
+      const currentId = Math.max(...estruturaComercial.map((i) => i.id), 0) + 1 + index;
+      return {
+        id: currentId,
+        nivel: "condicao_comercial",
+        nome: row.produto || row.vertical || `Item ${currentId}`,
+        descricao: `Importado automaticamente`,
+        codigo: row.codigo || generateAutoCode("condicao_comercial", row.produto || row.vertical),
+        vertical: row.vertical,
+        produto_nome: row.produto,
+        subproduto_nome: row.subproduto,
+        fornecedor_tipo: row.fornecedor_tipo as FornecedorTipo,
+        fornecedor_nome: row.fornecedor_nome,
+        tabela_nome: row.tabela_nome,
+        tabela_codigo: row.tabela_codigo,
+        taxa_juros: row.taxa_juros ? parseFloat(row.taxa_juros) : undefined,
+        prazo: row.prazo ? parseInt(row.prazo) : undefined,
+        valor_minimo: row.valor_minimo ? parseFloat(row.valor_minimo) : undefined,
+        valor_maximo: row.valor_maximo ? parseFloat(row.valor_maximo) : undefined,
+        validade_inicio: row.validade_inicio,
+        validade_fim: row.validade_fim,
+        ativo: 1,
+        created_at: Date.now(),
+        updated_at: Date.now(),
+      };
+    });
 
-    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `estrutura_comercial_${new Date().toISOString().split("T")[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setExportModalOpen(false);
+    importEstruturaComercial(newItems);
+    alert(`${newItems.length} item(ns) da estrutura comercial importado(s) com sucesso!`);
   };
 
-  // Exportar JSON
-  const handleExportJSON = () => {
-    const jsonContent = JSON.stringify(filteredEstrutura, null, 2);
-    const blob = new Blob([jsonContent], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `estrutura_comercial_${new Date().toISOString().split("T")[0]}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setExportModalOpen(false);
-  };
-
-  // Importar CSV
-  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const lines = text.split("\n");
-      const headers = lines[0].split(",");
-
-      const newItems: EstruturaComercial[] = [];
-      let currentId = Math.max(...estruturaComercial.map((i) => i.id), 0) + 1;
-
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        const values = lines[i].split(",");
-        const item: any = {
-          id: currentId++,
-          nivel: "condicao_comercial",
-          ativo: 1,
-          created_at: Date.now(),
-          updated_at: Date.now(),
-        };
-
-        headers.forEach((header, index) => {
-          const value = values[index]?.trim() || "";
-          const key = header.trim();
-          
-          if (key === "vertical") item.vertical = value;
-          if (key === "produto") item.produto_nome = value;
-          if (key === "subproduto") item.subproduto_nome = value;
-          if (key === "fornecedor_tipo") item.fornecedor_tipo = value as FornecedorTipo;
-          if (key === "fornecedor_nome") item.fornecedor_nome = value;
-          if (key === "tabela_nome") item.tabela_nome = value;
-          if (key === "tabela_codigo") item.tabela_codigo = value;
-          if (key === "taxa_juros") item.taxa_juros = parseFloat(value) || undefined;
-          if (key === "prazo") item.prazo = parseInt(value) || undefined;
-          if (key === "prazo_minimo") item.prazo_minimo = parseInt(value) || undefined;
-          if (key === "prazo_maximo") item.prazo_maximo = parseInt(value) || undefined;
-          if (key === "valor_minimo") item.valor_minimo = parseFloat(value) || undefined;
-          if (key === "valor_maximo") item.valor_maximo = parseFloat(value) || undefined;
-          if (key === "coeficiente") item.coeficiente = parseFloat(value) || undefined;
-          if (key === "comissao_flat") item.comissao_flat = parseFloat(value) || undefined;
-          if (key === "comissao_bonus") item.comissao_bonus = parseFloat(value) || undefined;
-          if (key === "comissao_adiantamento") item.comissao_adiantamento = parseFloat(value) || undefined;
-          if (key === "validade_inicio") item.validade_inicio = value;
-          if (key === "validade_fim") item.validade_fim = value;
-          if (key === "ativo") item.ativo = value === "1" || value === "1" ? 1 : 0;
-        });
-
-        newItems.push(item as EstruturaComercial);
-      }
-
-      if (newItems.length > 0) {
-        importEstruturaComercial(newItems);
-        alert(`Importados ${newItems.length} registros com sucesso!`);
-      }
-    };
-    reader.readAsText(file);
-    setImportModalOpen(false);
+  // Handler para exportação usando componente compartilhado
+  const handleExportEstrutura = (format: string) => {
+    if (format === 'json') {
+      handleExportJSON();
+    } else {
+      handleExportCSV();
+    }
   };
 
   // Renderizar item da lista
@@ -1002,21 +976,34 @@ const EstruturaComercialPage: React.FC = () => {
           if (key === 'nivel') setFiltroNivel(value)
           if (key === 'status') setFiltroStatus(value)
         }}
-        importLabel="Importar Tabelas"
-        exportLabel="Exportar"
-        exportData={[]}
-        exportColumns={[]}
-        exportFilename="estrutura_comercial"
         extra={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSyncWithCatalog}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw size={14} />
-            Sincronizar Catálogo
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setImportModalOpen(true)}
+              className="flex items-center gap-1"
+            >
+              <Upload size={14} />
+              Importar
+            </Button>
+            <ExportMenu
+              data={filteredEstrutura}
+              columns={exportColumns}
+              filename="estrutura_comercial"
+              onExport={handleExportEstrutura}
+              label="Exportar"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncWithCatalog}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw size={14} />
+              Sincronizar Catálogo
+            </Button>
+          </div>
         }
       />
 
@@ -1439,71 +1426,23 @@ const EstruturaComercialPage: React.FC = () => {
       </Modal>
 
       {/* Modal de importação */}
-      <Modal
+      <ImportModal
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
+        onImport={handleImportEstrutura}
+        columns={importColumns}
         title="Importar Estrutura Comercial"
-        size="md"
-      >
-        <div className="space-y-4">
-          <div className="bg-blue-900/20 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Instruções de Importação</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• O arquivo deve estar no formato CSV</li>
-              <li>• Cada linha representa uma Condição Comercial</li>
-              <li>• Campos obrigatórios: vertical, produto</li>
-              <li>• Campos opcionais: taxa_juros, prazo, valores, comissões</li>
-            </ul>
-          </div>
+        description="Importe condições comerciais a partir de um arquivo CSV. Campos obrigatórios: vertical, produto."
+        acceptedTypes={['.csv']}
+      />
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Arquivo CSV</label>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleImportCSV}
-              className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-900/20 file:text-blue-700 hover:file:bg-blue-900/20"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setImportModalOpen(false)}>
-              Fechar
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal de exportação */}
-      <Modal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        title="Exportar Estrutura Comercial"
-        size="md"
-      >
-        <div className="space-y-4">
-          <p className="text-slate-600">
-            Escolha o formato de exportação. Serão exportados {filteredEstrutura.length} registros.
-          </p>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2" onClick={handleExportCSV}>
-              <FileText size={24} />
-              <span>Exportar CSV</span>
-            </Button>
-            <Button variant="outline" className="h-20 flex flex-col items-center justify-center gap-2" onClick={handleExportJSON}>
-              <Download size={24} />
-              <span>Exportar JSON</span>
-            </Button>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setExportModalOpen(false)}>
-              Fechar
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Menu de exportação */}
+      <ExportMenu
+        data={filteredEstrutura}
+        columns={exportColumns}
+        filename="estrutura_comercial"
+        onExport={handleExportEstrutura}
+      />
 
       {/* Filter Drawer */}
       <FilterDrawer
