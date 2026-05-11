@@ -318,12 +318,24 @@ const legacyMenuItems: MenuItem[] = [
   { path: "/app/produtos", label: "Produtos", icon: Package },
 ];
 
+const dashboardSidebarItems: MenuItem[] = [
+  { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard:read" },
+  { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "clientes:read" },
+  { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "oportunidades:read" },
+  { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "estrutura_comercial:read" },
+  { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "parceiros:read" },
+  { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "relatorios:read" },
+  { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "financeiro:read" },
+  { path: "/app/admin/geral", label: "Configurações", icon: Settings, permission: "configuracoes:read" },
+];
+
 export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.ReactNode }> = ({ customMenuItems, children }) => {
   const { sidebarOpen, setSidebarOpen, user, theme, toggleTheme } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["dashboard", "crm", "operacoes", "hub", "administracao"]);
+  const isDashboardPage = location.pathname === "/app/dashboard";
 
   // Obter permissões do usuário (do store ou do usuário logado)
   const userPermissions = user?.permissions || [];
@@ -344,6 +356,10 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     return legacyMenuItems.filter(item => 
       hasPermissionForRoute(userPermissions, item.path)
     );
+  }, [userPermissions]);
+
+  const filteredDashboardItems = useMemo(() => {
+    return dashboardSidebarItems.filter((item) => hasPermissionForMenuItem(userPermissions, item.permission));
   }, [userPermissions]);
 
   // Carregar estado expandido do localStorage ou usar padrão
@@ -434,6 +450,18 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     group.items.some((item) => item.path === location.pathname)
   );
   const currentArea = currentGroup?.id === "dashboard" ? "Visão geral" : currentGroup?.label || "Workspace";
+  const displayName = user?.nome || "Admin";
+  const displayRole = user?.perfil || "Administrador";
+  const sidebarWidthClass = sidebarOpen
+    ? isDashboardPage
+      ? "w-56 translate-x-0 lg:w-56"
+      : "w-72 translate-x-0 lg:w-72"
+    : "-translate-x-full lg:w-20";
+  const mainMarginClass = sidebarOpen
+    ? isDashboardPage
+      ? "lg:ml-56"
+      : "lg:ml-72"
+    : "lg:ml-20";
 
   const handleLogout = async () => {
     await client.auth.signOut();
@@ -466,15 +494,23 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
 
       <aside
         className={`finqz-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r transition-all duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "w-72 translate-x-0 lg:w-72" : "-translate-x-full lg:w-20"
+          sidebarWidthClass
         }`}
       >
         <div className="flex h-16 items-center justify-between border-b border-[var(--sidebar-border)] px-4">
           <div className={`flex items-center gap-3 ${sidebarOpen ? "" : "lg:justify-center lg:w-full"}`}>
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm shadow-primary/25">
-              <span className="text-lg font-bold text-white">F</span>
-            </div>
-            {sidebarOpen && (
+            {isDashboardPage && sidebarOpen ? (
+              <div className="min-w-0">
+                <div className="text-[1.65rem] font-light leading-none tracking-normal text-[var(--sidebar-text)]">
+                  FINQZ <span className="align-top text-[0.72rem] font-bold text-[#1f75ff]">PRO</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm shadow-primary/25">
+                <span className="text-lg font-bold text-white">F</span>
+              </div>
+            )}
+            {sidebarOpen && !isDashboardPage && (
               <div className="min-w-0">
                 <div className="text-base font-bold tracking-tight text-[var(--sidebar-text)]">FINQZ</div>
                 <div className="text-[10px] font-semibold uppercase text-[var(--sidebar-muted)]">PRO</div>
@@ -484,15 +520,38 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
 
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--sidebar-muted)] transition-colors hover:bg-[var(--nav-hover-bg)] hover:text-[var(--sidebar-text)]"
+            className={`flex h-9 w-9 items-center justify-center rounded-lg text-[var(--sidebar-muted)] transition-colors hover:bg-[var(--nav-hover-bg)] hover:text-[var(--sidebar-text)] ${
+              isDashboardPage && sidebarOpen ? "lg:hidden" : ""
+            }`}
             aria-label={sidebarOpen ? "Recolher navegação" : "Expandir navegação"}
           >
             {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
-        <nav className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
-          {filteredMenuGroups.map((group) => {
+        <nav className={`flex-1 overflow-y-auto px-3 ${isDashboardPage ? "space-y-1 py-4" : "space-y-2 py-4"}`}>
+          {isDashboardPage ? (
+            filteredDashboardItems.map((item) => {
+              const ItemIcon = item.icon;
+              const isItemActive = location.pathname === item.path;
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  title={sidebarOpen ? undefined : item.label}
+                  onClick={closeSidebarOnMobile}
+                  className={`flex h-11 items-center rounded-lg text-sm transition-all ${
+                    sidebarOpen ? "gap-3 px-3" : "justify-center px-0"
+                  } ${isItemActive ? "finqz-nav-active" : "finqz-nav-idle"}`}
+                >
+                  <ItemIcon size={18} />
+                  {sidebarOpen && <span className="truncate">{item.label}</span>}
+                </NavLink>
+              );
+            })
+          ) : (
+            filteredMenuGroups.map((group) => {
             const GroupIcon = group.icon;
             const isExpanded = expandedGroups.includes(group.id);
             const isActive = group.items.some((item) => item.path === location.pathname);
@@ -583,10 +642,31 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
                 )}
               </div>
             );
-          })}
+          }))}
         </nav>
 
         <div className="border-t border-[var(--sidebar-border)] p-3">
+          {isDashboardPage && (
+            <button
+              onClick={toggleTheme}
+              className={`mb-3 flex h-11 w-full items-center rounded-lg text-sm transition-colors hover:bg-[var(--nav-hover-bg)] hover:text-[var(--sidebar-text)] ${
+                sidebarOpen ? "justify-between px-3 text-[var(--sidebar-muted)]" : "justify-center px-0 text-[var(--sidebar-muted)]"
+              }`}
+              title={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+              aria-label={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+            >
+              <span className="flex min-w-0 items-center gap-3">
+                {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
+                {sidebarOpen && <span className="truncate">Tema</span>}
+              </span>
+              {sidebarOpen && (
+                <span className="relative h-6 w-11 rounded-full bg-[#1d6fff] shadow-inner shadow-blue-950/35">
+                  <span className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm" />
+                </span>
+              )}
+            </button>
+          )}
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -594,16 +674,16 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
             }}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--nav-hover-bg)]"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-white shadow-sm shadow-primary/20">
-              {user?.name?.charAt(0) || "U"}
+            <div className={`${isDashboardPage ? "rounded-full bg-slate-700" : "rounded-lg bg-primary"} flex h-9 w-9 shrink-0 items-center justify-center text-sm font-semibold text-white shadow-sm shadow-primary/20`}>
+              {displayName.charAt(0)}
             </div>
             {sidebarOpen && (
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[var(--sidebar-text)]">
-                  {user?.name || "Usuário"}
+                  {displayName}
                 </p>
                 <p className="truncate text-xs text-[var(--sidebar-muted)]">
-                  {user?.email || "usuario@finqz.com"}
+                  {isDashboardPage ? displayRole : user?.email || "usuario@finqz.com"}
                 </p>
               </div>
             )}
@@ -625,9 +705,10 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
 
       <main
         className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${
-          sidebarOpen ? "lg:ml-72" : "lg:ml-20"
+          mainMarginClass
         }`}
       >
+        {!isDashboardPage && (
         <header className="finqz-topbar flex min-h-16 items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
@@ -669,9 +750,10 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
             </button>
           </div>
         </header>
+        )}
 
         <div className="flex-1 overflow-auto bg-transparent">
-          <div className="px-4 py-5 sm:px-6 lg:px-8">
+          <div className={isDashboardPage ? "px-4 py-5 sm:px-5 lg:px-6" : "px-4 py-5 sm:px-6 lg:px-8"}>
             {children || <Outlet />}
           </div>
         </div>

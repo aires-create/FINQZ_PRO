@@ -3,13 +3,18 @@ import StatsCard from "../components/dashboard/StatsCard";
 import {
   AlertTriangle,
   BarChart3,
+  Box,
   CalendarDays,
+  Clock3,
   CircleDollarSign,
   CreditCard,
   Filter,
+  Menu,
   PieChart,
+  RefreshCw,
   ShoppingBag,
   Star,
+  TrendingDown,
   TrendingUp,
   UserRound,
   Users,
@@ -61,10 +66,10 @@ type SmartAlert = {
 };
 
 const CHANNELS = [
-  { label: "Venda Direta", color: "#0b4fb3", costPerLead: 180, expectedCac: 260 },
-  { label: "Parceiros", color: "#3388d9", costPerLead: 120, expectedCac: 210 },
-  { label: "Tráfego Pago", color: "#7c5cff", costPerLead: 390, expectedCac: 320 },
-  { label: "Indicação", color: "#50c9a7", costPerLead: 75, expectedCac: 160 },
+  { label: "Venda Direta", color: "#1d6fff", costPerLead: 180, expectedCac: 260 },
+  { label: "Parceiros", color: "#7c3aed", costPerLead: 120, expectedCac: 210 },
+  { label: "Tráfego Pago", color: "#f59e0b", costPerLead: 390, expectedCac: 320 },
+  { label: "Indicação", color: "#61d394", costPerLead: 75, expectedCac: 160 },
 ] as const;
 
 const PERIOD_OPTIONS = [
@@ -243,7 +248,7 @@ const getTrendText = (current: number, previous: number, suffix = "") => {
   if (!previous) return "Sem base anterior";
   const diff = ((current - previous) / Math.abs(previous)) * 100;
   const sign = diff >= 0 ? "+" : "";
-  return `${sign}${formatPercent(diff)}${suffix} contra período anterior`;
+  return `${sign}${formatPercent(diff)}${suffix} vs período anterior`;
 };
 
 const matchesCoreFilters = (row: DashboardRow, filters: DashboardFilters) =>
@@ -277,6 +282,49 @@ const calculateMetrics = (rows: DashboardRow[]) => {
   };
 };
 
+const FUNNEL_GRADIENTS = [
+  "linear-gradient(135deg, #1078ff 0%, #1557d6 100%)",
+  "linear-gradient(135deg, #3157f5 0%, #3c43d9 100%)",
+  "linear-gradient(135deg, #7c3bd8 0%, #9b35d8 100%)",
+  "linear-gradient(135deg, #f97316 0%, #f59e0b 100%)",
+  "linear-gradient(135deg, #facc15 0%, #f59e0b 100%)",
+];
+
+function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: string; color?: string }) {
+  const safeValues = values.length ? values : [0];
+  const minValue = Math.min(...safeValues);
+  const maxValue = Math.max(...safeValues, 1);
+  const range = Math.max(1, maxValue - minValue);
+  const points = safeValues.map((value, index) => {
+    const x = safeValues.length <= 1 ? 50 : (100 / (safeValues.length - 1)) * index;
+    const y = 44 - ((value - minValue) / range) * 34;
+    return `${x.toFixed(1)},${Math.max(7, Math.min(44, y)).toFixed(1)}`;
+  });
+  const linePath = `M ${points.join(" L ")}`;
+  const areaPath = `${linePath} L 100,50 L 0,50 Z`;
+  const gradientId = `spark-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+
+  return (
+    <svg viewBox="0 0 100 50" className="h-16 w-full overflow-visible">
+      <defs>
+        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+        <filter id={`${gradientId}-glow`} x="-20%" y="-40%" width="140%" height="180%">
+          <feGaussianBlur stdDeviation="2.4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <path d={areaPath} fill={`url(#${gradientId})`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" filter={`url(#${gradientId}-glow)`} />
+    </svg>
+  );
+}
+
 function RevenueChart({ series, previousSeries }: { series: { label: string; value: number }[]; previousSeries: number[] }) {
   const values = series.map((item) => item.value);
   const maxValue = Math.max(...values, ...previousSeries, 1);
@@ -289,7 +337,7 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
   const previousPoints = previousSeries.map((value, index) => getPoint(value, index, previousSeries.length)).join(" ");
 
   return (
-    <div className="relative h-44 overflow-hidden rounded-lg">
+    <div className="relative h-56 overflow-hidden rounded-lg">
       <div className="absolute inset-x-0 bottom-0 h-px bg-[var(--border-muted)]" />
       <div className="absolute inset-0 grid grid-rows-3">
         {[100, 50, 0].map((mark) => (
@@ -298,16 +346,23 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
           </div>
         ))}
       </div>
-      <svg viewBox="0 0 420 150" className="absolute inset-x-14 bottom-7 h-[7.5rem] w-[calc(100%-4.75rem)] overflow-visible">
+      <svg viewBox="0 0 420 150" className="absolute inset-x-14 bottom-8 h-40 w-[calc(100%-4.75rem)] overflow-visible">
         <defs>
           <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-fill)" />
             <stop offset="100%" stopColor="transparent" />
           </linearGradient>
+          <filter id="revenueGlow" x="-12%" y="-35%" width="124%" height="170%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
         <polyline points={`${points} 420,150 0,150`} fill="url(#revenueFill)" stroke="none" />
         <polyline points={previousPoints} fill="none" stroke="var(--chart-line-2)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
-        <polyline points={points} fill="none" stroke="var(--chart-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={points} fill="none" stroke="var(--chart-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" filter="url(#revenueGlow)" />
         {points.split(" ").filter(Boolean).map((point) => {
           const [cx, cy] = point.split(",");
           return <circle key={point} cx={cx} cy={cy} r="4" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="2.5" />;
@@ -325,13 +380,86 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
   );
 }
 
+function FunnelVisual({
+  rows,
+}: {
+  rows: Array<{ key: FunilStageKey; label: string; count: number; value: string; conversion: string; percentage: number }>;
+}) {
+  return (
+    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-1.5 py-1">
+      {rows.map((row, index) => {
+        const visualWidth = Math.max(36, row.count > 0 ? row.percentage : 34 - index * 2);
+        const inset = 5 + index * 1.8;
+
+        return (
+          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_58px] items-center gap-3">
+            <div className="flex min-w-0 justify-center">
+              <div
+                className="flex h-12 flex-col items-center justify-center text-center text-xs font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.015] sm:h-14"
+                style={{
+                  width: `${visualWidth}%`,
+                  minWidth: row.count > 0 ? "9rem" : "6.75rem",
+                  background: FUNNEL_GRADIENTS[index] ?? FUNNEL_GRADIENTS[0],
+                  clipPath: `polygon(${inset}% 0, ${100 - inset}% 0, ${100 - inset - 8}% 100%, ${inset + 8}% 100%)`,
+                }}
+              >
+                <span>{row.label}</span>
+                <strong className="text-sm leading-tight sm:text-base">{row.value}</strong>
+              </div>
+            </div>
+            <span className="text-right text-sm font-extrabold text-[var(--text-primary)]">{row.conversion}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DonutChart({
+  channels,
+  total,
+  gradient,
+}: {
+  channels: Array<{ label: string; color: string; percentage: number; production: number }>;
+  total: number;
+  gradient: string;
+}) {
+  return (
+    <div className="grid items-center gap-6 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[12rem_minmax(0,1fr)]">
+      <div
+        className="relative mx-auto h-44 w-44 shrink-0 rounded-full border border-[var(--border-default)] shadow-2xl shadow-blue-950/20"
+        style={{ background: gradient }}
+      >
+        <div className="absolute inset-8 flex flex-col items-center justify-center rounded-full border border-[var(--border-muted)] bg-[var(--bg-elevated)] text-center shadow-inner">
+          <strong className="text-sm font-extrabold text-[var(--text-primary)]">{formatMoney(total)}</strong>
+          <span className="mt-1 text-xs text-[var(--text-muted)]">Total</span>
+        </div>
+      </div>
+      <div className="space-y-4">
+        {channels.map((channel) => (
+          <div key={channel.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 text-sm">
+            <span className="flex min-w-0 items-center gap-3 text-[var(--text-secondary)]">
+              <span className="h-3 w-3 shrink-0 rounded-full shadow-sm" style={{ background: channel.color }} />
+              <span className="truncate">{channel.label}</span>
+            </span>
+            <span className="text-right">
+              <span className="font-semibold text-[var(--text-primary)]">{formatMoney(channel.production)}</span>
+              <span className="ml-1 text-xs text-[var(--text-muted)]">({formatPercent(channel.percentage)})</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SkeletonBlock({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800/70 ${className}`} />;
 }
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-6 text-center">
+    <div className="rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-6 text-center">
       <p className="text-sm font-semibold text-[var(--text-primary)]">{title}</p>
       <p className="mt-1 text-xs text-[var(--text-muted)]">{detail}</p>
     </div>
@@ -344,6 +472,7 @@ export default function Dashboard() {
     oportunidadesKanban,
     parceiros,
     usuarios,
+    setSidebarOpen,
   } = useAppStore();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -488,7 +617,7 @@ export default function Dashboard() {
         count,
         value: formatInteger(count),
         conversion: formatPercent(conversion),
-        width: `${Math.max(count ? 14 : 0, leadCount ? (count / leadCount) * 100 : 0)}%`,
+        percentage: leadCount ? (count / leadCount) * 100 : 0,
       };
     });
   }, [filteredRows]);
@@ -501,33 +630,37 @@ export default function Dashboard() {
       groups.get(key)?.push(row);
     });
 
-    return Array.from(groups.values())
-      .map((rows) => {
-        const first = rows[0];
+    const structuredProducts = productStructure.products
+      .filter((product) => !filters.produto || String(product.id) === filters.produto)
+      .map((product) => ({ id: String(product.id), nome: product.nome }));
+    const fallbackProducts = Array.from(groups.entries()).map(([id, rows]) => ({ id, nome: rows[0]?.produto ?? "Produto não informado" }));
+    const baseProducts = structuredProducts.length > 0 ? structuredProducts : fallbackProducts;
+
+    return baseProducts
+      .map((product) => {
+        const rows = groups.get(product.id) ?? [];
         const production = rows.filter((row) => row.etapaRank >= 2).reduce((total, row) => total + row.valor, 0);
         const conversion = rows.length ? (rows.filter((row) => row.etapaRank >= 2).length / rows.length) * 100 : 0;
         const contracts = rows.filter((row) => row.etapaRank >= 3).length;
-        const proposals = rows.filter((row) => row.etapaRank >= 1).length;
-        const maxCount = Math.max(rows.length, proposals, contracts, 1);
 
         return {
-          produtoId: first.produtoId,
-          produto: first.produto,
+          produtoId: product.id,
+          produto: product.nome,
           production,
           conversion,
           leads: rows.length,
           contracts,
-          bars: [
-            Math.max(10, (rows.length / maxCount) * 100),
-            Math.max(10, (proposals / maxCount) * 100),
-            Math.max(10, (Math.max(contracts, rows.filter((row) => row.etapaRank >= 2).length) / maxCount) * 100),
-          ],
-          Icon: getProductIcon(first.produto),
+          sparkline: Array.from({ length: 11 }, (_, index) => {
+            const row = rows[index % Math.max(rows.length, 1)];
+            const base = row ? row.valor / 1000 + row.etapaRank * 12 : 6 + index * 0.8;
+            return Math.max(6, base + ((index * 7 + rows.length * 5) % 18));
+          }),
+          Icon: getProductIcon(product.nome),
         };
       })
-      .sort((a, b) => b.production - a.production)
-      .slice(0, 6);
-  }, [filteredRows]);
+      .sort((a, b) => b.production - a.production || a.produto.localeCompare(b.produto, "pt-BR"))
+      .slice(0, 4);
+  }, [filteredRows, filters.produto, productStructure.products]);
 
   const channelData = useMemo(() => {
     const totalProduction = filteredRows
@@ -699,23 +832,6 @@ export default function Dashboard() {
     return rows;
   }, [alerts, channelData, filteredRows.length, funnelRows, metrics, productPerformance]);
 
-  const activeFilterLabels = useMemo(() => {
-    const periodLabel = PERIOD_OPTIONS.find((item) => item.value === filters.periodo)?.label ?? "Período";
-    const productLabel = productStructure.products.find((item) => String(item.id) === filters.produto)?.nome;
-    const subproductLabel = productStructure.subproducts.find((item) => String(item.id) === filters.subproduto)?.nome;
-    const partnerLabel = parceiros.find((item) => String(item.id) === filters.parceiro)?.nome;
-    const managerLabel = gerenteOptions.find((item) => item.id === filters.responsavel)?.nome;
-
-    return [
-      periodLabel,
-      productLabel,
-      subproductLabel,
-      filters.canal,
-      partnerLabel,
-      managerLabel,
-    ].filter(Boolean);
-  }, [filters, gerenteOptions, parceiros, productStructure]);
-
   const dateRangeLabel = `${formatDate(dateRange.start)} - ${formatDate(dateRange.end)}`;
 
   const setFilter = <K extends keyof DashboardFilters>(key: K, value: DashboardFilters[K]) => {
@@ -729,30 +845,44 @@ export default function Dashboard() {
     setFilters((prev) => ({ ...prev, ...patch }));
   };
 
+  const handleRefresh = () => {
+    setLoading(true);
+    window.setTimeout(() => setLoading(false), 280);
+  };
+
   return (
-    <div className="app-page">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
+    <div className="app-page max-w-[1510px] space-y-4">
+      <section className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="finqz-control h-10 w-10 lg:hidden"
+            aria-label="Abrir navegação"
+          >
+            <Menu size={18} />
+          </button>
           <h2 className="text-2xl font-extrabold leading-tight tracking-normal text-[var(--text-primary)] sm:text-3xl">
-            Painel Executivo
+            Dashboard
           </h2>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {activeFilterLabels.map((label) => (
-              <span key={label} className="rounded-full border border-[var(--border-muted)] bg-[var(--bg-elevated)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-                {label}
-              </span>
-            ))}
-          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3 xl:justify-end">
           <button
             type="button"
             onClick={() => setFiltersOpen(true)}
-            className="finqz-control min-h-10 w-full min-w-0 justify-start px-3 text-sm sm:w-auto sm:max-w-[280px]"
+            className="finqz-control min-h-11 w-full min-w-0 justify-start px-4 text-sm sm:w-auto sm:max-w-[300px]"
           >
             <CalendarDays size={17} />
             <span className="min-w-0 truncate">{dateRangeLabel}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFiltersOpen(true)}
+            className="finqz-control h-11 px-4 text-sm"
+          >
+            <Filter size={17} />
+            Filtros
           </button>
           <ExportMenu
             data={exportRows}
@@ -769,12 +899,12 @@ export default function Dashboard() {
           />
           <button
             type="button"
-            onClick={() => setFiltersOpen(true)}
-            className="h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-sm shadow-primary/25 transition-colors hover:bg-primary-hover"
+            onClick={handleRefresh}
+            className="h-11 rounded-lg bg-gradient-to-r from-[#136fff] to-[#2356e8] px-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:shadow-blue-600/30"
           >
             <span className="flex items-center gap-2">
-              <Filter size={17} />
-              Filtros
+              <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
+              Atualizar
             </span>
           </button>
         </div>
@@ -897,7 +1027,7 @@ export default function Dashboard() {
             <StatsCard
               title="Conversão Geral"
               value={formatPercent(metrics.conversion)}
-              change={`${metrics.conversion >= previousMetrics.conversion ? "+" : ""}${formatPercent(metrics.conversion - previousMetrics.conversion)} p.p. contra período anterior`}
+              change={`${metrics.conversion >= previousMetrics.conversion ? "+" : ""}${formatPercent(metrics.conversion - previousMetrics.conversion)} p.p. vs período anterior`}
               icon={<UserRound className="h-5 w-5" />}
               variant="green"
             />
@@ -919,60 +1049,51 @@ export default function Dashboard() {
         )}
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.95fr]">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_0.95fr]">
         <div className="finqz-card p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Desempenho por Produto</h3>
-            <span className="rounded-full border border-[var(--border-muted)] px-2.5 py-1 text-[11px] font-bold text-[var(--text-secondary)]">
-              {formatInteger(productPerformance.length)}
-            </span>
+            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Desempenho por Produto</h3>
+            <span className="text-xs font-semibold text-[#1f75ff]">Ver todos</span>
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-48" />
+            <SkeletonBlock className="h-[212px]" />
           ) : productPerformance.length === 0 ? (
             <EmptyState title="Nenhum desempenho encontrado" detail="Ajuste os filtros para visualizar produção por produto." />
           ) : (
-            <div className="grid gap-3 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {productPerformance.map((product, index) => {
                 const Icon = product.Icon;
+                const sparkColor = ["#1d73ff", "#3b82ff", "#7c3aed", "#22d3ee"][index % 4];
                 return (
                   <div
                     key={product.produtoId}
-                    className={`min-w-0 ${index > 0 ? "lg:border-l lg:border-[var(--border-muted)] lg:pl-4" : ""}`}
+                    className="group flex min-h-[212px] min-w-0 flex-col rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/35 hover:bg-[var(--bg-elevated)]"
                   >
-                    <div className="mb-3 flex items-center gap-3">
-                      <div className="finqz-icon-badge h-9 w-9">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1473ff] to-[#1d4ed8] text-white shadow-lg shadow-blue-600/20">
                         <Icon size={18} />
                       </div>
-                      <p className="min-w-0 truncate font-semibold text-[var(--text-primary)]">{product.produto}</p>
+                      <p className="min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">{product.produto}</p>
                     </div>
 
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
-                      <div className="space-y-2.5">
-                        <div>
-                          <p className="text-sm font-semibold text-[var(--color-primary)]">{formatMoney(product.production)}</p>
-                          <p className="text-xs text-[var(--text-muted)]">Produção</p>
-                        </div>
-                        <div>
-                          <p className="text-lg font-bold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
-                          <p className="text-xs text-[var(--text-muted)]">Conversão</p>
-                        </div>
-                        <div>
-                          <p className="text-base font-semibold text-[var(--text-primary)]">{formatInteger(product.contracts)}</p>
-                          <p className="text-xs text-[var(--text-muted)]">Contratos</p>
-                        </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-3">
+                        <p className="text-sm font-bold text-[#1f75ff]">{formatMoney(product.production)}</p>
+                        <p className="text-[11px] text-[var(--text-muted)]">Produção</p>
                       </div>
+                      <div>
+                        <p className="text-base font-extrabold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
+                        <p className="text-[11px] text-[var(--text-muted)]">Conversão</p>
+                      </div>
+                      <div>
+                        <p className="text-base font-extrabold text-[var(--text-primary)]">{formatInteger(product.contracts)}</p>
+                        <p className="text-[11px] text-[var(--text-muted)]">Contratos</p>
+                      </div>
+                    </div>
 
-                      <div className="flex h-24 items-end gap-1.5">
-                        {product.bars.map((height, barIndex) => (
-                          <div
-                            key={`${product.produto}-${barIndex}`}
-                            className="w-5 rounded-t-md border border-white/15 bg-gradient-to-t from-primary to-[var(--color-primary-soft)] shadow-sm"
-                            style={{ height: `${height}%` }}
-                          />
-                        ))}
-                      </div>
+                    <div className="mt-auto pt-3">
+                      <Sparkline id={product.produtoId} values={product.sparkline} color={sparkColor} />
                     </div>
                   </div>
                 );
@@ -984,137 +1105,110 @@ export default function Dashboard() {
         <div className="finqz-card p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Funil Consolidado</h3>
+              <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Funil Consolidado</h3>
             </div>
             <BarChart3 className="h-5 w-5 text-[var(--color-primary)]" />
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-48" />
+            <SkeletonBlock className="h-[212px]" />
           ) : filteredRows.length === 0 ? (
             <EmptyState title="Funil sem dados" detail="Não há leads no período e filtros selecionados." />
           ) : (
-            <div className="space-y-2.5">
-              {funnelRows.map((row) => (
-                <div
-                  key={row.key}
-                  className="grid grid-cols-[82px_minmax(0,1fr)_52px] items-center gap-2 text-sm sm:grid-cols-[104px_minmax(0,1fr)_62px] sm:gap-3"
-                >
-                  <span className="truncate text-xs font-semibold text-[var(--text-secondary)] sm:text-sm">{row.label}</span>
-                  <div className="relative h-8 overflow-hidden rounded-md border border-[var(--border-muted)] bg-[var(--bg-surface-hover)]">
-                    <div
-                      className="flex h-full items-center justify-end overflow-hidden rounded-md bg-gradient-to-r from-[var(--color-primary-soft)] to-primary px-2 text-[11px] font-bold text-white shadow-sm"
-                      style={{ width: row.width, minWidth: row.count > 0 ? "2rem" : 0 }}
-                    >
-                      {row.count > 0 ? row.value : ""}
-                    </div>
-                  </div>
-                  <span className="text-right text-xs font-bold text-[var(--text-primary)] sm:text-sm">{row.conversion}</span>
-                </div>
-              ))}
-            </div>
+            <FunnelVisual rows={funnelRows} />
           )}
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.95fr_1.15fr]">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.9fr]">
         <div className="finqz-card p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Produção ao Longo do Tempo</h3>
-            <span className="shrink-0 text-xs font-bold text-[var(--color-primary)]">{formatMoney(metrics.production)}</span>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Produção ao Longo do Tempo</h3>
+            <span className="finqz-control h-9 px-3 text-xs">Diário</span>
           </div>
-          {loading ? <SkeletonBlock className="h-44" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
+          {loading ? <SkeletonBlock className="h-56" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
         </div>
 
         <div className="finqz-card p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Receita por Canal</h3>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Receita por Canal</h3>
             <Users className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-44" />
+            <SkeletonBlock className="h-56" />
           ) : (
-            <div className="grid items-center gap-4 sm:grid-cols-[7.5rem_minmax(0,1fr)] xl:grid-cols-1">
-              <div
-                className="mx-auto h-28 w-28 shrink-0 rounded-full border border-[var(--border-default)] shadow-card"
-                style={{ background: channelGradient }}
-              >
-                <div className="m-7 h-14 w-14 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)]" />
-              </div>
-              <div className="w-full space-y-2.5">
-                {channelData.map((channel) => (
-                  <div key={channel.label} className="flex items-center justify-between gap-3 rounded-lg px-1 py-0.5 text-sm">
-                    <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--text-secondary)]">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: channel.color }} />
-                      <span className="truncate">{channel.label}</span>
-                    </span>
-                    <span className="text-right">
-                      <span className="block font-semibold text-[var(--text-primary)]">{formatPercent(channel.percentage)}</span>
-                      <span className="block text-xs text-[var(--text-muted)]">{formatMoney(channel.production)}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="finqz-card p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Alertas Inteligentes</h3>
-            <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
-          </div>
-
-          {loading ? (
-            <SkeletonBlock className="h-44" />
-          ) : alerts.length === 0 ? (
-            <EmptyState title="Sem alertas" detail="Filtros atuais sem desvios." />
-          ) : (
-            <div className="space-y-2.5">
-              {alerts.map((alert) => {
-                const alertFilter = alert.filtro;
-                const dotClass =
-                  alert.severidade === "crítico"
-                    ? "bg-red-500"
-                    : alert.severidade === "atenção"
-                      ? "bg-amber-500"
-                      : "bg-emerald-500";
-                const labelClass =
-                  alert.severidade === "crítico"
-                    ? "text-red-600 dark:text-red-300"
-                    : alert.severidade === "atenção"
-                      ? "text-amber-600 dark:text-amber-300"
-                      : "text-emerald-600 dark:text-emerald-300";
-
-                return (
-                  <div
-                    key={alert.id}
-                    role={alertFilter ? "button" : undefined}
-                    tabIndex={alertFilter ? 0 : undefined}
-                    onClick={alertFilter ? () => applyAlertFilter(alertFilter) : undefined}
-                    onKeyDown={(event) => {
-                      if (!alertFilter || (event.key !== "Enter" && event.key !== " ")) return;
-                      event.preventDefault();
-                      applyAlertFilter(alertFilter);
-                    }}
-                    className={`flex items-center gap-3 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-hover)] px-3 py-2.5 transition-colors ${
-                      alertFilter ? "cursor-pointer hover:border-[var(--color-primary)]/50 hover:bg-[var(--bg-elevated)]" : ""
-                    }`}
-                  >
-                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{alert.titulo}</p>
-                      <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${labelClass}`}>{alert.severidade}</p>
-                    </div>
-                    <p className="max-w-[42%] truncate text-right text-sm font-bold text-[var(--text-primary)]">{alert.valor}</p>
-                  </div>
-                );
-              })}
-            </div>
+            <DonutChart channels={channelData} total={metrics.production} gradient={channelGradient} />
           )}
         </div>
       </section>
+
+      <section className="finqz-card p-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Alertas Inteligentes</h3>
+          <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--color-warning)]" />
+        </div>
+
+        {loading ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[104px]" />)}
+          </div>
+        ) : alerts.length === 0 ? (
+          <EmptyState title="Sem alertas" detail="Filtros atuais sem desvios." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {alerts.map((alert) => {
+              const alertFilter = alert.filtro;
+              const visual =
+                alert.id === "parceiros-sem-producao"
+                  ? { Icon: Users, color: "text-red-300", bg: "from-red-500/28 to-red-500/8" }
+                  : alert.id === "queda-conversao"
+                    ? { Icon: TrendingDown, color: "text-amber-300", bg: "from-amber-500/28 to-amber-500/8" }
+                    : alert.id === "gerentes-sem-producao"
+                      ? { Icon: UserRound, color: "text-red-300", bg: "from-red-500/28 to-red-500/8" }
+                      : alert.id === "trafego-pago-sem-evolucao"
+                        ? { Icon: Clock3, color: "text-amber-300", bg: "from-amber-500/28 to-amber-500/8" }
+                        : { Icon: Box, color: "text-purple-300", bg: "from-purple-500/28 to-purple-500/8" };
+              const Icon = visual.Icon;
+
+              return (
+                <div
+                  key={alert.id}
+                  role={alertFilter ? "button" : undefined}
+                  tabIndex={alertFilter ? 0 : undefined}
+                  onClick={alertFilter ? () => applyAlertFilter(alertFilter) : undefined}
+                  onKeyDown={(event) => {
+                    if (!alertFilter || (event.key !== "Enter" && event.key !== " ")) return;
+                    event.preventDefault();
+                    applyAlertFilter(alertFilter);
+                  }}
+                  className={`flex min-h-[104px] items-center gap-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4 transition-all duration-200 ${
+                    alertFilter ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-500/35 hover:bg-[var(--bg-elevated)]" : ""
+                  }`}
+                >
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${visual.bg} ${visual.color}`}>
+                    <Icon size={22} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)]">{alert.titulo}</p>
+                    <p className={`mt-2 truncate text-2xl font-extrabold ${
+                      alert.severidade === "crítico"
+                        ? "text-red-500 dark:text-red-300"
+                        : alert.severidade === "atenção"
+                          ? "text-amber-500 dark:text-amber-300"
+                          : "text-purple-500 dark:text-purple-300"
+                    }`}>{alert.valor}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <footer className="pb-1 text-center text-xs text-[var(--text-muted)]">
+        FINQZ PRO © 2026 - Todos os direitos reservados.
+      </footer>
     </div>
   );
 }

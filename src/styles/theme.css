@@ -25,10 +25,10 @@
   --text-subtle: #8294aa;
   --placeholder: #7b8ca3;
 
-  --color-primary: #0b4fb3;
-  --color-primary-hover: #083f90;
+  --color-primary: #1d6fff;
+  --color-primary-hover: #155ee8;
   --color-primary-soft: #3388d9;
-  --color-primary-faint: rgba(51, 136, 217, 0.14);
+  --color-primary-faint: rgba(29, 111, 255, 0.13);
   --color-success: #079669;
   --color-warning: #d97706;
   --color-danger: #dc2626;
@@ -44,7 +44,7 @@
   --nav-active-text: #0b4fb3;
   --nav-hover-bg: rgba(255, 255, 255, 0.58);
 
-  --chart-line: #0b4fb3;
+  --chart-line: #1d6fff;
   --chart-line-2: #34b6df;
   --chart-fill: rgba(51, 136, 217, 0.18);
 
@@ -58,23 +58,24 @@
 .dark {
   color-scheme: dark;
 
-  --bg-primary: #020b16;
-  --bg-secondary: #06162a;
-  --bg-canvas: #020617;
+  --bg-primary: #010713;
+  --bg-secondary: #061427;
+  --bg-canvas: #020815;
   --bg-app-gradient:
-    radial-gradient(circle at 18% 4%, rgba(56, 189, 248, 0.13), transparent 30%),
-    radial-gradient(circle at 82% 12%, rgba(0, 13, 255, 0.16), transparent 32%),
-    linear-gradient(135deg, #06162a 0%, #020b16 48%, #020617 100%);
+    radial-gradient(circle at 16% 0%, rgba(29, 111, 255, 0.14), transparent 30%),
+    radial-gradient(circle at 82% 8%, rgba(124, 58, 237, 0.14), transparent 31%),
+    radial-gradient(circle at 52% 44%, rgba(34, 211, 238, 0.06), transparent 34%),
+    linear-gradient(135deg, #071322 0%, #020815 48%, #010510 100%);
 
-  --bg-surface: rgba(15, 23, 42, 0.82);
-  --bg-surface-soft: rgba(15, 23, 42, 0.66);
-  --bg-surface-strong: #111827;
-  --bg-surface-hover: rgba(51, 136, 217, 0.11);
-  --bg-elevated: rgba(17, 24, 39, 0.96);
+  --bg-surface: rgba(8, 18, 34, 0.78);
+  --bg-surface-soft: rgba(9, 21, 39, 0.58);
+  --bg-surface-strong: #0b1729;
+  --bg-surface-hover: rgba(29, 111, 255, 0.12);
+  --bg-elevated: rgba(10, 22, 40, 0.95);
 
-  --border-default: rgba(148, 163, 184, 0.18);
-  --border-muted: rgba(148, 163, 184, 0.12);
-  --border-strong: rgba(203, 213, 225, 0.24);
+  --border-default: rgba(119, 153, 203, 0.18);
+  --border-muted: rgba(119, 153, 203, 0.11);
+  --border-strong: rgba(59, 130, 246, 0.36);
 
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
@@ -82,30 +83,30 @@
   --text-subtle: #64748b;
   --placeholder: #64748b;
 
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-soft: #67b7f7;
-  --color-primary-faint: rgba(51, 136, 217, 0.18);
+  --color-primary: #1d6fff;
+  --color-primary-hover: #155ee8;
+  --color-primary-soft: #60a5fa;
+  --color-primary-faint: rgba(29, 111, 255, 0.18);
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
   --color-info: #38bdf8;
 
-  --sidebar-bg: linear-gradient(180deg, #071f3d 0%, #06182e 58%, #051225 100%);
-  --sidebar-border: rgba(148, 163, 184, 0.12);
+  --sidebar-bg: linear-gradient(180deg, #061427 0%, #04101f 58%, #020a15 100%);
+  --sidebar-border: rgba(119, 153, 203, 0.13);
   --sidebar-text: #e5f1ff;
   --sidebar-muted: #7f9ac7;
-  --sidebar-accent: #67b7f7;
-  --topbar-bg: rgba(7, 17, 31, 0.82);
-  --nav-active-bg: rgba(37, 99, 235, 0.42);
+  --sidebar-accent: #60a5fa;
+  --topbar-bg: rgba(4, 12, 24, 0.78);
+  --nav-active-bg: linear-gradient(90deg, rgba(29, 111, 255, 0.24), rgba(29, 111, 255, 0.08));
   --nav-active-text: #f8fafc;
   --nav-hover-bg: rgba(255, 255, 255, 0.06);
 
-  --chart-line: #88c7ff;
-  --chart-line-2: #43e0d1;
-  --chart-fill: rgba(56, 189, 248, 0.18);
+  --chart-line: #1d73ff;
+  --chart-line-2: #22d3ee;
+  --chart-fill: rgba(29, 111, 255, 0.2);
 
-  --shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.28);
-  --shadow-card: 0 22px 56px rgba(0, 0, 0, 0.34);
-  --shadow-control: 0 14px 30px rgba(0, 0, 0, 0.24);
+  --shadow-panel: 0 18px 42px rgba(0, 0, 0, 0.27);
+  --shadow-card: 0 22px 56px rgba(0, 0, 0, 0.33);
+  --shadow-control: 0 14px 30px rgba(0, 0, 0, 0.23);
 }
