@@ -305,29 +305,73 @@ const buildSmoothPath = (points: Array<{ x: number; y: number }>) => {
   }, "");
 };
 
+const getTextSeed = (value: string) =>
+  normalizeText(value)
+    .split("")
+    .reduce((total, char, index) => total + char.charCodeAt(0) * (index + 1), 0);
+
+const buildProductSparkline = (rows: DashboardRow[], productName: string) => {
+  const approved = rows.filter((row) => row.etapaRank >= 2).length;
+  const contracts = rows.filter((row) => row.etapaRank >= 3).length;
+  const conversion = rows.length ? (approved / rows.length) * 100 : 0;
+  const production = rows.filter((row) => row.etapaRank >= 2).reduce((total, row) => total + row.valor, 0);
+  const seed = getTextSeed(productName);
+  const values = rows.map((row) => row.valor);
+  const average = values.length ? values.reduce((total, value) => total + value, 0) / values.length : 0;
+  const variance = average
+    ? values.reduce((total, value) => total + Math.abs(value - average), 0) / values.length / average
+    : 0;
+  const patterns = {
+    growing: [18, 19, 21, 23, 25, 27, 29, 32, 34, 36, 39, 41],
+    stable: [29, 28, 29, 29, 30, 29, 30, 30, 29, 30, 31, 30],
+    oscillation: [25, 31, 27, 33, 29, 35, 31, 36, 32, 35, 33, 36],
+    recovery: [36, 33, 30, 27, 26, 28, 31, 34, 36, 38, 40, 42],
+    decline: [40, 38, 36, 35, 33, 31, 30, 28, 27, 25, 24, 22],
+  } as const;
+
+  const patternKey = (() => {
+    if (rows.length === 0) return seed % 3 === 0 ? "stable" : seed % 3 === 1 ? "recovery" : "decline";
+    if (variance > 0.32) return "oscillation";
+    if (conversion >= 45 || contracts > 0) return "growing";
+    if (conversion >= 25 || production > 0) return "recovery";
+    return seed % 2 === 0 ? "stable" : "decline";
+  })();
+  const amplitude = rows.length > 0 ? 1 : 0.45;
+  const dataSignal = Math.round((production / 1000 + conversion + contracts * 8 + rows.length * 3) % 9);
+
+  return patterns[patternKey].map((value, index) => {
+    const offset = (((seed + dataSignal + index * 5) % 7) - 3) * amplitude;
+    return Math.max(10, Math.min(44, Number((value + offset).toFixed(1))));
+  });
+};
+
 function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: string; color?: string }) {
-  const safeValues = values.length ? values : [0];
+  const safeValues = values.length > 1 ? values : [24, 25, 24, 26];
   const minValue = Math.min(...safeValues);
   const maxValue = Math.max(...safeValues, 1);
   const range = Math.max(1, maxValue - minValue);
   const points = safeValues.map((value, index) => {
     const x = safeValues.length <= 1 ? 50 : (100 / (safeValues.length - 1)) * index;
-    const y = 44 - ((value - minValue) / range) * 34;
-    return `${x.toFixed(1)},${Math.max(7, Math.min(44, y)).toFixed(1)}`;
+    const y = 34 - ((value - minValue) / range) * 20;
+    return {
+      x: Number(x.toFixed(1)),
+      y: Number(Math.max(10, Math.min(35, y)).toFixed(1)),
+    };
   });
-  const linePath = `M ${points.join(" L ")}`;
-  const areaPath = `${linePath} L 100,50 L 0,50 Z`;
+  const linePath = buildSmoothPath(points);
+  const areaPath = points.length ? `${linePath} L ${points[points.length - 1].x},40 L ${points[0].x},40 Z` : "";
   const gradientId = `spark-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   return (
-    <svg viewBox="0 0 100 50" className="h-11 w-full overflow-visible sm:h-12">
+    <svg viewBox="0 0 100 42" className="h-8 w-full overflow-visible sm:h-9">
       <defs>
         <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.16" />
+          <stop offset="72%" stopColor={color} stopOpacity="0.05" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
-        <filter id={`${gradientId}-glow`} x="-18%" y="-34%" width="136%" height="168%">
-          <feGaussianBlur stdDeviation="1.8" result="blur" />
+        <filter id={`${gradientId}-glow`} x="-14%" y="-26%" width="128%" height="152%">
+          <feGaussianBlur stdDeviation="0.95" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -335,7 +379,8 @@ function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: st
         </filter>
       </defs>
       <path d={areaPath} fill={`url(#${gradientId})`} />
-      <path d={linePath} fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" filter={`url(#${gradientId}-glow)`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.18" filter={`url(#${gradientId}-glow)`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" opacity="0.82" />
     </svg>
   );
 }
@@ -684,11 +729,7 @@ export default function Dashboard() {
           conversion,
           leads: rows.length,
           contracts,
-          sparkline: Array.from({ length: 11 }, (_, index) => {
-            const row = rows[index % Math.max(rows.length, 1)];
-            const base = row ? row.valor / 1000 + row.etapaRank * 12 : 6 + index * 0.8;
-            return Math.max(6, base + ((index * 7 + rows.length * 5) % 18));
-          }),
+          sparkline: buildProductSparkline(rows, product.nome),
           Icon: getProductIcon(product.nome),
         };
       })
@@ -1088,7 +1129,7 @@ export default function Dashboard() {
             <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
               {productPerformance.map((product, index) => {
                 const Icon = product.Icon;
-                const sparkColor = ["#1d73ff", "#3b82ff", "#7c3aed", "#22d3ee"][index % 4];
+                const sparkColor = ["#4b8df7", "#5e95ea", "#8a6ee6", "#38b9c9"][index % 4];
                 return (
                   <div
                     key={product.produtoId}
@@ -1116,7 +1157,7 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="mt-auto pt-2">
+                    <div className="mt-auto pt-1.5">
                       <Sparkline id={product.produtoId} values={product.sparkline} color={sparkColor} />
                     </div>
                   </div>
