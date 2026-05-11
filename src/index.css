@@ -67,12 +67,14 @@ body {
   .finqz-card {
     @apply relative overflow-hidden rounded-lg border;
     background:
+      linear-gradient(150deg, rgba(29, 111, 255, 0.055), transparent 34%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
       var(--bg-surface);
     border-color: var(--border-default);
     box-shadow: var(--shadow-card);
     color: var(--text-primary);
     backdrop-filter: blur(18px);
+    transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
   }
 
   .finqz-card-hover {
@@ -88,12 +90,13 @@ body {
   }
 
   .finqz-kpi-card {
-    @apply relative min-h-[132px] overflow-hidden rounded-lg border p-4 transition-all duration-200 sm:p-5;
+    @apply relative min-h-[128px] overflow-hidden rounded-lg border p-4 transition-all duration-200;
     background:
-      radial-gradient(circle at 14% 12%, var(--color-primary-faint), transparent 34%),
+      radial-gradient(circle at 18% 12%, var(--color-primary-faint), transparent 30%),
+      linear-gradient(150deg, rgba(255, 255, 255, 0.032), transparent 42%),
       var(--bg-surface);
     border-color: var(--border-default);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-panel);
     color: var(--text-primary);
     backdrop-filter: blur(18px);
   }
@@ -101,13 +104,14 @@ body {
   .finqz-kpi-card:hover {
     border-color: var(--border-strong);
     transform: translateY(-1px);
+    box-shadow: var(--shadow-card);
   }
 
   .finqz-sidebar {
     background: var(--sidebar-bg);
     border-color: var(--sidebar-border);
     color: var(--sidebar-text);
-    box-shadow: var(--shadow-card);
+    box-shadow: 18px 0 52px rgba(0, 0, 0, 0.24);
   }
 
   .finqz-topbar {
@@ -120,7 +124,7 @@ body {
   .finqz-nav-active {
     background: var(--nav-active-bg);
     color: var(--nav-active-text);
-    box-shadow: inset 0 0 0 1px rgba(51, 136, 217, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(29, 111, 255, 0.16), 0 10px 22px rgba(29, 111, 255, 0.08);
   }
 
   .finqz-nav-idle {

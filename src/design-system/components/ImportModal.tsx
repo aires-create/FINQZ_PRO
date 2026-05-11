@@ -3,12 +3,11 @@
  * Modal padronizado para importação de dados com preview e validação
  */
 
-import React, { useState, useRef } from 'react';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, AlertCircle, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { Button } from './Button';
 import { Dropzone } from './Dropzone';
 import { Modal } from './Modal';
-import { zIndex } from '../../config/zIndex';
 
 export interface ImportColumn {
   key: string;
@@ -36,12 +35,13 @@ const parseCSV = (text: string): string[][] => {
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
+    const delimiter = (line.match(/;/g)?.length || 0) > (line.match(/,/g)?.length || 0) ? ';' : ',';
     
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
       if (char === '"') {
         inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === delimiter && !inQuotes) {
         result.push(current.trim());
         current = '';
       } else {
@@ -169,26 +169,76 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     setStep('upload');
   };
 
+  const handleClose = () => {
+    handleReset();
+    onClose();
+  };
+
   const totalValidRows = importData.length;
   const totalErrorRows = Object.keys(importErrors).length;
   const totalRows = totalValidRows + totalErrorRows;
+  const requiredColumns = columns.filter((column) => column.required);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title={title} size="xl">
       <div className="space-y-6">
-        {description && (
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            {description}
-          </p>
-        )}
+        <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+          <div className="rounded-xl border border-slate-200/50 bg-slate-50/70 p-4 dark:border-slate-700/60 dark:bg-slate-800/40">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Upload className="h-5 w-5" />
+              </div>
+              <div>
+                {description && (
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                    {description}
+                  </p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {acceptedTypes.map((type) => (
+                    <span
+                      key={type}
+                      className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold uppercase text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                    >
+                      {type.replace('.', '')}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200/50 bg-white p-4 dark:border-slate-700/60 dark:bg-slate-900/70">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <FileSpreadsheet className="h-4 w-4 text-primary" />
+              Campos do arquivo
+            </div>
+            <div className="space-y-2">
+              {requiredColumns.length > 0 ? (
+                requiredColumns.map((column) => (
+                  <div key={column.key} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500 dark:text-slate-400">{column.label}</span>
+                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-600 dark:text-emerald-300">
+                      obrigatório
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Nenhum campo obrigatório configurado.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
 
         {step === 'upload' ? (
           <>
             <Dropzone
               onFilesSelected={handleFilesSelected}
               acceptedTypes={acceptedTypes}
-              label="Clique ou arraste o arquivo aqui"
-              description="Aceitos: CSV, XLSX, XLS"
+              label="Selecionar arquivo para importação"
+              description={`Arraste aqui ou clique para escolher. Aceitos: ${acceptedTypes.join(', ')}`}
             />
 
             {downloadTemplate && (
@@ -197,6 +247,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 onClick={downloadTemplate}
                 className="w-full"
               >
+                <Download className="mr-2 h-4 w-4" />
                 Baixar modelo ({templateFileName})
               </Button>
             )}
@@ -302,7 +353,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       {/* Footer */}
       <div className="mt-6 flex gap-3 border-t border-slate-200/50 dark:border-slate-700/50 pt-6">
-        <Button variant="outline" onClick={onClose} className="flex-1">
+        <Button variant="outline" onClick={handleClose} className="flex-1">
           Cancelar
         </Button>
         {step === 'preview' && (

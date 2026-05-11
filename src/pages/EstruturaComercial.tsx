@@ -808,6 +808,58 @@ const EstruturaComercialPage: React.FC = () => {
   };
 
   // Handler para exportação usando componente compartilhado
+  const escapeCsvValue = (value: unknown) => {
+    const text = value === null || value === undefined ? "" : String(value);
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportCSV = () => {
+    const rows = filteredEstrutura.length > 0 ? filteredEstrutura : exportEstruturaComercial();
+    if (!rows.length) {
+      alert("Nenhum dado para exportar.");
+      return;
+    }
+
+    const csv = [
+      exportColumns.map((column) => escapeCsvValue(column.label)).join(","),
+      ...rows.map((row) =>
+        exportColumns.map((column) => escapeCsvValue((row as any)[column.key])).join(",")
+      ),
+    ].join("\n");
+
+    downloadFile(
+      `\ufeff${csv}`,
+      `estrutura_comercial_${new Date().toISOString().split("T")[0]}.csv`,
+      "text/csv;charset=utf-8;"
+    );
+  };
+
+  const handleExportJSON = () => {
+    const rows = filteredEstrutura.length > 0 ? filteredEstrutura : exportEstruturaComercial();
+    if (!rows.length) {
+      alert("Nenhum dado para exportar.");
+      return;
+    }
+
+    downloadFile(
+      JSON.stringify(rows, null, 2),
+      `estrutura_comercial_${new Date().toISOString().split("T")[0]}.json`,
+      "application/json;charset=utf-8;"
+    );
+  };
+
   const handleExportEstrutura = (format: string) => {
     if (format === 'json') {
       handleExportJSON();
@@ -962,9 +1014,13 @@ const EstruturaComercialPage: React.FC = () => {
         subtitle="Gerencie a hierarquia comercial completa"
         onSearch={setSearchTerm}
         onRefresh={() => {}}
-        onCreate={() => {}}
+        onCreate={() => handleCreate("vertical")}
         createLabel="Nova Estrutura"
         onOpenFilters={() => setOpenFilterDrawer(true)}
+        filterValues={{
+          nivel: filtroNivel,
+          status: filtroStatus,
+        }}
         filters={[
           { label: 'Nível', key: 'nivel', type: 'select', options: nivelOptions, placeholder: 'Todos os níveis' },
           { label: 'Status', key: 'status', type: 'select', options: [
@@ -992,6 +1048,10 @@ const EstruturaComercialPage: React.FC = () => {
               columns={exportColumns}
               filename="estrutura_comercial"
               onExport={handleExportEstrutura}
+              options={[
+                { id: "csv", label: "CSV", format: "csv", icon: <FileText size={16} className="text-green-500" />, description: "Planilha CSV" },
+                { id: "json", label: "JSON", format: "json", icon: <FileText size={16} className="text-blue-500" />, description: "Dados estruturados" },
+              ]}
               label="Exportar"
             />
             <Button
@@ -1434,14 +1494,6 @@ const EstruturaComercialPage: React.FC = () => {
         title="Importar Estrutura Comercial"
         description="Importe condições comerciais a partir de um arquivo CSV. Campos obrigatórios: vertical, produto."
         acceptedTypes={['.csv']}
-      />
-
-      {/* Menu de exportação */}
-      <ExportMenu
-        data={filteredEstrutura}
-        columns={exportColumns}
-        filename="estrutura_comercial"
-        onExport={handleExportEstrutura}
       />
 
       {/* Filter Drawer */}

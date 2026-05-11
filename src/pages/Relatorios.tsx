@@ -437,9 +437,12 @@ const RelatoriosPage: React.FC = () => {
           ticketMedio: item.ticketMedio,
         }));
     
+    if (exportData.length === 0) {
+      alert('Nenhum dado para exportar.');
+      return;
+    }
+
     reportUtils.exportToCSV(exportData as any[], `relatorio_${reportType}`);
-    
-    reportUtils.exportToXLSX(exportData, `relatorio_${reportType}`);
   }, [reportType, analyticalData, consolidatedData]);
 
   // Get report title

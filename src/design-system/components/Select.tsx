@@ -66,7 +66,7 @@ export const Select: React.FC<SelectProps> = ({
           className={`${baseStyles} ${stateStyles} ${className}`}
           {...props}
         >
-          {placeholder && (
+          {placeholder && !children && (
             <option value="" disabled>
               {placeholder}
             </option>

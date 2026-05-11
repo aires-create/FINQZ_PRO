@@ -14,36 +14,36 @@ datasource db {
 }
 
 // ============================================
-// MULTI-TENANT CORE
+// CORE MULTI-TENANT
 // ============================================
 
-/// Tenant (Company) - Multi-tenant isolation
 model Tenant {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String
-  domain    String?   @unique
-  plan      String    @default("standard") // basic, standard, premium, enterprise
-  settings  Json? // Tenant-specific settings
-  isActive  Boolean   @default(true)
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  domain     String?   @unique
+  plan       String    @default("standard")
+  settings   Json?
+  isActive   Boolean   @default(true)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  // Relations
   users         User[]
-  roles         Role[]
-  customers     Customer[]
-  leads         Lead[]
-  opportunities Opportunity[]
-  pipelines     Pipeline[]
-  stages        Stage[]
-  activities    Activity[]
-  bankProposals BankProposal[]
-  auditLogs     AuditLog[]
-  commissions   Commission[]
-  partners      Partner[]
   organizations Organization[]
   memberships   Membership[]
+  roles         Role[]
+  partners      Partner[]
+  leads         Lead[]
+  customers     Customer[]
+  pipelines     Pipeline[]
+  stages        Stage[]
+  opportunities Opportunity[]
+  activities    Activity[]
+  bankProposals BankProposal[]
+  commissions   Commission[]
+  rolePermissions RolePermission[]
+  userRoles     UserRole[]
+  auditLogs     AuditLog[]
 
   @@index([domain])
   @@index([isActive])
@@ -51,32 +51,26 @@ model Tenant {
   @@map("tenants")
 }
 
-/// Organization - Hierarchical organization structure within tenant
 model Organization {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
-  code        String    // Unique code within tenant
+  code        String
   description String?
-  type        String    @default("department") // department, division, team, unit
-  level       Int       @default(1) // Hierarchy level (1=root, 2=child, etc.)
-
-  // Hierarchy
-  parentId String?     @db.Uuid
-  parent   Organization? @relation("OrganizationHierarchy", fields: [parentId], references: [id])
-  children Organization[] @relation("OrganizationHierarchy")
-
-  // Settings
-  settings    Json? // Organization-specific settings
+  type        String    @default("department")
+  level       Int       @default(1)
+  settings    Json?
   isActive    Boolean   @default(true)
   deletedAt   DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  // Multi-tenant
-  tenantId String @db.Uuid
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String  @db.Uuid
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
+  parentId String?     @db.Uuid
+  parent   Organization? @relation("OrganizationHierarchy", fields: [parentId], references: [id])
+  children Organization[] @relation("OrganizationHierarchy")
+
   memberships Membership[]
   users       User[]
   auditLogs   AuditLog[]
@@ -90,21 +84,18 @@ model Organization {
   @@map("organizations")
 }
 
-/// Membership - User organization membership and roles
 model Membership {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role          String    @default("member") // member, admin, owner, manager
-  permissions   Json? // Additional granular permissions
-  isActive      Boolean   @default(true)
-  joinedAt      DateTime  @default(now())
-  invitedAt     DateTime?
-  invitedById   String?   @db.Uuid
-  invitedBy     User?     @relation("MembershipInvitedBy", fields: [invitedById], references: [id])
-  deletedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role        String    @default("member")
+  permissions Json?
+  isActive    Boolean   @default(true)
+  joinedAt    DateTime  @default(now())
+  invitedAt   DateTime?
+  invitedById String?   @db.Uuid
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  // Multi-tenant relationships
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -114,7 +105,7 @@ model Membership {
   organizationId String @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  // Relations
+  invitedBy User? @relation("MembershipInvitedBy", fields: [invitedById], references: [id])
   auditLogs AuditLog[]
 
   @@unique([userId, organizationId])
@@ -126,35 +117,42 @@ model Membership {
   @@map("memberships")
 }
 
-/// Partner - Commercial partner hierarchy
 model Partner {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code      String    @unique
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code      String
   name      String
   type      String
   document  String?
   email     String?
   phone     String?
-  status    String    @default("active")
+  status    String  @default("active")
   deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  companyId String @db.Uuid
-  company   Tenant @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  managedById String? @db.Uuid
-  managedBy   User?   @relation(fields: [managedById], references: [id])
+  parentId String? @db.Uuid
+  parent   Partner? @relation("PartnerHierarchy", fields: [parentId], references: [id])
+  children Partner[] @relation("PartnerHierarchy")
 
-  customers Customer[]
+  users      User[]
+  customers  Customer[]
+  leads      Lead[]
+  opportunities Opportunity[]
+  bankProposals BankProposal[]
+  commissions Commission[]
 
-  @@index([companyId])
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([parentId])
   @@index([status])
   @@map("partners")
 }
 
 // ============================================
-// RBAC - ROLE BASED ACCESS CONTROL
+// RBAC
 // ============================================
 
 enum RoleType {
@@ -178,31 +176,26 @@ enum PermissionAction {
   REVOKE
 }
 
-/// Role - RBAC roles with granular permissions and hierarchy
 model Role {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
   slug        String
   type        RoleType         @default(USER)
   description String?
-  priority    Int              @default(0) // Role priority for hierarchy (higher = more permissions)
+  priority    Int              @default(0)
   isSystem    Boolean          @default(false)
   deletedAt   DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  // Role Hierarchy
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   parentId String? @db.Uuid
   parent   Role?   @relation("RoleHierarchy", fields: [parentId], references: [id])
   children Role[]  @relation("RoleHierarchy")
 
-  // Multi-tenant
-  tenantId String @db.Uuid
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  // Relations
-  users      User[]
-  userRoles  UserRole[]
+  userRoles       UserRole[]
   rolePermissions RolePermission[]
 
   @@unique([tenantId, slug])
@@ -213,7 +206,6 @@ model Role {
   @@map("roles")
 }
 
-/// Permission - Granular permissions for RBAC
 model Permission {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String           @unique
@@ -223,7 +215,6 @@ model Permission {
   action      PermissionAction
   createdAt   DateTime         @default(now())
 
-  // Relations
   rolePermissions RolePermission[]
 
   @@index([resource, action])
@@ -231,6 +222,8 @@ model Permission {
 }
 
 model RolePermission {
+  tenantId     String     @db.Uuid
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   roleId       String     @db.Uuid
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -238,11 +231,14 @@ model RolePermission {
   createdAt    DateTime   @default(now())
 
   @@id([roleId, permissionId])
+  @@index([tenantId])
   @@index([permissionId])
   @@map("role_permissions")
 }
 
 model UserRole {
+  tenantId   String @db.Uuid
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     String @db.Uuid
   role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -250,6 +246,7 @@ model UserRole {
   assignedAt DateTime @default(now())
 
   @@id([userId, roleId])
+  @@index([tenantId])
   @@index([roleId])
   @@map("user_roles")
 }
@@ -258,7 +255,6 @@ model UserRole {
 // USER MANAGEMENT
 // ============================================
 
-/// User - Application users
 model User {
   id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email           String
@@ -270,58 +266,48 @@ model User {
   department      String?
   jobTitle        String?
   avatar          String?
-
-  // Account status
   isActive        Boolean   @default(true)
   isEmailVerified Boolean   @default(false)
   lastLoginAt     DateTime?
   lastLoginIp     String?
+  deletedAt       DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
-  // Security & audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Organization membership
   organizationId String?      @db.Uuid
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  // RBAC
-  roleId String @db.Uuid
-  role   Role   @relation(fields: [roleId], references: [id])
-  userRoles UserRole[]
+  partnerId String? @db.Uuid
+  partner   Partner? @relation(fields: [partnerId], references: [id])
 
-  // Relations
-  createdLeads       Lead[]         @relation("LeadCreatedBy")
-  ownedLeads         Lead[]         @relation("LeadOwner")
-  ownedOpportunities Opportunity[]  @relation("OpportunityOwner")
-  createdProposals   BankProposal[] @relation("ProposalCreatedBy")
-  activities         Activity[]
-  commissions        Commission[]
-  auditLogs          AuditLog[]
-  Partner            Partner[]
-  refreshTokens      RefreshToken[]
-  memberships        Membership[]
-  invitedMemberships Membership[]   @relation("MembershipInvitedBy")
+  userRoles       UserRole[]
+  createdLeads    Lead[]      @relation("LeadCreatedBy")
+  ownedLeads      Lead[]      @relation("LeadOwner")
+  ownedOpportunities Opportunity[] @relation("OpportunityOwner")
+  createdProposals BankProposal[] @relation("ProposalCreatedBy")
+  activities      Activity[]
+  commissions     Commission[]
+  auditLogs       AuditLog[]
+  refreshTokens   RefreshToken[]
+  memberships     Membership[]
+  invitedMemberships Membership[] @relation("MembershipInvitedBy")
 
   @@unique([tenantId, emailNormalized])
   @@index([tenantId])
   @@index([organizationId])
-  @@index([email])
+  @@index([partnerId])
   @@index([isActive])
   @@index([deletedAt])
   @@map("users")
 }
 
 // ============================================
-// LEADS & CUSTOMERS
+// CRM
 // ============================================
 
-/// Lead - Sales leads and prospects
 model Lead {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   firstName       String
@@ -333,38 +319,37 @@ model Lead {
   birthDate       DateTime?
   address         Json?
   income          Float?
+  score           Int       @default(0)
+  status          String    @default("prospect")
+  source          String?
+  notes           String?
+  tags            Json?
+  convertedAt     DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
-  // Lead qualification
-  score  Int     @default(0)
-  status String  @default("prospect") // prospect, contact, qualified, negotiation, converted, lost
-  source String?
-  notes  String?
-  tags   Json? // JSON array of tags
-
-  // Audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relationships
+  partnerId String? @db.Uuid
+  partner   Partner? @relation(fields: [partnerId], references: [id])
+
   createdById String @db.Uuid
   creator     User   @relation("LeadCreatedBy", fields: [createdById], references: [id])
 
   ownerId String? @db.Uuid
-  owner   User?   @relation("LeadOwner", fields: [ownerId], references: [id])
+  owner   User? @relation("LeadOwner", fields: [ownerId], references: [id])
 
-  // Domain relations
   opportunities Opportunity[]
   activities    Activity[]
   bankProposals BankProposal[]
+  customers      Customer[]
 
   @@unique([tenantId, cpf])
   @@unique([tenantId, emailNormalized])
   @@index([tenantId])
+  @@index([partnerId])
   @@index([status])
   @@index([cpf])
   @@index([score])
@@ -374,80 +359,70 @@ model Lead {
   @@map("leads")
 }
 
-/// Customer - Active customers
 model Customer {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customerCode  String    @unique
+  customerCode  String
   firstName     String
   lastName      String
   email         String
+  emailNormalized String
   phone         String?
-  cpf           String    @unique
-  document      String?
+  cpf           String
   birthDate     DateTime?
   monthlyIncome Float?
   annualIncome  Float?
-
-  // KYC
-  kycStatus     String    @default("pending") // pending, approved, rejected, review
+  kycStatus     String    @default("pending")
   kycVerifiedAt DateTime?
+  riskLevel     String    @default("medium")
+  isActive      Boolean   @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  // Risk assessment
-  riskLevel String  @default("medium") // low, medium, high
-  isActive  Boolean @default(true)
-
-  // Audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  partnerId String?  @db.Uuid
+  partnerId String? @db.Uuid
   partner   Partner? @relation(fields: [partnerId], references: [id])
 
-  customerId     String?    @db.Uuid
-  customer       Customer?  @relation("CustomerHierarchy", fields: [customerId], references: [id])
-  childCustomers Customer[] @relation("CustomerHierarchy")
+  leadId String? @db.Uuid
+  lead   Lead? @relation(fields: [leadId], references: [id])
 
-  // Domain relations
+  parentCustomerId String? @db.Uuid
+  parentCustomer   Customer?  @relation("CustomerHierarchy", fields: [parentCustomerId], references: [id])
+  childCustomers   Customer[] @relation("CustomerHierarchy")
+
   opportunities Opportunity[]
   activities    Activity[]
   bankProposals BankProposal[]
   commissions   Commission[]
 
+  @@unique([tenantId, cpf])
+  @@index([partnerId])
+  @@unique([tenantId, customerCode])
+  @@unique([tenantId, emailNormalized])
   @@index([tenantId])
-  @@index([cpf])
-  @@index([customerCode])
   @@index([kycStatus])
   @@index([isActive])
   @@index([deletedAt])
   @@map("customers")
 }
 
-// ============================================
-// SALES PIPELINE
-// ============================================
-
-/// Pipeline - Sales process definition
 model Pipeline {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
   description String?
-  isDefault   Boolean   @default(false)
-  isActive    Boolean   @default(true)
-  deletedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isDefault  Boolean   @default(false)
+  isActive   Boolean   @default(true)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
   stages Stage[]
+  opportunities Opportunity[]
 
   @@index([tenantId])
   @@index([isDefault])
@@ -455,7 +430,6 @@ model Pipeline {
   @@map("pipelines")
 }
 
-/// Stage - Pipeline stages
 model Stage {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String
@@ -466,60 +440,58 @@ model Stage {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  // Foreign keys
   pipelineId String   @db.Uuid
   pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relations
   opportunities Opportunity[]
 
+  @@unique([pipelineId, order])
   @@index([pipelineId])
   @@index([tenantId])
-  @@index([order])
   @@map("stages")
 }
 
-/// Opportunity - Sales opportunities
 model Opportunity {
   id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title             String
   description       String?
   amount            Float
   currency          String    @default("BRL")
-  probability       Int       @default(50) // 0-100
-  status            String    @default("open") // open, won, lost, suspended
+  probability       Int       @default(50)
+  status            String    @default("open")
   expectedCloseDate DateTime?
   actualCloseDate   DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  // Audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relationships
-  leadId String? @db.Uuid
-  lead   Lead?   @relation(fields: [leadId], references: [id])
+  partnerId String? @db.Uuid
+  partner   Partner? @relation(fields: [partnerId], references: [id])
 
-  customerId String?   @db.Uuid
+  leadId String? @db.Uuid
+  lead   Lead? @relation(fields: [leadId], references: [id])
+
+  customerId String? @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id])
 
+  pipelineId String @db.Uuid
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+
   stageId String @db.Uuid
-  stage   Stage  @relation(fields: [stageId], references: [id])
+  stage   Stage  @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
   ownerId String? @db.Uuid
   owner   User?   @relation("OpportunityOwner", fields: [ownerId], references: [id])
 
-  // Domain relations
   activities    Activity[]
   bankProposals BankProposal[]
+  commissions   Commission[]
 
   @@index([tenantId])
   @@index([status])
@@ -527,108 +499,97 @@ model Opportunity {
   @@index([leadId])
   @@index([customerId])
   @@index([ownerId])
+  @@index([partnerId])
   @@index([deletedAt])
   @@map("opportunities")
 }
 
-// ============================================
-// INTERACTIONS & ACTIVITIES
-// ============================================
-
-/// Activity - Customer interactions (calls, emails, meetings, etc)
 model Activity {
   id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type         String    @default("note") // call, email, meeting, task, note, custom
+  type         String    @default("note")
   title        String
   description  String?
-  status       String    @default("pending") // completed, pending, cancelled
+  status       String    @default("pending")
   scheduledFor DateTime?
   completedAt  DateTime?
-  duration     Int? // minutes
+  duration     Int?
   notes        String?
   attachments  Json?
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  // Audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relationships
   userId String @db.Uuid
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   leadId String? @db.Uuid
-  lead   Lead?   @relation(fields: [leadId], references: [id])
+  lead   Lead? @relation(fields: [leadId], references: [id])
 
-  opportunityId String?      @db.Uuid
+  customerId String? @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  opportunityId String? @db.Uuid
   opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
-  Customer      Customer?    @relation(fields: [customerId], references: [id])
-  customerId    String?      @db.Uuid
 
   @@index([tenantId])
   @@index([type])
   @@index([status])
   @@index([userId])
   @@index([leadId])
+  @@index([customerId])
   @@index([opportunityId])
   @@index([deletedAt])
   @@map("activities")
 }
 
 // ============================================
-// BANKING & PROPOSALS
+// FINANCEIRO
 // ============================================
 
-/// BankProposal - Financing proposals
 model BankProposal {
-  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  proposalNumber String @unique
-  productType    String // credit_line, business_loan, etc
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  proposalNumber String
+  productType    String
   title          String
-  status         String @default("draft") // draft, sent, accepted, rejected, expired, cancelled
+  status         String    @default("draft")
   amount         Float
   interestRate   Float
-  term           Int // months
+  term           Int
   monthlyPayment Float
   totalCost      Float
+  kycStatus      String    @default("pending")
+  kycVerifiedAt  DateTime?
+  kycExpireAt    DateTime?
+  documents      Json?
+  fees           Json?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  // KYC
-  kycStatus     String    @default("pending") // pending, approved, rejected
-  kycVerifiedAt DateTime?
-  kycExpireAt   DateTime?
-
-  // Documents & Fees
-  documentsProvided Json? // {identity, address, income, etc}
-  fees              Json? // {origination, insurance, etc}
-
-  // Audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relationships
-  leadId String? @db.Uuid
-  lead   Lead?   @relation(fields: [leadId], references: [id])
+  partnerId String? @db.Uuid
+  partner   Partner? @relation(fields: [partnerId], references: [id])
 
-  customerId String?   @db.Uuid
+  leadId String? @db.Uuid
+  lead   Lead? @relation(fields: [leadId], references: [id])
+
+  customerId String? @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id])
 
-  opportunityId String?      @db.Uuid
+  opportunityId String? @db.Uuid
   opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
 
   createdById String @db.Uuid
   creator     User   @relation("ProposalCreatedBy", fields: [createdById], references: [id])
 
   @@index([tenantId])
-  @@index([proposalNumber])
+  @@unique([tenantId, proposalNumber])
+  @@index([partnerId])
   @@index([status])
   @@index([kycStatus])
   @@index([leadId])
@@ -639,82 +600,76 @@ model BankProposal {
   @@map("bank_proposals")
 }
 
-/// Commission - Sales commissions
 model Commission {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commissionNumber String    @unique
-  type             String    @default("sale") // sale, referral, bonus, adjustment
+  commissionNumber String
+  type             String    @default("sale")
   amount           Float
   percentage       Float
-  status           String    @default("pending") // pending, approved, paid, cancelled
+  status           String    @default("pending")
   referenceDate    DateTime
   approvedAt       DateTime?
   paidAt           DateTime?
   dueDate          DateTime
+  deletedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  // Audit
-  deletedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Relationships
-  customerId String?   @db.Uuid
+  partnerId String? @db.Uuid
+  partner   Partner? @relation(fields: [partnerId], references: [id])
+
+  customerId String? @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id])
 
   userId String @db.Uuid
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  opportunityId String? @db.Uuid
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id])
 
   @@index([tenantId])
-  @@index([commissionNumber])
+  @@unique([tenantId, commissionNumber])
   @@index([status])
   @@index([type])
   @@index([userId])
   @@index([customerId])
+  @@index([opportunityId])
   @@index([deletedAt])
   @@map("commissions")
 }
 
 // ============================================
-// AUDIT & COMPLIANCE
+// AUDIT & SECURITY
 // ============================================
 
-/// AuditLog - Immutable audit trail with enhanced enterprise features
 model AuditLog {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  action      String // CREATE, READ, UPDATE, DELETE, LOGIN, LOGOUT, EXPORT, etc.
-  entity      String // Model name
+  action      String
+  entity      String
   entityId    String?
-  changes     Json? // {before: {}, after: {}}
+  changes     Json?
   description String?
   ipAddress   String?
   userAgent   String?
-  sessionId   String? // Session tracking
-  requestId   String? // Request correlation ID
-  metadata    Json? // Additional context (API version, client info, etc.)
+  sessionId   String?
+  requestId   String?
+  metadata    Json?
+  riskLevel   String? @default("low")
+  complianceTags Json?
+  createdAt   DateTime @default(now())
 
-  // Compliance & Security
-  riskLevel   String? @default("low") // low, medium, high, critical
-  complianceTags Json? // GDPR, SOX, etc.
-
-  createdAt DateTime @default(now())
-
-  // Multi-tenant
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // Organization context
   organizationId String? @db.Uuid
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  // User context
   userId String? @db.Uuid
   user   User?   @relation(fields: [userId], references: [id])
 
-  // Membership context
   membershipId String? @db.Uuid
   membership   Membership? @relation(fields: [membershipId], references: [id])
 
@@ -730,23 +685,17 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ============================================
-// AUTHENTICATION - REFRESH TOKENS
-// ============================================
-
-/// RefreshToken - JWT refresh token storage for token rotation
 model RefreshToken {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  token     String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token         String    @unique
+  expiresAt     DateTime
+  revokedAt     DateTime?
   revokedReason String?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  // Relationships
   userId String @db.Uuid
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 

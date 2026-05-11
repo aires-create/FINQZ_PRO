@@ -3,6 +3,7 @@
 // Suporte completo dark/light mode e z-index global
 
 import React, { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { zIndex } from "../../config/zIndex";
 
@@ -47,8 +48,6 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen, onClose, closeOnEsc]);
 
-  if (!isOpen) return null;
-
   const sizes = {
     sm: "max-w-sm",
     md: "max-w-lg",
@@ -62,7 +61,9 @@ export const Modal: React.FC<ModalProps> = ({
     }
   };
 
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <div
       ref={overlayRef}
       onClick={handleOverlayClick}
@@ -116,7 +117,8 @@ export const Modal: React.FC<ModalProps> = ({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

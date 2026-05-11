@@ -237,20 +237,22 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         <>
           {/* Overlay */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0"
+            style={{ zIndex: zIndex.dropdown }}
             onClick={() => setIsOpen(false)}
           />
 
           {/* Dropdown */}
           <div
             className={`
-              absolute top-full right-0 z-50 mt-2 w-56 rounded-lg
+              absolute top-full right-0 mt-2 w-56 rounded-lg
               border border-slate-200/50 dark:border-slate-700/50
               bg-white dark:bg-slate-900
               shadow-lg shadow-black/10 dark:shadow-black/40
               overflow-hidden
               ${dropdownClassName}
             `}
+            style={{ zIndex: zIndex.dropdown + 1 }}
           >
             <div className="p-2">
               {exportOptions.map((option) => (
