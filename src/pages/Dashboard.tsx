@@ -283,12 +283,27 @@ const calculateMetrics = (rows: DashboardRow[]) => {
 };
 
 const FUNNEL_GRADIENTS = [
-  "linear-gradient(135deg, #1078ff 0%, #1557d6 100%)",
-  "linear-gradient(135deg, #3157f5 0%, #3c43d9 100%)",
-  "linear-gradient(135deg, #7c3bd8 0%, #9b35d8 100%)",
-  "linear-gradient(135deg, #f97316 0%, #f59e0b 100%)",
-  "linear-gradient(135deg, #facc15 0%, #f59e0b 100%)",
+  "linear-gradient(135deg, #1878ff 0%, #155ed9 100%)",
+  "linear-gradient(135deg, #3c63f6 0%, #4148d7 100%)",
+  "linear-gradient(135deg, #7b3dd6 0%, #9235d1 100%)",
+  "linear-gradient(135deg, #f47c18 0%, #f59e0b 100%)",
+  "linear-gradient(135deg, #f7c915 0%, #eaa10b 100%)",
 ];
+
+const FUNNEL_WIDTH_FLOORS = [96, 78, 60, 45, 34];
+
+const buildSmoothPath = (points: Array<{ x: number; y: number }>) => {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0].x},${points[0].y}`;
+
+  return points.reduce((path, point, index) => {
+    if (index === 0) return `M ${point.x},${point.y}`;
+
+    const previous = points[index - 1];
+    const controlOffset = (point.x - previous.x) * 0.45;
+    return `${path} C ${previous.x + controlOffset},${previous.y} ${point.x - controlOffset},${point.y} ${point.x},${point.y}`;
+  }, "");
+};
 
 function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: string; color?: string }) {
   const safeValues = values.length ? values : [0];
@@ -305,14 +320,14 @@ function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: st
   const gradientId = `spark-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   return (
-    <svg viewBox="0 0 100 50" className="h-16 w-full overflow-visible">
+    <svg viewBox="0 0 100 50" className="h-11 w-full overflow-visible sm:h-12">
       <defs>
         <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.35" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
-        <filter id={`${gradientId}-glow`} x="-20%" y="-40%" width="140%" height="180%">
-          <feGaussianBlur stdDeviation="2.4" result="blur" />
+        <filter id={`${gradientId}-glow`} x="-18%" y="-34%" width="136%" height="168%">
+          <feGaussianBlur stdDeviation="1.8" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -320,7 +335,7 @@ function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: st
         </filter>
       </defs>
       <path d={areaPath} fill={`url(#${gradientId})`} />
-      <path d={linePath} fill="none" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" filter={`url(#${gradientId}-glow)`} />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" filter={`url(#${gradientId}-glow)`} />
     </svg>
   );
 }
@@ -330,46 +345,57 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
   const maxValue = Math.max(...values, ...previousSeries, 1);
   const getPoint = (value: number, index: number, total: number) => {
     const x = total <= 1 ? 210 : (420 / (total - 1)) * index;
-    const y = 128 - (value / maxValue) * 106;
-    return `${x.toFixed(1)},${Math.max(20, Math.min(128, y)).toFixed(1)}`;
+    const y = 126 - (value / maxValue) * 104;
+    return {
+      x: Number(x.toFixed(1)),
+      y: Number(Math.max(20, Math.min(126, y)).toFixed(1)),
+    };
   };
-  const points = series.map((item, index) => getPoint(item.value, index, series.length)).join(" ");
-  const previousPoints = previousSeries.map((value, index) => getPoint(value, index, previousSeries.length)).join(" ");
+  const points = series.map((item, index) => getPoint(item.value, index, series.length));
+  const previousPoints = previousSeries.map((value, index) => getPoint(value, index, previousSeries.length));
+  const linePath = buildSmoothPath(points);
+  const previousPath = buildSmoothPath(previousPoints);
+  const areaPath = points.length ? `${linePath} L ${points[points.length - 1].x},150 L ${points[0].x},150 Z` : "";
 
   return (
-    <div className="relative h-56 overflow-hidden rounded-lg">
+    <div className="relative h-52 overflow-hidden rounded-lg sm:h-56">
       <div className="absolute inset-x-0 bottom-0 h-px bg-[var(--border-muted)]" />
-      <div className="absolute inset-0 grid grid-rows-3">
-        {[100, 50, 0].map((mark) => (
-          <div key={mark} className="flex items-start border-t border-[var(--border-muted)] text-[10px] font-medium text-[var(--text-muted)]">
+      <div className="absolute inset-0 grid grid-rows-4">
+        {[100, 67, 33, 0].map((mark) => (
+          <div key={mark} className="flex items-start border-t border-[var(--border-muted)] text-[10px] font-medium text-[var(--text-muted)] opacity-80">
             <span className="w-14 pt-1">{formatCompactMoney((maxValue * mark) / 100)}</span>
           </div>
         ))}
       </div>
-      <svg viewBox="0 0 420 150" className="absolute inset-x-14 bottom-8 h-40 w-[calc(100%-4.75rem)] overflow-visible">
+      <svg viewBox="0 0 420 150" className="absolute inset-x-12 bottom-8 h-40 w-[calc(100%-4.25rem)] overflow-visible sm:inset-x-14 sm:w-[calc(100%-4.75rem)]">
         <defs>
           <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--chart-fill)" />
-            <stop offset="100%" stopColor="transparent" />
+            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.28" />
+            <stop offset="58%" stopColor="var(--chart-fill)" stopOpacity="0.16" />
+            <stop offset="100%" stopColor="var(--chart-fill)" stopOpacity="0" />
           </linearGradient>
-          <filter id="revenueGlow" x="-12%" y="-35%" width="124%" height="170%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <filter id="revenueGlow" x="-10%" y="-30%" width="120%" height="160%">
+            <feGaussianBlur stdDeviation="2.4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
-        <polyline points={`${points} 420,150 0,150`} fill="url(#revenueFill)" stroke="none" />
-        <polyline points={previousPoints} fill="none" stroke="var(--chart-line-2)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
-        <polyline points={points} fill="none" stroke="var(--chart-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" filter="url(#revenueGlow)" />
-        {points.split(" ").filter(Boolean).map((point) => {
-          const [cx, cy] = point.split(",");
-          return <circle key={point} cx={cx} cy={cy} r="4" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="2.5" />;
+        <path d={areaPath} fill="url(#revenueFill)" stroke="none" />
+        <path d={previousPath} fill="none" stroke="var(--chart-line-2)" strokeWidth="1.8" strokeDasharray="6 7" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+        <path d={linePath} fill="none" stroke="var(--chart-line)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" filter="url(#revenueGlow)" />
+        {points.map((point, index) => {
+          const item = series[index];
+          return (
+            <circle key={`${item.label}-${point.x}`} cx={point.x} cy={point.y} r="3.8" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="2.2">
+              <title>{`${item.label}: ${formatMoney(item.value)}`}</title>
+            </circle>
+          );
         })}
       </svg>
       <div
-        className="absolute bottom-1 left-14 right-4 grid text-center text-[11px] font-medium text-[var(--text-muted)]"
+        className="absolute bottom-1 left-12 right-3 grid text-center text-[10px] font-semibold text-[var(--text-muted)] sm:left-14 sm:right-4 sm:text-[11px]"
         style={{ gridTemplateColumns: `repeat(${Math.max(series.length, 1)}, minmax(0, 1fr))` }}
       >
         {series.map((item, index) => (
@@ -386,28 +412,31 @@ function FunnelVisual({
   rows: Array<{ key: FunilStageKey; label: string; count: number; value: string; conversion: string; percentage: number }>;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-1.5 py-1">
+    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-2.5 py-1 sm:gap-3">
       {rows.map((row, index) => {
-        const visualWidth = Math.max(36, row.count > 0 ? row.percentage : 34 - index * 2);
-        const inset = 5 + index * 1.8;
+        const visualWidth = row.count > 0
+          ? Math.max(FUNNEL_WIDTH_FLOORS[index] ?? 34, row.percentage)
+          : FUNNEL_WIDTH_FLOORS[index] ?? 34;
+        const inset = 4.5 + index * 2.1;
 
         return (
-          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_58px] items-center gap-3">
+          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_64px] items-center gap-3">
             <div className="flex min-w-0 justify-center">
               <div
-                className="flex h-12 flex-col items-center justify-center text-center text-xs font-semibold text-white shadow-lg transition-transform duration-200 hover:scale-[1.015] sm:h-14"
+                className="flex h-11 flex-col items-center justify-center text-center text-xs font-semibold text-white shadow-[0_12px_28px_rgba(29,111,255,0.16)] transition-all duration-200 hover:scale-[1.01] sm:h-[52px]"
                 style={{
                   width: `${visualWidth}%`,
-                  minWidth: row.count > 0 ? "9rem" : "6.75rem",
+                  minWidth: row.count > 0 ? "8.25rem" : "6.5rem",
                   background: FUNNEL_GRADIENTS[index] ?? FUNNEL_GRADIENTS[0],
                   clipPath: `polygon(${inset}% 0, ${100 - inset}% 0, ${100 - inset - 8}% 100%, ${inset + 8}% 100%)`,
+                  filter: "drop-shadow(0 0 10px rgba(29, 111, 255, 0.12))",
                 }}
               >
-                <span>{row.label}</span>
-                <strong className="text-sm leading-tight sm:text-base">{row.value}</strong>
+                <span className="leading-tight">{row.label}</span>
+                <strong className="text-sm leading-tight">{row.value}</strong>
               </div>
             </div>
-            <span className="text-right text-sm font-extrabold text-[var(--text-primary)]">{row.conversion}</span>
+            <span className="text-right text-sm font-extrabold tabular-nums text-[var(--text-primary)]">{row.conversion}</span>
           </div>
         );
       })}
@@ -425,26 +454,26 @@ function DonutChart({
   gradient: string;
 }) {
   return (
-    <div className="grid items-center gap-6 lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[12rem_minmax(0,1fr)]">
+    <div className="grid items-center gap-5 lg:grid-cols-[11.5rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)]">
       <div
-        className="relative mx-auto h-44 w-44 shrink-0 rounded-full border border-[var(--border-default)] shadow-2xl shadow-blue-950/20"
+        className="relative mx-auto h-40 w-40 shrink-0 rounded-full border border-[var(--border-default)] shadow-xl shadow-blue-950/15"
         style={{ background: gradient }}
       >
-        <div className="absolute inset-8 flex flex-col items-center justify-center rounded-full border border-[var(--border-muted)] bg-[var(--bg-elevated)] text-center shadow-inner">
-          <strong className="text-sm font-extrabold text-[var(--text-primary)]">{formatMoney(total)}</strong>
-          <span className="mt-1 text-xs text-[var(--text-muted)]">Total</span>
+        <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full border border-[var(--border-muted)] bg-[var(--bg-elevated)] text-center shadow-inner">
+          <strong className="text-base font-extrabold leading-tight text-[var(--text-primary)]">{formatMoney(total)}</strong>
+          <span className="mt-0.5 text-[11px] font-medium text-[var(--text-muted)]">Total</span>
         </div>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-3">
         {channels.map((channel) => (
-          <div key={channel.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 text-sm">
-            <span className="flex min-w-0 items-center gap-3 text-[var(--text-secondary)]">
-              <span className="h-3 w-3 shrink-0 rounded-full shadow-sm" style={{ background: channel.color }} />
+          <div key={channel.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+            <span className="flex min-w-0 items-center gap-2.5 text-[var(--text-secondary)]">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm" style={{ background: channel.color }} />
               <span className="truncate">{channel.label}</span>
             </span>
-            <span className="text-right">
+            <span className="text-right tabular-nums">
               <span className="font-semibold text-[var(--text-primary)]">{formatMoney(channel.production)}</span>
-              <span className="ml-1 text-xs text-[var(--text-muted)]">({formatPercent(channel.percentage)})</span>
+              <span className="ml-1 text-[11px] text-[var(--text-muted)]">({formatPercent(channel.percentage)})</span>
             </span>
           </div>
         ))}
@@ -454,12 +483,17 @@ function DonutChart({
 }
 
 function SkeletonBlock({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800/70 ${className}`} />;
+  return (
+    <div
+      className={`animate-pulse rounded-lg border border-[var(--border-muted)] ${className}`}
+      style={{ background: "linear-gradient(90deg, var(--bg-surface-soft), var(--bg-surface-hover), var(--bg-surface-soft))" }}
+    />
+  );
 }
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-6 text-center">
+    <div className="rounded-lg border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-5 text-center">
       <p className="text-sm font-semibold text-[var(--text-primary)]">{title}</p>
       <p className="mt-1 text-xs text-[var(--text-muted)]">{detail}</p>
     </div>
@@ -730,59 +764,22 @@ export default function Dashboard() {
   }, [chartSeries, previousRows]);
 
   const alerts = useMemo<SmartAlert[]>(() => {
-    const generated: SmartAlert[] = [];
     const productionRows = filteredRows.filter((row) => row.etapaRank >= 2);
     const scopedPartners = filters.parceiro ? parceiros.filter((partner) => String(partner.id) === filters.parceiro) : parceiros;
     const partnersWithoutProduction = scopedPartners.filter(
       (partner) => !productionRows.some((row) => row.parceiroId === String(partner.id)),
     );
-
-    if (partnersWithoutProduction.length > 0) {
-      generated.push({
-        id: "parceiros-sem-producao",
-        titulo: "Parceiros sem produção > 30 dias",
-        severidade: "crítico",
-        valor: formatInteger(partnersWithoutProduction.length),
-        filtro: partnersWithoutProduction.length === 1 ? { parceiro: String(partnersWithoutProduction[0].id) } : undefined,
-      });
-    }
-
-    if (metrics.conversion + 1 < previousMetrics.conversion) {
-      const delta = metrics.conversion - previousMetrics.conversion;
-      generated.push({
-        id: "queda-conversao",
-        titulo: "Queda de conversão",
-        severidade: "crítico",
-        valor: `${delta >= 0 ? "+" : ""}${formatPercent(delta)}`,
-      });
-    }
+    const conversionDelta = metrics.conversion - previousMetrics.conversion;
 
     const scopedManagers = filters.responsavel ? gerenteOptions.filter((manager) => manager.id === filters.responsavel) : gerenteOptions;
     const managersWithoutProduction = scopedManagers.filter(
       (manager) => !productionRows.some((row) => row.responsavelId === manager.id),
     );
 
-    if (managersWithoutProduction.length > 0) {
-      generated.push({
-        id: "gerentes-sem-producao",
-        titulo: "Gerentes sem produção",
-        severidade: "atenção",
-        valor: formatInteger(managersWithoutProduction.length),
-        filtro: managersWithoutProduction.length === 1 ? { responsavel: managersWithoutProduction[0].id } : undefined,
-      });
-    }
-
     const paidTrafficStale = filteredRows.filter((row) => row.canal === "Tráfego Pago" && row.etapaRank <= 1 && row.diasSemMovimento > 2);
-    if (paidTrafficStale.length > 0) {
-      const maxDays = Math.max(...paidTrafficStale.map((row) => row.diasSemMovimento));
-      generated.push({
-        id: "trafego-pago-sem-evolucao",
-        titulo: "Leads de Tráfego Pago sem evolução",
-        severidade: "atenção",
-        valor: `${formatInteger(maxDays)} dias`,
-        filtro: { canal: "Tráfego Pago" },
-      });
-    }
+    const maxPaidTrafficDays = paidTrafficStale.length > 0
+      ? Math.max(...paidTrafficStale.map((row) => row.diasSemMovimento))
+      : 0;
 
     const subproductGroups = new Map<string, DashboardRow[]>();
     filteredRows.forEach((row) => {
@@ -800,15 +797,42 @@ export default function Dashboard() {
       .filter((item) => item.leads >= 1 && item.conversion < 25)
       .sort((a, b) => a.conversion - b.conversion)[0];
 
-    if (lowProduct) {
-      generated.push({
+    const generated: SmartAlert[] = [
+      {
+        id: "parceiros-sem-producao",
+        titulo: "Parceiros sem produção",
+        severidade: partnersWithoutProduction.length > 0 ? "crítico" : "oportunidade",
+        valor: formatInteger(partnersWithoutProduction.length),
+        filtro: partnersWithoutProduction.length === 1 ? { parceiro: String(partnersWithoutProduction[0].id) } : undefined,
+      },
+      {
+        id: "queda-conversao",
+        titulo: "Queda de conversão",
+        severidade: conversionDelta < -1 ? "crítico" : "oportunidade",
+        valor: `${conversionDelta >= 0 ? "+" : ""}${formatPercent(conversionDelta)}`,
+      },
+      {
+        id: "gerentes-sem-producao",
+        titulo: "Gerentes sem produção",
+        severidade: managersWithoutProduction.length > 0 ? "atenção" : "oportunidade",
+        valor: formatInteger(managersWithoutProduction.length),
+        filtro: managersWithoutProduction.length === 1 ? { responsavel: managersWithoutProduction[0].id } : undefined,
+      },
+      {
+        id: "trafego-pago-sem-evolucao",
+        titulo: "Leads de tráfego pago",
+        severidade: maxPaidTrafficDays > 2 ? "atenção" : "oportunidade",
+        valor: `${formatInteger(maxPaidTrafficDays)} dias`,
+        filtro: maxPaidTrafficDays > 0 ? { canal: "Tráfego Pago" } : undefined,
+      },
+      {
         id: "produto-baixa-performance",
-        titulo: "Produto/Subproduto com baixa performance",
+        titulo: "Produto/subproduto baixa performance",
         severidade: "oportunidade",
-        valor: lowProduct.produto,
-        filtro: { produto: lowProduct.produtoId },
-      });
-    }
+        valor: lowProduct?.produto ?? "Sem desvio",
+        filtro: lowProduct ? { produto: lowProduct.produtoId } : undefined,
+      },
+    ];
 
     const severityOrder = { crítico: 0, atenção: 1, oportunidade: 2 };
     return generated
@@ -1007,7 +1031,7 @@ export default function Dashboard() {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {loading ? (
-          Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[116px]" />)
+          Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[122px]" />)
         ) : (
           <>
             <StatsCard
@@ -1050,49 +1074,49 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_0.95fr]">
-        <div className="finqz-card p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="finqz-card p-3.5 sm:p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Desempenho por Produto</h3>
             <span className="text-xs font-semibold text-[#1f75ff]">Ver todos</span>
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-[212px]" />
+            <SkeletonBlock className="h-[178px]" />
           ) : productPerformance.length === 0 ? (
             <EmptyState title="Nenhum desempenho encontrado" detail="Ajuste os filtros para visualizar produção por produto." />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
               {productPerformance.map((product, index) => {
                 const Icon = product.Icon;
                 const sparkColor = ["#1d73ff", "#3b82ff", "#7c3aed", "#22d3ee"][index % 4];
                 return (
                   <div
                     key={product.produtoId}
-                    className="group flex min-h-[212px] min-w-0 flex-col rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/35 hover:bg-[var(--bg-elevated)]"
+                    className="group flex min-h-[178px] min-w-0 flex-col rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/30 hover:bg-[var(--bg-elevated)]"
                   >
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1473ff] to-[#1d4ed8] text-white shadow-lg shadow-blue-600/20">
-                        <Icon size={18} />
+                    <div className="mb-3 flex h-8 items-center gap-2.5">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1473ff] to-[#1d4ed8] text-white shadow-sm shadow-blue-600/15">
+                        <Icon size={16} />
                       </div>
                       <p className="min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">{product.produto}</p>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-3">
-                        <p className="text-sm font-bold text-[#1f75ff]">{formatMoney(product.production)}</p>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                      <div className="col-span-2">
+                        <p className="truncate text-sm font-extrabold text-[#1f75ff]">{formatMoney(product.production)}</p>
                         <p className="text-[11px] text-[var(--text-muted)]">Produção</p>
                       </div>
                       <div>
-                        <p className="text-base font-extrabold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
+                        <p className="text-sm font-extrabold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
                         <p className="text-[11px] text-[var(--text-muted)]">Conversão</p>
                       </div>
                       <div>
-                        <p className="text-base font-extrabold text-[var(--text-primary)]">{formatInteger(product.contracts)}</p>
+                        <p className="text-sm font-extrabold text-[var(--text-primary)]">{formatInteger(product.contracts)}</p>
                         <p className="text-[11px] text-[var(--text-muted)]">Contratos</p>
                       </div>
                     </div>
 
-                    <div className="mt-auto pt-3">
+                    <div className="mt-auto pt-2">
                       <Sparkline id={product.produtoId} values={product.sparkline} color={sparkColor} />
                     </div>
                   </div>
@@ -1102,8 +1126,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="finqz-card p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="finqz-card p-3.5 sm:p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Funil Consolidado</h3>
             </div>
@@ -1111,7 +1135,7 @@ export default function Dashboard() {
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-[212px]" />
+            <SkeletonBlock className="h-[206px]" />
           ) : filteredRows.length === 0 ? (
             <EmptyState title="Funil sem dados" detail="Não há leads no período e filtros selecionados." />
           ) : (
@@ -1121,42 +1145,42 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.9fr]">
-        <div className="finqz-card p-4">
+        <div className="finqz-card p-3.5 sm:p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Produção ao Longo do Tempo</h3>
             <span className="finqz-control h-9 px-3 text-xs">Diário</span>
           </div>
-          {loading ? <SkeletonBlock className="h-56" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
+          {loading ? <SkeletonBlock className="h-52 sm:h-56" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
         </div>
 
-        <div className="finqz-card p-4">
+        <div className="finqz-card p-3.5 sm:p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Receita por Canal</h3>
             <Users className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-56" />
+            <SkeletonBlock className="h-52 sm:h-56" />
           ) : (
             <DonutChart channels={channelData} total={metrics.production} gradient={channelGradient} />
           )}
         </div>
       </section>
 
-      <section className="finqz-card p-4">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <section className="finqz-card p-3.5 sm:p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Alertas Inteligentes</h3>
           <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--color-warning)]" />
         </div>
 
         {loading ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[104px]" />)}
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[92px]" />)}
           </div>
         ) : alerts.length === 0 ? (
           <EmptyState title="Sem alertas" detail="Filtros atuais sem desvios." />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
             {alerts.map((alert) => {
               const alertFilter = alert.filtro;
               const visual =
@@ -1182,16 +1206,16 @@ export default function Dashboard() {
                     event.preventDefault();
                     applyAlertFilter(alertFilter);
                   }}
-                  className={`flex min-h-[104px] items-center gap-4 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4 transition-all duration-200 ${
-                    alertFilter ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-500/35 hover:bg-[var(--bg-elevated)]" : ""
+                  className={`flex min-h-[92px] items-center gap-3 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-all duration-200 ${
+                    alertFilter ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-500/30 hover:bg-[var(--bg-elevated)]" : ""
                   }`}
                 >
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${visual.bg} ${visual.color}`}>
-                    <Icon size={22} />
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${visual.bg} ${visual.color}`}>
+                    <Icon size={19} />
                   </div>
                   <div className="min-w-0">
-                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-[var(--text-primary)]">{alert.titulo}</p>
-                    <p className={`mt-2 truncate text-2xl font-extrabold ${
+                    <p className="line-clamp-2 text-xs font-semibold leading-snug text-[var(--text-primary)] sm:text-[13px]">{alert.titulo}</p>
+                    <p className={`mt-1.5 truncate text-xl font-extrabold leading-none sm:text-2xl ${
                       alert.severidade === "crítico"
                         ? "text-red-500 dark:text-red-300"
                         : alert.severidade === "atenção"
