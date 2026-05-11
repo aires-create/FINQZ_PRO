@@ -1,6 +1,6 @@
 // FINQZ PRO - Clientes Page
 import React, { useEffect, useState, useMemo } from "react";
-import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Download, Clock, Shield } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Clock, Shield, Upload } from "lucide-react";
 import api from "../api/client";
 import useAppStore from "../store";
 import type { Cliente } from "../types";
@@ -203,6 +203,7 @@ export const ClientesPage: React.FC = () => {
   const exportColumns = [
     { key: 'codigo', label: 'Código' },
     { key: 'nome', label: 'Nome' },
+    { key: 'tipo', label: 'Tipo' },
     { key: 'cpf_cnpj', label: 'CPF/CNPJ' },
     { key: 'email', label: 'Email' },
     { key: 'telefone', label: 'Telefone' },
@@ -298,7 +299,43 @@ export const ClientesPage: React.FC = () => {
   const tenantFilteredClientes = useTenantFilter(safeClientes);
   
   // Depois aplica os filtros de UI
-  const filteredClientes = tenantFilteredClientes.filter((cliente) => {
+  const filteredClientes = tenantFilteredClientes.filter((cliente, index) => {
+    const searchTerm = search.trim().toLowerCase();
+    if (searchTerm) {
+      const digits = searchTerm.replace(/\D/g, "");
+      const searchableText = [
+        cliente.nome,
+        cliente.email,
+        cliente.cpf_cnpj,
+        cliente.telefone,
+        cliente.celular,
+        cliente.codigo,
+        cliente.code,
+        cliente.id,
+        formatClientCode(cliente, index),
+      ]
+        .filter((value) => value !== undefined && value !== null)
+        .map((value) => String(value).toLowerCase())
+        .join(" ");
+
+      const searchableDigits = [
+        cliente.cpf_cnpj,
+        cliente.telefone,
+        cliente.celular,
+        cliente.codigo,
+        cliente.code,
+        cliente.id,
+        formatClientCode(cliente, index),
+      ]
+        .filter((value) => value !== undefined && value !== null)
+        .map((value) => String(value).replace(/\D/g, ""))
+        .join(" ");
+
+      if (!searchableText.includes(searchTerm) && (!digits || !searchableDigits.includes(digits))) {
+        return false;
+      }
+    }
+
     // Filtro por status
     if (filterStatus && cliente.status !== filterStatus) return false;
     
@@ -920,58 +957,28 @@ export const ClientesPage: React.FC = () => {
     return date.toLocaleDateString('pt-BR');
   };
 
-  // Função para exportar clientes filtrados para CSV
-  const exportClientes = () => {
-    const headers = ["Nome", "Tipo", "CPF/CNPJ", "Email", "Telefone", "Celular", "CEP", "Rua", "Número", "Complemento", "Bairro", "Cidade", "Estado", "Status", "Profissão", "Estado Civil", "Observação"];
-    
-    const csvContent = [
-      headers.join(","),
-      ...filteredClientes.map((cliente) => {
-        const tipo = isCNPJ(cliente.cpf_cnpj || "") ? "Pessoa Jurídica" : "Pessoa Física";
-        const status = cliente.status === "ativo" ? "Ativo" : cliente.status === "inativo" ? "Inativo" : "Não Perturbe";
-        return [
-          `"${cliente.nome || ""}"`,
-          `"${tipo}"`,
-          `"${cliente.cpf_cnpj || ""}"`,
-          `"${cliente.email || ""}"`,
-          `"${formatPhone(cliente.telefone)}"`,
-          `"${formatPhone(cliente.celular)}"`,
-          `"${cliente.cep || ""}"`,
-          `"${cliente.rua || ""}"`,
-          `"${cliente.numero || ""}"`,
-          `"${cliente.complemento || ""}"`,
-          `"${cliente.bairro || ""}"`,
-          `"${cliente.cidade || ""}"`,
-          `"${cliente.estado || ""}"`,
-          `"${status}"`,
-          `"${cliente.profissao || ""}"`,
-          `"${cliente.estado_civil || ""}"`,
-          `"${(cliente.observacao || "").replace(/"/g, '""')}"`,
-        ].join(",");
-      }),
-    ].join("\n");
-
-    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `clientes_${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Handler para exportação usando componente compartilhado
-  const handleExportClientes = (format: string) => {
-    if (format === 'csv') {
-      exportClientes();
-    } else {
-      // Para outros formatos, usar a lógica padrão do ExportMenu
-      // Por enquanto, apenas CSV é suportado customizado
-      exportClientes();
-    }
-  };
+  const exportClientesData = useMemo(() => (
+    filteredClientes.map((cliente, index) => ({
+      codigo: formatClientCode(cliente, index),
+      nome: cliente.nome || "",
+      tipo: isCNPJ(cliente.cpf_cnpj || "") ? "Pessoa Jurídica" : "Pessoa Física",
+      cpf_cnpj: cliente.cpf_cnpj || "",
+      email: cliente.email || "",
+      telefone: formatPhone(cliente.telefone),
+      celular: formatPhone(cliente.celular),
+      cep: cliente.cep || "",
+      rua: cliente.rua || "",
+      numero: cliente.numero || "",
+      complemento: cliente.complemento || "",
+      bairro: cliente.bairro || "",
+      cidade: cliente.cidade || "",
+      estado: cliente.estado || "",
+      status: cliente.status === "ativo" ? "Ativo" : cliente.status === "inativo" ? "Inativo" : "Não Perturbe",
+      profissao: cliente.profissao || "",
+      estado_civil: cliente.estado_civil || "",
+      observacao: cliente.observacao || "",
+    }))
+  ), [filteredClientes]);
 
   return (
     <div className="space-y-5">
@@ -1009,14 +1016,13 @@ export const ClientesPage: React.FC = () => {
               onClick={() => setImportModalOpen(true)}
               className="flex items-center gap-1"
             >
-              <Download size={14} />
+              <Upload size={14} />
               Importar
             </Button>
             <ExportMenu
-              data={filteredClientes}
+              data={exportClientesData}
               columns={exportColumns}
               filename="clientes"
-              onExport={handleExportClientes}
               label="Exportar"
             />
           </div>

@@ -2,10 +2,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { 
   Calculator, Users, Phone, Mail, FileText, DollarSign,
-  Zap, Building2, Check, X as XIcon, ChevronDown, ChevronRight,
+  Zap, Building2, Check, ChevronDown, ChevronRight,
   TrendingUp, Star, Heart, Balance
 } from "lucide-react";
-import { Button } from "../components/ui";
+import { Button, Modal } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { 
   simulatorRepository,
@@ -399,25 +399,24 @@ export const SimuladorPage: React.FC = () => {
   };
 
   // Proposal Preview Modal
-  if (showProposalPreview && simulationResult) {
+  const proposalPreviewModal = (() => {
+    if (!showProposalPreview || !simulationResult) return null;
+
     const creditOffer = selectedCreditOffer;
     const energyOffer = selectedEnergyOffer;
     const totalBenefit = (creditOffer ? creditOffer.approvedAmount - creditData.desiredAmount : 0) + 
       (energyOffer ? energyOffer.estimatedMonthlySavings * 12 : 0);
     
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-[#111827] rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Modal Header */}
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="text-xl font-bold text-white">Proposta Comercial</h2>
-            <button onClick={() => setShowProposalPreview(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-              <XIcon className="w-5 h-5" />
-            </button>
-          </div>
-          
+      <Modal
+        isOpen={showProposalPreview}
+        onClose={() => setShowProposalPreview(false)}
+        title="Proposta Comercial"
+        size="xl"
+      >
+        <div className="space-y-4">
           {/* Proposal Content - Printable Area */}
-          <div id="proposal-print-area" className="p-6">
+          <div id="proposal-print-area" className="rounded-xl bg-white p-5 text-slate-900 shadow-inner sm:p-6">
             {/* Header */}
             <div className="text-center border-b-2 border-blue-600 pb-4 mb-6">
               <h1 className="text-2xl font-bold text-blue-600">FINQZ PRO</h1>
@@ -430,7 +429,7 @@ export const SimuladorPage: React.FC = () => {
             {/* Customer Data */}
             <div className="mb-6">
               <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Dados do Cliente</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                 <div><span className="font-bold">Nome:</span> {customerData.name}</div>
                 <div><span className="font-bold">CPF/CNPJ:</span> {customerData.document}</div>
                 <div><span className="font-bold">Telefone:</span> {customerData.phone}</div>
@@ -451,7 +450,7 @@ export const SimuladorPage: React.FC = () => {
                 <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Crédito</h3>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-blue-600 mb-2">{creditOffer.providerName}</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div><span className="font-bold">Produto:</span> {creditOffer.productName}</div>
                     <div><span className="font-bold">Subproduto:</span> {creditOffer.subproductName}</div>
                     <div><span className="font-bold">Modalidade:</span> {creditOffer.modalityLabel}</div>
@@ -470,7 +469,7 @@ export const SimuladorPage: React.FC = () => {
               <div className="mb-6">
                 <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Energia</h3>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div><span className="font-bold">Comercializadora:</span> {energyOffer.providerName}</div>
                     <div><span className="font-bold">Tipo:</span> {ENERGY_TYPE_LABELS[energyOffer.energyType]}</div>
                     <div><span className="font-bold">Distribuidora:</span> {energyData.distributor || 'Não informada'}</div>
@@ -510,7 +509,7 @@ export const SimuladorPage: React.FC = () => {
           </div>
           
           {/* Modal Actions */}
-          <div className="flex gap-3 p-4 border-t">
+          <div className="flex flex-col-reverse gap-3 border-t border-slate-700/60 pt-4 sm:flex-row">
             <Button variant="outline" onClick={() => setShowProposalPreview(false)} className="flex-1">
               Fechar
             </Button>
@@ -520,20 +519,21 @@ export const SimuladorPage: React.FC = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </Modal>
     );
-  }
+  })();
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="app-page">
       <PageHeader
         title="Simulador"
         subtitle="Simule opções de Crédito, Energia ou ambos"
         icon={Calculator}
       />
+      {proposalPreviewModal}
       
       {/* Steps Indicator */}
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
         {[
           { step: 1, label: "Dados do Cliente" },
           { step: 2, label: "Simulação" },
@@ -543,7 +543,7 @@ export const SimuladorPage: React.FC = () => {
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-medium ${
               currentStep >= step 
                 ? "bg-blue-600 text-white" 
-                : "bg-gray-200 text-slate-500"
+                : "bg-slate-800 text-slate-500"
             }`}>
               {currentStep > step ? <Check className="w-5 h-5" /> : step}
             </div>
@@ -563,14 +563,14 @@ export const SimuladorPage: React.FC = () => {
             Dados do Cliente
           </h2>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Nome *</label>
               <input
                 type="text"
                 value={customerData.name}
                 onChange={(e) => setCustomerData({ ...customerData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="Nome completo"
               />
             </div>
@@ -580,7 +580,7 @@ export const SimuladorPage: React.FC = () => {
                 type="text"
                 value={customerData.document}
                 onChange={(e) => setCustomerData({ ...customerData, document: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="000.000.000-00"
               />
             </div>
@@ -590,7 +590,7 @@ export const SimuladorPage: React.FC = () => {
                 type="tel"
                 value={customerData.phone}
                 onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="(00) 00000-0000"
               />
             </div>
@@ -600,7 +600,7 @@ export const SimuladorPage: React.FC = () => {
                 type="email"
                 value={customerData.email}
                 onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="email@exemplo.com"
               />
             </div>
@@ -609,7 +609,7 @@ export const SimuladorPage: React.FC = () => {
               <select
                 value={customerData.type}
                 onChange={(e) => setCustomerData({ ...customerData, type: e.target.value as CustomerType })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="PF">Pessoa Física</option>
                 <option value="PJ">Pessoa Jurídica</option>
@@ -623,7 +623,7 @@ export const SimuladorPage: React.FC = () => {
                 type="number"
                 value={customerData.income || ''}
                 onChange={(e) => setCustomerData({ ...customerData, income: parseFloat(e.target.value) || undefined })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="0,00"
               />
             </div>
@@ -642,15 +642,15 @@ export const SimuladorPage: React.FC = () => {
                   }
                 }}
                 onBlur={() => setTimeout(() => setShowCitySuggestions(false), 200)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 placeholder="Digite a cidade"
               />
               {showCitySuggestions && citySuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full bg-[#111827] border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
+                <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-slate-700 bg-[#111827] shadow-lg">
                   {citySuggestions.map((city, idx) => (
                     <li
                       key={idx}
-                      className="px-3 py-2 hover:bg-yellow-50 cursor-pointer text-sm"
+                      className="cursor-pointer px-3 py-2 text-sm text-slate-200 hover:bg-white/10"
                       onClick={() => handleCitySelect(city)}
                     >
                       <span className="font-medium">{city.city}</span>
@@ -677,7 +677,7 @@ export const SimuladorPage: React.FC = () => {
           <div className="border-t pt-6 mt-6">
             <h3 className="text-md font-semibold text-white mb-4">O que deseja simular?</h3>
             
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
               {/* Crédito */}
               <div className={`p-4 rounded-lg border-2 transition-all ${creditData.productId ? 'border-blue-500 bg-blue-500/10 dark:bg-blue-950/30' : 'border-[#1f2937]'}`}>
                 <div className="flex items-center gap-2 mb-3">
@@ -691,7 +691,7 @@ export const SimuladorPage: React.FC = () => {
                     <select
                       value={creditData.productId}
                       onChange={(e) => setCreditData({ ...creditData, productId: e.target.value, subproductId: '', modality: '' })}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                     >
                       <option value="">Selecione...</option>
                       {products.map(p => (
@@ -707,7 +707,7 @@ export const SimuladorPage: React.FC = () => {
                         <select
                           value={creditData.subproductId}
                           onChange={(e) => setCreditData({ ...creditData, subproductId: e.target.value, modality: '' })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">Selecione...</option>
                           {subproducts.map(sp => (
@@ -722,7 +722,7 @@ export const SimuladorPage: React.FC = () => {
                           <select
                             value={creditData.modality}
                             onChange={(e) => setCreditData({ ...creditData, modality: e.target.value })}
-                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           >
                             <option value="">Selecione...</option>
                             {modalities.map(m => (
@@ -738,7 +738,7 @@ export const SimuladorPage: React.FC = () => {
                           type="number"
                           value={creditData.desiredAmount}
                           onChange={(e) => setCreditData({ ...creditData, desiredAmount: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                       
@@ -748,7 +748,7 @@ export const SimuladorPage: React.FC = () => {
                           type="number"
                           value={creditData.desiredTerm}
                           onChange={(e) => setCreditData({ ...creditData, desiredTerm: parseInt(e.target.value) || 0 })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
                     </>
@@ -781,7 +781,7 @@ export const SimuladorPage: React.FC = () => {
                         <select
                           value={energyData.type || ''}
                           onChange={(e) => setEnergyData({ ...energyData, type: e.target.value as EnergyType })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">Selecione...</option>
                           <option value="GD">{ENERGY_TYPE_LABELS.GD}</option>
@@ -794,7 +794,7 @@ export const SimuladorPage: React.FC = () => {
                         <select
                           value={energyData.customerSegment || ''}
                           onChange={(e) => setEnergyData({ ...energyData, customerSegment: e.target.value as CustomerSegment })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                         >
                           <option value="">Selecione...</option>
                           <option value="residencial">{CUSTOMER_SEGMENT_LABELS.residencial}</option>
@@ -809,7 +809,7 @@ export const SimuladorPage: React.FC = () => {
                           type="number"
                           value={energyData.averageConsumption || ''}
                           onChange={(e) => setEnergyData({ ...energyData, averageConsumption: parseInt(e.target.value) || undefined })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           placeholder="0"
                         />
                       </div>
@@ -820,7 +820,7 @@ export const SimuladorPage: React.FC = () => {
                           type="number"
                           value={energyData.averageBillValue || ''}
                           onChange={(e) => setEnergyData({ ...energyData, averageBillValue: parseFloat(e.target.value) || undefined })}
-                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                          className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                           placeholder="0,00"
                         />
                       </div>
@@ -852,24 +852,24 @@ export const SimuladorPage: React.FC = () => {
             Revisar Dados
           </h2>
           
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+            <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-4">
               <h3 className="font-medium text-white mb-2">Cliente</h3>
-              <p className="text-sm text-slate-600">{customerData.name}</p>
-              <p className="text-sm text-slate-600">{customerData.document}</p>
-              <p className="text-sm text-slate-600">{customerData.phone}</p>
-              <p className="text-sm text-slate-600">{customerData.email}</p>
+              <p className="text-sm text-slate-300">{customerData.name}</p>
+              <p className="text-sm text-slate-300">{customerData.document}</p>
+              <p className="text-sm text-slate-300">{customerData.phone}</p>
+              <p className="text-sm text-slate-300">{customerData.email}</p>
             </div>
             
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-4">
               <h3 className="font-medium text-white mb-2">Simulação</h3>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-300">
                 {creditData.productId && 'Crédito: ' + 
                   (products.find(p => p.id === creditData.productId)?.name || '') + 
                   ` - R$ ${creditData.desiredAmount.toLocaleString()} - ${creditData.desiredTerm}x`}
               </p>
               {energyData.interested && (
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-300">
                   Energia: {energyData.type} - {energyData.customerSegment} - {energyData.averageConsumption} kWh
                 </p>
               )}
@@ -939,7 +939,7 @@ export const SimuladorPage: React.FC = () => {
                               <span className="font-medium">{offer.providerName}</span>
                               {index === 0 && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
                             </div>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-400">
                               {offer.productName} - {offer.subproductName} - {offer.modalityLabel}
                             </p>
                           </div>
@@ -947,7 +947,7 @@ export const SimuladorPage: React.FC = () => {
                             <p className="font-semibold text-lg">
                               R$ {offer.approvedAmount.toLocaleString()}
                             </p>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-400">
                               {offer.term}x de R$ {((offer.approvedAmount * (1 + offer.monthlyRate/100)) / offer.term).toFixed(2)}
                             </p>
                             <p className="text-sm text-slate-500">
@@ -986,7 +986,7 @@ export const SimuladorPage: React.FC = () => {
                               <span className="font-medium">{offer.providerName}</span>
                               {index === 0 && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
                             </div>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-400">
                               {ENERGY_TYPE_LABELS[offer.energyType]} - {CUSTOMER_SEGMENT_LABELS[offer.customerSegment]}
                             </p>
                             <p className="text-sm text-slate-500">
@@ -997,7 +997,7 @@ export const SimuladorPage: React.FC = () => {
                             <p className="font-semibold text-lg text-green-600">
                               {offer.savingsPercent}% de economia
                             </p>
-                            <p className="text-sm text-slate-600">
+                            <p className="text-sm text-slate-400">
                               R$ {offer.estimatedMonthlySavings.toFixed(2)}/mês economizado
                             </p>
                             <p className={`text-sm ${offer.eligible ? 'text-green-600' : 'text-red-600'}`}>

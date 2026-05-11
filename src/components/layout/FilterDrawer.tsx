@@ -7,6 +7,7 @@ import { Button } from "../../design-system/components/Button";
 import { Input } from "../../design-system/components/Input";
 import { Select } from "../../design-system/components/Select";
 import { StatusBadge } from "../../design-system/components/StatusBadge";
+import { zIndex } from "../../config/zIndex";
 
 // ============================================
 // TYPES
@@ -140,18 +141,20 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
     <>
       {/* Overlay discreto - bg-black/30 sem blur */}
       <div
-        className={`fixed inset-0 bg-black/30 z-40 transition-opacity duration-200 ${
+        className={`fixed inset-0 bg-black/30 transition-opacity duration-200 ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
+        style={{ zIndex: zIndex.drawer }}
         onClick={handleClose}
         aria-hidden="true"
       />
 
       {/* Drawer: container fixed inset-y-0 right-0, width responsivo */}
       <div
-        className={`fixed inset-y-0 right-0 w-full sm:max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-2xl border border-white/20 shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col h-full ${
+        className={`fixed inset-y-0 right-0 w-full sm:max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-2xl border border-white/20 shadow-2xl transform transition-transform duration-300 ease-out flex flex-col h-full ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
+        style={{ zIndex: zIndex.drawer + 1 }}
         role="dialog"
         aria-modal="true"
         aria-labelledby="filter-drawer-title"
@@ -234,7 +237,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                     <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <Input
                         type="date"
                         value={localValues[`${field.key}Start`] || ""}
@@ -268,7 +271,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                     <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                           <Hash className="w-4 h-4" />
@@ -366,7 +369,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                     <label className="block text-sm font-medium text-slate-300">
                       {field.label}
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                           <DollarSign className="w-4 h-4" />

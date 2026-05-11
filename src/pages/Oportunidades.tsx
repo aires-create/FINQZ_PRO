@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import useAppStore from "../store";
 import api from "../api/client";
 import { useTenantFilter } from "../hooks/useTenantFilter";
@@ -202,6 +203,11 @@ const ETAPAS_PIPELINE = OFICIAL_ETAPAS.map((e, index) => ({
   cor: getCorEtapa(e.key, index)
 }));
 
+const OverlayPortal = ({ children }: { children: React.ReactNode }) => {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.body);
+};
+
 const OportunidadesPageInner = () => {
   const { 
     pipelines, 
@@ -334,8 +340,17 @@ const OportunidadesPageInner = () => {
     if (!lead) return;
     setSelectedLead(lead);
     setOpenLeadDrawer(false);
+    setShowEditDrawerModal(false);
+    setShowOpportunityForm(false);
     setShowFullscreenModal(true);
   }
+
+  const handleCloseNegotiation = () => {
+    setShowFullscreenModal(false);
+    setOpenLeadDrawer(false);
+    setShowEditDrawerModal(false);
+    setShowOpportunityForm(false);
+  };
   
   // Filter state
   const [filters, setFilters] = useState({
@@ -4092,12 +4107,13 @@ const OportunidadesPageInner = () => {
 
       {/* Modal Fullscreen de Detalhes da Negociação */}
       {showFullscreenModal && selectedLead && (
+        <OverlayPortal>
         <div className="fixed inset-0 z-50 flex flex-col bg-gray-50 overflow-hidden">
           <div className="bg-[#111827] border-b border-[#1f2937] px-6 py-4 shadow-sm flex-shrink-0">
             <div className="max-w-7xl mx-auto">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setShowFullscreenModal(false)} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
+                  <button onClick={handleCloseNegotiation} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
                   <span className="text-slate-300">|</span>
                   <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedLead?.displayId ?? selectedLead?.id ?? '---'}</h1></div>
                 </div>
@@ -4884,14 +4900,16 @@ const OportunidadesPageInner = () => {
             </div>
           </div>
         </div>
+        </OverlayPortal>
       )}
 
       {/* Se selectedLead for nulo, mostrar mensagem de erro no modal fullscreen */}
       {showFullscreenModal && !selectedLead && (
+        <OverlayPortal>
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div 
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowFullscreenModal(false)}
+            onClick={handleCloseNegotiation}
           />
           <div className="relative bg-[#111827] rounded-xl shadow-2xl p-8 max-w-md text-center">
             <AlertCircle size={48} className="mx-auto text-slate-400 mb-4" />
@@ -4902,13 +4920,14 @@ const OportunidadesPageInner = () => {
               Selecione uma oportunidade no Kanban para ver os detalhes.
             </p>
             <button
-              onClick={() => setShowFullscreenModal(false)}
+              onClick={handleCloseNegotiation}
               className="px-6 py-2.5 bg-[#000dff] text-white rounded-lg font-medium hover:bg-[#000dff]/90"
             >
               Fechar
             </button>
           </div>
         </div>
+        </OverlayPortal>
       )}
 
       {/* Formulário Lateral de Edição de Oportunidade */}
