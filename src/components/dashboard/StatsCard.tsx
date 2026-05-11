@@ -47,13 +47,13 @@ export default function StatsCard({ title, value, change, icon, variant = "blue"
   const isNegative = change?.trim().startsWith("-")
 
   return (
-    <div className={`finqz-kpi-card group ${styles.border}`}>
-      <div className="flex items-start justify-between gap-4">
+    <div className={`finqz-kpi-card group flex min-h-[116px] flex-col justify-between p-3 sm:p-4 ${styles.border}`}>
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="mb-2 flex items-center gap-2">
             {icon && (
               <div className={`
-                flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${styles.border}
+                flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${styles.border}
                 ${styles.iconBg} ${styles.iconColor}
               `}>
                 {icon}
@@ -64,14 +64,14 @@ export default function StatsCard({ title, value, change, icon, variant = "blue"
             </p>
           </div>
 
-          <h2 className="mb-2 truncate text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+          <h2 className="mb-1 truncate text-[1.35rem] font-bold leading-tight text-[var(--text-primary)]">
             {value}
           </h2>
 
           {change && (
-            <div className={`flex items-center gap-1.5 ${isNegative ? "text-red-600 dark:text-red-300" : "text-emerald-600 dark:text-emerald-300"}`}>
-              {isNegative ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
-              <p className="text-sm font-medium">
+            <div className={`flex min-w-0 items-center gap-1.5 ${isNegative ? "text-red-600 dark:text-red-300" : "text-emerald-600 dark:text-emerald-300"}`}>
+              {isNegative ? <TrendingDown size={13} /> : <TrendingUp size={13} />}
+              <p className="truncate text-xs font-semibold">
                 {change}
               </p>
             </div>

@@ -4,11 +4,9 @@ import {
   AlertTriangle,
   BarChart3,
   CalendarDays,
-  CheckCircle2,
   CircleDollarSign,
   CreditCard,
   Filter,
-  Info,
   PieChart,
   ShoppingBag,
   Star,
@@ -57,10 +55,8 @@ type FunilStageKey = "leads" | "propostas" | "aprovados" | "contratos" | "conclu
 type SmartAlert = {
   id: string;
   titulo: string;
-  severidade: "crítico" | "atenção" | "informativo";
-  motivo: string;
-  metrica: string;
-  sugestao: string;
+  severidade: "crítico" | "atenção" | "oportunidade";
+  valor: string;
   filtro?: Partial<DashboardFilters>;
 };
 
@@ -108,6 +104,18 @@ const formatMoney = (value: number) =>
     currency: "BRL",
     maximumFractionDigits: 0,
   }).format(Math.round(value));
+
+const formatCompactMoney = (value: number) => {
+  if (Math.abs(value) >= 1_000_000) {
+    return `R$ ${(value / 1_000_000).toFixed(1).replace(".", ",")} mi`;
+  }
+
+  if (Math.abs(value) >= 1_000) {
+    return `R$ ${(value / 1_000).toFixed(0)} mil`;
+  }
+
+  return formatMoney(value);
+};
 
 const formatPercent = (value: number) =>
   `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(Number.isFinite(value) ? value : 0)}%`;
@@ -274,23 +282,23 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
   const maxValue = Math.max(...values, ...previousSeries, 1);
   const getPoint = (value: number, index: number, total: number) => {
     const x = total <= 1 ? 210 : (420 / (total - 1)) * index;
-    const y = 132 - (value / maxValue) * 104;
-    return `${x.toFixed(1)},${Math.max(18, Math.min(132, y)).toFixed(1)}`;
+    const y = 128 - (value / maxValue) * 106;
+    return `${x.toFixed(1)},${Math.max(20, Math.min(128, y)).toFixed(1)}`;
   };
   const points = series.map((item, index) => getPoint(item.value, index, series.length)).join(" ");
   const previousPoints = previousSeries.map((value, index) => getPoint(value, index, previousSeries.length)).join(" ");
 
   return (
-    <div className="relative h-48 overflow-hidden rounded-lg">
+    <div className="relative h-44 overflow-hidden rounded-lg">
       <div className="absolute inset-x-0 bottom-0 h-px bg-[var(--border-muted)]" />
-      <div className="absolute inset-0 grid grid-rows-4">
-        {[100, 75, 50, 25].map((mark) => (
-          <div key={mark} className="flex items-start border-t border-[var(--border-muted)] text-[11px] text-[var(--text-muted)]">
-            <span className="w-10 pt-1">{formatMoney((maxValue * mark) / 100)}</span>
+      <div className="absolute inset-0 grid grid-rows-3">
+        {[100, 50, 0].map((mark) => (
+          <div key={mark} className="flex items-start border-t border-[var(--border-muted)] text-[10px] font-medium text-[var(--text-muted)]">
+            <span className="w-14 pt-1">{formatCompactMoney((maxValue * mark) / 100)}</span>
           </div>
         ))}
       </div>
-      <svg viewBox="0 0 420 150" className="absolute inset-x-10 bottom-7 h-32 w-[calc(100%-5rem)] overflow-visible">
+      <svg viewBox="0 0 420 150" className="absolute inset-x-14 bottom-7 h-[7.5rem] w-[calc(100%-4.75rem)] overflow-visible">
         <defs>
           <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-fill)" />
@@ -298,19 +306,19 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
           </linearGradient>
         </defs>
         <polyline points={`${points} 420,150 0,150`} fill="url(#revenueFill)" stroke="none" />
-        <polyline points={previousPoints} fill="none" stroke="var(--chart-line-2)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-        <polyline points={points} fill="none" stroke="var(--chart-line)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={previousPoints} fill="none" stroke="var(--chart-line-2)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" opacity="0.65" />
+        <polyline points={points} fill="none" stroke="var(--chart-line)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         {points.split(" ").filter(Boolean).map((point) => {
           const [cx, cy] = point.split(",");
-          return <circle key={point} cx={cx} cy={cy} r="5" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="3" />;
+          return <circle key={point} cx={cx} cy={cy} r="4" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="2.5" />;
         })}
       </svg>
       <div
-        className="absolute bottom-1 left-10 right-4 grid text-center text-xs text-[var(--text-muted)]"
+        className="absolute bottom-1 left-14 right-4 grid text-center text-[11px] font-medium text-[var(--text-muted)]"
         style={{ gridTemplateColumns: `repeat(${Math.max(series.length, 1)}, minmax(0, 1fr))` }}
       >
-        {series.map((item) => (
-          <span key={item.label} className="truncate px-1">{item.label}</span>
+        {series.map((item, index) => (
+          <span key={`${item.label}-${index}`} className="truncate px-1">{item.label}</span>
         ))}
       </div>
     </div>
@@ -488,7 +496,7 @@ export default function Dashboard() {
   const productPerformance = useMemo(() => {
     const groups = new Map<string, DashboardRow[]>();
     filteredRows.forEach((row) => {
-      const key = `${row.produtoId}-${row.subprodutoId}`;
+      const key = row.produtoId;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)?.push(row);
     });
@@ -504,9 +512,7 @@ export default function Dashboard() {
 
         return {
           produtoId: first.produtoId,
-          subprodutoId: first.subprodutoId,
           produto: first.produto,
-          subproduto: first.subproduto,
           production,
           conversion,
           leads: rows.length,
@@ -593,135 +599,89 @@ export default function Dashboard() {
   const alerts = useMemo<SmartAlert[]>(() => {
     const generated: SmartAlert[] = [];
     const productionRows = filteredRows.filter((row) => row.etapaRank >= 2);
-    const scopedPartners = filters.parceiro
-      ? parceiros.filter((partner) => String(partner.id) === filters.parceiro)
-      : parceiros;
+    const scopedPartners = filters.parceiro ? parceiros.filter((partner) => String(partner.id) === filters.parceiro) : parceiros;
+    const partnersWithoutProduction = scopedPartners.filter(
+      (partner) => !productionRows.some((row) => row.parceiroId === String(partner.id)),
+    );
 
-    scopedPartners.forEach((partner) => {
-      const rows = productionRows.filter((row) => row.parceiroId === String(partner.id));
-      if (rows.length === 0) {
-        generated.push({
-          id: `parceiro-sem-producao-${partner.id}`,
-          titulo: "Parceiro sem produção há mais de 30 dias",
-          severidade: "crítico",
-          motivo: `${partner.nome} não possui produção no período filtrado.`,
-          metrica: "Produção Total",
-          sugestao: "Aplicar filtro do parceiro e revisar carteira, pendências e cadência comercial.",
-          filtro: { parceiro: String(partner.id) },
-        });
-      }
-    });
-
-    const scopedManagers = filters.responsavel
-      ? gerenteOptions.filter((manager) => manager.id === filters.responsavel)
-      : gerenteOptions;
-
-    scopedManagers.forEach((manager) => {
-      const rows = productionRows.filter((row) => row.responsavelId === manager.id);
-      if (rows.length === 0) {
-        generated.push({
-          id: `gerente-sem-producao-${manager.id}`,
-          titulo: "Gerente sem produção há mais de 3 dias",
-          severidade: "atenção",
-          motivo: `${manager.nome} não tem operação aprovada no recorte atual.`,
-          metrica: "Conversão Geral",
-          sugestao: "Filtrar o responsável e priorizar propostas em análise ou aprovação.",
-          filtro: { responsavel: manager.id },
-        });
-      }
-    });
-
-    const paidTrafficStale = filteredRows.filter((row) => row.canal === "Tráfego Pago" && row.etapaRank <= 1 && row.diasSemMovimento > 2);
-    if (paidTrafficStale.length > 0) {
+    if (partnersWithoutProduction.length > 0) {
       generated.push({
-        id: "trafego-pago-sem-indicacao",
-        titulo: "Leads de Tráfego Pago sem indicação há mais de 2 dias",
-        severidade: "atenção",
-        motivo: `${paidTrafficStale.length} lead(s) de mídia paga ainda não avançaram para aprovação.`,
-        metrica: "CAC Médio",
-        sugestao: "Filtrar Tráfego Pago e acionar SDR/gerente para qualificação imediata.",
-        filtro: { canal: "Tráfego Pago" },
+        id: "parceiros-sem-producao",
+        titulo: "Parceiros sem produção > 30 dias",
+        severidade: "crítico",
+        valor: formatInteger(partnersWithoutProduction.length),
+        filtro: partnersWithoutProduction.length === 1 ? { parceiro: String(partnersWithoutProduction[0].id) } : undefined,
       });
     }
 
     if (metrics.conversion + 1 < previousMetrics.conversion) {
+      const delta = metrics.conversion - previousMetrics.conversion;
       generated.push({
         id: "queda-conversao",
-        titulo: "Queda de conversão contra período anterior",
+        titulo: "Queda de conversão",
         severidade: "crítico",
-        motivo: `Conversão atual em ${formatPercent(metrics.conversion)}, abaixo de ${formatPercent(previousMetrics.conversion)}.`,
-        metrica: "Conversão Geral",
-        sugestao: "Revisar etapas de proposta e aprovação para identificar gargalos.",
+        valor: `${delta >= 0 ? "+" : ""}${formatPercent(delta)}`,
       });
     }
 
-    const lowProduct = productPerformance.find((item) => item.leads >= 1 && item.conversion < 25);
+    const scopedManagers = filters.responsavel ? gerenteOptions.filter((manager) => manager.id === filters.responsavel) : gerenteOptions;
+    const managersWithoutProduction = scopedManagers.filter(
+      (manager) => !productionRows.some((row) => row.responsavelId === manager.id),
+    );
+
+    if (managersWithoutProduction.length > 0) {
+      generated.push({
+        id: "gerentes-sem-producao",
+        titulo: "Gerentes sem produção",
+        severidade: "atenção",
+        valor: formatInteger(managersWithoutProduction.length),
+        filtro: managersWithoutProduction.length === 1 ? { responsavel: managersWithoutProduction[0].id } : undefined,
+      });
+    }
+
+    const paidTrafficStale = filteredRows.filter((row) => row.canal === "Tráfego Pago" && row.etapaRank <= 1 && row.diasSemMovimento > 2);
+    if (paidTrafficStale.length > 0) {
+      const maxDays = Math.max(...paidTrafficStale.map((row) => row.diasSemMovimento));
+      generated.push({
+        id: "trafego-pago-sem-evolucao",
+        titulo: "Leads de Tráfego Pago sem evolução",
+        severidade: "atenção",
+        valor: `${formatInteger(maxDays)} dias`,
+        filtro: { canal: "Tráfego Pago" },
+      });
+    }
+
+    const subproductGroups = new Map<string, DashboardRow[]>();
+    filteredRows.forEach((row) => {
+      const key = `${row.produtoId}-${row.subprodutoId}`;
+      if (!subproductGroups.has(key)) subproductGroups.set(key, []);
+      subproductGroups.get(key)?.push(row);
+    });
+
+    const lowProduct = Array.from(subproductGroups.values())
+      .map((rows) => {
+        const first = rows[0];
+        const conversion = rows.length ? (rows.filter((row) => row.etapaRank >= 2).length / rows.length) * 100 : 0;
+        return { produtoId: first.produtoId, produto: first.produto, conversion, leads: rows.length };
+      })
+      .filter((item) => item.leads >= 1 && item.conversion < 25)
+      .sort((a, b) => a.conversion - b.conversion)[0];
+
     if (lowProduct) {
       generated.push({
-        id: `produto-baixa-performance-${lowProduct.produtoId}-${lowProduct.subprodutoId}`,
-        titulo: "Produto ou subproduto com baixa performance",
-        severidade: "atenção",
-        motivo: `${lowProduct.produto} / ${lowProduct.subproduto} está com ${formatPercent(lowProduct.conversion)} de conversão.`,
-        metrica: "Desempenho por Produto",
-        sugestao: "Filtrar o produto e revisar roteiro, oferta e pendências documentais.",
-        filtro: { produto: lowProduct.produtoId, subproduto: lowProduct.subprodutoId },
+        id: "produto-baixa-performance",
+        titulo: "Produto/Subproduto com baixa performance",
+        severidade: "oportunidade",
+        valor: lowProduct.produto,
+        filtro: { produto: lowProduct.produtoId },
       });
     }
 
-    const expensiveChannel = channelData.find((channel) => channel.leads > 0 && channel.cac > channel.expectedCac);
-    if (expensiveChannel) {
-      generated.push({
-        id: `canal-cac-${expensiveChannel.label}`,
-        titulo: "Canal com CAC acima do esperado",
-        severidade: "atenção",
-        motivo: `${expensiveChannel.label} está com CAC de ${formatMoney(expensiveChannel.cac)}.`,
-        metrica: "CAC Médio",
-        sugestao: "Filtrar o canal e redistribuir investimento para origens com maior conversão.",
-        filtro: { canal: expensiveChannel.label },
-      });
-    }
-
-    const partnerGroups = new Map<string, DashboardRow[]>();
-    filteredRows.forEach((row) => {
-      if (!row.parceiroId) return;
-      if (!partnerGroups.has(row.parceiroId)) partnerGroups.set(row.parceiroId, []);
-      partnerGroups.get(row.parceiroId)?.push(row);
-    });
-
-    const partnerWithLowConversion = Array.from(partnerGroups.values()).find((rows) => {
-      const conversion = rows.length ? (rows.filter((row) => row.etapaRank >= 2).length / rows.length) * 100 : 0;
-      return rows.length >= 2 && conversion < 25;
-    });
-
-    if (partnerWithLowConversion) {
-      const first = partnerWithLowConversion[0];
-      generated.push({
-        id: `parceiro-leads-baixa-conversao-${first.parceiroId}`,
-        titulo: "Parceiro com muitos leads e baixa conversão",
-        severidade: "crítico",
-        motivo: `${first.parceiro} gerou ${partnerWithLowConversion.length} leads com baixa evolução no funil.`,
-        metrica: "Funil Consolidado",
-        sugestao: "Filtrar parceiro e comparar qualidade de entrada com aprovações.",
-        filtro: { parceiro: first.parceiroId },
-      });
-    }
-
-    if (generated.length === 0) {
-      generated.push({
-        id: "operacao-estavel",
-        titulo: "Operação sem alertas críticos no recorte",
-        severidade: "informativo",
-        motivo: "Nenhuma ruptura operacional relevante foi encontrada para os filtros ativos.",
-        metrica: "Saúde operacional",
-        sugestao: "Manter acompanhamento diário e comparar com o próximo período.",
-      });
-    }
-
-    const severityOrder = { crítico: 0, atenção: 1, informativo: 2 };
+    const severityOrder = { crítico: 0, atenção: 1, oportunidade: 2 };
     return generated
       .sort((a, b) => severityOrder[a.severidade] - severityOrder[b.severidade])
-      .slice(0, 7);
-  }, [channelData, filteredRows, filters, gerenteOptions, metrics.conversion, parceiros, previousMetrics.conversion, productPerformance]);
+      .slice(0, 5);
+  }, [filteredRows, filters, gerenteOptions, metrics.conversion, parceiros, previousMetrics.conversion]);
 
   const exportRows = useMemo(() => {
     const rows = [
@@ -732,8 +692,8 @@ export default function Dashboard() {
       { secao: "KPIs", indicador: "LTV Médio", metrica: "Valor", valor: formatMoney(metrics.ltv), contexto: "Valor médio estimado", sugestao: "" },
       ...funnelRows.map((row) => ({ secao: "Funil Consolidado", indicador: row.label, metrica: "Volume", valor: row.value, contexto: row.conversion, sugestao: "" })),
       ...channelData.map((channel) => ({ secao: "Receita por Canal", indicador: channel.label, metrica: "Produção", valor: formatMoney(channel.production), contexto: `${formatPercent(channel.percentage)} | CAC ${formatMoney(channel.cac)}`, sugestao: "" })),
-      ...productPerformance.map((product) => ({ secao: "Desempenho por Produto", indicador: `${product.produto} / ${product.subproduto}`, metrica: "Produção", valor: formatMoney(product.production), contexto: `${product.leads} lead(s) | ${formatPercent(product.conversion)}`, sugestao: "" })),
-      ...alerts.map((alert) => ({ secao: "Alertas Inteligentes", indicador: alert.titulo, metrica: alert.metrica, valor: alert.severidade, contexto: alert.motivo, sugestao: alert.sugestao })),
+      ...productPerformance.map((product) => ({ secao: "Desempenho por Produto", indicador: product.produto, metrica: "Produção", valor: formatMoney(product.production), contexto: `${product.leads} lead(s) | ${formatPercent(product.conversion)}`, sugestao: "" })),
+      ...alerts.map((alert) => ({ secao: "Alertas Inteligentes", indicador: alert.titulo, metrica: alert.severidade, valor: alert.valor, contexto: "", sugestao: "" })),
     ];
 
     return rows;
@@ -915,9 +875,9 @@ export default function Dashboard() {
         </div>
       </Modal>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {loading ? (
-          Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-36" />)
+          Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[116px]" />)
         ) : (
           <>
             <StatsCard
@@ -960,61 +920,55 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.95fr]">
-        <div className="finqz-card p-4 sm:p-5">
-          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Desempenho por Produto e Subproduto</h3>
-              <p className="text-xs text-[var(--text-muted)]">Dados derivados da Estrutura Comercial e do funil filtrado.</p>
-            </div>
-            <span className="rounded-full border border-[var(--border-muted)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
-              {formatInteger(productPerformance.length)} grupo(s)
+        <div className="finqz-card p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Desempenho por Produto</h3>
+            <span className="rounded-full border border-[var(--border-muted)] px-2.5 py-1 text-[11px] font-bold text-[var(--text-secondary)]">
+              {formatInteger(productPerformance.length)}
             </span>
           </div>
 
           {loading ? (
             <SkeletonBlock className="h-48" />
           ) : productPerformance.length === 0 ? (
-            <EmptyState title="Nenhum desempenho encontrado" detail="Ajuste os filtros para visualizar produção por produto e subproduto." />
+            <EmptyState title="Nenhum desempenho encontrado" detail="Ajuste os filtros para visualizar produção por produto." />
           ) : (
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3">
               {productPerformance.map((product, index) => {
                 const Icon = product.Icon;
                 return (
                   <div
-                    key={`${product.produtoId}-${product.subprodutoId}`}
-                    className={`min-w-0 ${index > 0 ? "lg:border-l lg:border-[var(--border-muted)] lg:pl-5" : ""}`}
+                    key={product.produtoId}
+                    className={`min-w-0 ${index > 0 ? "lg:border-l lg:border-[var(--border-muted)] lg:pl-4" : ""}`}
                   >
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="finqz-icon-badge h-10 w-10">
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="finqz-icon-badge h-9 w-9">
                         <Icon size={18} />
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-[var(--text-primary)]">{product.produto}</p>
-                        <p className="truncate text-xs text-[var(--text-muted)]">{product.subproduto}</p>
-                      </div>
+                      <p className="min-w-0 truncate font-semibold text-[var(--text-primary)]">{product.produto}</p>
                     </div>
 
-                    <div className="grid grid-cols-[1fr_auto] items-end gap-4">
-                      <div className="space-y-3">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+                      <div className="space-y-2.5">
                         <div>
                           <p className="text-sm font-semibold text-[var(--color-primary)]">{formatMoney(product.production)}</p>
                           <p className="text-xs text-[var(--text-muted)]">Produção</p>
                         </div>
                         <div>
-                          <p className="text-xl font-bold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
+                          <p className="text-lg font-bold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
                           <p className="text-xs text-[var(--text-muted)]">Conversão</p>
                         </div>
                         <div>
-                          <p className="text-lg font-semibold text-[var(--text-primary)]">{formatInteger(product.contracts)}</p>
+                          <p className="text-base font-semibold text-[var(--text-primary)]">{formatInteger(product.contracts)}</p>
                           <p className="text-xs text-[var(--text-muted)]">Contratos</p>
                         </div>
                       </div>
 
-                      <div className="flex h-28 items-end gap-2">
+                      <div className="flex h-24 items-end gap-1.5">
                         {product.bars.map((height, barIndex) => (
                           <div
                             key={`${product.produto}-${barIndex}`}
-                            className="w-6 rounded-t-md border border-white/20 bg-gradient-to-t from-primary to-[var(--color-primary-soft)] shadow-sm"
+                            className="w-5 rounded-t-md border border-white/15 bg-gradient-to-t from-primary to-[var(--color-primary-soft)] shadow-sm"
                             style={{ height: `${height}%` }}
                           />
                         ))}
@@ -1027,11 +981,10 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="finqz-card p-4 sm:p-5">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="finqz-card p-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Funil Consolidado</h3>
-              <p className="text-xs text-[var(--text-muted)]">Leads até concluídos conforme filtros ativos.</p>
+              <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Funil Consolidado</h3>
             </div>
             <BarChart3 className="h-5 w-5 text-[var(--color-primary)]" />
           </div>
@@ -1041,19 +994,22 @@ export default function Dashboard() {
           ) : filteredRows.length === 0 ? (
             <EmptyState title="Funil sem dados" detail="Não há leads no período e filtros selecionados." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {funnelRows.map((row) => (
-                <div key={row.key} className="grid grid-cols-[96px_1fr_64px] items-center gap-3 text-sm">
-                  <span className="font-medium text-[var(--text-secondary)]">{row.label}</span>
-                  <div className="relative h-9 overflow-hidden rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-hover)]">
+                <div
+                  key={row.key}
+                  className="grid grid-cols-[82px_minmax(0,1fr)_52px] items-center gap-2 text-sm sm:grid-cols-[104px_minmax(0,1fr)_62px] sm:gap-3"
+                >
+                  <span className="truncate text-xs font-semibold text-[var(--text-secondary)] sm:text-sm">{row.label}</span>
+                  <div className="relative h-8 overflow-hidden rounded-md border border-[var(--border-muted)] bg-[var(--bg-surface-hover)]">
                     <div
-                      className="flex h-full items-center justify-center rounded-lg bg-gradient-to-r from-[var(--color-primary-soft)] to-primary text-xs font-bold text-white shadow-sm"
-                      style={{ width: row.width, marginInline: "auto" }}
+                      className="flex h-full items-center justify-end overflow-hidden rounded-md bg-gradient-to-r from-[var(--color-primary-soft)] to-primary px-2 text-[11px] font-bold text-white shadow-sm"
+                      style={{ width: row.width, minWidth: row.count > 0 ? "2rem" : 0 }}
                     >
-                      {row.value}
+                      {row.count > 0 ? row.value : ""}
                     </div>
                   </div>
-                  <span className="text-right font-semibold text-[var(--text-primary)]">{row.conversion}</span>
+                  <span className="text-right text-xs font-bold text-[var(--text-primary)] sm:text-sm">{row.conversion}</span>
                 </div>
               ))}
             </div>
@@ -1062,40 +1018,34 @@ export default function Dashboard() {
       </section>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.95fr_1.15fr]">
-        <div className="finqz-card p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Produção ao Longo do Tempo</h3>
-              <p className="text-xs text-[var(--text-muted)]">Linha pontilhada representa base comparativa.</p>
-            </div>
-            <span className="text-xs font-semibold text-[var(--color-primary)]">{formatMoney(metrics.production)}</span>
+        <div className="finqz-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Produção ao Longo do Tempo</h3>
+            <span className="shrink-0 text-xs font-bold text-[var(--color-primary)]">{formatMoney(metrics.production)}</span>
           </div>
-          {loading ? <SkeletonBlock className="h-48" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
+          {loading ? <SkeletonBlock className="h-44" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
         </div>
 
-        <div className="finqz-card p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Receita por Canal</h3>
-              <p className="text-xs text-[var(--text-muted)]">Venda Direta, Parceiros, Tráfego Pago e Indicação.</p>
-            </div>
-            <Users className="h-5 w-5 text-[var(--color-primary)]" />
+        <div className="finqz-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Receita por Canal</h3>
+            <Users className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-48" />
+            <SkeletonBlock className="h-44" />
           ) : (
-            <div className="flex flex-col items-center gap-5 sm:flex-row xl:flex-col">
+            <div className="grid items-center gap-4 sm:grid-cols-[7.5rem_minmax(0,1fr)] xl:grid-cols-1">
               <div
-                className="h-32 w-32 shrink-0 rounded-full border border-[var(--border-default)] shadow-card"
+                className="mx-auto h-28 w-28 shrink-0 rounded-full border border-[var(--border-default)] shadow-card"
                 style={{ background: channelGradient }}
               >
-                <div className="m-8 h-16 w-16 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)]" />
+                <div className="m-7 h-14 w-14 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)]" />
               </div>
-              <div className="w-full space-y-3">
+              <div className="w-full space-y-2.5">
                 {channelData.map((channel) => (
-                  <div key={channel.label} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="flex min-w-0 items-center gap-2 text-[var(--text-secondary)]">
+                  <div key={channel.label} className="flex items-center justify-between gap-3 rounded-lg px-1 py-0.5 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--text-secondary)]">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: channel.color }} />
                       <span className="truncate">{channel.label}</span>
                     </span>
@@ -1110,63 +1060,54 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="finqz-card p-4 sm:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Alertas Inteligentes</h3>
-              <p className="text-xs text-[var(--text-muted)]">Análise operacional com contexto acionável.</p>
-            </div>
-            <CheckCircle2 className="h-5 w-5 text-[var(--color-primary)]" />
+        <div className="finqz-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-[var(--text-primary)] sm:text-lg">Alertas Inteligentes</h3>
+            <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
           </div>
 
           {loading ? (
-            <SkeletonBlock className="h-56" />
+            <SkeletonBlock className="h-44" />
+          ) : alerts.length === 0 ? (
+            <EmptyState title="Sem alertas" detail="Filtros atuais sem desvios." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {alerts.map((alert) => {
-                const toneClass =
+                const alertFilter = alert.filtro;
+                const dotClass =
                   alert.severidade === "crítico"
-                    ? "border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-300"
+                    ? "bg-red-500"
                     : alert.severidade === "atenção"
-                      ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300"
-                      : "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300";
-                const Icon = alert.severidade === "informativo" ? Info : AlertTriangle;
+                      ? "bg-amber-500"
+                      : "bg-emerald-500";
+                const labelClass =
+                  alert.severidade === "crítico"
+                    ? "text-red-600 dark:text-red-300"
+                    : alert.severidade === "atenção"
+                      ? "text-amber-600 dark:text-amber-300"
+                      : "text-emerald-600 dark:text-emerald-300";
 
                 return (
-                  <div key={alert.id} className="rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-hover)] p-3">
-                    <div className="flex items-start gap-3">
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${toneClass}`}>
-                        <Icon size={16} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-[var(--text-primary)]">{alert.titulo}</p>
-                          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${toneClass}`}>
-                            {alert.severidade}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">{alert.motivo}</p>
-                        <p className="mt-2 text-xs font-semibold text-[var(--text-secondary)]">Métrica afetada: {alert.metrica}</p>
-                        <p className="mt-1 text-xs text-[var(--text-muted)]">{alert.sugestao}</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {alert.filtro && (
-                            <button
-                              type="button"
-                              onClick={() => applyAlertFilter(alert.filtro)}
-                              className="rounded-lg border border-[var(--border-default)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
-                            >
-                              Aplicar filtro
-                            </button>
-                          )}
-                          <a
-                            href="/app/crm/pipeline"
-                            className="rounded-lg border border-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--bg-elevated)]"
-                          >
-                            Abrir pipeline
-                          </a>
-                        </div>
-                      </div>
+                  <div
+                    key={alert.id}
+                    role={alertFilter ? "button" : undefined}
+                    tabIndex={alertFilter ? 0 : undefined}
+                    onClick={alertFilter ? () => applyAlertFilter(alertFilter) : undefined}
+                    onKeyDown={(event) => {
+                      if (!alertFilter || (event.key !== "Enter" && event.key !== " ")) return;
+                      event.preventDefault();
+                      applyAlertFilter(alertFilter);
+                    }}
+                    className={`flex items-center gap-3 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-hover)] px-3 py-2.5 transition-colors ${
+                      alertFilter ? "cursor-pointer hover:border-[var(--color-primary)]/50 hover:bg-[var(--bg-elevated)]" : ""
+                    }`}
+                  >
+                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{alert.titulo}</p>
+                      <p className={`mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] ${labelClass}`}>{alert.severidade}</p>
                     </div>
+                    <p className="max-w-[42%] truncate text-right text-sm font-bold text-[var(--text-primary)]">{alert.valor}</p>
                   </div>
                 );
               })}
