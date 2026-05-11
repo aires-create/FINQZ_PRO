@@ -415,12 +415,12 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
       <svg viewBox="0 0 420 150" className="absolute inset-x-12 bottom-8 h-40 w-[calc(100%-4.25rem)] overflow-visible sm:inset-x-14 sm:w-[calc(100%-4.75rem)]">
         <defs>
           <linearGradient id="revenueFill" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.28" />
-            <stop offset="58%" stopColor="var(--chart-fill)" stopOpacity="0.16" />
+            <stop offset="0%" stopColor="var(--chart-line)" stopOpacity="0.16" />
+            <stop offset="62%" stopColor="var(--chart-fill)" stopOpacity="0.08" />
             <stop offset="100%" stopColor="var(--chart-fill)" stopOpacity="0" />
           </linearGradient>
-          <filter id="revenueGlow" x="-10%" y="-30%" width="120%" height="160%">
-            <feGaussianBlur stdDeviation="2.4" result="blur" />
+          <filter id="revenueGlow" x="-8%" y="-22%" width="116%" height="144%">
+            <feGaussianBlur stdDeviation="1.15" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -428,12 +428,13 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
           </filter>
         </defs>
         <path d={areaPath} fill="url(#revenueFill)" stroke="none" />
-        <path d={previousPath} fill="none" stroke="var(--chart-line-2)" strokeWidth="1.8" strokeDasharray="6 7" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
-        <path d={linePath} fill="none" stroke="var(--chart-line)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" filter="url(#revenueGlow)" />
+        <path d={previousPath} fill="none" stroke="var(--chart-line-2)" strokeWidth="1.35" strokeDasharray="6 7" strokeLinecap="round" strokeLinejoin="round" opacity="0.42" />
+        <path d={linePath} fill="none" stroke="var(--chart-line)" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.14" filter="url(#revenueGlow)" />
+        <path d={linePath} fill="none" stroke="var(--chart-line)" strokeWidth="2.05" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
         {points.map((point, index) => {
           const item = series[index];
           return (
-            <circle key={`${item.label}-${point.x}`} cx={point.x} cy={point.y} r="3.8" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="2.2">
+            <circle key={`${item.label}-${point.x}`} cx={point.x} cy={point.y} r="3.1" fill="var(--bg-elevated)" stroke="var(--chart-line)" strokeWidth="1.65" opacity="0.95">
               <title>{`${item.label}: ${formatMoney(item.value)}`}</title>
             </circle>
           );
@@ -1216,7 +1217,7 @@ export default function Dashboard() {
 
         {loading ? (
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[92px]" />)}
+            {Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[96px]" />)}
           </div>
         ) : alerts.length === 0 ? (
           <EmptyState title="Sem alertas" detail="Filtros atuais sem desvios." />
@@ -1226,43 +1227,54 @@ export default function Dashboard() {
               const alertFilter = alert.filtro;
               const visual =
                 alert.id === "parceiros-sem-producao"
-                  ? { Icon: Users, color: "text-red-300", bg: "from-red-500/28 to-red-500/8" }
+                  ? { Icon: Users, color: "text-red-300", bg: "from-red-500/18 to-red-500/5" }
                   : alert.id === "queda-conversao"
-                    ? { Icon: TrendingDown, color: "text-amber-300", bg: "from-amber-500/28 to-amber-500/8" }
+                    ? { Icon: TrendingDown, color: "text-amber-300", bg: "from-amber-500/18 to-amber-500/5" }
                     : alert.id === "gerentes-sem-producao"
-                      ? { Icon: UserRound, color: "text-red-300", bg: "from-red-500/28 to-red-500/8" }
+                      ? { Icon: UserRound, color: "text-red-300", bg: "from-red-500/18 to-red-500/5" }
                       : alert.id === "trafego-pago-sem-evolucao"
-                        ? { Icon: Clock3, color: "text-amber-300", bg: "from-amber-500/28 to-amber-500/8" }
-                        : { Icon: Box, color: "text-purple-300", bg: "from-purple-500/28 to-purple-500/8" };
+                        ? { Icon: Clock3, color: "text-amber-300", bg: "from-amber-500/18 to-amber-500/5" }
+                        : { Icon: Box, color: "text-purple-300", bg: "from-purple-500/18 to-purple-500/5" };
               const Icon = visual.Icon;
+              const isProductPerformanceAlert = alert.id === "produto-baixa-performance";
 
               return (
                 <div
                   key={alert.id}
                   role={alertFilter ? "button" : undefined}
                   tabIndex={alertFilter ? 0 : undefined}
+                  aria-label={`${alert.titulo}: ${alert.valor}`}
                   onClick={alertFilter ? () => applyAlertFilter(alertFilter) : undefined}
                   onKeyDown={(event) => {
                     if (!alertFilter || (event.key !== "Enter" && event.key !== " ")) return;
                     event.preventDefault();
                     applyAlertFilter(alertFilter);
                   }}
-                  className={`flex min-h-[92px] items-center gap-3 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-all duration-200 ${
-                    alertFilter ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-500/30 hover:bg-[var(--bg-elevated)]" : ""
+                  className={`grid h-[96px] grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-3 py-2.5 transition-all duration-200 ${
+                    alertFilter ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-500/25 hover:bg-[var(--bg-elevated)]" : "hover:border-[var(--border-strong)]"
                   }`}
                 >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${visual.bg} ${visual.color}`}>
-                    <Icon size={19} />
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${visual.bg} ${visual.color}`}>
+                    <Icon size={18} strokeWidth={1.8} />
                   </div>
                   <div className="min-w-0">
-                    <p className="line-clamp-2 text-xs font-semibold leading-snug text-[var(--text-primary)] sm:text-[13px]">{alert.titulo}</p>
-                    <p className={`mt-1.5 truncate text-xl font-extrabold leading-none sm:text-2xl ${
-                      alert.severidade === "crítico"
-                        ? "text-red-500 dark:text-red-300"
-                        : alert.severidade === "atenção"
-                          ? "text-amber-500 dark:text-amber-300"
-                          : "text-purple-500 dark:text-purple-300"
-                    }`}>{alert.valor}</p>
+                    <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4 text-[var(--text-secondary)] sm:text-[13px]">{alert.titulo}</p>
+                    <div className="relative mt-1.5 max-w-full overflow-hidden pr-5" title={isProductPerformanceAlert ? alert.valor : undefined}>
+                      <p
+                        className={`truncate text-lg font-bold leading-none tabular-nums sm:text-xl ${
+                          alert.severidade === "crítico"
+                            ? "text-red-500 dark:text-red-300"
+                            : alert.severidade === "atenção"
+                              ? "text-amber-500 dark:text-amber-300"
+                              : "text-purple-500 dark:text-purple-300"
+                        }`}
+                      >
+                        {alert.valor}
+                      </p>
+                      {isProductPerformanceAlert ? (
+                        <span className="pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-[var(--bg-surface-soft)] to-transparent" />
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               );
