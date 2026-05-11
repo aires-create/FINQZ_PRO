@@ -869,7 +869,7 @@ export default function Dashboard() {
       },
       {
         id: "produto-baixa-performance",
-        titulo: "Produto/subproduto baixa performance",
+        titulo: "Produto e Subproduto",
         severidade: "oportunidade",
         valor: lowProduct?.produto ?? "Sem desvio",
         filtro: lowProduct ? { produto: lowProduct.produtoId } : undefined,
@@ -1216,13 +1216,13 @@ export default function Dashboard() {
         </div>
 
         {loading ? (
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, index) => <SkeletonBlock key={index} className="h-[96px]" />)}
           </div>
         ) : alerts.length === 0 ? (
           <EmptyState title="Sem alertas" detail="Filtros atuais sem desvios." />
         ) : (
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
             {alerts.map((alert) => {
               const alertFilter = alert.filtro;
               const visual =
@@ -1259,9 +1259,9 @@ export default function Dashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4 text-[var(--text-secondary)] sm:text-[13px]">{alert.titulo}</p>
-                    <div className="relative mt-1.5 max-w-full overflow-hidden pr-5" title={isProductPerformanceAlert ? alert.valor : undefined}>
+                    <div className={isProductPerformanceAlert ? "mt-1.5 max-w-full" : "relative mt-1.5 max-w-full overflow-hidden pr-5"}>
                       <p
-                        className={`truncate text-lg font-bold leading-none tabular-nums sm:text-xl ${
+                        className={`${isProductPerformanceAlert ? "whitespace-normal break-words text-base leading-tight sm:text-[17px]" : "truncate text-lg leading-none sm:text-xl"} font-bold tabular-nums ${
                           alert.severidade === "crítico"
                             ? "text-red-500 dark:text-red-300"
                             : alert.severidade === "atenção"
