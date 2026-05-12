@@ -43,7 +43,9 @@ export interface JWTPayload {
   userId: string;
   tenantId: string;
   roleId: string;
+  role: string;
   email: string;
+  permissions?: string[];
   iat?: number;
   exp?: number;
 }

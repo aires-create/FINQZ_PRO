@@ -101,7 +101,7 @@ export class AuthService {
       // Hash password
       const hashedPassword = await hashPassword(data.password);
 
-      // Create user
+      // Create user with primary role assignment through userRoles
       const user = await prisma.user.create({
         data: {
           email: data.email,
@@ -109,21 +109,31 @@ export class AuthService {
           password: hashedPassword,
           firstName: data.firstName,
           lastName: data.lastName || '',
-          tenantId: tenant.id,
-          roleId: role.id,
+          tenant: { connect: { id: tenant.id } },
+          userRoles: {
+            create: {
+              tenant: { connect: { id: tenant.id } },
+              role: { connect: { id: role.id } },
+            },
+          },
           isActive: true,
         },
         include: {
-          role: true,
           tenant: true,
+          userRoles: {
+            include: { role: true },
+          },
         },
       });
+
+      const assignedRole = user.userRoles?.[0]?.role ?? role;
 
       // Generate tokens
       const tokens = generateTokens({
         userId: user.id,
         tenantId: user.tenantId,
-        roleId: user.roleId,
+        roleId: assignedRole.id,
+        role: assignedRole.slug || assignedRole.name,
         email: user.email,
       });
 
@@ -145,7 +155,8 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role.name,
+          roleId: assignedRole.id,
+          role: assignedRole.slug || assignedRole.name,
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
         },
@@ -167,12 +178,14 @@ export class AuthService {
       // Normalize email
       const emailNormalized = data.email.toLowerCase().trim();
 
-      // Find user with tenant and role
+      // Find user with tenant and assigned roles
       const user = await prisma.user.findFirst({
         where: { emailNormalized },
         include: {
           tenant: true,
-          role: true,
+          userRoles: {
+            include: { role: true },
+          },
         },
       });
 
@@ -201,11 +214,17 @@ export class AuthService {
         data: { lastLoginAt: new Date() },
       });
 
+      const assignedRole = user.userRoles?.[0]?.role;
+      if (!assignedRole) {
+        throw new AuthenticationError('User role assignment not found', 401);
+      }
+
       // Generate tokens
       const tokens = generateTokens({
         userId: user.id,
         tenantId: user.tenantId,
-        roleId: user.roleId,
+        roleId: assignedRole.id,
+        role: assignedRole.slug || assignedRole.name,
         email: user.email,
       });
 
@@ -227,7 +246,8 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role.name,
+          roleId: assignedRole.id,
+          role: assignedRole.slug || assignedRole.name,
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
         },
@@ -275,7 +295,6 @@ export class AuthService {
           id: true,
           isActive: true,
           tenantId: true,
-          roleId: true,
           email: true,
         },
       });
@@ -285,12 +304,19 @@ export class AuthService {
       }
 
       // Generate new tokens
-      const tokens = generateTokens({
+      const tokenPayload: Omit<JWTPayload, 'iat' | 'exp'> = {
         userId: user.id,
         tenantId: user.tenantId,
-        roleId: user.roleId,
+        roleId: decoded.roleId,
+        role: decoded.role,
         email: user.email,
-      });
+      };
+
+      if (decoded.permissions) {
+        tokenPayload.permissions = decoded.permissions;
+      }
+
+      const tokens = generateTokens(tokenPayload);
 
       // Revoke old refresh token
       await prisma.refreshToken.update({

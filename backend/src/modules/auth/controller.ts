@@ -2,7 +2,7 @@
 // FINQZ PRO - Auth Controller
 // ============================================
 
-import { Request, Response, NextFunction } from 'express';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import { authService } from './service';
 import { ApiResponse } from '../../types';
 import { createModuleLogger } from '../../shared/logger';
@@ -18,210 +18,156 @@ import type {
 const logger = createModuleLogger('AuthController');
 
 export class AuthController {
-  /**
-   * Register endpoint
-   */
-  async register(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const data: RegisterRequest = req.body;
+  async register(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const data = request.body as RegisterRequest;
 
-      logger.info(`Registration request for email: ${data.email}`);
+    logger.info(`Registration request for email: ${data.email}`);
 
-      const result = await authService.register(data);
+    const result = await authService.register(data);
 
-      const response: ApiResponse<AuthResponse> = {
-        success: true,
-        data: result,
-        message: 'User registered successfully',
-      };
+    const response: ApiResponse<AuthResponse> = {
+      success: true,
+      data: result,
+      message: 'User registered successfully',
+    };
 
-      res.status(201).json(response);
-    } catch (error) {
-      next(error);
-    }
+    reply.code(201).send(response);
   }
 
-  /**
-   * Login endpoint
-   */
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const data: LoginRequest = req.body;
+  async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const data = request.body as LoginRequest;
 
-      logger.info(`Login request for email: ${data.email}`);
+    logger.info(`Login request for email: ${data.email}`);
 
-      const result = await authService.login(data);
+    const result = await authService.login(data);
 
-      // Set refresh token in secure cookie
-      res.cookie('refreshToken', result.tokens.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    reply.setCookie('refreshToken', result.tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
+    const response: ApiResponse<AuthResponse> = {
+      success: true,
+      data: result,
+      message: 'Login successful',
+    };
+
+    reply.send(response);
+  }
+
+  async refreshToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    let refreshToken = (request.body as RefreshTokenRequest)?.refreshToken;
+
+    if (!refreshToken && request.cookies?.refreshToken) {
+      refreshToken = request.cookies.refreshToken;
+    }
+
+    if (!refreshToken) {
+      reply.status(401).send({
+        success: false,
+        message: 'Refresh token required',
       });
-
-      const response: ApiResponse<AuthResponse> = {
-        success: true,
-        data: result,
-        message: 'Login successful',
-      };
-
-      res.json(response);
-    } catch (error) {
-      next(error);
+      return;
     }
+
+    logger.info('Refresh token request');
+
+    const tokens = await authService.refreshToken({ refreshToken });
+
+    reply.setCookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+
+    const response: ApiResponse<typeof tokens> = {
+      success: true,
+      data: tokens,
+      message: 'Token refreshed successfully',
+    };
+
+    reply.send(response);
   }
 
-  /**
-   * Refresh token endpoint
-   */
-  async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      let refreshToken = req.body.refreshToken;
+  async changePassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const user = request.currentUser;
+    const data = request.body as ChangePasswordRequest;
 
-      // If not in body, try to get from cookies
-      if (!refreshToken && req.cookies?.refreshToken) {
-        refreshToken = req.cookies.refreshToken;
-      }
+    logger.info(`Change password request for user: ${user?.userId}`);
 
-      if (!refreshToken) {
-        res.status(401).json({
-          success: false,
-          message: 'Refresh token required',
-        });
-        return;
-      }
+    await authService.changePassword(user!.userId, data);
 
-      const data: RefreshTokenRequest = { refreshToken };
+    const response: ApiResponse = {
+      success: true,
+      message: 'Password changed successfully',
+    };
 
-      logger.info('Refresh token request');
-
-      const tokens = await authService.refreshToken(data);
-
-      // Update refresh token in cookie
-      res.cookie('refreshToken', tokens.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
-
-      const response: ApiResponse<typeof tokens> = {
-        success: true,
-        data: tokens,
-        message: 'Token refreshed successfully',
-      };
-
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
+    reply.send(response);
   }
 
-  /**
-   * Change password endpoint
-   */
-  async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user!.userId;
-      const data: ChangePasswordRequest = req.body;
+  async getProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const user = request.currentUser;
 
-      logger.info(`Change password request for user: ${userId}`);
+    logger.info(`Get profile request for user: ${user?.userId}`);
 
-      await authService.changePassword(userId, data);
+    const profile = {
+      id: user!.userId,
+      email: user!.email,
+      tenantId: user!.tenantId,
+      roleId: user!.roleId,
+      role: user!.role,
+    };
 
-      const response: ApiResponse = {
-        success: true,
-        message: 'Password changed successfully',
-      };
+    const response: ApiResponse<typeof profile> = {
+      success: true,
+      data: profile,
+      message: 'Profile retrieved successfully',
+    };
 
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
+    reply.send(response);
   }
 
-  /**
-   * Get current user profile
-   */
-  async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user!.userId;
+  async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    let refreshToken = (request.body as LogoutRequest)?.refreshToken;
 
-      logger.info(`Get profile request for user: ${userId}`);
-
-      const profile = {
-        id: req.user!.userId,
-        email: req.user!.email,
-        tenantId: req.user!.tenantId,
-        roleId: req.user!.roleId,
-      };
-
-      const response: ApiResponse<typeof profile> = {
-        success: true,
-        data: profile,
-        message: 'Profile retrieved successfully',
-      };
-
-      res.json(response);
-    } catch (error) {
-      next(error);
+    if (!refreshToken && request.cookies?.refreshToken) {
+      refreshToken = request.cookies.refreshToken;
     }
+
+    if (refreshToken) {
+      await authService.logout(refreshToken);
+    }
+
+    reply.clearCookie('refreshToken');
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Logout successful',
+    };
+
+    reply.send(response);
   }
 
-  /**
-   * Logout endpoint (revoke refresh token)
-   */
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      let refreshToken = req.body.refreshToken;
+  async logoutAll(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const user = request.currentUser;
 
-      // If not in body, try to get from cookies
-      if (!refreshToken && req.cookies?.refreshToken) {
-        refreshToken = req.cookies.refreshToken;
-      }
+    logger.info(`Logout all sessions for user: ${user?.userId}`);
 
-      if (refreshToken) {
-        await authService.logout(refreshToken);
-      }
+    await authService.logoutAll(user!.userId);
 
-      // Clear cookie
-      res.clearCookie('refreshToken');
+    reply.clearCookie('refreshToken');
 
-      const response: ApiResponse = {
-        success: true,
-        message: 'Logout successful',
-      };
+    const response: ApiResponse = {
+      success: true,
+      message: 'All sessions logged out successfully',
+    };
 
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * Logout all sessions endpoint
-   */
-  async logoutAll(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const userId = req.user!.userId;
-
-      logger.info(`Logout all sessions for user: ${userId}`);
-
-      await authService.logoutAll(userId);
-
-      // Clear cookie
-      res.clearCookie('refreshToken');
-
-      const response: ApiResponse = {
-        success: true,
-        message: 'All sessions logged out successfully',
-      };
-
-      res.json(response);
-    } catch (error) {
-      next(error);
-    }
+    reply.send(response);
   }
 }
 

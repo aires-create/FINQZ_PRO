@@ -244,7 +244,13 @@ export class RolesService {
 
       // Check if role is assigned to users
       const userCount = await prisma.user.count({
-        where: { roleId },
+        where: {
+          userRoles: {
+            some: {
+              roleId,
+            },
+          },
+        },
       });
 
       if (userCount > 0) {
