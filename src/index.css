@@ -537,3 +537,82 @@ html:not(.dark) [class*="bg-[#2673c8]"] .text-white {
 .tracking-widest {
   letter-spacing: 0 !important;
 }
+
+.auth-login-shell {
+  background: #061344 !important;
+  color: #0f172a !important;
+}
+
+.auth-login-panel {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.auth-login-label,
+.auth-login-heading,
+.auth-login-code-value {
+  color: #0f172a !important;
+}
+
+.auth-login-muted,
+.auth-login-subtle {
+  color: #5f6f8a !important;
+}
+
+.auth-login-subtle:hover,
+.auth-login-icon-button:hover {
+  color: #0f172a !important;
+}
+
+.auth-login-icon-button {
+  color: #5f6f8a !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+.auth-login-panel input.auth-login-field {
+  background: #eaf1fb !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.auth-login-panel input.auth-login-field::placeholder {
+  color: #60708c !important;
+}
+
+.auth-login-panel input.auth-login-field:focus {
+  border-color: transparent !important;
+  box-shadow: 0 0 0 3px rgba(0, 24, 255, 0.16) !important;
+}
+
+.auth-login-panel button.auth-login-button {
+  background: #2d3767 !important;
+  border: 1px solid #2d3767 !important;
+  border-radius: 0 !important;
+  color: #ffffff !important;
+  letter-spacing: 0.24em !important;
+}
+
+.auth-login-panel button.auth-login-button:hover {
+  background: #222b52 !important;
+  border-color: #222b52 !important;
+  color: #ffffff !important;
+}
+
+.auth-login-alert {
+  background: #fff1f2 !important;
+  border: 1px solid #fecdd3 !important;
+  color: #be123c !important;
+}
+
+.auth-login-code-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.auth-login-code-label {
+  color: #64748b !important;
+}

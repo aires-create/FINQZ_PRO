@@ -44,4 +44,5 @@ YOUWARE.md
 AGENTS.md
 yw_manifest.json
 chat/
-__generated__/
+__generated__/.tmp-chrome-*
+.tmp-*
