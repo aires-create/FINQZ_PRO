@@ -251,11 +251,14 @@ export class RolesService {
             },
           },
         },
+      // Check if role is assigned to users via role assignments
+      const userRoleCount = await prisma.userRole.count({
+        where: { roleId },
       });
 
-      if (userCount > 0) {
+      if (userRoleCount > 0) {
         throw new ValidationError('Cannot delete role with assigned users', [
-          `This role is assigned to ${userCount} user(s)`,
+          `This role is assigned to ${userRoleCount} user(s)`,
         ]);
       }
 

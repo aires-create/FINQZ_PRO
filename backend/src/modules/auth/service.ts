@@ -116,6 +116,7 @@ export class AuthService {
               role: { connect: { id: role.id } },
             },
           },
+          tenantId: tenant.id,
           isActive: true,
         },
         include: {
@@ -126,15 +127,11 @@ export class AuthService {
         },
       });
 
-      const assignedRole = user.userRoles?.[0]?.role ?? role;
-
       // Generate tokens
       const tokens = generateTokens({
         userId: user.id,
         tenantId: user.tenantId,
-        roleId: assignedRole.id,
-        role: assignedRole.slug || assignedRole.name,
-        email: user.email,
+email: user.email,
       });
 
       // Store refresh token in database
@@ -155,8 +152,7 @@ export class AuthService {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          roleId: assignedRole.id,
-          role: assignedRole.slug || assignedRole.name,
+
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
         },
@@ -179,6 +175,7 @@ export class AuthService {
       const emailNormalized = data.email.toLowerCase().trim();
 
       // Find user with tenant and assigned roles
+      // Find user with tenant information
       const user = await prisma.user.findFirst({
         where: { emailNormalized },
         include: {
@@ -208,6 +205,23 @@ export class AuthService {
         throw new AuthenticationError('Invalid credentials', 401);
       }
 
+      const userRole = await prisma.userRole.findFirst({
+        where: {
+          userId: user.id,
+          tenantId: user.tenantId,
+        },
+        include: {
+          role: true,
+        },
+        orderBy: {
+          assignedAt: 'desc',
+        },
+      });
+
+      if (!userRole) {
+        throw new AuthenticationError('No role assigned to user', 401);
+      }
+
       // Update last login
       await prisma.user.update({
         where: { id: user.id },
@@ -225,6 +239,7 @@ export class AuthService {
         tenantId: user.tenantId,
         roleId: assignedRole.id,
         role: assignedRole.slug || assignedRole.name,
+        roleId: userRole.roleId,
         email: user.email,
       });
 
@@ -248,6 +263,7 @@ export class AuthService {
           lastName: user.lastName,
           roleId: assignedRole.id,
           role: assignedRole.slug || assignedRole.name,
+          role: userRole.role.name,
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
         },
@@ -303,12 +319,30 @@ export class AuthService {
         throw new AuthenticationError('User not found or inactive', 401);
       }
 
+      const userRole = await prisma.userRole.findFirst({
+        where: {
+          userId: user.id,
+          tenantId: user.tenantId,
+        },
+        select: {
+          roleId: true,
+        },
+        orderBy: {
+          assignedAt: 'desc',
+        },
+      });
+
+      if (!userRole) {
+        throw new AuthenticationError('No role assigned to user', 401);
+      }
+
       // Generate new tokens
       const tokenPayload: Omit<JWTPayload, 'iat' | 'exp'> = {
         userId: user.id,
         tenantId: user.tenantId,
         roleId: decoded.roleId,
         role: decoded.role,
+        roleId: userRole.roleId,
         email: user.email,
       };
 

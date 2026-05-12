@@ -255,7 +255,6 @@ export const roleHierarchyGuard = (requiredPermissions: string[] = []) =>
           deletedAt: null,
         },
         select: {
-          roleId: true,
           userRoles: {
             select: { roleId: true },
           },
@@ -279,10 +278,7 @@ export const roleHierarchyGuard = (requiredPermissions: string[] = []) =>
       });
 
       const roleById = new Map(roles.map((role) => [role.id, role]));
-      const assignedRoleIds = new Set<string>([
-        user.roleId,
-        ...user.userRoles.map((userRole) => userRole.roleId),
-      ]);
+      const assignedRoleIds = new Set<string>(user.userRoles.map((userRole) => userRole.roleId));
 
       const permissions = new Set<string>();
       const visitedRoles = new Set<string>();
@@ -320,9 +316,12 @@ export const roleHierarchyGuard = (requiredPermissions: string[] = []) =>
       }
 
       req.userPermissions = Array.from(permissions);
-      const primaryRole = roleById.get(user.roleId);
-      if (primaryRole) {
-        req.userRole = primaryRole;
+      const firstRoleId = user.userRoles[0]?.roleId;
+      if (firstRoleId) {
+        const primaryRole = roleById.get(firstRoleId);
+        if (primaryRole) {
+          req.userRole = primaryRole;
+        }
       }
 
       logger.debug('Role hierarchy access granted', {
