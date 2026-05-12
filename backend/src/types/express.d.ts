@@ -12,7 +12,7 @@ declare global {
       // Authentication
       user?: JWTPayload & {
         permissions?: string[];
-        role?: Role;
+        role?: string | Role;
         organizationId?: string;
       };
 

@@ -11,7 +11,7 @@ import { requestLogger } from './shared/logger';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 import { requestContext } from './middlewares/requestContext';
 
-import authRoutes from './modules/auth/routes';
+import authRoutes from './modules/auth/legacy.routes';
 import analyticsRoutes from './modules/analytics/routes';
 import bankingRoutes from './modules/banking/routes';
 import commissionsRoutes from './modules/commissions/routes';

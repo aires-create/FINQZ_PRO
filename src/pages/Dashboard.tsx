@@ -1234,9 +1234,16 @@ export default function Dashboard() {
                       ? { Icon: UserRound, color: "text-red-300", bg: "from-red-500/18 to-red-500/5" }
                       : alert.id === "trafego-pago-sem-evolucao"
                         ? { Icon: Clock3, color: "text-amber-300", bg: "from-amber-500/18 to-amber-500/5" }
-                        : { Icon: Box, color: "text-purple-300", bg: "from-purple-500/18 to-purple-500/5" };
+                        : { Icon: Box, color: "text-violet-600 dark:text-purple-300", bg: "from-purple-500/18 to-purple-500/5" };
               const Icon = visual.Icon;
               const isProductPerformanceAlert = alert.id === "produto-baixa-performance";
+              const valueTone = isProductPerformanceAlert
+                ? "text-violet-700 dark:text-purple-300"
+                : alert.severidade === "crítico"
+                  ? "text-red-500 dark:text-red-300"
+                  : alert.severidade === "atenção"
+                    ? "text-amber-500 dark:text-amber-300"
+                    : "text-purple-500 dark:text-purple-300";
 
               return (
                 <div
@@ -1261,19 +1268,10 @@ export default function Dashboard() {
                     <p className="line-clamp-2 min-h-8 text-xs font-medium leading-4 text-[var(--text-secondary)] sm:text-[13px]">{alert.titulo}</p>
                     <div className={isProductPerformanceAlert ? "mt-1.5 max-w-full" : "relative mt-1.5 max-w-full overflow-hidden pr-5"}>
                       <p
-                        className={`${isProductPerformanceAlert ? "whitespace-normal break-words text-base leading-tight sm:text-[17px]" : "truncate text-lg leading-none sm:text-xl"} font-bold tabular-nums ${
-                          alert.severidade === "crítico"
-                            ? "text-red-500 dark:text-red-300"
-                            : alert.severidade === "atenção"
-                              ? "text-amber-500 dark:text-amber-300"
-                              : "text-purple-500 dark:text-purple-300"
-                        }`}
+                        className={`${isProductPerformanceAlert ? "whitespace-normal break-words text-base leading-tight sm:text-[17px]" : "truncate text-lg leading-none sm:text-xl"} font-bold tabular-nums ${valueTone}`}
                       >
                         {alert.valor}
                       </p>
-                      {isProductPerformanceAlert ? (
-                        <span className="pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-[var(--bg-surface-soft)] to-transparent" />
-                      ) : null}
                     </div>
                   </div>
                 </div>
