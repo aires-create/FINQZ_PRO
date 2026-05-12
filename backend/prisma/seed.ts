@@ -68,7 +68,7 @@ async function seedRBAC(): Promise<void> {
     const roles = await createRoles(tenant.id, permissions);
 
     // 4. Create role-permission relations
-    await createRolePermissions(roles, permissions);
+    await createRolePermissions(tenant.id, roles, permissions);
 
     // 5. Create organizations
     const organizations = await createOrganizations(tenant.id);
@@ -817,8 +817,11 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
 /**
  * Create role-permission relationships
  */
-async function createRolePermissions(roles: Record<string, any>, permissions: Record<string, any>) {
-  logger.info('Creating role-permission relationships...');
+async function createRolePermissions(
+  tenantId: string,
+  roles: any[],
+  permissions: any[]
+): Promise<void> {
 
   const rolePermissionData = [
     {
@@ -938,9 +941,10 @@ async function createRolePermissions(roles: Record<string, any>, permissions: Re
         },
         update: {},
         create: {
-          roleId: role.id,
-          permissionId: permission.id,
-        },
+  tenantId,
+  roleId: role.id,
+  permissionId: permission.id,
+},
       });
     }
   }
@@ -1263,8 +1267,7 @@ async function createDefaultSuperAdmin(tenantId: string, roles: Record<string, a
     isEmailVerified: true,
     roleSlug: 'super-admin',
   };
-
-  const hashedPassword = await hashPassword(userData.password);
+    const hashedPassword = await hashPassword(userData.password);
 
   const user = await prisma.user.upsert({
     where: {
@@ -1283,9 +1286,22 @@ async function createDefaultSuperAdmin(tenantId: string, roles: Record<string, a
       isActive: true,
       isEmailVerified: userData.isEmailVerified,
       tenantId,
-      roleId: superAdminRole.id,
     },
   });
+  await prisma.userRole.upsert({
+  where: {
+    userId_roleId: {
+      userId: user.id,
+      roleId: superAdminRole.id,
+    },
+  },
+  update: {},
+  create: {
+    tenantId,
+    userId: user.id,
+    roleId: superAdminRole.id,
+  },
+});
 
   logger.info(`Default SUPER_ADMIN user created/updated: ${user.id}`);
   return user;
@@ -1310,16 +1326,14 @@ async function main() {
 }
 
 // Execute seed if run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main()
-    .then(() => {
-      logger.info('Seed completed successfully');
-      process.exit(0);
-    })
-    .catch((error) => {
-      logger.error('Seed failed:', error);
-      process.exit(1);
-    });
-}
+main()
+  .then(() => {
+    logger.info('Seed completed successfully');
+    process.exit(0);
+  })
+  .catch((error) => {
+    logger.error('Seed failed:', error);
+    process.exit(1);
+  });
 
 export { seedRBAC, main };
