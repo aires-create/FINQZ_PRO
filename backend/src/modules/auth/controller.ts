@@ -2,7 +2,6 @@
 // FINQZ PRO - Auth Controller
 // ============================================
 
-import type { FastifyReply, FastifyRequest } from 'fastify';
 import { authService } from './service';
 import { ApiResponse } from '../../types';
 import { createModuleLogger } from '../../shared/logger';
@@ -18,9 +17,8 @@ import type {
 const logger = createModuleLogger('AuthController');
 
 export class AuthController {
-  async register(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async register(request: any, reply: any): Promise<void> {
     const data = request.body as RegisterRequest;
-
     logger.info(`Registration request for email: ${data.email}`);
 
     const result = await authService.register(data);
@@ -34,7 +32,7 @@ export class AuthController {
     reply.code(201).send(response);
   }
 
-  async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async login(request: any, reply: any): Promise<void> {
     const data = request.body as LoginRequest;
 
     logger.info(`Login request for email: ${data.email}`);
@@ -58,7 +56,7 @@ export class AuthController {
     reply.send(response);
   }
 
-  async refreshToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async refreshToken(request: any, reply: any): Promise<void> {
     let refreshToken = (request.body as RefreshTokenRequest)?.refreshToken;
 
     if (!refreshToken && request.cookies?.refreshToken) {
@@ -94,7 +92,7 @@ export class AuthController {
     reply.send(response);
   }
 
-  async changePassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async changePassword(request: any, reply: any): Promise<void> {
     const user = request.currentUser;
     const data = request.body as ChangePasswordRequest;
 
@@ -110,7 +108,7 @@ export class AuthController {
     reply.send(response);
   }
 
-  async getProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async getProfile(request: any, reply: any): Promise<void> {
     const user = request.currentUser;
 
     logger.info(`Get profile request for user: ${user?.userId}`);
@@ -132,7 +130,7 @@ export class AuthController {
     reply.send(response);
   }
 
-  async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async logout(request: any, reply: any): Promise<void> {
     let refreshToken = (request.body as LogoutRequest)?.refreshToken;
 
     if (!refreshToken && request.cookies?.refreshToken) {
@@ -153,7 +151,7 @@ export class AuthController {
     reply.send(response);
   }
 
-  async logoutAll(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  async logoutAll(request: any, reply: any): Promise<void> {
     const user = request.currentUser;
 
     logger.info(`Logout all sessions for user: ${user?.userId}`);

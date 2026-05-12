@@ -242,15 +242,6 @@ export class RolesService {
         throw new ValidationError('Cannot delete system role', ['System roles cannot be deleted']);
       }
 
-      // Check if role is assigned to users
-      const userCount = await prisma.user.count({
-        where: {
-          userRoles: {
-            some: {
-              roleId,
-            },
-          },
-        },
       // Check if role is assigned to users via role assignments
       const userRoleCount = await prisma.userRole.count({
         where: { roleId },
@@ -260,9 +251,7 @@ export class RolesService {
         throw new ValidationError('Cannot delete role with assigned users', [
           `This role is assigned to ${userRoleCount} user(s)`,
         ]);
-      }
-
-      // Soft delete role
+      }      // Soft delete role
       await prisma.role.update({
         where: { id: roleId },
         data: { deletedAt: new Date() },
@@ -313,3 +302,4 @@ export class RolesService {
 }
 
 export const rolesService = new RolesService();
+

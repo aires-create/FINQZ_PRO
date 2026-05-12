@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyPluginAsync } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import crypto from 'node:crypto';
@@ -26,7 +26,7 @@ export const authJwtPlugin: FastifyPluginAsync = async (app) => {
   app.decorateRequest('requestId', null);
   app.decorateRequest('startTime', null);
 
-  app.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.decorate('authenticate', async (request: any, reply: any) => {
     try {
       const payload = (await request.jwtVerify()) as JWTPayload;
       request.currentUser = payload;
@@ -40,11 +40,11 @@ export const authJwtPlugin: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.decorate('challengeAuthorization', (reply: FastifyReply, message = 'Unauthorized') => {
+  app.decorate('challengeAuthorization', (reply: any, message = 'Unauthorized') => {
     reply.status(401).send(new AppError(message, 401));
   });
 
-  app.addHook('onRequest', async (request) => {
+  app.addHook('onRequest', async (request: any) => {
     request.requestId = crypto.randomUUID();
     request.startTime = Date.now();
   });

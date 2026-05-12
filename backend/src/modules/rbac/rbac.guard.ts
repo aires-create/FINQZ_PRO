@@ -1,4 +1,3 @@
-import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthorizationError, AuthenticationError } from '../../types';
 
 const normalize = (value: string | string[]) =>
@@ -7,7 +6,7 @@ const normalize = (value: string | string[]) =>
 export const requireRoles = (acceptedRoles: string | string[]) => {
   const roles = normalize(acceptedRoles);
 
-  return async (request: FastifyRequest, reply: FastifyReply) => {
+  return async (request: any, reply: any) => {
     const user = request.currentUser;
 
     if (!user) {
@@ -24,7 +23,7 @@ export const requireRoles = (acceptedRoles: string | string[]) => {
 export const requirePermissions = (requiredPermissions: string | string[]) => {
   const permissions = normalize(requiredPermissions);
 
-  return async (request: FastifyRequest, reply: FastifyReply) => {
+  return async (request: any, reply: any) => {
     const user = request.currentUser;
 
     if (!user) {

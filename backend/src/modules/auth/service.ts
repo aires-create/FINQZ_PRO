@@ -116,7 +116,6 @@ export class AuthService {
               role: { connect: { id: role.id } },
             },
           },
-          tenantId: tenant.id,
           isActive: true,
         },
         include: {
@@ -131,7 +130,9 @@ export class AuthService {
       const tokens = generateTokens({
         userId: user.id,
         tenantId: user.tenantId,
-email: user.email,
+        roleId: role.id,
+        role: role.slug || role.name,
+        email: user.email,
       });
 
       // Store refresh token in database
@@ -152,7 +153,8 @@ email: user.email,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-
+          roleId: role.id,
+          role: role.slug || role.name,
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
         },
@@ -237,9 +239,8 @@ email: user.email,
       const tokens = generateTokens({
         userId: user.id,
         tenantId: user.tenantId,
-        roleId: assignedRole.id,
-        role: assignedRole.slug || assignedRole.name,
         roleId: userRole.roleId,
+        role: assignedRole.slug || assignedRole.name,
         email: user.email,
       });
 
@@ -263,7 +264,6 @@ email: user.email,
           lastName: user.lastName,
           roleId: assignedRole.id,
           role: assignedRole.slug || assignedRole.name,
-          role: userRole.role.name,
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
         },
@@ -324,15 +324,21 @@ email: user.email,
           userId: user.id,
           tenantId: user.tenantId,
         },
-        select: {
-          roleId: true,
+        include: {
+          role: {
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           assignedAt: 'desc',
         },
       });
 
-      if (!userRole) {
+      if (!userRole || !userRole.role) {
         throw new AuthenticationError('No role assigned to user', 401);
       }
 
@@ -340,9 +346,8 @@ email: user.email,
       const tokenPayload: Omit<JWTPayload, 'iat' | 'exp'> = {
         userId: user.id,
         tenantId: user.tenantId,
-        roleId: decoded.roleId,
-        role: decoded.role,
         roleId: userRole.roleId,
+        role: userRole.role.slug || userRole.role.name,
         email: user.email,
       };
 

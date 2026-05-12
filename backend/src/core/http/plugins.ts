@@ -26,7 +26,7 @@ export const httpAuthPlugin: FastifyPluginAsync = async (app) => {
   app.decorateRequest('requestId', null);
   app.decorateRequest('startTime', null);
 
-  app.decorate('authenticate', async (request, reply) => {
+  app.decorate('authenticate', async (request: any, reply: any) => {
     try {
       const payload = (await request.jwtVerify()) as JWTPayload;
       request.currentUser = payload;
@@ -40,7 +40,7 @@ export const httpAuthPlugin: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.addHook('onRequest', async (request) => {
+  app.addHook('onRequest', async (request: any, reply: any) => {
     request.requestId = crypto.randomUUID();
     request.startTime = Date.now();
   });

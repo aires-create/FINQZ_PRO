@@ -2,7 +2,7 @@
 // FINQZ PRO - Password Utilities
 // ============================================
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { config } from '../config/app';
 import { AppError } from '../types';
 

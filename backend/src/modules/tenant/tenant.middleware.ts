@@ -1,9 +1,12 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { AuthenticationError, AuthorizationError } from '../../types';
 
-export const tenantContext = async (request: FastifyRequest, reply: FastifyReply) => {
+export const tenantContext = async (
+  request: any,
+  reply: any
+) => {
   const user = request.currentUser;
-
+  
   if (!user) {
     throw new AuthenticationError('Authentication required');
   }

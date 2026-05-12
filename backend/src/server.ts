@@ -2,10 +2,10 @@
 // FINQZ PRO - Server Entry Point
 // ============================================
 
-import app from './app';
 import { config } from './config/app';
 import { logger } from './shared/logger';
 import { testDatabaseConnection, disconnectDatabase } from './database/prisma';
+import createApp from './app';
 
 // Server startup function
 const startServer = async (): Promise<void> => {
@@ -18,8 +18,12 @@ const startServer = async (): Promise<void> => {
       throw new Error('Database connection failed');
     }
 
-    // Start HTTP server
-    const server = app.listen(config.port, config.host, () => {
+    // Build and start Fastify app
+    const app = await createApp();
+
+    await app.listen({ port: config.port, host: config.host }, (err: any, address: string) => {
+      if (err) throw err;
+      
       logger.info(`🚀 FINQZ PRO API Server running on http://${config.host}:${config.port}`);
       logger.info(`📊 Environment: ${config.nodeEnv}`);
       logger.info(`🔗 Health check: http://${config.host}:${config.port}/health`);
@@ -33,21 +37,14 @@ const startServer = async (): Promise<void> => {
     const gracefulShutdown = async (signal: string) => {
       logger.info(`Received ${signal}. Starting graceful shutdown...`);
 
-      server.close(async () => {
-        logger.info('HTTP server closed');
+      await app.close();
+      logger.info('HTTP server closed');
 
-        // Close database connection
-        await disconnectDatabase();
-        logger.info('Database connection closed');
+      // Close database connection
+      await disconnectDatabase();
+      logger.info('Database connection closed');
 
-        process.exit(0);
-      });
-
-      // Force shutdown after 10 seconds
-      setTimeout(() => {
-        logger.error('Forced shutdown after timeout');
-        process.exit(1);
-      }, 10000);
+      process.exit(0);
     };
 
     // Listen for termination signals
