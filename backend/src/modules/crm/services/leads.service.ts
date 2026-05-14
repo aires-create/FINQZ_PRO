@@ -46,7 +46,7 @@ const normalizeJson = (value: unknown) => {
 
 const normalizePositiveInteger = (
   value: number | undefined,
-  fallback: number
+  fallback: number,
 ) => {
   if (!value || Number.isNaN(value) || value < 1) {
     return fallback;
@@ -83,7 +83,7 @@ const buildLeadUpdateData = (body: UpdateLeadBody): Prisma.LeadUpdateInput => {
 const getChangedFields = (
   before: Record<string, unknown>,
   after: Record<string, unknown>,
-  fields: string[]
+  fields: string[],
 ) => {
   return fields.filter((field) => {
     return JSON.stringify(before[field]) !== JSON.stringify(after[field]);
@@ -210,7 +210,7 @@ export class LeadsService {
     id: string,
     tenantId: string,
     body: UpdateLeadBody,
-    actorId?: string | null
+    actorId?: string | null,
   ) {
     if (!tenantId) throw new Error('Missing tenant context');
 
@@ -244,7 +244,7 @@ export class LeadsService {
     const changedFields = getChangedFields(
       existingLead as unknown as Record<string, unknown>,
       updatedLead as unknown as Record<string, unknown>,
-      auditFields
+      auditFields,
     );
 
     await safeRegisterAuditLog({
@@ -255,14 +255,6 @@ export class LeadsService {
       entityId: updatedLead.id,
       metadata: {
         changedFields,
-        before: changedFields.reduce<Record<string, unknown>>((acc, field) => {
-          acc[field] = (existingLead as unknown as Record<string, unknown>)[field];
-          return acc;
-        }, {}),
-        after: changedFields.reduce<Record<string, unknown>>((acc, field) => {
-          acc[field] = (updatedLead as unknown as Record<string, unknown>)[field];
-          return acc;
-        }, {}),
       },
     });
 
@@ -284,10 +276,6 @@ export class LeadsService {
       entity: 'Lead',
       entityId: id,
       metadata: {
-        firstName: existingLead.firstName,
-        lastName: existingLead.lastName,
-        email: existingLead.email,
-        status: existingLead.status,
         deletedAt: new Date().toISOString(),
       },
     });
