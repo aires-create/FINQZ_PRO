@@ -1,9 +1,10 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { ZodError } from 'zod';
+
 import {
   createLeadSchema,
   updateLeadSchema,
 } from './validators/leads.validator';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import type { Prisma } from '@prisma/client';
 import { leadsService } from './services/leads.service';
 import { logger } from '../../shared/logger';
 import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto';
@@ -33,7 +34,24 @@ const getCurrentUserId = (request: FastifyRequest) => {
   return userId;
 };
 
+const isZodError = (error: unknown): error is ZodError => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'flatten' in error &&
+    typeof (error as ZodError).flatten === 'function'
+  );
+};
+
 const handleRouteError = (error: unknown, reply: FastifyReply) => {
+  if (isZodError(error)) {
+    return reply.status(400).send({
+      success: false,
+      message: 'Validation error',
+      errors: error.flatten(),
+    });
+  }
+
   const message = error instanceof Error ? error.message : 'Unexpected error';
 
   if (message === 'Missing tenant context' || message === 'Missing user context') {
@@ -96,38 +114,22 @@ export async function crmRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Body: CreateLeadBody }>('/leads', async (request, reply) => {
-  try {
-    const parsed = createLeadSchema.safeParse(request.body);
+    try {
+      const body = createLeadSchema.parse(request.body) as CreateLeadBody;
+      const tenantId = getTenantId(request);
+      const createdById = getCurrentUserId(request);
 
-    if (!parsed.success) {
-      return reply.status(400).send({
-        success: false,
-        message: 'Validation error',
-        errors: parsed.error.flatten(),
+      const lead = await leadsService.createLead(tenantId, createdById, body);
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Lead created successfully',
+        data: lead,
       });
+    } catch (error) {
+      return handleRouteError(error, reply);
     }
-
-    const tenantId = getTenantId(request);
-
-    const body = parsed.data as CreateLeadBody;
-
-    const createdById = getCurrentUserId(request);
-
-    const lead = await leadsService.createLead(
-      tenantId,
-      createdById,
-      body
-    );
-
-    return reply.status(201).send({
-      success: true,
-      message: 'Lead created successfully',
-      data: lead,
-    });
-  } catch (error) {
-    return handleRouteError(error, reply);
-  }
-});
+  });
 
   app.put<{ Params: LeadParams; Body: UpdateLeadBody }>(
     '/leads/:id',
@@ -135,8 +137,9 @@ export async function crmRoutes(app: FastifyInstance) {
       try {
         const { id } = request.params;
         const tenantId = getTenantId(request);
+        const body = updateLeadSchema.parse(request.body) as UpdateLeadBody;
 
-        const lead = await leadsService.updateLead(id, tenantId, request.body);
+        const lead = await leadsService.updateLead(id, tenantId, body);
 
         return reply.send({
           success: true,
@@ -155,8 +158,9 @@ export async function crmRoutes(app: FastifyInstance) {
       try {
         const { id } = request.params;
         const tenantId = getTenantId(request);
+        const body = updateLeadSchema.parse(request.body) as UpdateLeadBody;
 
-        const lead = await leadsService.updateLead(id, tenantId, request.body);
+        const lead = await leadsService.updateLead(id, tenantId, body);
 
         return reply.send({
           success: true,

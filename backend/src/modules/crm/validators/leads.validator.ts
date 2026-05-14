@@ -1,11 +1,20 @@
 import { z } from 'zod';
 
+const leadStatusSchema = z.enum([
+  'prospect',
+  'qualified',
+  'contacted',
+  'converted',
+  'lost',
+]);
+
 export const createLeadSchema = z
   .object({
-    firstName: z.string().min(1),
-    lastName: z.string().min(1),
+    firstName: z.string().min(1, 'First name is required'),
 
-    email: z.string().email().optional().nullable(),
+    lastName: z.string().min(1, 'Last name is required'),
+
+    email: z.string().email('Invalid email').optional().nullable(),
 
     phone: z.string().optional().nullable(),
 
@@ -23,19 +32,19 @@ export const createLeadSchema = z
 
     address: z.record(z.any()).optional().nullable(),
 
-    partnerId: z.string().optional().nullable(),
+    partnerId: z.string().uuid().optional().nullable(),
 
-    ownerId: z.string().optional().nullable(),
+    ownerId: z.string().uuid().optional().nullable(),
   })
   .strict();
 
 export const updateLeadSchema = z
   .object({
-    firstName: z.string().optional(),
+    firstName: z.string().min(1).optional(),
 
-    lastName: z.string().optional(),
+    lastName: z.string().min(1).optional(),
 
-    email: z.string().email().optional().nullable(),
+    email: z.string().email('Invalid email').optional().nullable(),
 
     phone: z.string().optional().nullable(),
 
@@ -45,15 +54,7 @@ export const updateLeadSchema = z
 
     income: z.union([z.number(), z.string()]).optional().nullable(),
 
-    status: z
-      .enum([
-        'prospect',
-        'qualified',
-        'contacted',
-        'converted',
-        'lost',
-      ])
-      .optional(),
+    status: leadStatusSchema.optional(),
 
     source: z.string().optional().nullable(),
 
@@ -63,8 +64,12 @@ export const updateLeadSchema = z
 
     address: z.record(z.any()).optional().nullable(),
 
-    partnerId: z.string().optional().nullable(),
+    partnerId: z.string().uuid().optional().nullable(),
 
-    ownerId: z.string().optional().nullable(),
+    ownerId: z.string().uuid().optional().nullable(),
   })
   .strict();
+
+export type CreateLeadInput = z.infer<typeof createLeadSchema>;
+
+export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
