@@ -1,17 +1,100 @@
 import { prisma } from '../../../core/prisma/client';
 import type { Prisma } from '@prisma/client';
 
+export type FindAllLeadsParams = {
+  tenantId: string;
+  page: number;
+  limit: number;
+  search?: string;
+  status?: string;
+  source?: string;
+  ownerId?: string;
+  partnerId?: string;
+};
+
 export class LeadsRepository {
-  async findAll(tenantId: string) {
-    return prisma.lead.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+  async findAll(params: FindAllLeadsParams) {
+    const {
+      tenantId,
+      page,
+      limit,
+      search,
+      status,
+      source,
+      ownerId,
+      partnerId,
+    } = params;
+
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.LeadWhereInput = {
+      tenantId,
+      deletedAt: null,
+    };
+
+    if (search) {
+      where.OR = [
+        {
+          firstName: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          lastName: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          email: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          phone: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (source) {
+      where.source = source;
+    }
+
+    if (ownerId) {
+      where.ownerId = ownerId;
+    }
+
+    if (partnerId) {
+      where.partnerId = partnerId;
+    }
+
+    const [data, total] = await prisma.$transaction([
+      prisma.lead.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      prisma.lead.count({
+        where,
+      }),
+    ]);
+
+    return {
+      data,
+      total,
+    };
   }
 
   async findById(id: string, tenantId: string) {
@@ -32,12 +115,14 @@ export class LeadsRepository {
 
   async update(
     id: string,
-    _tenantId: string,
+    tenantId: string,
     data: Prisma.LeadUpdateInput
   ) {
-    return prisma.lead.update({
+    return prisma.lead.updateMany({
       where: {
         id,
+        tenantId,
+        deletedAt: null,
       },
       data,
     });

@@ -2,6 +2,16 @@ import { Prisma } from '@prisma/client';
 import { leadsRepository } from '../repositories/leads.repository';
 import type { CreateLeadBody, UpdateLeadBody } from '../dto/leads.dto';
 
+export type ListLeadsParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  source?: string;
+  ownerId?: string;
+  partnerId?: string;
+};
+
 const normalizeText = (value?: string | null) => {
   const normalized = value?.trim();
   return normalized ? normalized : null;
@@ -27,6 +37,17 @@ const normalizeJson = (value: unknown) => {
   return value as Prisma.InputJsonValue;
 };
 
+const normalizePositiveInteger = (
+  value: number | undefined,
+  fallback: number
+) => {
+  if (!value || Number.isNaN(value) || value < 1) {
+    return fallback;
+  }
+
+  return Math.floor(value);
+};
+
 const buildLeadUpdateData = (body: UpdateLeadBody): Prisma.LeadUpdateInput => {
   const data: Prisma.LeadUpdateInput = {};
 
@@ -48,14 +69,53 @@ const buildLeadUpdateData = (body: UpdateLeadBody): Prisma.LeadUpdateInput => {
   if (body.source !== undefined) data.source = normalizeText(body.source);
   if (body.notes !== undefined) data.notes = normalizeText(body.notes);
   if (body.tags !== undefined) data.tags = normalizeJson(body.tags);
-   
+
   return data;
 };
 
 export class LeadsService {
-  async getAllLeads(tenantId: string) {
+  async getAllLeads(tenantId: string, params: ListLeadsParams = {}) {
     if (!tenantId) throw new Error('Missing tenant context');
-    return leadsRepository.findAll(tenantId);
+
+    const page = normalizePositiveInteger(params.page, 1);
+    const limit = Math.min(normalizePositiveInteger(params.limit, 20), 100);
+
+    const repositoryParams = {
+  tenantId,
+  page,
+  limit,
+  ...(normalizeText(params.search)
+    ? { search: normalizeText(params.search)! }
+    : {}),
+  ...(normalizeText(params.status)
+    ? { status: normalizeText(params.status)! }
+    : {}),
+  ...(normalizeText(params.source)
+    ? { source: normalizeText(params.source)! }
+    : {}),
+  ...(normalizeText(params.ownerId)
+    ? { ownerId: normalizeText(params.ownerId)! }
+    : {}),
+  ...(normalizeText(params.partnerId)
+    ? { partnerId: normalizeText(params.partnerId)! }
+    : {}),
+};
+
+const { data, total } = await leadsRepository.findAll(repositoryParams);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 
   async getLeadById(id: string, tenantId: string) {
@@ -103,7 +163,12 @@ export class LeadsService {
 
     const data = buildLeadUpdateData(body);
 
-    return leadsRepository.update(id, tenantId, data);
+    await leadsRepository.update(id, tenantId, data);
+
+    const updatedLead = await leadsRepository.findById(id, tenantId);
+    if (!updatedLead) throw new Error('Lead not found');
+
+    return updatedLead;
   }
 
   async deleteLead(id: string, tenantId: string) {

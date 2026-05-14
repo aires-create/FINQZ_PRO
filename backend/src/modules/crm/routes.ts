@@ -81,21 +81,44 @@ export async function crmRoutes(app: FastifyInstance) {
   app.addHook('preHandler', tenantContextMiddleware);
 
   app.get('/leads', async (request, reply) => {
-    try {
-      const tenantId = getTenantId(request);
+  try {
+    const tenantId = getTenantId(request);
 
-      logger.info('Fetching leads', { tenantId });
+    const query = request.query as {
+      page?: string;
+      limit?: string;
+      search?: string;
+      status?: string;
+      source?: string;
+      ownerId?: string;
+      partnerId?: string;
+    };
 
-      const leads = await leadsService.getAllLeads(tenantId);
+    logger.info('Fetching leads', {
+      tenantId,
+      query,
+    });
 
-      return reply.send({
-        success: true,
-        data: leads,
-      });
-    } catch (error) {
-      return handleRouteError(error, reply);
-    }
-  });
+   const listParams = {
+  ...(query.page ? { page: Number(query.page) } : {}),
+  ...(query.limit ? { limit: Number(query.limit) } : {}),
+  ...(query.search ? { search: query.search } : {}),
+  ...(query.status ? { status: query.status } : {}),
+  ...(query.source ? { source: query.source } : {}),
+  ...(query.ownerId ? { ownerId: query.ownerId } : {}),
+  ...(query.partnerId ? { partnerId: query.partnerId } : {}),
+};
+
+const leads = await leadsService.getAllLeads(tenantId, listParams);
+
+    return reply.send({
+      success: true,
+      ...leads,
+    });
+  } catch (error) {
+    return handleRouteError(error, reply);
+  }
+});
 
   app.get<{ Params: LeadParams }>('/leads/:id', async (request, reply) => {
     try {
