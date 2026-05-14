@@ -1,0 +1,23 @@
+
+prisma\schema.prisma:20:model Tenant {
+prisma\schema.prisma:54:model Organization {
+prisma\schema.prisma:87:model Membership {
+prisma\schema.prisma:120:model Partner {
+prisma\schema.prisma:158:enum RoleType {
+prisma\schema.prisma:167:enum PermissionAction {
+prisma\schema.prisma:179:model Role {
+prisma\schema.prisma:209:model Permission {
+prisma\schema.prisma:224:model RolePermission {
+prisma\schema.prisma:239:model UserRole {
+prisma\schema.prisma:258:model User {
+prisma\schema.prisma:311:model Lead {
+prisma\schema.prisma:362:model Customer {
+prisma\schema.prisma:411:model Pipeline {
+prisma\schema.prisma:433:model Stage {
+prisma\schema.prisma:457:model Opportunity {
+prisma\schema.prisma:507:model Activity {
+prisma\schema.prisma:552:model BankProposal {
+prisma\schema.prisma:603:model Commission {
+prisma\schema.prisma:648:model AuditLog {
+prisma\schema.prisma:688:model RefreshToken {
+

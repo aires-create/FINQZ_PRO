@@ -1,106 +1,197 @@
-// ============================================
-// FINQZ PRO - CRM Routes
-// ============================================
-
-import { Router, Request, Response } from 'express';
-import { asyncHandler } from '../../middlewares/errorHandler';
+import { leadsService } from './services/leads.service';
 import { logger } from '../../shared/logger';
+import type { CreateLeadBody } from './dto/leads.dto';
 
-const router = Router();
+const getHeaderValue = (value: string | string[] | undefined) => {
+  return Array.isArray(value) ? value[0] : value;
+};
 
-/**
- * GET /api/v1/crm/leads
- * List all leads for a company
- */
-router.get('/leads', asyncHandler(async (req: Request, res: Response) => {
-  const { page = 1, limit = 10, status, companyId } = req.query;
+const handleRouteError = (error: unknown, reply: any) => {
+  const message = error instanceof Error ? error.message : 'Unexpected error';
 
-  logger.info('Fetching leads', { page, limit, status, companyId });
-
-  // TODO: Implement actual leads listing with filters
-  res.json({
-    success: true,
-    message: 'Leads listing endpoint ready',
-    data: [],
-    pagination: {
-      page: parseInt(page as string),
-      limit: parseInt(limit as string),
-      total: 0,
-    },
-  });
-}));
-
-/**
- * GET /api/v1/crm/leads/:id
- * Get lead by ID
- */
-router.get('/leads/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  logger.info(`Fetching lead: ${id}`);
-
-  // TODO: Implement actual lead retrieval
-  res.json({
-    success: true,
-    message: 'Get lead endpoint ready',
-    data: { id },
-  });
-}));
-
-/**
- * POST /api/v1/crm/leads
- * Create new lead
- */
-router.post('/leads', asyncHandler(async (req: Request, res: Response) => {
-  const { firstName, lastName, email, phone, cpf, companyId } = req.body;
-
-  if (!firstName || !lastName || !companyId) {
-    return res.status(400).json({
+  if (message === 'Missing tenant context' || message === 'Missing user context') {
+    return reply.status(400).send({
       success: false,
-      message: 'Missing required fields: firstName, lastName, companyId',
+      message,
     });
   }
 
-  logger.info(`Creating lead: ${firstName} ${lastName}`);
+  if (message === 'Lead not found') {
+    return reply.status(404).send({
+      success: false,
+      message,
+    });
+  }
 
-  // TODO: Implement actual lead creation with validation
-  return res.status(201).json({
-    success: true,
-    message: 'Lead creation endpoint ready',
-    data: {
-      id: 'new-lead-id',
-      firstName,
-      lastName,
-      email,
-      phone,
-      status: 'prospect',
-    },
+  logger.error('CRM route error', { error });
+
+  return reply.status(500).send({
+    success: false,
+    message: 'Internal server error',
   });
-}));
+};
 
-/**
- * PUT /api/v1/crm/leads/:id
- * Update lead
- */
-router.put('/leads/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { firstName, lastName, email, status, score } = req.body;
+export async function crmRoutes(app: any) {
+  app.get('/leads', async (request: any, reply: any) => {
+    try {
+      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
 
-  logger.info(`Updating lead: ${id}`);
+      if (!tenantId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing tenant context',
+        });
+      }
 
-  // TODO: Implement actual lead update
-  res.json({
-    success: true,
-    message: 'Lead update endpoint ready',
-    data: {
-      id,
-      firstName,
-      lastName,
-      email,
-      status,
-      score,
-    },
+      logger.info('Fetching leads', { tenantId });
+
+      const leads = await leadsService.getAllLeads(tenantId);
+
+      return reply.send({
+        success: true,
+        data: leads,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
   });
-}));
 
-export default router;
+  app.get('/leads/:id', async (request: any, reply: any) => {
+    try {
+      const { id } = request.params as { id: string };
+      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+
+      if (!tenantId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing tenant context',
+        });
+      }
+
+      const lead = await leadsService.getLeadById(id, tenantId);
+
+      return reply.send({
+        success: true,
+        data: lead,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.post('/leads', async (request: any, reply: any) => {
+    try {
+      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+
+      if (!tenantId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing tenant context',
+        });
+      }
+
+      const body = (request.body ?? {}) as CreateLeadBody;
+      const firstName = body.firstName?.trim();
+      const lastName = body.lastName?.trim();
+
+      if (!firstName || !lastName) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing required fields: firstName, lastName',
+        });
+      }
+
+      const createdById =
+        getHeaderValue(request.headers['x-user-id']) ?? request.currentUser?.userId;
+
+      if (!createdById) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing user context',
+        });
+      }
+
+      const lead = await leadsService.createLead(tenantId, createdById, body);
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Lead created successfully',
+        data: lead,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.put('/leads/:id', async (request: any, reply: any) => {
+    try {
+      const { id } = request.params as { id: string };
+      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+
+      if (!tenantId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing tenant context',
+        });
+      }
+
+      const lead = await leadsService.updateLead(id, tenantId, request.body);
+
+      return reply.send({
+        success: true,
+        message: 'Lead updated successfully',
+        data: lead,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.patch('/leads/:id', async (request: any, reply: any) => {
+    try {
+      const { id } = request.params as { id: string };
+      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+
+      if (!tenantId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing tenant context',
+        });
+      }
+
+      const lead = await leadsService.updateLead(id, tenantId, request.body);
+
+      return reply.send({
+        success: true,
+        message: 'Lead updated successfully',
+        data: lead,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.delete('/leads/:id', async (request: any, reply: any) => {
+    try {
+      const { id } = request.params as { id: string };
+      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+
+      if (!tenantId) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Missing tenant context',
+        });
+      }
+
+      const result = await leadsService.deleteLead(id, tenantId);
+
+      return reply.send({
+        success: true,
+        message: 'Lead deleted successfully',
+        data: result,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+}
