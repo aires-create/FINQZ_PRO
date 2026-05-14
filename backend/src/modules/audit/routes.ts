@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify'
 import { getAuditLogs } from './services/audit.service'
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware'
@@ -25,13 +26,13 @@ export async function auditRoutes(app: FastifyInstance) {
     }
 
     const result = await getAuditLogs({
-      ...(query.page ? { page: Number(query.page) } : {}),
-      ...(query.limit ? { limit: Number(query.limit) } : {}),
-      ...(query.action ? { action: query.action } : {}),
-      ...(query.entity ? { entity: query.entity } : {}),
-      ...(query.userId ? { userId: query.userId } : {}),
-      tenantId,
-    })
+  tenantId,
+  page: query.page ? Number(query.page) : 1,
+  limit: query.limit ? Number(query.limit) : 20,
+  ...(query.action ? { action: query.action } : {}),
+  ...(query.entity ? { entity: query.entity } : {}),
+  ...(query.userId ? { userId: query.userId } : {}),
+});
 
     return reply.send({
       success: true,

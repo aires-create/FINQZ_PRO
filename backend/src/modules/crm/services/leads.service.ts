@@ -90,21 +90,6 @@ const getChangedFields = (
   });
 };
 
-const safeRegisterAuditLog = async (params: {
-  tenantId: string;
-  userId?: string | null;
-  action: string;
-  entity: string;
-  entityId: string;
-  metadata?: unknown;
-}) => {
-  try {
-    await registerAuditLog(params);
-  } catch (error) {
-    console.error('Failed to register audit log', error);
-  }
-};
-
 export class LeadsService {
   async getAllLeads(tenantId: string, params: ListLeadsParams = {}) {
     if (!tenantId) throw new Error('Missing tenant context');
@@ -186,7 +171,7 @@ export class LeadsService {
 
     const lead = await leadsRepository.create(data);
 
-    await safeRegisterAuditLog({
+    await registerAuditLog({
       tenantId,
       userId: createdById,
       action: AuditActions.LEAD_CREATED,
@@ -247,7 +232,7 @@ export class LeadsService {
       auditFields,
     );
 
-    await safeRegisterAuditLog({
+    await registerAuditLog({
       tenantId,
       userId: actorId ?? null,
       action: AuditActions.LEAD_UPDATED,
@@ -261,7 +246,7 @@ export class LeadsService {
     return updatedLead;
   }
 
-  async deleteLead(id: string, tenantId: string, actorId?: string | null) {
+    async deleteLead(id: string, tenantId: string, actorId?: string | null) {
     if (!tenantId) throw new Error('Missing tenant context');
 
     const existingLead = await leadsRepository.findById(id, tenantId);
@@ -269,22 +254,24 @@ export class LeadsService {
 
     await leadsRepository.softDelete(id, tenantId);
 
-    await safeRegisterAuditLog({
+        await registerAuditLog({
       tenantId,
       userId: actorId ?? null,
       action: AuditActions.LEAD_DELETED,
       entity: 'Lead',
-      entityId: id,
+      entityId: existingLead.id,
       metadata: {
+        previousStatus: existingLead.status,
+        firstName: existingLead.firstName,
+        lastName: existingLead.lastName,
+        email: existingLead.email,
+        ownerId: existingLead.ownerId,
+        partnerId: existingLead.partnerId,
         deletedAt: new Date().toISOString(),
       },
     });
 
-    return {
-      success: true,
-      deleted: true,
-      id,
-    };
+    return existingLead;
   }
 }
 

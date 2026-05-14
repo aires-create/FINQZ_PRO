@@ -1,12 +1,13 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../../core/prisma/client';
 
 export interface ListAuditLogsParams {
-  page?: number;
-  limit?: number;
+  tenantId: string;
+  page: number;
+  limit: number;
   action?: string;
   entity?: string;
   userId?: string;
-  tenantId?: string;
 }
 
 export interface CreateAuditLogParams {
@@ -15,28 +16,36 @@ export interface CreateAuditLogParams {
   action: string;
   entity: string;
   entityId: string;
-  metadata?: unknown;
+  metadata?: Prisma.InputJsonObject;
 }
 
 export async function listAuditLogs(params: ListAuditLogsParams) {
-  const page = params.page || 1;
-  const limit = params.limit || 20;
+  const {
+    tenantId,
+    page,
+    limit,
+    action,
+    entity,
+    userId,
+  } = params;
 
-  const where = {
-    ...(params.action ? { action: params.action } : {}),
-    ...(params.entity ? { entity: params.entity } : {}),
-    ...(params.userId ? { userId: params.userId } : {}),
-    ...(params.tenantId ? { tenantId: params.tenantId } : {}),
+  const skip = (page - 1) * limit;
+
+  const where: Prisma.AuditLogWhereInput = {
+    tenantId,
+    ...(action ? { action } : {}),
+    ...(entity ? { entity } : {}),
+    ...(userId ? { userId } : {}),
   };
 
-  const [data, total] = await Promise.all([
+  const [data, total] = await prisma.$transaction([
     prisma.auditLog.findMany({
       where,
-      skip: (page - 1) * limit,
-      take: limit,
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take: limit,
     }),
 
     prisma.auditLog.count({
@@ -57,15 +66,28 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
   };
 }
 
-export async function createAuditLog(params: CreateAuditLogParams) {
+export async function createAuditLog(
+  params: CreateAuditLogParams,
+) {
+  const {
+    tenantId,
+    userId,
+    action,
+    entity,
+    entityId,
+    metadata,
+  } = params;
+
+  const data: Prisma.AuditLogUncheckedCreateInput = {
+    tenantId,
+    action,
+    entity,
+    entityId,
+    ...(userId ? { userId } : {}),
+    ...(metadata ? { metadata } : {}),
+  };
+
   return prisma.auditLog.create({
-    data: {
-      tenantId: params.tenantId,
-      userId: params.userId ?? null,
-      action: params.action,
-      entity: params.entity,
-      entityId: params.entityId,
-      metadata: params.metadata ?? {},
-    },
+    data,
   });
 }
