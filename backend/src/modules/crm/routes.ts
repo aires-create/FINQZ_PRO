@@ -1,12 +1,35 @@
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { Prisma } from '@prisma/client';
 import { leadsService } from './services/leads.service';
 import { logger } from '../../shared/logger';
 import type { CreateLeadBody } from './dto/leads.dto';
+import { authenticate, tenantContextMiddleware } from '../../core/http/middleware';
 
-const getHeaderValue = (value: string | string[] | undefined) => {
-  return Array.isArray(value) ? value[0] : value;
+type LeadParams = {
+  id: string;
 };
 
-const handleRouteError = (error: unknown, reply: any) => {
+const getTenantId = (request: FastifyRequest) => {
+  const tenantId = request.currentTenant?.tenantId;
+
+  if (!tenantId) {
+    throw new Error('Missing tenant context');
+  }
+
+  return tenantId;
+};
+
+const getCurrentUserId = (request: FastifyRequest) => {
+  const userId = request.currentUser?.userId ?? request.currentTenant?.userId;
+
+  if (!userId) {
+    throw new Error('Missing user context');
+  }
+
+  return userId;
+};
+
+const handleRouteError = (error: unknown, reply: FastifyReply) => {
   const message = error instanceof Error ? error.message : 'Unexpected error';
 
   if (message === 'Missing tenant context' || message === 'Missing user context') {
@@ -31,17 +54,13 @@ const handleRouteError = (error: unknown, reply: any) => {
   });
 };
 
-export async function crmRoutes(app: any) {
-  app.get('/leads', async (request: any, reply: any) => {
-    try {
-      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+export async function crmRoutes(app: FastifyInstance) {
+  app.addHook('preHandler', authenticate);
+  app.addHook('preHandler', tenantContextMiddleware);
 
-      if (!tenantId) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing tenant context',
-        });
-      }
+  app.get('/leads', async (request, reply) => {
+    try {
+      const tenantId = getTenantId(request);
 
       logger.info('Fetching leads', { tenantId });
 
@@ -56,17 +75,10 @@ export async function crmRoutes(app: any) {
     }
   });
 
-  app.get('/leads/:id', async (request: any, reply: any) => {
+  app.get<{ Params: LeadParams }>('/leads/:id', async (request, reply) => {
     try {
-      const { id } = request.params as { id: string };
-      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
-
-      if (!tenantId) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing tenant context',
-        });
-      }
+      const { id } = request.params;
+      const tenantId = getTenantId(request);
 
       const lead = await leadsService.getLeadById(id, tenantId);
 
@@ -79,16 +91,9 @@ export async function crmRoutes(app: any) {
     }
   });
 
-  app.post('/leads', async (request: any, reply: any) => {
+  app.post<{ Body: CreateLeadBody }>('/leads', async (request, reply) => {
     try {
-      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
-
-      if (!tenantId) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing tenant context',
-        });
-      }
+      const tenantId = getTenantId(request);
 
       const body = (request.body ?? {}) as CreateLeadBody;
       const firstName = body.firstName?.trim();
@@ -101,15 +106,7 @@ export async function crmRoutes(app: any) {
         });
       }
 
-      const createdById =
-        getHeaderValue(request.headers['x-user-id']) ?? request.currentUser?.userId;
-
-      if (!createdById) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing user context',
-        });
-      }
+      const createdById = getCurrentUserId(request);
 
       const lead = await leadsService.createLead(tenantId, createdById, body);
 
@@ -123,65 +120,50 @@ export async function crmRoutes(app: any) {
     }
   });
 
-  app.put('/leads/:id', async (request: any, reply: any) => {
-    try {
-      const { id } = request.params as { id: string };
-      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+  app.put<{ Params: LeadParams; Body: Prisma.LeadUpdateInput }>(
+    '/leads/:id',
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const tenantId = getTenantId(request);
 
-      if (!tenantId) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing tenant context',
+        const lead = await leadsService.updateLead(id, tenantId, request.body);
+
+        return reply.send({
+          success: true,
+          message: 'Lead updated successfully',
+          data: lead,
         });
+      } catch (error) {
+        return handleRouteError(error, reply);
       }
-
-      const lead = await leadsService.updateLead(id, tenantId, request.body);
-
-      return reply.send({
-        success: true,
-        message: 'Lead updated successfully',
-        data: lead,
-      });
-    } catch (error) {
-      return handleRouteError(error, reply);
     }
-  });
+  );
 
-  app.patch('/leads/:id', async (request: any, reply: any) => {
-    try {
-      const { id } = request.params as { id: string };
-      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
+  app.patch<{ Params: LeadParams; Body: Prisma.LeadUpdateInput }>(
+    '/leads/:id',
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const tenantId = getTenantId(request);
 
-      if (!tenantId) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing tenant context',
+        const lead = await leadsService.updateLead(id, tenantId, request.body);
+
+        return reply.send({
+          success: true,
+          message: 'Lead updated successfully',
+          data: lead,
         });
+      } catch (error) {
+        return handleRouteError(error, reply);
       }
-
-      const lead = await leadsService.updateLead(id, tenantId, request.body);
-
-      return reply.send({
-        success: true,
-        message: 'Lead updated successfully',
-        data: lead,
-      });
-    } catch (error) {
-      return handleRouteError(error, reply);
     }
-  });
+  );
 
-  app.delete('/leads/:id', async (request: any, reply: any) => {
+  app.delete<{ Params: LeadParams }>('/leads/:id', async (request, reply) => {
     try {
-      const { id } = request.params as { id: string };
-      const tenantId = getHeaderValue(request.headers['x-tenant-id']);
-
-      if (!tenantId) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing tenant context',
-        });
-      }
+      const { id } = request.params;
+      const tenantId = getTenantId(request);
 
       const result = await leadsService.deleteLead(id, tenantId);
 
