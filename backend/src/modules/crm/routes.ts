@@ -81,44 +81,44 @@ export async function crmRoutes(app: FastifyInstance) {
   app.addHook('preHandler', tenantContextMiddleware);
 
   app.get('/leads', async (request, reply) => {
-  try {
-    const tenantId = getTenantId(request);
+    try {
+      const tenantId = getTenantId(request);
 
-    const query = request.query as {
-      page?: string;
-      limit?: string;
-      search?: string;
-      status?: string;
-      source?: string;
-      ownerId?: string;
-      partnerId?: string;
-    };
+      const query = request.query as {
+        page?: string;
+        limit?: string;
+        search?: string;
+        status?: string;
+        source?: string;
+        ownerId?: string;
+        partnerId?: string;
+      };
 
-    logger.info('Fetching leads', {
-      tenantId,
-      query,
-    });
+      logger.info('Fetching leads', {
+        tenantId,
+        query,
+      });
 
-   const listParams = {
-  ...(query.page ? { page: Number(query.page) } : {}),
-  ...(query.limit ? { limit: Number(query.limit) } : {}),
-  ...(query.search ? { search: query.search } : {}),
-  ...(query.status ? { status: query.status } : {}),
-  ...(query.source ? { source: query.source } : {}),
-  ...(query.ownerId ? { ownerId: query.ownerId } : {}),
-  ...(query.partnerId ? { partnerId: query.partnerId } : {}),
-};
+      const listParams = {
+        ...(query.page ? { page: Number(query.page) } : {}),
+        ...(query.limit ? { limit: Number(query.limit) } : {}),
+        ...(query.search ? { search: query.search } : {}),
+        ...(query.status ? { status: query.status } : {}),
+        ...(query.source ? { source: query.source } : {}),
+        ...(query.ownerId ? { ownerId: query.ownerId } : {}),
+        ...(query.partnerId ? { partnerId: query.partnerId } : {}),
+      };
 
-const leads = await leadsService.getAllLeads(tenantId, listParams);
+      const leads = await leadsService.getAllLeads(tenantId, listParams);
 
-    return reply.send({
-      success: true,
-      ...leads,
-    });
-  } catch (error) {
-    return handleRouteError(error, reply);
-  }
-});
+      return reply.send({
+        success: true,
+        ...leads,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
 
   app.get<{ Params: LeadParams }>('/leads/:id', async (request, reply) => {
     try {
@@ -160,9 +160,15 @@ const leads = await leadsService.getAllLeads(tenantId, listParams);
       try {
         const { id } = request.params;
         const tenantId = getTenantId(request);
+        const currentUserId = getCurrentUserId(request);
         const body = updateLeadSchema.parse(request.body) as UpdateLeadBody;
 
-        const lead = await leadsService.updateLead(id, tenantId, body);
+        const lead = await leadsService.updateLead(
+          id,
+          tenantId,
+          body,
+          currentUserId,
+        );
 
         return reply.send({
           success: true,
@@ -172,7 +178,7 @@ const leads = await leadsService.getAllLeads(tenantId, listParams);
       } catch (error) {
         return handleRouteError(error, reply);
       }
-    }
+    },
   );
 
   app.patch<{ Params: LeadParams; Body: UpdateLeadBody }>(
@@ -181,9 +187,15 @@ const leads = await leadsService.getAllLeads(tenantId, listParams);
       try {
         const { id } = request.params;
         const tenantId = getTenantId(request);
+        const currentUserId = getCurrentUserId(request);
         const body = updateLeadSchema.parse(request.body) as UpdateLeadBody;
 
-        const lead = await leadsService.updateLead(id, tenantId, body);
+        const lead = await leadsService.updateLead(
+          id,
+          tenantId,
+          body,
+          currentUserId,
+        );
 
         return reply.send({
           success: true,
@@ -193,15 +205,20 @@ const leads = await leadsService.getAllLeads(tenantId, listParams);
       } catch (error) {
         return handleRouteError(error, reply);
       }
-    }
+    },
   );
 
   app.delete<{ Params: LeadParams }>('/leads/:id', async (request, reply) => {
     try {
       const { id } = request.params;
       const tenantId = getTenantId(request);
+      const currentUserId = getCurrentUserId(request);
 
-      const result = await leadsService.deleteLead(id, tenantId);
+      const result = await leadsService.deleteLead(
+        id,
+        tenantId,
+        currentUserId,
+      );
 
       return reply.send({
         success: true,

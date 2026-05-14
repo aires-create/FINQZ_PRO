@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { leadsRepository } from '../repositories/leads.repository';
 import type { CreateLeadBody, UpdateLeadBody } from '../dto/leads.dto';
+import { registerAuditLog } from '../../audit/services/audit.service';
 
 export type ListLeadsParams = {
   page?: number;
@@ -11,6 +12,12 @@ export type ListLeadsParams = {
   ownerId?: string;
   partnerId?: string;
 };
+
+const AuditActions = {
+  LEAD_CREATED: 'LEAD_CREATED',
+  LEAD_UPDATED: 'LEAD_UPDATED',
+  LEAD_DELETED: 'LEAD_DELETED',
+} as const;
 
 const normalizeText = (value?: string | null) => {
   const normalized = value?.trim();
@@ -73,6 +80,31 @@ const buildLeadUpdateData = (body: UpdateLeadBody): Prisma.LeadUpdateInput => {
   return data;
 };
 
+const getChangedFields = (
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  fields: string[]
+) => {
+  return fields.filter((field) => {
+    return JSON.stringify(before[field]) !== JSON.stringify(after[field]);
+  });
+};
+
+const safeRegisterAuditLog = async (params: {
+  tenantId: string;
+  userId?: string | null;
+  action: string;
+  entity: string;
+  entityId: string;
+  metadata?: unknown;
+}) => {
+  try {
+    await registerAuditLog(params);
+  } catch (error) {
+    console.error('Failed to register audit log', error);
+  }
+};
+
 export class LeadsService {
   async getAllLeads(tenantId: string, params: ListLeadsParams = {}) {
     if (!tenantId) throw new Error('Missing tenant context');
@@ -81,27 +113,27 @@ export class LeadsService {
     const limit = Math.min(normalizePositiveInteger(params.limit, 20), 100);
 
     const repositoryParams = {
-  tenantId,
-  page,
-  limit,
-  ...(normalizeText(params.search)
-    ? { search: normalizeText(params.search)! }
-    : {}),
-  ...(normalizeText(params.status)
-    ? { status: normalizeText(params.status)! }
-    : {}),
-  ...(normalizeText(params.source)
-    ? { source: normalizeText(params.source)! }
-    : {}),
-  ...(normalizeText(params.ownerId)
-    ? { ownerId: normalizeText(params.ownerId)! }
-    : {}),
-  ...(normalizeText(params.partnerId)
-    ? { partnerId: normalizeText(params.partnerId)! }
-    : {}),
-};
+      tenantId,
+      page,
+      limit,
+      ...(normalizeText(params.search)
+        ? { search: normalizeText(params.search)! }
+        : {}),
+      ...(normalizeText(params.status)
+        ? { status: normalizeText(params.status)! }
+        : {}),
+      ...(normalizeText(params.source)
+        ? { source: normalizeText(params.source)! }
+        : {}),
+      ...(normalizeText(params.ownerId)
+        ? { ownerId: normalizeText(params.ownerId)! }
+        : {}),
+      ...(normalizeText(params.partnerId)
+        ? { partnerId: normalizeText(params.partnerId)! }
+        : {}),
+    };
 
-const { data, total } = await leadsRepository.findAll(repositoryParams);
+    const { data, total } = await leadsRepository.findAll(repositoryParams);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -152,10 +184,34 @@ const { data, total } = await leadsRepository.findAll(repositoryParams);
       ...(body.tags !== undefined ? { tags: normalizeJson(body.tags) } : {}),
     };
 
-    return leadsRepository.create(data);
+    const lead = await leadsRepository.create(data);
+
+    await safeRegisterAuditLog({
+      tenantId,
+      userId: createdById,
+      action: AuditActions.LEAD_CREATED,
+      entity: 'Lead',
+      entityId: lead.id,
+      metadata: {
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        email: lead.email,
+        status: lead.status,
+        source: lead.source,
+        ownerId: lead.ownerId,
+        partnerId: lead.partnerId,
+      },
+    });
+
+    return lead;
   }
 
-  async updateLead(id: string, tenantId: string, body: UpdateLeadBody) {
+  async updateLead(
+    id: string,
+    tenantId: string,
+    body: UpdateLeadBody,
+    actorId?: string | null
+  ) {
     if (!tenantId) throw new Error('Missing tenant context');
 
     const existingLead = await leadsRepository.findById(id, tenantId);
@@ -168,16 +224,73 @@ const { data, total } = await leadsRepository.findAll(repositoryParams);
     const updatedLead = await leadsRepository.findById(id, tenantId);
     if (!updatedLead) throw new Error('Lead not found');
 
+    const auditFields = [
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'cpf',
+      'birthDate',
+      'address',
+      'income',
+      'status',
+      'source',
+      'notes',
+      'tags',
+      'ownerId',
+      'partnerId',
+    ];
+
+    const changedFields = getChangedFields(
+      existingLead as unknown as Record<string, unknown>,
+      updatedLead as unknown as Record<string, unknown>,
+      auditFields
+    );
+
+    await safeRegisterAuditLog({
+      tenantId,
+      userId: actorId ?? null,
+      action: AuditActions.LEAD_UPDATED,
+      entity: 'Lead',
+      entityId: updatedLead.id,
+      metadata: {
+        changedFields,
+        before: changedFields.reduce<Record<string, unknown>>((acc, field) => {
+          acc[field] = (existingLead as unknown as Record<string, unknown>)[field];
+          return acc;
+        }, {}),
+        after: changedFields.reduce<Record<string, unknown>>((acc, field) => {
+          acc[field] = (updatedLead as unknown as Record<string, unknown>)[field];
+          return acc;
+        }, {}),
+      },
+    });
+
     return updatedLead;
   }
 
-  async deleteLead(id: string, tenantId: string) {
+  async deleteLead(id: string, tenantId: string, actorId?: string | null) {
     if (!tenantId) throw new Error('Missing tenant context');
 
     const existingLead = await leadsRepository.findById(id, tenantId);
     if (!existingLead) throw new Error('Lead not found');
 
     await leadsRepository.softDelete(id, tenantId);
+
+    await safeRegisterAuditLog({
+      tenantId,
+      userId: actorId ?? null,
+      action: AuditActions.LEAD_DELETED,
+      entity: 'Lead',
+      entityId: id,
+      metadata: {
+        firstName: existingLead.firstName,
+        lastName: existingLead.lastName,
+        email: existingLead.email,
+        status: existingLead.status,
+        deletedAt: new Date().toISOString(),
+      },
+    });
 
     return {
       success: true,
