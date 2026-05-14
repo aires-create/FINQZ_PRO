@@ -1,42 +1,58 @@
-import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 
-import { AppError } from "../shared/errors/AppError";
-import { JwtPayload } from "../types/request-context";
+import { AppError } from '../shared/errors/AppError';
+import { JwtPayload } from '../types/request-context';
 
 export function authenticate(
   req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    throw new AppError("Unauthorized", 401);
+    throw new AppError({
+      message: 'Unauthorized',
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+    });
   }
 
-  const [scheme, token] = authHeader.split(" ");
+  const [scheme, token] = authHeader.split(' ');
 
-  if (scheme !== "Bearer" || !token) {
-    throw new AppError("Invalid authorization header", 401);
+  if (scheme !== 'Bearer' || !token) {
+    throw new AppError({
+      message: 'Invalid authorization header',
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+    });
   }
 
   const jwtSecret = process.env.JWT_SECRET;
 
   if (!jwtSecret) {
-    throw new AppError("JWT secret not configured", 500);
+    throw new AppError({
+      message: 'JWT secret not configured',
+      statusCode: 500,
+      code: 'INTERNAL_ERROR',
+    });
   }
 
   try {
     const decoded = jwt.verify(token, jwtSecret);
 
     if (
-      typeof decoded !== "object" ||
+      typeof decoded !== 'object' ||
       decoded === null ||
-      !("tenantId" in decoded) ||
-      !("userId" in decoded)
+      !('tenantId' in decoded) ||
+      !('userId' in decoded)
     ) {
-      throw new AppError("Invalid token payload", 401);
+      throw new AppError({
+        message: 'Invalid token payload',
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+      });
     }
 
     req.user = decoded as JwtPayload;
@@ -47,6 +63,10 @@ export function authenticate(
       throw error;
     }
 
-    throw new AppError("Invalid token", 401);
+    throw new AppError({
+      message: 'Invalid token',
+      statusCode: 401,
+      code: 'UNAUTHORIZED',
+    });
   }
 }

@@ -1,19 +1,17 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
 
-import { AppError } from "../shared/errors/AppError";
+import { AppError } from '../shared/errors/AppError';
 
 export function requirePermission(permission: string) {
-  return (
-    req: Request,
-    _res: Response,
-    next: NextFunction
-  ) => {
-    const permissions = req.user?.permissions || [];
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const permissions = req.user?.permissions ?? [];
 
-    const hasPermission = permissions.includes(permission);
-
-    if (!hasPermission) {
-      throw new AppError("Forbidden", 403);
+    if (!permissions.includes(permission)) {
+      throw new AppError({
+        message: 'Permission denied',
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      });
     }
 
     next();

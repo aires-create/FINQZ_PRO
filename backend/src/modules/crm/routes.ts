@@ -9,6 +9,7 @@ import { leadsService } from './services/leads.service';
 import { logger } from '../../shared/logger';
 import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware';
+import { AppError } from '../../shared/errors';
 
 type LeadParams = {
   id: string;
@@ -18,7 +19,11 @@ const getTenantId = (request: FastifyRequest) => {
   const tenantId = request.currentTenant?.tenantId;
 
   if (!tenantId) {
-    throw new Error('Missing tenant context');
+    throw new AppError({
+      message: 'Missing tenant context',
+      statusCode: 400,
+      code: 'BAD_REQUEST',
+    });
   }
 
   return tenantId;
@@ -28,7 +33,11 @@ const getCurrentUserId = (request: FastifyRequest) => {
   const userId = request.currentUser?.userId ?? request.currentTenant?.userId;
 
   if (!userId) {
-    throw new Error('Missing user context');
+    throw new AppError({
+      message: 'Missing user context',
+      statusCode: 400,
+      code: 'BAD_REQUEST',
+    });
   }
 
   return userId;
@@ -47,32 +56,35 @@ const handleRouteError = (error: unknown, reply: FastifyReply) => {
   if (isZodError(error)) {
     return reply.status(400).send({
       success: false,
-      message: 'Validation error',
-      errors: error.flatten(),
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation error',
+        details: error.flatten(),
+      },
     });
   }
 
-  const message = error instanceof Error ? error.message : 'Unexpected error';
+  if (error instanceof AppError) {
+    const appError = error as AppError;
 
-  if (message === 'Missing tenant context' || message === 'Missing user context') {
-    return reply.status(400).send({
+    return reply.status(appError.statusCode).send({
       success: false,
-      message,
+      error: {
+        code: appError.code,
+        message: appError.message,
+        details: appError.details ?? null,
+      },
     });
   }
 
-  if (message === 'Lead not found') {
-    return reply.status(404).send({
-      success: false,
-      message,
-    });
-  }
-
-  logger.error('CRM route error', { error });
+logger.error('CRM route error', { error });
 
   return reply.status(500).send({
     success: false,
-    message: 'Internal server error',
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'Internal server error',
+    },
   });
 };
 
@@ -95,9 +107,9 @@ export async function crmRoutes(app: FastifyInstance) {
       };
 
       logger.info('Fetching leads', {
-        tenantId,
-        query,
-      });
+  tenantId,
+  query,
+});
 
       const listParams = {
         ...(query.page ? { page: Number(query.page) } : {}),

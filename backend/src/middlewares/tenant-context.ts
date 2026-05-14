@@ -1,14 +1,18 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from 'express';
 
-import { AppError } from "../shared/errors/AppError";
+import { AppError } from '../shared/errors/AppError';
 
 export function tenantContext(
   req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   if (!req.user?.tenantId) {
-    throw new AppError("Tenant not found", 401);
+    throw new AppError({
+      message: 'Missing tenant context',
+      statusCode: 400,
+      code: 'BAD_REQUEST',
+    });
   }
 
   req.tenantId = req.user.tenantId;

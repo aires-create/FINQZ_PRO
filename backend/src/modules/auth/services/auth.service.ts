@@ -1,56 +1,65 @@
-import bcrypt from "bcryptjs";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-import { AppError } from "../../../shared/errors/AppError";
-import { LoginDTO } from "../dto/login.dto";
-import { AuthRepository } from "../repositories/auth.repository";
-import { generateAccessToken, generateRefreshToken } from "../utils/token.util";
+import { prisma } from '../../../database/prisma';
+import { config } from '../../../config/app';
+import { AppError } from '../../../shared/errors/AppError';
+
+type LoginDTO = {
+  email: string;
+  password: string;
+};
 
 export class AuthService {
-  private authRepository = new AuthRepository();
+  async login({ email, password }: LoginDTO) {
+    const emailNormalized = email.trim().toLowerCase();
 
-  async login(data: LoginDTO) {
-    const user = await this.authRepository.findUserByEmail(data.email);
-
-    if (!user) {
-      throw new AppError("Invalid credentials", 401);
-    }
-
-    const isPasswordValid = await bcrypt.compare(data.password, user.password);
-
-    if (!isPasswordValid) {
-      throw new AppError("Invalid credentials", 401);
-    }
-
-    const roles = user.userRoles.map((userRole) => userRole.role.name);
-
-    const permissions = user.userRoles.flatMap((userRole) =>
-      userRole.role.rolePermissions.map(
-        (rolePermission) => rolePermission.permission.name
-      )
-    );
-
-    const accessToken = generateAccessToken({
-      sub: user.id,
-      userId: user.id,
-      tenantId: user.tenantId,
-      email: user.email,
-      roles,
-      permissions,
+    const user = await prisma.user.findFirst({
+      where: {
+        emailNormalized,
+      },
     });
 
-    const refreshToken = generateRefreshToken();
+    if (!user) {
+      throw new AppError({
+        message: 'Invalid credentials',
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+      });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, user.password);
+
+    if (!passwordMatches) {
+      throw new AppError({
+        message: 'Invalid credentials',
+        statusCode: 401,
+        code: 'UNAUTHORIZED',
+      });
+    }
+
+    const token = jwt.sign(
+  {
+    userId: user.id,
+    tenantId: user.tenantId,
+  },
+  config.jwt.secret as string,
+  {
+    expiresIn: config.jwt.expiresIn as any,
+  },
+);
 
     return {
-  accessToken,
-  refreshToken,
-  user: {
-    id: user.id,
-    name: `${user.firstName} ${user.lastName}`,
-    email: user.email,
-    tenantId: user.tenantId,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        tenantId: user.tenantId,
       },
-      roles,
-      permissions,
+      token,
     };
   }
 }
+
+export const authService = new AuthService();
