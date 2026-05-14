@@ -1,8 +1,12 @@
+import {
+  createLeadSchema,
+  updateLeadSchema,
+} from './validators/leads.validator';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Prisma } from '@prisma/client';
 import { leadsService } from './services/leads.service';
 import { logger } from '../../shared/logger';
-import type { CreateLeadBody } from './dto/leads.dto';
+import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware';
 
 type LeadParams = {
@@ -92,35 +96,40 @@ export async function crmRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Body: CreateLeadBody }>('/leads', async (request, reply) => {
-    try {
-      const tenantId = getTenantId(request);
+  try {
+    const parsed = createLeadSchema.safeParse(request.body);
 
-      const body = (request.body ?? {}) as CreateLeadBody;
-      const firstName = body.firstName?.trim();
-      const lastName = body.lastName?.trim();
-
-      if (!firstName || !lastName) {
-        return reply.status(400).send({
-          success: false,
-          message: 'Missing required fields: firstName, lastName',
-        });
-      }
-
-      const createdById = getCurrentUserId(request);
-
-      const lead = await leadsService.createLead(tenantId, createdById, body);
-
-      return reply.status(201).send({
-        success: true,
-        message: 'Lead created successfully',
-        data: lead,
+    if (!parsed.success) {
+      return reply.status(400).send({
+        success: false,
+        message: 'Validation error',
+        errors: parsed.error.flatten(),
       });
-    } catch (error) {
-      return handleRouteError(error, reply);
     }
-  });
 
-  app.put<{ Params: LeadParams; Body: Prisma.LeadUpdateInput }>(
+    const tenantId = getTenantId(request);
+
+    const body = parsed.data as CreateLeadBody;
+
+    const createdById = getCurrentUserId(request);
+
+    const lead = await leadsService.createLead(
+      tenantId,
+      createdById,
+      body
+    );
+
+    return reply.status(201).send({
+      success: true,
+      message: 'Lead created successfully',
+      data: lead,
+    });
+  } catch (error) {
+    return handleRouteError(error, reply);
+  }
+});
+
+  app.put<{ Params: LeadParams; Body: UpdateLeadBody }>(
     '/leads/:id',
     async (request, reply) => {
       try {
@@ -140,7 +149,7 @@ export async function crmRoutes(app: FastifyInstance) {
     }
   );
 
-  app.patch<{ Params: LeadParams; Body: Prisma.LeadUpdateInput }>(
+  app.patch<{ Params: LeadParams; Body: UpdateLeadBody }>(
     '/leads/:id',
     async (request, reply) => {
       try {

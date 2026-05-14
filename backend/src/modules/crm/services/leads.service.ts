@@ -1,6 +1,6 @@
+import { Prisma } from '@prisma/client';
 import { leadsRepository } from '../repositories/leads.repository';
-import type { Prisma } from '@prisma/client';
-import type { CreateLeadBody } from '../dto/leads.dto';
+import type { CreateLeadBody, UpdateLeadBody } from '../dto/leads.dto';
 
 const normalizeText = (value?: string | null) => {
   const normalized = value?.trim();
@@ -13,52 +13,63 @@ const normalizeEmail = (email?: string | null) => {
 };
 
 const normalizeDate = (value?: string | Date | null) => {
-  if (!value) {
-    return null;
-  }
-
+  if (!value) return null;
   return value instanceof Date ? value : new Date(value);
 };
 
 const normalizeNumber = (value?: number | string | null) => {
-  if (value === undefined || value === null || value === '') {
-    return null;
+  if (value === undefined || value === null || value === '') return null;
+  return Number(value);
+};
+
+const normalizeJson = (value: unknown) => {
+  if (value === null) return Prisma.JsonNull;
+  return value as Prisma.InputJsonValue;
+};
+
+const buildLeadUpdateData = (body: UpdateLeadBody): Prisma.LeadUpdateInput => {
+  const data: Prisma.LeadUpdateInput = {};
+
+  if (body.firstName !== undefined) data.firstName = body.firstName.trim();
+  if (body.lastName !== undefined) data.lastName = body.lastName.trim();
+
+  if (body.email !== undefined) {
+    const email = normalizeText(body.email);
+    data.email = email;
+    data.emailNormalized = normalizeEmail(email);
   }
 
-  return Number(value);
+  if (body.phone !== undefined) data.phone = normalizeText(body.phone);
+  if (body.cpf !== undefined) data.cpf = normalizeText(body.cpf);
+  if (body.birthDate !== undefined) data.birthDate = normalizeDate(body.birthDate);
+  if (body.address !== undefined) data.address = normalizeJson(body.address);
+  if (body.income !== undefined) data.income = normalizeNumber(body.income);
+  if (body.status !== undefined) data.status = body.status;
+  if (body.source !== undefined) data.source = normalizeText(body.source);
+  if (body.notes !== undefined) data.notes = normalizeText(body.notes);
+  if (body.tags !== undefined) data.tags = normalizeJson(body.tags);
+   
+  return data;
 };
 
 export class LeadsService {
   async getAllLeads(tenantId: string) {
-    if (!tenantId) {
-      throw new Error('Missing tenant context');
-    }
-
+    if (!tenantId) throw new Error('Missing tenant context');
     return leadsRepository.findAll(tenantId);
   }
 
   async getLeadById(id: string, tenantId: string) {
-    if (!tenantId) {
-      throw new Error('Missing tenant context');
-    }
+    if (!tenantId) throw new Error('Missing tenant context');
 
     const lead = await leadsRepository.findById(id, tenantId);
-
-    if (!lead) {
-      throw new Error('Lead not found');
-    }
+    if (!lead) throw new Error('Lead not found');
 
     return lead;
   }
 
   async createLead(tenantId: string, createdById: string, body: CreateLeadBody) {
-    if (!tenantId) {
-      throw new Error('Missing tenant context');
-    }
-
-    if (!createdById) {
-      throw new Error('Missing user context');
-    }
+    if (!tenantId) throw new Error('Missing tenant context');
+    if (!createdById) throw new Error('Missing user context');
 
     const email = normalizeText(body.email);
 
@@ -72,46 +83,34 @@ export class LeadsService {
       phone: normalizeText(body.phone),
       cpf: normalizeText(body.cpf),
       birthDate: normalizeDate(body.birthDate),
-      address: body.address,
       income: normalizeNumber(body.income),
       source: normalizeText(body.source),
       notes: normalizeText(body.notes),
-      tags: body.tags,
       partnerId: normalizeText(body.partnerId),
       ownerId: normalizeText(body.ownerId),
+      ...(body.address !== undefined ? { address: normalizeJson(body.address) } : {}),
+      ...(body.tags !== undefined ? { tags: normalizeJson(body.tags) } : {}),
     };
 
     return leadsRepository.create(data);
   }
 
-  async updateLead(
-    id: string,
-    tenantId: string,
-    data: Prisma.LeadUpdateInput
-  ) {
-    if (!tenantId) {
-      throw new Error('Missing tenant context');
-    }
+  async updateLead(id: string, tenantId: string, body: UpdateLeadBody) {
+    if (!tenantId) throw new Error('Missing tenant context');
 
     const existingLead = await leadsRepository.findById(id, tenantId);
+    if (!existingLead) throw new Error('Lead not found');
 
-    if (!existingLead) {
-      throw new Error('Lead not found');
-    }
+    const data = buildLeadUpdateData(body);
 
     return leadsRepository.update(id, tenantId, data);
   }
 
   async deleteLead(id: string, tenantId: string) {
-    if (!tenantId) {
-      throw new Error('Missing tenant context');
-    }
+    if (!tenantId) throw new Error('Missing tenant context');
 
     const existingLead = await leadsRepository.findById(id, tenantId);
-
-    if (!existingLead) {
-      throw new Error('Lead not found');
-    }
+    if (!existingLead) throw new Error('Lead not found');
 
     await leadsRepository.softDelete(id, tenantId);
 
