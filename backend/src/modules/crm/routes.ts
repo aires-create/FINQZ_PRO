@@ -6,6 +6,7 @@ import {
   updateLeadSchema,
 } from './validators/leads.validator';
 import { leadsService } from './services/leads.service';
+import { getLeadTimeline } from './services/lead-timeline.service';
 import { logger } from '../../shared/logger';
 import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware';
@@ -65,19 +66,17 @@ const handleRouteError = (error: unknown, reply: FastifyReply) => {
   }
 
   if (error instanceof AppError) {
-    const appError = error as AppError;
-
-    return reply.status(appError.statusCode).send({
+    return reply.status(error.statusCode).send({
       success: false,
       error: {
-        code: appError.code,
-        message: appError.message,
-        details: appError.details ?? null,
+        code: error.code,
+        message: error.message,
+        details: error.details ?? null,
       },
     });
   }
 
-logger.error('CRM route error', { error });
+  logger.error('CRM route error', { error });
 
   return reply.status(500).send({
     success: false,
@@ -107,9 +106,9 @@ export async function crmRoutes(app: FastifyInstance) {
       };
 
       logger.info('Fetching leads', {
-  tenantId,
-  query,
-});
+        tenantId,
+        query,
+      });
 
       const listParams = {
         ...(query.page ? { page: Number(query.page) } : {}),
@@ -131,6 +130,25 @@ export async function crmRoutes(app: FastifyInstance) {
       return handleRouteError(error, reply);
     }
   });
+
+  app.get<{ Params: LeadParams }>(
+    '/leads/:id/timeline',
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const tenantId = getTenantId(request);
+
+        const timeline = await getLeadTimeline(tenantId, id);
+
+        return reply.send({
+          success: true,
+          data: timeline,
+        });
+      } catch (error) {
+        return handleRouteError(error, reply);
+      }
+    },
+  );
 
   app.get<{ Params: LeadParams }>('/leads/:id', async (request, reply) => {
     try {
