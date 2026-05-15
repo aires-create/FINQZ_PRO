@@ -14,7 +14,7 @@ export async function buildFastifyApp(): Promise<any> {
   const app = Fastify({ logger: false });
 
   // Security headers
-  app.addHook('onSend', async (_request, reply, payload) => {
+  app.addHook('onSend', async (request, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
     reply.header('X-Frame-Options', 'DENY');
     reply.header('Referrer-Policy', 'no-referrer');
@@ -22,6 +22,7 @@ export async function buildFastifyApp(): Promise<any> {
       'Permissions-Policy',
       'camera=(), microphone=(), geolocation=()',
     );
+    reply.header('X-Request-ID', request.id);
 
     return payload;
   });
