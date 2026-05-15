@@ -1,5 +1,6 @@
 import {
   createAuditLog,
+  getAuditLogStats,
   listAuditLogs,
   type CreateAuditLogParams,
   type ListAuditLogsParams,
@@ -9,6 +10,16 @@ export async function getAuditLogs(
   params: ListAuditLogsParams,
 ) {
   return listAuditLogs(params);
+}
+
+export async function getAuditStats(tenantId: string) {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  return getAuditLogStats({
+    tenantId,
+    startOfDay,
+  });
 }
 
 /**

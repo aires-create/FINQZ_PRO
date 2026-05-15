@@ -24,6 +24,11 @@ export interface CreateAuditLogParams {
   metadata?: Prisma.InputJsonObject;
 }
 
+export interface AuditStatsParams {
+  tenantId: string;
+  startOfDay: Date;
+}
+
 export async function listAuditLogs(params: ListAuditLogsParams) {
   const {
   tenantId,
@@ -82,6 +87,58 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
       hasNextPage: page * limit < total,
       hasPreviousPage: page > 1,
     },
+  };
+}
+
+export async function getAuditLogStats(
+  params: AuditStatsParams,
+) {
+  const { tenantId, startOfDay } = params;
+
+  const [totalLogs, todayLogs, topActions] =
+    await prisma.$transaction([
+      prisma.auditLog.count({
+        where: {
+          tenantId,
+        },
+      }),
+
+      prisma.auditLog.count({
+        where: {
+          tenantId,
+          createdAt: {
+            gte: startOfDay,
+          },
+        },
+      }),
+
+      prisma.auditLog.groupBy({
+        by: ['action'],
+        where: {
+          tenantId,
+        },
+        _count: {
+          action: true,
+        },
+        orderBy: {
+          _count: {
+            action: 'desc',
+          },
+        },
+        take: 5,
+      }),
+    ]);
+
+  return {
+    totalLogs,
+    todayLogs,
+    topActions: topActions.map((item) => ({
+      action: item.action,
+      count:
+        item._count && typeof item._count === 'object'
+          ? item._count.action ?? 0
+          : 0,
+    })),
   };
 }
 
