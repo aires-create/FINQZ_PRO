@@ -64,21 +64,60 @@ export async function registerAuditLog(
 export const registerAuditEvent =
   registerAuditLog
 
+type AuditSeverity = 'info' | 'warning' | 'danger'
+
+interface AuditTimelineContext {
+  description: string
+  category: string
+  severity: AuditSeverity
+  icon: string
+}
+
+const auditContextByAction: Partial<Record<string, AuditTimelineContext>> = {
+  LEAD_CREATED: {
+    description: 'Lead criado',
+    category: 'CRM',
+    severity: 'info',
+    icon: 'plus-circle',
+  },
+  LEAD_UPDATED: {
+    description: 'Lead atualizado',
+    category: 'CRM',
+    severity: 'warning',
+    icon: 'edit',
+  },
+  LEAD_DELETED: {
+    description: 'Lead removido',
+    category: 'CRM',
+    severity: 'danger',
+    icon: 'trash',
+  },
+}
+
 function enrichAuditLog<T extends { action: string }>(
   log: T,
 ) {
+  const context = getAuditTimelineContext(log.action)
+
   return {
     ...log,
-    description: getAuditDescription(log.action),
+    ...context,
   }
 }
 
-function getAuditDescription(action: string) {
-  const descriptions: Record<string, string> = {
-    LEAD_CREATED: 'Lead criado',
-    LEAD_UPDATED: 'Lead atualizado',
-    LEAD_DELETED: 'Lead removido',
+function getAuditTimelineContext(
+  action: string,
+): AuditTimelineContext {
+  const context = auditContextByAction[action]
+
+  if (context) {
+    return context
   }
 
-  return descriptions[action] ?? action
+  return {
+    description: action,
+    category: 'System',
+    severity: 'info',
+    icon: 'activity',
+  }
 }
