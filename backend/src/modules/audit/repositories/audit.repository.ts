@@ -7,6 +7,7 @@ export interface ListAuditLogsParams {
   limit: number;
   action?: string;
   entity?: string;
+  entityId?: string;
   userId?: string;
 }
 
@@ -26,6 +27,7 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
     limit,
     action,
     entity,
+    entityId,
     userId,
   } = params;
 
@@ -35,6 +37,7 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
     tenantId,
     ...(action ? { action } : {}),
     ...(entity ? { entity } : {}),
+    ...(entityId ? { entityId } : {}),
     ...(userId ? { userId } : {}),
   };
 

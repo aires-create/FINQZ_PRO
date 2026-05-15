@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import type { FastifyInstance } from 'fastify'
 import { getAuditLogs } from './services/audit.service'
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware'
@@ -13,6 +12,7 @@ export async function auditRoutes(app: FastifyInstance) {
       limit?: string
       action?: string
       entity?: string
+      entityId?: string
       userId?: string
     }
 
@@ -31,6 +31,7 @@ export async function auditRoutes(app: FastifyInstance) {
   limit: query.limit ? Number(query.limit) : 20,
   ...(query.action ? { action: query.action } : {}),
   ...(query.entity ? { entity: query.entity } : {}),
+  ...(query.entityId ? { entityId: query.entityId } : {}),
   ...(query.userId ? { userId: query.userId } : {}),
 });
 
