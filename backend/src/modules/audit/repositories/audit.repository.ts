@@ -11,6 +11,8 @@ export interface ListAuditLogsParams {
   userId?: string;
   from?: Date;
   to?: Date;
+  sortBy?: 'createdAt' | 'action' | 'entity';
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface CreateAuditLogParams {
@@ -24,16 +26,18 @@ export interface CreateAuditLogParams {
 
 export async function listAuditLogs(params: ListAuditLogsParams) {
   const {
-    tenantId,
-    page,
-    limit,
-    action,
-    entity,
-    entityId,
-    userId,
-    from,
-    to,
-  } = params;
+  tenantId,
+  page,
+  limit,
+  action,
+  entity,
+  entityId,
+  userId,
+  from,
+  to,
+  sortBy = 'createdAt',
+  sortOrder = 'desc',
+} = params;
 
   const skip = (page - 1) * limit;
 
@@ -57,8 +61,8 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
     prisma.auditLog.findMany({
       where,
       orderBy: {
-        createdAt: 'desc',
-      },
+  [sortBy]: sortOrder,
+},
       skip,
       take: limit,
     }),

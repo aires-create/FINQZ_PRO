@@ -8,26 +8,30 @@ export async function auditRoutes(app: FastifyInstance) {
 
   app.get('/logs', async (request, reply) => {
     const query = request.query as {
-      page?: string
-      limit?: string
-      action?: string
-      entity?: string
-      entityId?: string
-      userId?: string
-      from?: string
-      to?: string
-    }
+  page?: string
+  limit?: string
+  action?: string
+  entity?: string
+  entityId?: string
+  userId?: string
+  from?: string
+  to?: string
+  sortBy?: string
+  sortOrder?: string
+}
 
-    const {
-      page = '1',
-      limit = '50',
-      action,
-      entity,
-      entityId,
-      userId,
-      from,
-      to,
-    } = query
+   const {
+  page = '1',
+  limit = '50',
+  action,
+  entity,
+  entityId,
+  userId,
+  from,
+  to,
+  sortBy,
+  sortOrder,
+} = query
 
     const tenantId = request.currentTenant?.tenantId
 
@@ -61,24 +65,44 @@ export async function auditRoutes(app: FastifyInstance) {
     }
 
     if (fromDate && toDate && fromDate > toDate) {
-      return reply.status(400).send({
-        success: false,
-        message: 'from date must be before or equal to to date',
-      })
-    }
+  return reply.status(400).send({
+    success: false,
+    message: 'from date must be before or equal to to date',
+  })
+}
 
-    const result = await getAuditLogs({
-      tenantId,
-      page: Number(page),
-      limit: Number(limit),
-      ...(action ? { action } : {}),
-      ...(entity ? { entity } : {}),
-      ...(entityId ? { entityId } : {}),
-      ...(userId ? { userId } : {}),
-      ...(fromDate ? { from: fromDate } : {}),
-      ...(toDate ? { to: toDate } : {}),
-    })
+const allowedSortBy = ['createdAt', 'action', 'entity'] as const
 
-    return reply.send(result)
+const allowedSortOrder = ['asc', 'desc'] as const
+
+const normalizedSortBy: 'createdAt' | 'action' | 'entity' =
+  allowedSortBy.includes(
+    sortBy as (typeof allowedSortBy)[number],
+  )
+    ? (sortBy as 'createdAt' | 'action' | 'entity')
+    : 'createdAt'
+
+const normalizedSortOrder: 'asc' | 'desc' =
+  allowedSortOrder.includes(
+    sortOrder as (typeof allowedSortOrder)[number],
+  )
+    ? (sortOrder as 'asc' | 'desc')
+    : 'desc'
+
+const result = await getAuditLogs({
+  tenantId,
+  page: Number(page),
+  limit: Number(limit),
+  sortBy: normalizedSortBy,
+  sortOrder: normalizedSortOrder,
+  ...(action ? { action } : {}),
+  ...(entity ? { entity } : {}),
+  ...(entityId ? { entityId } : {}),
+  ...(userId ? { userId } : {}),
+  ...(fromDate ? { from: fromDate } : {}),
+  ...(toDate ? { to: toDate } : {}),
+})
+
+return reply.send(result)
   })
 }
