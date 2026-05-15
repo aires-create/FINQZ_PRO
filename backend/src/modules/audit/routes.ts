@@ -14,7 +14,20 @@ export async function auditRoutes(app: FastifyInstance) {
       entity?: string
       entityId?: string
       userId?: string
+      from?: string
+      to?: string
     }
+
+    const {
+      page = '1',
+      limit = '50',
+      action,
+      entity,
+      entityId,
+      userId,
+      from,
+      to,
+    } = query
 
     const tenantId = request.currentTenant?.tenantId
 
@@ -25,19 +38,21 @@ export async function auditRoutes(app: FastifyInstance) {
       })
     }
 
-    const result = await getAuditLogs({
-  tenantId,
-  page: query.page ? Number(query.page) : 1,
-  limit: query.limit ? Number(query.limit) : 20,
-  ...(query.action ? { action: query.action } : {}),
-  ...(query.entity ? { entity: query.entity } : {}),
-  ...(query.entityId ? { entityId: query.entityId } : {}),
-  ...(query.userId ? { userId: query.userId } : {}),
-});
+    const fromDate = from ? new Date(`${from}T00:00:00.000Z`) : undefined
+    const toDate = to ? new Date(`${to}T23:59:59.999Z`) : undefined
 
-    return reply.send({
-      success: true,
-      ...result,
+    const result = await getAuditLogs({
+      tenantId,
+      page: Number(page),
+      limit: Number(limit),
+      ...(action ? { action } : {}),
+      ...(entity ? { entity } : {}),
+      ...(entityId ? { entityId } : {}),
+      ...(userId ? { userId } : {}),
+      ...(fromDate ? { from: fromDate } : {}),
+      ...(toDate ? { to: toDate } : {}),
     })
+
+    return reply.send(result)
   })
 }

@@ -9,6 +9,8 @@ export interface ListAuditLogsParams {
   entity?: string;
   entityId?: string;
   userId?: string;
+  from?: Date;
+  to?: Date;
 }
 
 export interface CreateAuditLogParams {
@@ -29,6 +31,8 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
     entity,
     entityId,
     userId,
+    from,
+    to,
   } = params;
 
   const skip = (page - 1) * limit;
@@ -39,6 +43,14 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
     ...(entity ? { entity } : {}),
     ...(entityId ? { entityId } : {}),
     ...(userId ? { userId } : {}),
+    ...((from || to)
+      ? {
+          createdAt: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {}),
   };
 
   const [data, total] = await prisma.$transaction([
