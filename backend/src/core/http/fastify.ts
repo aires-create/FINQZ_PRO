@@ -10,8 +10,59 @@ import authRoutes from '../../modules/auth/auth.routes';
 import { crmRoutes } from '../../modules/crm/routes';
 import { auditRoutes } from '../../modules/audit/routes';
 
+const developmentCorsOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+
+const getHeaderValue = (value: string | string[] | undefined) => {
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const getAllowedCorsOrigins = () => {
+  const envOrigins = (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin && origin !== '*');
+
+  const origins =
+    config.nodeEnv === 'development'
+      ? [...developmentCorsOrigins, ...envOrigins]
+      : envOrigins;
+
+  return [...new Set(origins)];
+};
+
 export async function buildFastifyApp(): Promise<any> {
   const app = Fastify({ logger: false });
+
+  // CORS
+  app.addHook('onRequest', async (request, reply) => {
+    const origin = getHeaderValue(request.headers.origin);
+    const allowedOrigins = getAllowedCorsOrigins();
+    const requestHeaders = getHeaderValue(
+      request.headers['access-control-request-headers'],
+    );
+
+    reply.header('Vary', 'Origin');
+    reply.header('Access-Control-Allow-Methods', config.cors.methods.join(', '));
+    reply.header(
+      'Access-Control-Allow-Headers',
+      requestHeaders ?? 'Authorization, Content-Type, X-Request-ID',
+    );
+
+    if (origin && allowedOrigins.includes(origin)) {
+      reply.header('Access-Control-Allow-Origin', origin);
+
+      if (config.cors.credentials) {
+        reply.header('Access-Control-Allow-Credentials', 'true');
+      }
+    }
+
+    if (request.method === 'OPTIONS') {
+      return reply.status(204).send();
+    }
+  });
 
   // Security headers
   app.addHook('onSend', async (request, reply, payload) => {
