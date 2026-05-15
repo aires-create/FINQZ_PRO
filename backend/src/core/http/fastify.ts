@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 
 import { config } from '../../config/app';
 import { logger } from '../../shared/logger';
+import { prisma } from '../prisma/client';
 
 import { authJwtPlugin } from '../../modules/auth/jwt.plugin';
 import authRoutes from '../../modules/auth/auth.routes';
@@ -24,6 +25,31 @@ export async function buildFastifyApp(): Promise<any> {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   }));
+
+  // Readiness
+  app.get('/ready', async (_request, reply) => {
+    const timestamp = new Date().toISOString();
+
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+
+      return reply.send({
+        success: true,
+        status: 'ready',
+        service: 'FINQZ PRO API',
+        database: 'connected',
+        timestamp,
+      });
+    } catch {
+      return reply.status(503).send({
+        success: false,
+        status: 'not_ready',
+        service: 'FINQZ PRO API',
+        database: 'disconnected',
+        timestamp,
+      });
+    }
+  });
 
   // Auth routes
   await authRoutes(app);
