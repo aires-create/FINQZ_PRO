@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+import { env } from '../config/env';
 import { AppError } from '../shared/errors/AppError';
 import { JwtPayload } from '../types/request-context';
 
@@ -29,18 +30,8 @@ export function authenticate(
     });
   }
 
-  const jwtSecret = process.env.JWT_SECRET;
-
-  if (!jwtSecret) {
-    throw new AppError({
-      message: 'JWT secret not configured',
-      statusCode: 500,
-      code: 'INTERNAL_ERROR',
-    });
-  }
-
   try {
-    const decoded = jwt.verify(token, jwtSecret);
+    const decoded = jwt.verify(token, env.jwtSecret);
 
     if (
       typeof decoded !== 'object' ||

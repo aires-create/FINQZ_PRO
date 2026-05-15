@@ -3,6 +3,7 @@
 // ============================================
 
 import { authService } from './service';
+import { config } from '../../config/app';
 import { ApiResponse } from '../../types';
 import { createModuleLogger } from '../../shared/logger';
 import type {
@@ -41,7 +42,7 @@ export class AuthController {
 
     reply.setCookie('refreshToken', result.tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: config.nodeEnv === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 7 * 24 * 60 * 60,
@@ -77,7 +78,7 @@ export class AuthController {
 
     reply.setCookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: config.nodeEnv === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 7 * 24 * 60 * 60,

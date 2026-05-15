@@ -30,8 +30,11 @@ const getHeaderValue = (value: string | string[] | undefined) => {
 };
 
 const getAllowedCorsOrigins = () => {
-  const envOrigins = (process.env.CORS_ORIGIN ?? '')
-    .split(',')
+  const configuredOrigins = Array.isArray(config.cors.origin)
+    ? config.cors.origin
+    : [config.cors.origin];
+
+  const envOrigins = configuredOrigins
     .map((origin) => origin.trim())
     .filter((origin) => origin && origin !== '*');
 
@@ -137,7 +140,7 @@ export async function buildFastifyApp(): Promise<any> {
     success: true,
     status: 'ok',
     service: 'FINQZ PRO API',
-    environment: process.env.NODE_ENV ?? 'development',
+    environment: config.nodeEnv,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
   }));

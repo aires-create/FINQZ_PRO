@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { env } from "../../../config/env";
 
 type AccessTokenPayload = {
   sub: string;
@@ -11,13 +12,7 @@ type AccessTokenPayload = {
 };
 
 export function generateAccessToken(payload: AccessTokenPayload): string {
-  const secret = process.env.JWT_SECRET;
-
-  if (!secret) {
-    throw new Error("JWT_SECRET is not configured");
-  }
-
-  return jwt.sign(payload, secret, {
+  return jwt.sign(payload, env.jwtSecret, {
     expiresIn: "15m",
   });
 }

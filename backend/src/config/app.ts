@@ -1,6 +1,4 @@
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { env } from './env';
 
 export interface AppConfig {
   nodeEnv: string;
@@ -31,29 +29,29 @@ export interface AppConfig {
 }
 
 export const config: AppConfig = {
-  nodeEnv: process.env.NODE_ENV || 'development',
-  host: process.env.HOST || '0.0.0.0',
-  port: Number(process.env.PORT ?? 4000),
+  nodeEnv: env.nodeEnv,
+  host: env.host,
+  port: env.port,
   cors: {
-    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) : ['*'],
+    origin: env.corsOrigin,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
     credentials: true,
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'supersecret',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'refreshsupersecret',
-    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    secret: env.jwtSecret,
+    refreshSecret: env.jwtRefreshSecret,
+    expiresIn: env.jwtExpiresIn,
+    refreshExpiresIn: env.jwtRefreshExpiresIn,
   },
-  bcryptRounds: Number(process.env.BCRYPT_ROUNDS ?? 10),
+  bcryptRounds: env.bcryptRounds,
   logging: {
-    level: process.env.LOG_LEVEL || 'info',
-    file: process.env.LOG_FILE || 'logs/app.log',
+    level: env.logLevel,
+    file: env.logFile,
   },
   swagger: {
-    title: process.env.SWAGGER_TITLE || 'FINQZ PRO API',
-    version: process.env.SWAGGER_VERSION || '1.0.0',
-    description: process.env.SWAGGER_DESCRIPTION || 'FINQZ PRO backend API documentation',
-    path: process.env.SWAGGER_PATH || '/api-docs',
+    title: env.swaggerTitle,
+    version: env.swaggerVersion,
+    description: env.swaggerDescription,
+    path: env.swaggerPath,
   },
 };
