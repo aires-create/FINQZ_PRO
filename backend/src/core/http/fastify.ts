@@ -19,6 +19,10 @@ export async function buildFastifyApp(): Promise<any> {
   app.get('/health', async () => ({
     success: true,
     status: 'ok',
+    service: 'FINQZ PRO API',
+    environment: process.env.NODE_ENV ?? 'development',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
   }));
 
   // Auth routes
