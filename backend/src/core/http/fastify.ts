@@ -46,6 +46,24 @@ const getAllowedCorsOrigins = () => {
   return [...new Set(origins)];
 };
 
+const getRequestUrlForLog = (url: string) => url.split('?')[0] || url;
+
+const getRouteForLog = (request: any) => {
+  return request.routeOptions?.url ?? request.routerPath ?? undefined;
+};
+
+const getLogLevelForStatusCode = (statusCode: number) => {
+  if (statusCode >= 500) {
+    return 'error';
+  }
+
+  if (statusCode >= 400) {
+    return 'warn';
+  }
+
+  return 'http';
+};
+
 export async function buildFastifyApp(): Promise<any> {
   const app = Fastify({ logger: false });
 
@@ -134,6 +152,30 @@ export async function buildFastifyApp(): Promise<any> {
 
   // JWT
   await app.register(authJwtPlugin);
+
+  // HTTP request logging
+  app.addHook('onRequest', async (request) => {
+    request.startTime = request.startTime ?? Date.now();
+  });
+
+  app.addHook('onResponse', async (request, reply) => {
+    const startedAt = request.startTime ?? Date.now();
+    const durationMs = Date.now() - startedAt;
+    const statusCode = reply.statusCode;
+    const level = getLogLevelForStatusCode(statusCode);
+    const url = getRequestUrlForLog(request.url);
+    const route = getRouteForLog(request);
+
+    logger[level]('HTTP request completed', {
+      requestId: request.requestId ?? request.id,
+      method: request.method,
+      url,
+      route,
+      statusCode,
+      durationMs,
+      environment: config.nodeEnv,
+    });
+  });
 
   // Health
   app.get('/health', async () => ({
