@@ -15,6 +15,16 @@ const developmentCorsOrigins = [
   'http://127.0.0.1:5173',
 ];
 
+const apiRateLimitWindowMs = 15 * 60 * 1000;
+const apiRateLimitMaxRequests = 300;
+
+type RateLimitEntry = {
+  count: number;
+  resetAt: number;
+};
+
+const apiRateLimitStore = new Map<string, RateLimitEntry>();
+
 const getHeaderValue = (value: string | string[] | undefined) => {
   return Array.isArray(value) ? value[0] : value;
 };
@@ -61,6 +71,47 @@ export async function buildFastifyApp(): Promise<any> {
 
     if (request.method === 'OPTIONS') {
       return reply.status(204).send();
+    }
+  });
+
+  // API rate limit
+  app.addHook('onRequest', async (request, reply) => {
+    if (
+      request.method === 'OPTIONS' ||
+      !request.url.startsWith('/api/v1/')
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    const clientId = request.ip || 'unknown';
+    let entry = apiRateLimitStore.get(clientId);
+
+    if (!entry || now > entry.resetAt) {
+      entry = {
+        count: 0,
+        resetAt: now + apiRateLimitWindowMs,
+      };
+      apiRateLimitStore.set(clientId, entry);
+    }
+
+    entry.count += 1;
+
+    reply.header('X-RateLimit-Limit', apiRateLimitMaxRequests.toString());
+    reply.header(
+      'X-RateLimit-Remaining',
+      Math.max(0, apiRateLimitMaxRequests - entry.count).toString(),
+    );
+    reply.header(
+      'X-RateLimit-Reset',
+      new Date(entry.resetAt).toISOString(),
+    );
+
+    if (entry.count > apiRateLimitMaxRequests) {
+      return reply.status(429).send({
+        success: false,
+        message: 'Too many requests',
+      });
     }
   });
 
