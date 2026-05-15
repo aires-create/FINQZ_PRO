@@ -27,6 +27,8 @@ export interface CreateAuditLogParams {
 export interface AuditStatsParams {
   tenantId: string;
   startOfDay: Date;
+  from?: Date;
+  to?: Date;
 }
 
 export async function listAuditLogs(params: ListAuditLogsParams) {
@@ -93,22 +95,40 @@ export async function listAuditLogs(params: ListAuditLogsParams) {
 export async function getAuditLogStats(
   params: AuditStatsParams,
 ) {
-  const { tenantId, startOfDay } = params;
+  const { tenantId, startOfDay, from, to } = params;
+
+  const dateRangeFilter: Prisma.AuditLogWhereInput =
+    from || to
+      ? {
+          createdAt: {
+            ...(from ? { gte: from } : {}),
+            ...(to ? { lte: to } : {}),
+          },
+        }
+      : {};
+
+  const todayStart = from && from > startOfDay ? from : startOfDay;
+
+  const todayDateFilter: Prisma.AuditLogWhereInput = {
+    createdAt: {
+      gte: todayStart,
+      ...(to ? { lte: to } : {}),
+    },
+  };
 
   const [totalLogs, todayLogs, topActions] =
     await prisma.$transaction([
       prisma.auditLog.count({
         where: {
           tenantId,
+          ...dateRangeFilter,
         },
       }),
 
       prisma.auditLog.count({
         where: {
           tenantId,
-          createdAt: {
-            gte: startOfDay,
-          },
+          ...todayDateFilter,
         },
       }),
 
@@ -116,6 +136,7 @@ export async function getAuditLogStats(
         by: ['action'],
         where: {
           tenantId,
+          ...dateRangeFilter,
         },
         _count: {
           action: true,
@@ -141,7 +162,6 @@ export async function getAuditLogStats(
     })),
   };
 }
-
 export async function createAuditLog(
   params: CreateAuditLogParams,
 ) {

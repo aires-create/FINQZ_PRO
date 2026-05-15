@@ -12,13 +12,25 @@ export async function getAuditLogs(
   return listAuditLogs(params);
 }
 
-export async function getAuditStats(tenantId: string) {
+export interface GetAuditStatsParams {
+  tenantId: string;
+  from?: Date;
+  to?: Date;
+}
+
+export async function getAuditStats(
+  params: GetAuditStatsParams,
+) {
+  const { tenantId, from, to } = params;
+
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
 
   return getAuditLogStats({
     tenantId,
     startOfDay,
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
   });
 }
 

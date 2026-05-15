@@ -10,19 +10,59 @@ export async function auditRoutes(app: FastifyInstance) {
   app.addHook('preHandler', tenantContextMiddleware)
 
   app.get('/stats', async (request, reply) => {
-    const tenantId = request.currentTenant?.tenantId
+  const query = request.query as {
+    from?: string
+    to?: string
+  }
 
-    if (!tenantId) {
-      return reply.status(400).send({
-        success: false,
-        message: 'Missing tenant context',
-      })
-    }
+  const { from, to } = query
 
-    const result = await getAuditStats(tenantId)
+  const tenantId = request.currentTenant?.tenantId
 
-    return reply.send(result)
+  if (!tenantId) {
+    return reply.status(400).send({
+      success: false,
+      message: 'Missing tenant context',
+    })
+  }
+
+  const fromDate = from
+    ? new Date(`${from}T00:00:00.000Z`)
+    : undefined
+
+  const toDate = to
+    ? new Date(`${to}T23:59:59.999Z`)
+    : undefined
+
+  if (fromDate && Number.isNaN(fromDate.getTime())) {
+    return reply.status(400).send({
+      success: false,
+      message: 'Invalid from date',
+    })
+  }
+
+  if (toDate && Number.isNaN(toDate.getTime())) {
+    return reply.status(400).send({
+      success: false,
+      message: 'Invalid to date',
+    })
+  }
+
+  if (fromDate && toDate && fromDate > toDate) {
+    return reply.status(400).send({
+      success: false,
+      message: 'from date must be before or equal to to date',
+    })
+  }
+
+  const result = await getAuditStats({
+    tenantId,
+    ...(fromDate ? { from: fromDate } : {}),
+    ...(toDate ? { to: toDate } : {}),
   })
+
+  return reply.send(result)
+})
 
   app.get('/logs', async (request, reply) => {
     const query = request.query as {
