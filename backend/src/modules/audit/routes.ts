@@ -9,6 +9,87 @@ export async function auditRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)
   app.addHook('preHandler', tenantContextMiddleware)
 
+  /**
+   * @swagger
+   * /api/v1/audit/stats:
+   *   get:
+   *     summary: Get audit log stats
+   *     tags: [Audit]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: from
+   *         required: false
+   *         description: Start date in YYYY-MM-DD format
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: to
+   *         required: false
+   *         description: End date in YYYY-MM-DD format
+   *         schema:
+   *           type: string
+   *           format: date
+   *     responses:
+   *       200:
+   *         description: Audit stats retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 totalLogs:
+   *                   type: number
+   *                 todayLogs:
+   *                   type: number
+   *                 topActions:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       action:
+   *                         type: string
+   *                       count:
+   *                         type: number
+   *       400:
+   *         description: Invalid request or missing tenant context
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   enum:
+   *                     - Missing tenant context
+   *                     - Invalid from date
+   *                     - Invalid to date
+   *                     - from date must be before or equal to to date
+   *             examples:
+   *               missingTenantContext:
+   *                 value:
+   *                   success: false
+   *                   message: Missing tenant context
+   *               invalidFromDate:
+   *                 value:
+   *                   success: false
+   *                   message: Invalid from date
+   *               invalidToDate:
+   *                 value:
+   *                   success: false
+   *                   message: Invalid to date
+   *               invalidDateRange:
+   *                 value:
+   *                   success: false
+   *                   message: from date must be before or equal to to date
+   *       401:
+   *         description: Unauthorized
+   */
   app.get('/stats', async (request, reply) => {
   const query = request.query as {
     from?: string
@@ -64,6 +145,168 @@ export async function auditRoutes(app: FastifyInstance) {
   return reply.send(result)
 })
 
+  /**
+   * @swagger
+   * /api/v1/audit/logs:
+   *   get:
+   *     summary: List audit logs
+   *     tags: [Audit]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         required: false
+   *         schema:
+   *           oneOf:
+   *             - type: string
+   *             - type: number
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           oneOf:
+   *             - type: string
+   *             - type: number
+   *       - in: query
+   *         name: action
+   *         required: false
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: entity
+   *         required: false
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: entityId
+   *         required: false
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: userId
+   *         required: false
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: from
+   *         required: false
+   *         description: Start date in YYYY-MM-DD format
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: to
+   *         required: false
+   *         description: End date in YYYY-MM-DD format
+   *         schema:
+   *           type: string
+   *           format: date
+   *       - in: query
+   *         name: sortBy
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [createdAt, action, entity]
+   *       - in: query
+   *         name: sortOrder
+   *         required: false
+   *         schema:
+   *           type: string
+   *           enum: [asc, desc]
+   *     responses:
+   *       200:
+   *         description: Audit logs retrieved successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 data:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id:
+   *                         type: string
+   *                       tenantId:
+   *                         type: string
+   *                       userId:
+   *                         type: string
+   *                         nullable: true
+   *                       action:
+   *                         type: string
+   *                       entity:
+   *                         type: string
+   *                       entityId:
+   *                         type: string
+   *                       metadata:
+   *                         type: object
+   *                         nullable: true
+   *                       createdAt:
+   *                         type: string
+   *                         format: date-time
+   *                       description:
+   *                         type: string
+   *                       category:
+   *                         type: string
+   *                       severity:
+   *                         type: string
+   *                         enum: [info, warning, danger]
+   *                       icon:
+   *                         type: string
+   *                 meta:
+   *                   type: object
+   *                   properties:
+   *                     page:
+   *                       type: number
+   *                     limit:
+   *                       type: number
+   *                     total:
+   *                       type: number
+   *                     totalPages:
+   *                       type: number
+   *                     hasNextPage:
+   *                       type: boolean
+   *                     hasPreviousPage:
+   *                       type: boolean
+   *       400:
+   *         description: Invalid request or missing tenant context
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 success:
+   *                   type: boolean
+   *                   example: false
+   *                 message:
+   *                   type: string
+   *                   enum:
+   *                     - Missing tenant context
+   *                     - Invalid from date
+   *                     - Invalid to date
+   *                     - from date must be before or equal to to date
+   *             examples:
+   *               missingTenantContext:
+   *                 value:
+   *                   success: false
+   *                   message: Missing tenant context
+   *               invalidFromDate:
+   *                 value:
+   *                   success: false
+   *                   message: Invalid from date
+   *               invalidToDate:
+   *                 value:
+   *                   success: false
+   *                   message: Invalid to date
+   *               invalidDateRange:
+   *                 value:
+   *                   success: false
+   *                   message: from date must be before or equal to to date
+   *       401:
+   *         description: Unauthorized
+   */
   app.get('/logs', async (request, reply) => {
     const query = request.query as {
   page?: string
