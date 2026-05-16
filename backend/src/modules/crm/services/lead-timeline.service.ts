@@ -1,4 +1,4 @@
-import { prisma } from '../../../core/prisma/client';
+import { prisma } from '../../../core/prisma/client.js';
 
 export async function getLeadTimeline(
   tenantId: string,

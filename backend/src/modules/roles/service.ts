@@ -2,10 +2,10 @@
 // FINQZ PRO - Roles Service
 // ============================================
 
-import { prisma } from '../../database/prisma';
-import { AppError, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
-import type { CreateRoleRequest, UpdateRoleRequest, RoleResponse } from './types';
+import { prisma } from '../../database/prisma.js';
+import { AppError, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
+import type { CreateRoleRequest, UpdateRoleRequest, RoleResponse } from './types.js';
 
 const logger = createModuleLogger('RolesService');
 

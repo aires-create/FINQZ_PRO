@@ -3,15 +3,15 @@
 // ============================================
 
 import { Prisma } from '@prisma/client';
-import { prisma } from '../../database/prisma';
-import { AppError, AuthorizationError, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
+import { prisma } from '../../database/prisma.js';
+import { AppError, AuthorizationError, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
 import type {
   CreateMembershipRequest,
   MembershipListQuery,
   MembershipRole,
   UpdateMembershipRequest,
-} from './types';
+} from './types.js';
 
 const logger = createModuleLogger('MembershipsService');
 

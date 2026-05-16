@@ -1,9 +1,9 @@
-export { default as organizationRoutes } from './routes';
-export { organizationsController } from './controller';
-export { organizationsService } from './service';
+export { default as organizationRoutes } from './routes.js';
+export { organizationsController } from './controller.js';
+export { organizationsService } from './service.js';
 export type {
   CreateOrganizationRequest,
   OrganizationListQuery,
   OrganizationResponse,
   UpdateOrganizationRequest,
-} from './types';
+} from './types.js';

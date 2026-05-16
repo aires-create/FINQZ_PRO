@@ -3,8 +3,8 @@
 // ============================================
 
 import { Router, Request, Response } from 'express';
-import { asyncHandler } from '../../middlewares/errorHandler';
-import { logger } from '../../shared/logger';
+import { asyncHandler } from '../../middlewares/errorHandler.js';
+import { logger } from '../../shared/logger.js';
 
 const router = Router();
 

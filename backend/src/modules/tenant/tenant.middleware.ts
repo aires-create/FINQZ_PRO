@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { AuthenticationError, AuthorizationError } from '../../types';
+import { AuthenticationError, AuthorizationError } from '../../types/index.js';
 
 export const tenantContext = async (
   request: any,

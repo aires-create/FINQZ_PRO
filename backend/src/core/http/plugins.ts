@@ -1,10 +1,10 @@
 import { FastifyPluginAsync } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
-import { config } from '../../config/app';
-import { AppError } from '../../types';
+import { config } from '../../config/app.js';
+import { AppError } from '../../types/index.js';
 import crypto from 'node:crypto';
-import type { JWTPayload } from '../../shared/types';
+import type { JWTPayload } from '../../shared/types/index.js';
 
 export const httpAuthPlugin: FastifyPluginAsync = async (app) => {
   await app.register(cookie, {

@@ -2,11 +2,11 @@
 // FINQZ PRO - Permissions Service
 // ============================================
 
-import { prisma } from '../../database/prisma';
+import { prisma } from '../../database/prisma.js';
 import { PermissionAction } from '@prisma/client';
-import { AppError, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
-import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionResponse } from './types';
+import { AppError, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
+import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionResponse } from './types.js';
 
 const logger = createModuleLogger('PermissionsService');
 

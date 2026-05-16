@@ -4,11 +4,11 @@
 
 import { Router } from 'express';
 import Joi from 'joi';
-import { permissionsController } from './controller';
-import { validate } from '../../middlewares/validation';
-import { asyncHandler } from '../../middlewares/errorHandler';
-import { authenticate } from '../../middlewares/auth';
-import { requireAdmin } from '../../middlewares/rbac';
+import { permissionsController } from './controller.js';
+import { validate } from '../../middlewares/validation.js';
+import { asyncHandler } from '../../middlewares/errorHandler.js';
+import { authenticate } from '../../middlewares/auth.js';
+import { requireAdmin } from '../../middlewares/rbac.js';
 
 const router = Router();
 

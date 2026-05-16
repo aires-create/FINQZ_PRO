@@ -1,4 +1,4 @@
-import { AuthorizationError, AuthenticationError } from '../../types';
+import { AuthorizationError, AuthenticationError } from '../../types/index.js';
 
 const normalize = (value: string | string[]) =>
   Array.isArray(value) ? value : [value];

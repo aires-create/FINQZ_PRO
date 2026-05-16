@@ -3,10 +3,10 @@
 // ============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { rolesService } from './service';
-import { ApiResponse, PaginatedResponse } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
-import type { CreateRoleRequest, UpdateRoleRequest, RoleResponse } from './types';
+import { rolesService } from './service.js';
+import { ApiResponse, PaginatedResponse } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
+import type { CreateRoleRequest, UpdateRoleRequest, RoleResponse } from './types.js';
 
 const logger = createModuleLogger('RolesController');
 

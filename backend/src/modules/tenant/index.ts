@@ -1,2 +1,2 @@
-export * from './tenant.decorator';
-export * from './tenant.middleware';
+export * from './tenant.decorator.js';
+export * from './tenant.middleware.js';

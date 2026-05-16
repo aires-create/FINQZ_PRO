@@ -2,10 +2,10 @@
 // FINQZ PRO - Server Entry Point
 // ============================================
 
-import { config } from './config/app';
-import { logger } from './shared/logger';
-import { testDatabaseConnection, disconnectDatabase } from './database/prisma';
-import createApp from './app';
+import { config } from './config/app.js';
+import { logger } from './shared/logger.js';
+import { testDatabaseConnection, disconnectDatabase } from './database/prisma.js';
+import createApp from './app.js';
 
 const startServer = async (): Promise<void> => {
   try {

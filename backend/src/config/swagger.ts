@@ -1,6 +1,6 @@
 import path from 'path';
 import swaggerJsdoc from 'swagger-jsdoc';
-import { config } from './app';
+import { config } from './app.js';
 
 const swaggerDefinition = {
   openapi: '3.0.0',

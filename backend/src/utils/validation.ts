@@ -4,7 +4,7 @@
 // ============================================
 
 import { body, param, query, ValidationChain } from 'express-validator';
-import { createModuleLogger } from '../shared/logger';
+import { createModuleLogger } from '../shared/logger.js';
 
 const logger = createModuleLogger('Validation');
 
@@ -285,7 +285,7 @@ export const sanitizers = {
  */
 export const businessValidators = {
   uniqueEmail: async (email: string, tenantId: string, excludeUserId?: string) => {
-    const existingUser = await import('../database/prisma').then(({ prisma }) =>
+    const existingUser = await import('../database/prisma.js').then(({ prisma }) =>
       prisma.user.findFirst({
         where: {
           emailNormalized: email.toLowerCase().trim(),
@@ -301,7 +301,7 @@ export const businessValidators = {
   },
 
   uniqueOrganizationCode: async (code: string, tenantId: string, excludeOrgId?: string) => {
-    const existingOrg = await import('../database/prisma').then(({ prisma }) =>
+    const existingOrg = await import('../database/prisma.js').then(({ prisma }) =>
       prisma.organization.findFirst({
         where: {
           tenantId,
@@ -335,7 +335,7 @@ export const businessValidators = {
       visited.add(currentParentId);
       const parentLookupId: string = currentParentId;
 
-      const parent: { parentId: string | null } | null = await import('../database/prisma').then(({ prisma }) =>
+      const parent: { parentId: string | null } | null = await import('../database/prisma.js').then(({ prisma }) =>
         prisma.role.findUnique({
           where: { id: parentLookupId },
           select: { parentId: true }

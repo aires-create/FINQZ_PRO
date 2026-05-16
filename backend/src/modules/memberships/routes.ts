@@ -4,16 +4,16 @@
 
 import { Router } from 'express';
 import Joi from 'joi';
-import { membershipsController } from './controller';
-import { validate, validateParams, validateQuery } from '../../middlewares/validation';
-import { asyncHandler } from '../../middlewares/errorHandler';
-import { authenticate } from '../../middlewares/auth';
+import { membershipsController } from './controller.js';
+import { validate, validateParams, validateQuery } from '../../middlewares/validation.js';
+import { asyncHandler } from '../../middlewares/errorHandler.js';
+import { authenticate } from '../../middlewares/auth.js';
 import {
   auditLogger,
   enterpriseTenantGuard,
   organizationAccessGuard,
   roleHierarchyGuard,
-} from '../../middlewares/enterprise';
+} from '../../middlewares/enterprise.js';
 
 const router = Router();
 

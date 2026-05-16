@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
-import { config } from '../config/app';
+import { config } from '../config/app.js';
 
 type LogMeta = Record<string, unknown> | unknown;
 

@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { AuthenticationError, AuthorizationError } from '../../types';
-import type { JWTPayload, TenantContext } from '../../shared/types';
+import { AuthenticationError, AuthorizationError } from '../../types/index.js';
+import type { JWTPayload, TenantContext } from '../../shared/types/index.js';
 
 type TenantBearingSource = Record<string, unknown> | null | undefined;
 

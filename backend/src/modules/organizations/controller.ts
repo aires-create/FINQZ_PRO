@@ -3,15 +3,15 @@
 // ============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { organizationsService } from './service';
-import { ApiResponse, PaginatedResponse } from '../../types';
-import { AuthenticationError, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
+import { organizationsService } from './service.js';
+import { ApiResponse, PaginatedResponse } from '../../types/index.js';
+import { AuthenticationError, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
 import type {
   CreateOrganizationRequest,
   OrganizationListQuery,
   UpdateOrganizationRequest,
-} from './types';
+} from './types.js';
 
 const logger = createModuleLogger('OrganizationsController');
 

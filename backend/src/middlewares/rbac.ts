@@ -4,10 +4,10 @@
 
 // @ts-nocheck
 import { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, AuthorizationError } from '../types';
-import { prisma } from '../database/prisma';
-import { createModuleLogger } from '../shared/logger';
-import { authenticate } from './auth';
+import { AuthenticationError, AuthorizationError } from '../types/index.js';
+import { prisma } from '../database/prisma.js';
+import { createModuleLogger } from '../shared/logger.js';
+import { authenticate } from './auth.js';
 
 const logger = createModuleLogger('RBACMiddleware');
 

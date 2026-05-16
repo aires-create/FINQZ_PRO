@@ -4,7 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { ValidationError } from '../types';
+import { ValidationError } from '../types/index.js';
 
 // Generic validation middleware
 export const validate = (schema: Joi.ObjectSchema) => {

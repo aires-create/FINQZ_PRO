@@ -3,7 +3,7 @@
 // Enterprise multi-tenant type definitions
 // ============================================
 
-import type { JWTPayload } from './index';
+import type { JWTPayload } from './index.js';
 import type { Tenant, Organization, Membership, Role } from '@prisma/client';
 
 declare global {

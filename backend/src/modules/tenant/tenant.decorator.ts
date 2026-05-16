@@ -1,4 +1,4 @@
-import { AuthenticationError, AuthorizationError } from '../../types';
+import { AuthenticationError, AuthorizationError } from '../../types/index.js';
 
 export const currentUser = (request: any) => {
   if (!request.currentUser) {

@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-import { prisma } from '../../../database/prisma';
-import { config } from '../../../config/app';
-import { AppError } from '../../../shared/errors/AppError';
+import { prisma } from '../../../database/prisma.js';
+import { config } from '../../../config/app.js';
+import { AppError } from '../../../shared/errors/AppError.js';
 
 type LoginDTO = {
   email: string;

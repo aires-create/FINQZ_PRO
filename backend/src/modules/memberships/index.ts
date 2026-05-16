@@ -1,9 +1,9 @@
-export { default as membershipRoutes } from './routes';
-export { membershipsController } from './controller';
-export { membershipsService } from './service';
+export { default as membershipRoutes } from './routes.js';
+export { membershipsController } from './controller.js';
+export { membershipsService } from './service.js';
 export type {
   CreateMembershipRequest,
   MembershipListQuery,
   MembershipRole,
   UpdateMembershipRequest,
-} from './types';
+} from './types.js';

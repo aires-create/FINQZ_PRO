@@ -1,16 +1,16 @@
 import Fastify from 'fastify';
 import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 
-import { config } from '../../config/app';
-import { logger } from '../../shared/logger';
-import { AppError } from '../../shared/errors/AppError';
-import { prisma } from '../prisma/client';
+import { config } from '../../config/app.js';
+import { logger } from '../../shared/logger.js';
+import { AppError } from '../../shared/errors/AppError.js';
+import { prisma } from '../prisma/client.js';
 
-import { authJwtPlugin } from '../../modules/auth/jwt.plugin';
-import authRoutes from '../../modules/auth/auth.routes';
+import { authJwtPlugin } from '../../modules/auth/jwt.plugin.js';
+import authRoutes from '../../modules/auth/auth.routes.js';
 
-import { crmRoutes } from '../../modules/crm/routes';
-import { auditRoutes } from '../../modules/audit/routes';
+import { crmRoutes } from '../../modules/crm/routes.js';
+import { auditRoutes } from '../../modules/audit/routes.js';
 
 const developmentCorsOrigins = [
   'http://localhost:5173',

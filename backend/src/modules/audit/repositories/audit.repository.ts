@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { prisma } from '../../../core/prisma/client';
+import { prisma } from '../../../core/prisma/client.js';
 
 export interface ListAuditLogsParams {
   tenantId: string;

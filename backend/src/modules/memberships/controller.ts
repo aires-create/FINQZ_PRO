@@ -3,14 +3,14 @@
 // ============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { membershipsService } from './service';
-import { ApiResponse, AuthenticationError, PaginatedResponse, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
+import { membershipsService } from './service.js';
+import { ApiResponse, AuthenticationError, PaginatedResponse, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
 import type {
   CreateMembershipRequest,
   MembershipListQuery,
   UpdateMembershipRequest,
-} from './types';
+} from './types.js';
 
 const logger = createModuleLogger('MembershipsController');
 

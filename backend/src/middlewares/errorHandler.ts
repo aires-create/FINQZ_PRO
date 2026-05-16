@@ -3,8 +3,8 @@
 // ============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { AppError, ValidationError } from '../types';
-import { logger } from '../shared/logger';
+import { AppError, ValidationError } from '../types/index.js';
+import { logger } from '../shared/logger.js';
 
 // Global error handler
 export const errorHandler = (

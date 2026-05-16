@@ -1,7 +1,7 @@
-import { buildFastifyApp } from './core/http/fastify';
-import { config } from './config/app';
-import { logger } from './shared/logger';
-import { testDatabaseConnection, disconnectDatabase } from './database/prisma';
+import { buildFastifyApp } from './core/http/fastify.js';
+import { config } from './config/app.js';
+import { logger } from './shared/logger.js';
+import { testDatabaseConnection, disconnectDatabase } from './database/prisma.js';
 
 const startServer = async (): Promise<void> => {
   try {

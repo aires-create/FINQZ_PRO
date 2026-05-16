@@ -2,29 +2,29 @@
 // FINQZ PRO - Auth Service
 // ============================================
 
-import { prisma } from '../../database/prisma';
-import { AppError, AuthenticationError, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
+import { prisma } from '../../database/prisma.js';
+import { AppError, AuthenticationError, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
 import {
   generateTokens,
   generateAccessToken,
   verifyRefreshToken,
   JWTPayload,
   TokenPair,
-} from '../../utils/jwt';
+} from '../../utils/jwt.js';
 import {
   hashPassword,
   verifyPassword,
   validatePasswordStrength,
   isCommonPassword,
-} from '../../utils/password';
+} from '../../utils/password.js';
 import type {
   LoginRequest,
   RegisterRequest,
   AuthResponse,
   RefreshTokenRequest,
   ChangePasswordRequest,
-} from './types';
+} from './types.js';
 
 const logger = createModuleLogger('AuthService');
 

@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
-import { leadsRepository } from '../repositories/leads.repository';
-import type { CreateLeadBody, UpdateLeadBody } from '../dto/leads.dto';
-import { registerAuditLog } from '../../audit/services/audit.service';
+import { leadsRepository } from '../repositories/leads.repository.js';
+import type { CreateLeadBody, UpdateLeadBody } from '../dto/leads.dto.js';
+import { registerAuditLog } from '../../audit/services/audit.service.js';
 
 export type ListLeadsParams = {
   page?: number;

@@ -1,1 +1,1 @@
-export * from './rbac.guard';
+export * from './rbac.guard.js';

@@ -3,8 +3,8 @@ import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import fp from 'fastify-plugin';
 import crypto from 'node:crypto';
-import { config } from '../../config/app';
-import { authenticate } from '../../core/http/middleware';
+import { config } from '../../config/app.js';
+import { authenticate } from '../../core/http/middleware.js';
 
 const getHeaderValue = (value: string | string[] | undefined) => {
   return Array.isArray(value) ? value[0] : value;

@@ -2,8 +2,8 @@ import type { FastifyInstance } from 'fastify'
 import {
   getAuditLogs,
   getAuditStats,
-} from './services/audit.service'
-import { authenticate, tenantContextMiddleware } from '../../core/http/middleware'
+} from './services/audit.service.js'
+import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js'
 
 export async function auditRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate)

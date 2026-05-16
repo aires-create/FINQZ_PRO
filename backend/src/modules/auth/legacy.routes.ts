@@ -4,10 +4,10 @@
 
 import { Router } from 'express';
 import Joi from 'joi';
-import { authController } from './controller';
-import { validate } from '../../middlewares/validation';
-import { asyncHandler } from '../../middlewares/errorHandler';
-import { authenticate } from '../../middlewares/auth';
+import { authController } from './controller.js';
+import { validate } from '../../middlewares/validation.js';
+import { asyncHandler } from '../../middlewares/errorHandler.js';
+import { authenticate } from '../../middlewares/auth.js';
 
 const router = Router();
 

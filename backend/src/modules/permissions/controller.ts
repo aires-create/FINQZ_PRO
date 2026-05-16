@@ -3,10 +3,10 @@
 // ============================================
 
 import { Request, Response, NextFunction } from 'express';
-import { permissionsService } from './service';
-import { ApiResponse, PaginatedResponse } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
-import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionResponse } from './types';
+import { permissionsService } from './service.js';
+import { ApiResponse, PaginatedResponse } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
+import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionResponse } from './types.js';
 
 const logger = createModuleLogger('PermissionsController');
 

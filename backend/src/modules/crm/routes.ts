@@ -4,13 +4,13 @@ import type { ZodError } from 'zod';
 import {
   createLeadSchema,
   updateLeadSchema,
-} from './validators/leads.validator';
-import { leadsService } from './services/leads.service';
-import { getLeadTimeline } from './services/lead-timeline.service';
-import { logger } from '../../shared/logger';
-import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto';
-import { authenticate, tenantContextMiddleware } from '../../core/http/middleware';
-import { AppError } from '../../shared/errors';
+} from './validators/leads.validator.js';
+import { leadsService } from './services/leads.service.js';
+import { getLeadTimeline } from './services/lead-timeline.service.js';
+import { logger } from '../../shared/logger.js';
+import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto.js';
+import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
+import { AppError } from '../../shared/errors/index.js';
 
 type LeadParams = {
   id: string;

@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { authController } from './controller';
-import { authenticate, tenantContextMiddleware } from '../../core/http/middleware';
-import { requireRoles } from '../rbac/rbac.guard';
+import { authController } from './controller.js';
+import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
+import { requireRoles } from '../rbac/rbac.guard.js';
 
 const loginSchema = z.object({
   email: z.string().email(),

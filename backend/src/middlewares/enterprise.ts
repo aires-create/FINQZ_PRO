@@ -5,9 +5,9 @@
 
 import { Request, Response, NextFunction } from 'express';
 import type { Prisma } from '@prisma/client';
-import { prisma } from '../database/prisma';
-import { AuthenticationError, AuthorizationError } from '../types';
-import { createModuleLogger } from '../shared/logger';
+import { prisma } from '../database/prisma.js';
+import { AuthenticationError, AuthorizationError } from '../types/index.js';
+import { createModuleLogger } from '../shared/logger.js';
 
 const logger = createModuleLogger('EnterpriseMiddleware');
 

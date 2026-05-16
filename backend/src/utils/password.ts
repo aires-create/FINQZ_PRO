@@ -3,8 +3,8 @@
 // ============================================
 
 import bcrypt from 'bcryptjs';
-import { config } from '../config/app';
-import { AppError } from '../types';
+import { config } from '../config/app.js';
+import { AppError } from '../types/index.js';
 
 /**
  * Hash password using bcrypt

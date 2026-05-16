@@ -4,7 +4,7 @@ import {
   listAuditLogs,
   type CreateAuditLogParams,
   type ListAuditLogsParams,
-} from '../repositories/audit.repository'
+} from '../repositories/audit.repository.js'
 
 export async function getAuditLogs(
   params: ListAuditLogsParams,

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '../utils/jwt';
-import { AuthenticationError, AuthorizationError } from '../types';
+import { verifyAccessToken } from '../utils/jwt.js';
+import { AuthenticationError, AuthorizationError } from '../types/index.js';
 
 export const authenticate = (
   req: Request,

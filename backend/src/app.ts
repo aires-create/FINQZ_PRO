@@ -2,7 +2,7 @@
 // FINQZ PRO - Fastify Application Factory
 // ============================================
 
-import { buildFastifyApp } from "./core/http/fastify";
+import { buildFastifyApp } from "./core/http/fastify.js";
 
 /**
  * Creates and configures the Fastify application

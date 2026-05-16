@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import type { JWTPayload, TenantContext } from './index';
+import type { JWTPayload, TenantContext } from './index.js';
 
 declare module 'fastify' {
   interface FastifyRequest {

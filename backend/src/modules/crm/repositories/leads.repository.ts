@@ -1,4 +1,4 @@
-import { prisma } from '../../../core/prisma/client';
+import { prisma } from '../../../core/prisma/client.js';
 import type { Prisma } from '@prisma/client';
 
 export type FindAllLeadsParams = {

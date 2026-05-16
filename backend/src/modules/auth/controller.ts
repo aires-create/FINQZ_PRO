@@ -2,10 +2,10 @@
 // FINQZ PRO - Auth Controller
 // ============================================
 
-import { authService } from './service';
-import { config } from '../../config/app';
-import { ApiResponse } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
+import { authService } from './service.js';
+import { config } from '../../config/app.js';
+import { ApiResponse } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -13,7 +13,7 @@ import type {
   ChangePasswordRequest,
   AuthResponse,
   LogoutRequest,
-} from './types';
+} from './types.js';
 
 const logger = createModuleLogger('AuthController');
 

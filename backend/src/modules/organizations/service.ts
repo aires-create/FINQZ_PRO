@@ -3,14 +3,14 @@
 // ============================================
 
 import type { Prisma } from '@prisma/client';
-import { prisma } from '../../database/prisma';
-import { AppError, ValidationError } from '../../types';
-import { createModuleLogger } from '../../shared/logger';
+import { prisma } from '../../database/prisma.js';
+import { AppError, ValidationError } from '../../types/index.js';
+import { createModuleLogger } from '../../shared/logger.js';
 import type {
   CreateOrganizationRequest,
   OrganizationListQuery,
   UpdateOrganizationRequest,
-} from './types';
+} from './types.js';
 
 const logger = createModuleLogger('OrganizationsService');
 
