@@ -13,7 +13,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://finqz:finqz_password@postgres:5432/finqz_pro?schema=public
+      DATABASE_URL: postgresql://finqz_user:finqz_password@postgres:5432/finqz_pro_dev?schema=public
       REDIS_URL: redis://redis:6379
       JWT_SECRET: change-me-staging-jwt-secret
       JWT_REFRESH_SECRET: change-me-staging-refresh-secret
@@ -27,9 +27,9 @@ services:
     image: postgres:16-alpine
     container_name: finqz-pro-postgres
     environment:
-      POSTGRES_USER: finqz
+      POSTGRES_USER: finqz_user
       POSTGRES_PASSWORD: finqz_password
-      POSTGRES_DB: finqz_pro
+      POSTGRES_DB: finqz_pro_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
