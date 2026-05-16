@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+coverage
+
+# Runtime data
+logs
+uploads
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Temporary files and caches
+.tmp*
+tmp
+temp
+.cache
+
+# Git and local tooling
+.git
+.gitignore
+.vscode
+.codex
+
+# Temporary Docker artifacts
+Dockerfile*.tmp
+docker-compose*.tmp
+.dockerignore.tmp
+*.docker.tmp
+docker-build*
+.docker
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+$RECYCLE.BIN
