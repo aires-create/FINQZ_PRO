@@ -1,0 +1,57 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finqz-pro-api
+    ports:
+      - "4000:4000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://finqz:finqz_password@postgres:5432/finqz_pro?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me-staging-jwt-secret
+      JWT_REFRESH_SECRET: change-me-staging-refresh-secret
+      CORS_ORIGIN: http://localhost:5173
+    command: node dist/server.js
+    restart: unless-stopped
+    networks:
+      - finqz_pro_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: finqz-pro-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: finqz
+      POSTGRES_PASSWORD: finqz_password
+      POSTGRES_DB: finqz_pro
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - finqz_pro_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: finqz-pro-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - finqz_pro_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  finqz_pro_network:
