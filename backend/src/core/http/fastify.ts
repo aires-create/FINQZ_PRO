@@ -1,7 +1,9 @@
 import Fastify from 'fastify';
+import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 
 import { config } from '../../config/app';
 import { logger } from '../../shared/logger';
+import { AppError } from '../../shared/errors/AppError';
 import { prisma } from '../prisma/client';
 
 import { authJwtPlugin } from '../../modules/auth/jwt.plugin';
@@ -21,6 +23,13 @@ const apiRateLimitMaxRequests = 300;
 type RateLimitEntry = {
   count: number;
   resetAt: number;
+};
+
+type OperationalError = Error & {
+  code?: string;
+  errors?: unknown;
+  isOperational?: boolean;
+  statusCode?: number;
 };
 
 const apiRateLimitStore = new Map<string, RateLimitEntry>();
@@ -49,7 +58,7 @@ const getAllowedCorsOrigins = () => {
 const getRequestUrlForLog = (url: string) => url.split('?')[0] || url;
 
 const getRouteForLog = (request: any) => {
-  return request.routeOptions?.url ?? request.routerPath ?? undefined;
+  return request.routeOptions?.url ?? request.url;
 };
 
 const getLogLevelForStatusCode = (statusCode: number) => {
@@ -62,6 +71,119 @@ const getLogLevelForStatusCode = (statusCode: number) => {
   }
 
   return 'http';
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const isOperationalError = (error: unknown): error is OperationalError => {
+  if (error instanceof AppError) {
+    return true;
+  }
+
+  return (
+    error instanceof Error &&
+    isRecord(error) &&
+    error.isOperational === true &&
+    typeof error.statusCode === 'number'
+  );
+};
+
+const getErrorStatusCode = (error: OperationalError) => {
+  const statusCode = Number(error.statusCode);
+
+  return Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599
+    ? statusCode
+    : 500;
+};
+
+const getErrorResponseErrors = (error: OperationalError) => {
+  return Array.isArray(error.errors) && error.errors.every((item) => typeof item === 'string')
+    ? error.errors
+    : undefined;
+};
+
+const redactSensitiveText = (value: string) => {
+  return value.replace(
+    /\b(password|senha|token|authorization|cookie)\b\s*[:=]\s*[^,\s}]+/gi,
+    '$1=[REDACTED]',
+  );
+};
+
+const getErrorLogMeta = (
+  error: FastifyError,
+  request: FastifyRequest,
+  statusCode: number,
+) => {
+  const url = getRequestUrlForLog(request.url);
+  const route = getRouteForLog(request);
+  const errorMessage = redactSensitiveText(error.message);
+  const meta: Record<string, unknown> = {
+    requestId: request.requestId ?? request.id,
+    method: request.method,
+    url,
+    route,
+    statusCode,
+    errorName: error.name,
+    errorMessage,
+    environment: config.nodeEnv,
+  };
+
+  if (config.nodeEnv !== 'production' && error.stack) {
+    meta.stack = redactSensitiveText(error.stack);
+  }
+
+  return meta;
+};
+
+const sendErrorResponse = (
+  error: FastifyError,
+  _request: FastifyRequest,
+  reply: FastifyReply,
+) => {
+  const isKnownOperationalError = isOperationalError(error);
+  const operationalError = isKnownOperationalError ? error : undefined;
+  const statusCode = operationalError
+    ? getErrorStatusCode(operationalError)
+    : 500;
+
+  logger[getLogLevelForStatusCode(statusCode)](
+    isKnownOperationalError
+      ? 'Operational API error'
+      : 'Unexpected API error',
+    getErrorLogMeta(error, _request, statusCode),
+  );
+
+  if (operationalError) {
+    const response: {
+      success: false;
+      message: string;
+      code?: string;
+      errors?: string[];
+    } = {
+      success: false,
+      message: operationalError.message,
+    };
+
+    if (typeof operationalError.code === 'string') {
+      response.code = operationalError.code;
+    }
+
+    const errors = getErrorResponseErrors(operationalError);
+
+    if (errors) {
+      response.errors = errors;
+    }
+
+    reply.status(statusCode).send(response);
+    return;
+  }
+
+  reply.status(500).send({
+    success: false,
+    message: 'Internal server error',
+  });
 };
 
 export async function buildFastifyApp(): Promise<any> {
@@ -220,25 +342,7 @@ export async function buildFastifyApp(): Promise<any> {
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
 
   // Error handler
-  app.setErrorHandler((error: any, request: any, reply: any) => {
-    if (error.statusCode && error.message) {
-      reply.status(error.statusCode).send({
-        success: false,
-        message: error.message,
-        errors: Array.isArray((error as any).errors)
-          ? (error as any).errors
-          : [],
-      });
-      return;
-    }
-
-    logger.error('Unhandled error in Fastify app', error);
-
-    reply.status(500).send({
-      success: false,
-      message: 'Internal server error',
-    });
-  });
+  app.setErrorHandler(sendErrorResponse);
 
   return app;
 }
