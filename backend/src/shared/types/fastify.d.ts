@@ -9,6 +9,8 @@ declare module 'fastify' {
     correlationId: string | null;
     startTime: number | null;
     securityEventLogKeys?: string[];
+    normalizedIp?: string | null;
+    trustedProxyChain?: boolean;
   }
 
   interface FastifyInstance {

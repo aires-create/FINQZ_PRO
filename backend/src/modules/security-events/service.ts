@@ -183,7 +183,9 @@ export function getSecurityEventContextFromRequest(
     ...(request.currentUser?.userId
       ? { userId: request.currentUser.userId }
       : {}),
-    ...(request.ip ? { ipAddress: request.ip } : {}),
+    ...(request.normalizedIp ?? request.ip
+      ? { ipAddress: request.normalizedIp ?? request.ip }
+      : {}),
     ...(userAgent ? { userAgent } : {}),
     ...(request.requestId ?? request.id
       ? { requestId: request.requestId ?? request.id }

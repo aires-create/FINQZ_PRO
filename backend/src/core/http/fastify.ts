@@ -1,5 +1,10 @@
 import Fastify from 'fastify';
-import type { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import type {
+  FastifyError,
+  FastifyInstance,
+  FastifyReply,
+  FastifyRequest,
+} from 'fastify';
 
 import { config } from '../../config/app.js';
 import { swaggerSpec } from '../../config/swagger.js';
@@ -22,6 +27,16 @@ import {
 
 import { crmRoutes } from '../../modules/crm/routes.js';
 import { auditRoutes } from '../../modules/audit/routes.js';
+import {
+  applyRequestSanitization,
+  baselineSecurityHeaders,
+  buildContentSecurityPolicy,
+  buildSwaggerContentSecurityPolicy,
+  createCspNonce,
+  enforceRequestSizeGovernance,
+  requestBodyLimits,
+  trustProxy,
+} from './security-governance.js';
 
 const developmentCorsOrigins = [
   'http://localhost:5173',
@@ -74,29 +89,7 @@ const getLogLevelForStatusCode = (statusCode: number) => {
   return 'http';
 };
 
-const isTrustedProxyAddress = (address: string) => {
-  const normalizedAddress = address.replace(/^::ffff:/, '');
-
-  if (
-    normalizedAddress === '127.0.0.1' ||
-    normalizedAddress === '::1' ||
-    normalizedAddress.startsWith('10.') ||
-    normalizedAddress.startsWith('192.168.')
-  ) {
-    return true;
-  }
-
-  const secondOctet = Number(normalizedAddress.split('.')[1]);
-
-  return (
-    normalizedAddress.startsWith('172.') &&
-    Number.isInteger(secondOctet) &&
-    secondOctet >= 16 &&
-    secondOctet <= 31
-  );
-};
-
-const buildSwaggerHtml = (specUrl: string) => `<!doctype html>
+const buildSwaggerHtml = (specUrl: string, nonce: string) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -107,7 +100,7 @@ const buildSwaggerHtml = (specUrl: string) => `<!doctype html>
   <body>
     <div id="swagger-ui"></div>
     <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-    <script>
+    <script nonce="${nonce}">
       window.onload = () => {
         window.ui = SwaggerUIBundle({
           url: '${specUrl}',
@@ -118,21 +111,26 @@ const buildSwaggerHtml = (specUrl: string) => `<!doctype html>
   </body>
 </html>`;
 
-const registerSwaggerDocs = (app: any) => {
+const registerSwaggerDocs = (app: FastifyInstance) => {
   const docsPath = config.swagger.path;
   const specPath = `${docsPath}/json`;
+  const sendSwaggerHtml = async (
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ) => {
+    const nonce = createCspNonce();
 
-  app.get(docsPath, async (_request: FastifyRequest, reply: FastifyReply) => {
     return reply
+      .header(
+        'Content-Security-Policy',
+        buildSwaggerContentSecurityPolicy(nonce),
+      )
       .type('text/html; charset=utf-8')
-      .send(buildSwaggerHtml(specPath));
-  });
+      .send(buildSwaggerHtml(specPath, nonce));
+  };
 
-  app.get(`${docsPath}/`, async (_request: FastifyRequest, reply: FastifyReply) => {
-    return reply
-      .type('text/html; charset=utf-8')
-      .send(buildSwaggerHtml(specPath));
-  });
+  app.get(docsPath, sendSwaggerHtml);
+  app.get(`${docsPath}/`, sendSwaggerHtml);
 
   app.get(specPath, async () => swaggerSpec);
 };
@@ -273,16 +271,25 @@ const sendErrorResponse = (
   });
 };
 
-export async function buildFastifyApp(): Promise<any> {
+export async function buildFastifyApp(): Promise<FastifyInstance> {
   initializeObservability();
 
   const app = Fastify({
+    bodyLimit: requestBodyLimits.jsonBytes,
     logger: false,
-    trustProxy: (address) => isTrustedProxyAddress(address),
+    trustProxy,
   });
 
   // CORS
   app.addHook('onRequest', async (request, reply) => {
+    applyRequestSanitization(request);
+
+    const sizeLimitResponse = enforceRequestSizeGovernance(request, reply);
+
+    if (sizeLimitResponse) {
+      return sizeLimitResponse;
+    }
+
     const origin = getHeaderValue(request.headers.origin);
     const allowedOrigins = getAllowedCorsOrigins();
     const requestHeaders = getHeaderValue(
@@ -311,14 +318,21 @@ export async function buildFastifyApp(): Promise<any> {
 
   // Security headers
   app.addHook('onSend', async (request, reply, payload) => {
-    reply.header('X-Content-Type-Options', 'nosniff');
-    reply.header('X-Frame-Options', 'DENY');
-    reply.header('Referrer-Policy', 'no-referrer');
+    if (!reply.getHeader('Content-Security-Policy')) {
+      reply.header('Content-Security-Policy', buildContentSecurityPolicy());
+    }
+
+    reply.header(
+      'X-Content-Type-Options',
+      baselineSecurityHeaders.contentTypeOptions,
+    );
+    reply.header('X-Frame-Options', baselineSecurityHeaders.frameOptions);
+    reply.header('Referrer-Policy', baselineSecurityHeaders.referrerPolicy);
     reply.header(
       'Permissions-Policy',
-      'camera=(), microphone=(), geolocation=()',
+      baselineSecurityHeaders.permissionsPolicy,
     );
-    reply.header('X-Request-ID', request.id);
+    reply.header('X-Request-ID', request.requestId ?? request.id);
 
     return payload;
   });
