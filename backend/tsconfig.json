@@ -51,6 +51,7 @@
     "src/__generated__",
     "src/index.ts",
     "src/defs",
+    "src/tests",
     "**/*.test.ts",
     "**/*.spec.ts"
   ],

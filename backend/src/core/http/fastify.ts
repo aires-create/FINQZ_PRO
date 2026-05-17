@@ -14,6 +14,7 @@ import {
 
 import { authJwtPlugin } from '../../modules/auth/jwt.plugin.js';
 import authRoutes from '../../modules/auth/auth.routes.js';
+import { enterpriseRateLimitPlugin } from './plugins/rate-limit.plugin.js';
 
 import { crmRoutes } from '../../modules/crm/routes.js';
 import { auditRoutes } from '../../modules/audit/routes.js';
@@ -23,22 +24,12 @@ const developmentCorsOrigins = [
   'http://127.0.0.1:5173',
 ];
 
-const apiRateLimitWindowMs = 15 * 60 * 1000;
-const apiRateLimitMaxRequests = 300;
-
-type RateLimitEntry = {
-  count: number;
-  resetAt: number;
-};
-
 type OperationalError = Error & {
   code?: string;
   errors?: unknown;
   isOperational?: boolean;
   statusCode?: number;
 };
-
-const apiRateLimitStore = new Map<string, RateLimitEntry>();
 
 const getHeaderValue = (value: string | string[] | undefined) => {
   return Array.isArray(value) ? value[0] : value;
@@ -77,6 +68,28 @@ const getLogLevelForStatusCode = (statusCode: number) => {
   }
 
   return 'http';
+};
+
+const isTrustedProxyAddress = (address: string) => {
+  const normalizedAddress = address.replace(/^::ffff:/, '');
+
+  if (
+    normalizedAddress === '127.0.0.1' ||
+    normalizedAddress === '::1' ||
+    normalizedAddress.startsWith('10.') ||
+    normalizedAddress.startsWith('192.168.')
+  ) {
+    return true;
+  }
+
+  const secondOctet = Number(normalizedAddress.split('.')[1]);
+
+  return (
+    normalizedAddress.startsWith('172.') &&
+    Number.isInteger(secondOctet) &&
+    secondOctet >= 16 &&
+    secondOctet <= 31
+  );
 };
 
 const buildSwaggerHtml = (specUrl: string) => `<!doctype html>
@@ -238,7 +251,7 @@ export async function buildFastifyApp(): Promise<any> {
 
   const app = Fastify({
     logger: false,
-    trustProxy: true,
+    trustProxy: (address) => isTrustedProxyAddress(address),
   });
 
   // CORS
@@ -269,47 +282,6 @@ export async function buildFastifyApp(): Promise<any> {
     }
   });
 
-  // API rate limit
-  app.addHook('onRequest', async (request, reply) => {
-    if (
-      request.method === 'OPTIONS' ||
-      !request.url.startsWith('/api/v1/')
-    ) {
-      return;
-    }
-
-    const now = Date.now();
-    const clientId = request.ip || 'unknown';
-    let entry = apiRateLimitStore.get(clientId);
-
-    if (!entry || now > entry.resetAt) {
-      entry = {
-        count: 0,
-        resetAt: now + apiRateLimitWindowMs,
-      };
-      apiRateLimitStore.set(clientId, entry);
-    }
-
-    entry.count += 1;
-
-    reply.header('X-RateLimit-Limit', apiRateLimitMaxRequests.toString());
-    reply.header(
-      'X-RateLimit-Remaining',
-      Math.max(0, apiRateLimitMaxRequests - entry.count).toString(),
-    );
-    reply.header(
-      'X-RateLimit-Reset',
-      new Date(entry.resetAt).toISOString(),
-    );
-
-    if (entry.count > apiRateLimitMaxRequests) {
-      return reply.status(429).send({
-        success: false,
-        message: 'Too many requests',
-      });
-    }
-  });
-
   // Security headers
   app.addHook('onSend', async (request, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
@@ -326,6 +298,9 @@ export async function buildFastifyApp(): Promise<any> {
 
   // JWT
   await app.register(authJwtPlugin);
+
+  // Distributed rate limit
+  await app.register(enterpriseRateLimitPlugin);
 
   // HTTP request logging
   app.addHook('onRequest', async (request) => {

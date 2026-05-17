@@ -15,6 +15,14 @@ export interface AppConfig {
     expiresIn: string;
     refreshExpiresIn: string;
   };
+  redis: {
+    url: string;
+    host: string;
+    port: number;
+    password?: string;
+    db: number;
+    tls: boolean;
+  };
   bcryptRounds: number;
   logging: {
     level: string;
@@ -42,6 +50,14 @@ export const config: AppConfig = {
     refreshSecret: env.jwtRefreshSecret,
     expiresIn: env.jwtExpiresIn,
     refreshExpiresIn: env.jwtRefreshExpiresIn,
+  },
+  redis: {
+    url: env.redisUrl,
+    host: env.redisHost,
+    port: env.redisPort,
+    ...(env.redisPassword ? { password: env.redisPassword } : {}),
+    db: env.redisDb,
+    tls: env.redisTls,
   },
   bcryptRounds: env.bcryptRounds,
   logging: {

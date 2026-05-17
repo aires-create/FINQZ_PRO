@@ -65,6 +65,10 @@ const rawEnvSchema = z.object({
   HOST: optionalEnvString,
   DATABASE_URL: optionalEnvString,
   REDIS_URL: optionalEnvString,
+  REDIS_HOST: optionalEnvString,
+  REDIS_PORT: optionalEnvString,
+  REDIS_PASSWORD: optionalEnvString,
+  REDIS_DB: optionalEnvString,
   JWT_SECRET: optionalEnvString,
   JWT_REFRESH_SECRET: optionalEnvString,
   JWT_EXPIRES_IN: optionalEnvString,
@@ -126,6 +130,39 @@ const parsePositiveInteger = (value: string | undefined) => {
   return Number.isInteger(numberValue) && numberValue > 0
     ? numberValue
     : undefined;
+};
+
+const parseNonNegativeInteger = (value: string | undefined) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const numberValue = Number(value);
+
+  return Number.isInteger(numberValue) && numberValue >= 0
+    ? numberValue
+    : undefined;
+};
+
+const parseRedisUrlParts = (value: string | undefined) => {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    const url = new URL(value);
+    const dbPath = url.pathname.replace('/', '');
+
+    return {
+      host: url.hostname || undefined,
+      port: parsePort(url.port),
+      password: url.password ? decodeURIComponent(url.password) : undefined,
+      db: dbPath ? parseNonNegativeInteger(dbPath) : undefined,
+      tls: url.protocol === 'rediss:',
+    };
+  } catch {
+    return {};
+  }
 };
 
 const parseCorsOrigins = (value: string) => {
@@ -297,12 +334,36 @@ const validateNumbers = (
       'BCRYPT_ROUNDS must be a positive integer.',
     );
   }
+
+  if (input.REDIS_PORT !== undefined && parsePort(input.REDIS_PORT) === undefined) {
+    addEnvIssue(
+      context,
+      'REDIS_PORT',
+      'REDIS_PORT must be an integer between 1 and 65535.',
+    );
+  }
+
+  if (
+    input.REDIS_DB !== undefined &&
+    parseNonNegativeInteger(input.REDIS_DB) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'REDIS_DB',
+      'REDIS_DB must be a non-negative integer.',
+    );
+  }
 };
 
 const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
   const port = parsePort(input.PORT) ?? 4000;
   const bcryptRounds = parsePositiveInteger(input.BCRYPT_ROUNDS) ?? 10;
   const swaggerPath = input.SWAGGER_PATH ?? '/api-docs';
+  const redisUrlParts = parseRedisUrlParts(input.REDIS_URL);
+  const redisHost = input.REDIS_HOST ?? redisUrlParts.host ?? 'localhost';
+  const redisPort = parsePort(input.REDIS_PORT) ?? redisUrlParts.port ?? 6379;
+  const redisDb = parseNonNegativeInteger(input.REDIS_DB) ?? redisUrlParts.db ?? 0;
+  const redisPassword = input.REDIS_PASSWORD ?? redisUrlParts.password;
 
   return {
     nodeEnv: input.NODE_ENV,
@@ -314,6 +375,11 @@ const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
     jwtExpiresIn: input.JWT_EXPIRES_IN ?? '15m',
     jwtRefreshExpiresIn: input.JWT_REFRESH_EXPIRES_IN ?? '7d',
     redisUrl: input.REDIS_URL ?? '',
+    redisHost,
+    redisPort,
+    redisPassword,
+    redisDb,
+    redisTls: redisUrlParts.tls ?? false,
     corsOrigin: parseCorsOrigins(input.CORS_ORIGIN ?? ''),
     bcryptRounds,
     logLevel: input.LOG_LEVEL ?? 'info',
