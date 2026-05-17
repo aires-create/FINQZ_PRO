@@ -14,8 +14,13 @@ import type {
   AuthResponse,
   LogoutRequest,
 } from './types.js';
+import type { SecurityEventContext } from '../security-events/index.js';
 
 const logger = createModuleLogger('AuthController');
+
+const getHeaderValue = (value: string | string[] | undefined) => {
+  return Array.isArray(value) ? value[0] : value;
+};
 
 export class AuthController {
   async register(request: any, reply: any): Promise<void> {
@@ -35,10 +40,20 @@ export class AuthController {
 
   async login(request: any, reply: any): Promise<void> {
     const data = request.body as LoginRequest;
+    const userAgent = getHeaderValue(request.headers?.['user-agent']);
+    const requestId = request.requestId ?? request.id;
+    const route = request.routeOptions?.url ?? request.url;
+    const securityContext: SecurityEventContext = {
+      ...(request.ip ? { ipAddress: request.ip } : {}),
+      ...(userAgent ? { userAgent } : {}),
+      ...(requestId ? { requestId } : {}),
+      ...(route ? { route } : {}),
+      ...(request.method ? { method: request.method } : {}),
+    };
 
     logger.info(`Login request for email: ${data.email}`);
 
-    const result = await authService.login(data);
+    const result = await authService.login(data, securityContext);
 
     reply.setCookie('refreshToken', result.tokens.refreshToken, {
       httpOnly: true,

@@ -7,6 +7,7 @@ import { getRedisClient, disconnectRedis } from '../../redis/index.js';
 import { recordRateLimitExceeded } from '../../../infra/observability/index.js';
 import { logger } from '../../../shared/logger.js';
 import type { JWTPayload } from '../../../shared/types/index.js';
+import { recordSecurityEvent } from '../../../modules/security-events/index.js';
 
 type RateLimitPolicyName =
   | 'global_api'
@@ -50,6 +51,10 @@ const exceededLogWindow = new Map<string, number>();
 
 const hashValue = (value: string) =>
   crypto.createHash('sha256').update(value).digest('hex').slice(0, 24);
+
+const getHeaderValue = (value: string | string[] | undefined) => {
+  return Array.isArray(value) ? value[0] : value;
+};
 
 const normalizeRoute = (route: string) => {
   const path = route.split('?')[0] || '/';
@@ -130,10 +135,32 @@ const recordExceeded = (policy: RateLimitPolicyName) => (
   key: string,
 ) => {
   const route = getRequestRoute(request);
+  const keyHash = hashValue(key);
+  const tenantId =
+    request.currentTenant?.tenantId ?? request.currentUser?.tenantId;
+  const userId = request.currentUser?.userId;
+  const userAgent = getHeaderValue(request.headers['user-agent']);
 
   recordRateLimitExceeded({
     policy,
     route,
+  });
+
+  void recordSecurityEvent({
+    ...(tenantId ? { tenantId } : {}),
+    ...(userId ? { userId } : {}),
+    eventType: 'RATE_LIMIT_EXCEEDED',
+    severity: policy === 'auth_login' ? 'HIGH' : 'MEDIUM',
+    outcome: 'BLOCKED',
+    ipAddress: request.ip,
+    ...(userAgent ? { userAgent } : {}),
+    requestId: request.requestId ?? request.id,
+    route,
+    method: request.method,
+    metadata: {
+      policy,
+      keyHash,
+    },
   });
 
   if (!shouldLogExceeded(policy, key)) {
@@ -145,7 +172,7 @@ const recordExceeded = (policy: RateLimitPolicyName) => (
     method: request.method,
     route,
     policy,
-    keyHash: hashValue(key),
+    keyHash,
   });
 };
 

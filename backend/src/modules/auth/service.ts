@@ -2,6 +2,8 @@
 // FINQZ PRO - Auth Service
 // ============================================
 
+import crypto from 'node:crypto';
+
 import { prisma } from '../../database/prisma.js';
 import { AppError, AuthenticationError, ValidationError } from '../../types/index.js';
 import { createModuleLogger } from '../../shared/logger.js';
@@ -25,8 +27,42 @@ import type {
   RefreshTokenRequest,
   ChangePasswordRequest,
 } from './types.js';
+import {
+  recordSecurityEvent,
+  type SecurityEventContext,
+  type SecurityEventMetadata,
+} from '../security-events/index.js';
 
 const logger = createModuleLogger('AuthService');
+
+const hashSecurityIdentifier = (value: string) =>
+  crypto.createHash('sha256').update(value).digest('hex');
+
+const getLoginFailureReason = (error: unknown) => {
+  if (!(error instanceof AuthenticationError)) {
+    return 'unexpected_error';
+  }
+
+  switch (error.message) {
+    case 'Account is deactivated':
+      return 'account_deactivated';
+    case 'Tenant is not active':
+      return 'tenant_inactive';
+    case 'No role assigned to user':
+    case 'User role assignment not found':
+      return 'role_missing';
+    default:
+      return 'invalid_credentials';
+  }
+};
+
+const buildLoginMetadata = (
+  emailNormalized: string,
+  reason?: string,
+): SecurityEventMetadata => ({
+  emailHash: hashSecurityIdentifier(emailNormalized),
+  ...(reason ? { reason } : {}),
+});
 
 export class AuthService {
   /**
@@ -169,12 +205,16 @@ export class AuthService {
   /**
    * Login user
    */
-  async login(data: LoginRequest): Promise<AuthResponse> {
+  async login(
+    data: LoginRequest,
+    securityContext: SecurityEventContext = {},
+  ): Promise<AuthResponse> {
+    const emailNormalized = data.email.toLowerCase().trim();
+    let resolvedTenantId: string | null = null;
+    let resolvedUserId: string | null = null;
+
     try {
       logger.info(`Login attempt for email: ${data.email}`);
-
-      // Normalize email
-      const emailNormalized = data.email.toLowerCase().trim();
 
       // Find user with tenant and assigned roles
       // Find user with tenant information
@@ -187,6 +227,11 @@ export class AuthService {
           },
         },
       });
+
+      if (user) {
+        resolvedTenantId = user.tenantId;
+        resolvedUserId = user.id;
+      }
 
       if (!user) {
         throw new AuthenticationError('Invalid credentials', 401);
@@ -256,6 +301,16 @@ export class AuthService {
 
       logger.info(`Login successful for user: ${user.id}`);
 
+      void recordSecurityEvent({
+        ...securityContext,
+        tenantId: user.tenantId,
+        userId: user.id,
+        eventType: 'AUTH_LOGIN_SUCCEEDED',
+        severity: 'LOW',
+        outcome: 'SUCCESS',
+        metadata: buildLoginMetadata(emailNormalized),
+      });
+
       return {
         user: {
           id: user.id,
@@ -270,6 +325,21 @@ export class AuthService {
         tokens,
       };
     } catch (error) {
+      if (error instanceof AuthenticationError) {
+        void recordSecurityEvent({
+          ...securityContext,
+          tenantId: resolvedTenantId,
+          userId: resolvedUserId,
+          eventType: 'AUTH_LOGIN_FAILED',
+          severity: 'MEDIUM',
+          outcome: 'FAILURE',
+          metadata: buildLoginMetadata(
+            emailNormalized,
+            getLoginFailureReason(error),
+          ),
+        });
+      }
+
       logger.error('Login failed:', error);
       throw error;
     }

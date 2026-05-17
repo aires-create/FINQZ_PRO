@@ -44,6 +44,7 @@ model Tenant {
   rolePermissions RolePermission[]
   userRoles       UserRole[]
   auditLogs       AuditLog[]
+  securityEventLogs SecurityEventLog[]
 
   @@index([domain])
   @@index([isActive])
@@ -291,6 +292,7 @@ model User {
   activities         Activity[]
   commissions        Commission[]
   auditLogs          AuditLog[]
+  securityEventLogs  SecurityEventLog[]
   refreshTokens      RefreshToken[]
   memberships        Membership[]
   invitedMemberships Membership[]   @relation("MembershipInvitedBy")
@@ -683,6 +685,36 @@ model AuditLog {
   @@index([createdAt])
   @@index([riskLevel])
   @@map("audit_logs")
+}
+
+model SecurityEventLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType String
+  severity  String
+  outcome   String
+
+  ipAddress String?
+  userAgent String?
+  requestId String?
+  route     String?
+  method    String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  tenantId String? @db.Uuid
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  userId String? @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([outcome])
+  @@index([requestId])
+  @@index([createdAt])
+  @@map("security_event_logs")
 }
 
 model RefreshToken {
