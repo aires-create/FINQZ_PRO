@@ -6,6 +6,11 @@ import { swaggerSpec } from '../../config/swagger.js';
 import { logger } from '../../shared/logger.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { prisma } from '../prisma/client.js';
+import {
+  getPrometheusMetrics,
+  initializeObservability,
+  recordHttpRequestMetrics,
+} from '../../infra/observability/index.js';
 
 import { authJwtPlugin } from '../../modules/auth/jwt.plugin.js';
 import authRoutes from '../../modules/auth/auth.routes.js';
@@ -229,6 +234,8 @@ const sendErrorResponse = (
 };
 
 export async function buildFastifyApp(): Promise<any> {
+  initializeObservability();
+
   const app = Fastify({
     logger: false,
     trustProxy: true,
@@ -342,6 +349,13 @@ export async function buildFastifyApp(): Promise<any> {
       durationMs,
       environment: config.nodeEnv,
     });
+
+    recordHttpRequestMetrics({
+      method: request.method,
+      route,
+      statusCode,
+      durationMs,
+    });
   });
 
   // Health
@@ -377,6 +391,15 @@ export async function buildFastifyApp(): Promise<any> {
         timestamp,
       });
     }
+  });
+
+  // Metrics
+  app.get('/metrics', async (_request, reply) => {
+    const metrics = await getPrometheusMetrics();
+
+    return reply
+      .type(metrics.contentType)
+      .send(metrics.body);
   });
 
   // API docs
