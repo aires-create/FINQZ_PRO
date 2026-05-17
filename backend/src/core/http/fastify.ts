@@ -229,7 +229,10 @@ const sendErrorResponse = (
 };
 
 export async function buildFastifyApp(): Promise<any> {
-  const app = Fastify({ logger: false });
+  const app = Fastify({
+    logger: false,
+    trustProxy: true,
+  });
 
   // CORS
   app.addHook('onRequest', async (request, reply) => {
