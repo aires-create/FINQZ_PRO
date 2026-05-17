@@ -1,0 +1,195 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+      - staging
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  CI_POSTGRES_USER: finqz_user
+  CI_POSTGRES_PASSWORD: finqz_password
+  CI_POSTGRES_DB: finqz_pro_ci
+  CI_REDIS_URL_HOST: redis://localhost:6379
+  CI_REDIS_URL_COMPOSE: redis://redis:6379
+  CI_JWT_SECRET: ci-only-jwt-secret-change-before-runtime-use-32chars
+  CI_JWT_REFRESH_SECRET: ci-only-refresh-secret-change-before-runtime-use-32chars
+  CI_CORS_ORIGIN: http://localhost:5173
+
+jobs:
+  frontend:
+    name: Frontend / Vite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Lint frontend contract
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.lint ? 0 : 1)"; then
+            npm run lint
+          else
+            echo "::notice title=Frontend lint::scripts.lint is not defined yet; this CI hook is ready to enforce it when the frontend lint script is added."
+          fi
+
+      - name: Run frontend tests
+        run: npm test
+
+      - name: Build frontend
+        run: npm run build
+
+  backend:
+    name: Backend / TypeScript + Prisma
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    env:
+      DATABASE_URL: "postgresql://${{ env.CI_POSTGRES_USER }}:${{ env.CI_POSTGRES_PASSWORD }}@localhost:5432/${{ env.CI_POSTGRES_DB }}?schema=public"
+      JWT_SECRET: ${{ env.CI_JWT_SECRET }}
+      JWT_REFRESH_SECRET: ${{ env.CI_JWT_REFRESH_SECRET }}
+      REDIS_URL: ${{ env.CI_REDIS_URL_HOST }}
+      CORS_ORIGIN: ${{ env.CI_CORS_ORIGIN }}
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Typecheck backend
+        run: npm run typecheck
+
+      - name: Lint backend
+        run: npm run lint
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run backend tests
+        run: npm test
+
+  compose-config:
+    name: Docker / Compose config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate docker compose model
+        env:
+          POSTGRES_USER: ${{ env.CI_POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.CI_POSTGRES_DB }}
+          REDIS_URL: ${{ env.CI_REDIS_URL_COMPOSE }}
+          JWT_SECRET: ${{ env.CI_JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ env.CI_JWT_REFRESH_SECRET }}
+          CORS_ORIGIN: ${{ env.CI_CORS_ORIGIN }}
+        run: docker compose -f docker-compose.yml config --quiet
+
+  docker-build:
+    name: Docker / Backend image
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs:
+      - backend
+      - compose-config
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: finqz-pro-api:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ci-status:
+    name: CI / Required
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ always() }}
+    needs:
+      - frontend
+      - backend
+      - compose-config
+      - docker-build
+
+    steps:
+      - name: Enforce required CI gates
+        shell: bash
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" == "true" ]]; then
+            echo "One or more required CI gates failed, were cancelled, or were skipped."
+            exit 1
+          fi
+
+          echo "All required CI gates passed."
