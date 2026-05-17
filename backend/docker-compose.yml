@@ -13,11 +13,11 @@ services:
       NODE_ENV: production
       PORT: 4000
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://finqz_user:finqz_password@postgres:5432/finqz_pro_dev?schema=public
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: change-me-staging-jwt-secret
-      JWT_REFRESH_SECRET: change-me-staging-refresh-secret
-      CORS_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     command: node dist/server.js
     restart: unless-stopped
     networks:
@@ -40,9 +40,9 @@ services:
     image: postgres:16-alpine
     container_name: finqz-pro-postgres
     environment:
-      POSTGRES_USER: finqz_user
-      POSTGRES_PASSWORD: finqz_password
-      POSTGRES_DB: finqz_pro_dev
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
