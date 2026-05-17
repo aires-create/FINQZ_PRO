@@ -189,6 +189,7 @@ export function enforceRequestSizeGovernance(
 
   return reply.status(413).send({
     success: false,
+    requestId: request.requestId ?? request.id,
     code: 'PAYLOAD_TOO_LARGE',
     message: 'Payload too large.',
     limit: {

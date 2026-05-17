@@ -37,6 +37,7 @@ import {
   requestBodyLimits,
   trustProxy,
 } from './security-governance.js';
+import { applyRequestCorrelation } from './request-correlation.js';
 
 const developmentCorsOrigins = [
   'http://localhost:5173',
@@ -189,6 +190,8 @@ const getErrorLogMeta = (
     statusCode,
     errorName: error.name,
     errorMessage,
+    tenantId: request.currentTenant?.tenantId ?? request.currentUser?.tenantId,
+    userId: request.currentUser?.userId,
     environment: config.nodeEnv,
   };
 
@@ -243,11 +246,13 @@ const sendErrorResponse = (
   if (operationalError) {
     const response: {
       success: false;
+      requestId: string;
       message: string;
       code?: string;
       errors?: string[];
     } = {
       success: false,
+      requestId: _request.requestId ?? _request.id,
       message: operationalError.message,
     };
 
@@ -267,6 +272,7 @@ const sendErrorResponse = (
 
   reply.status(500).send({
     success: false,
+    requestId: _request.requestId ?? _request.id,
     message: 'Internal server error',
   });
 };
@@ -278,6 +284,11 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
     bodyLimit: requestBodyLimits.jsonBytes,
     logger: false,
     trustProxy,
+  });
+
+  // Request correlation must run before CORS, auth, rate-limit and routes.
+  app.addHook('onRequest', async (request, reply) => {
+    applyRequestCorrelation(request, reply);
   });
 
   // CORS
@@ -363,6 +374,9 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
       route,
       statusCode,
       durationMs,
+      latencyMs: durationMs,
+      tenantId: request.currentTenant?.tenantId ?? request.currentUser?.tenantId,
+      userId: request.currentUser?.userId,
       environment: config.nodeEnv,
     });
 

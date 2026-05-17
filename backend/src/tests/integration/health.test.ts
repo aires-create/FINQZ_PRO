@@ -42,4 +42,35 @@ describe('GET /health', () => {
       environment: 'test',
     });
   });
+
+  it('echoes a valid inbound request id', async () => {
+    const server = await getApp();
+    const requestId = 'test-request-123';
+    const response = await server.inject({
+      method: 'GET',
+      url: '/health',
+      headers: {
+        'x-request-id': requestId,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['x-request-id']).toBe(requestId);
+  });
+
+  it('replaces an unsafe inbound request id', async () => {
+    const server = await getApp();
+    const unsafeRequestId = ' invalid request id ';
+    const response = await server.inject({
+      method: 'GET',
+      url: '/health',
+      headers: {
+        'x-request-id': unsafeRequestId,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['x-request-id']).toBeDefined();
+    expect(response.headers['x-request-id']).not.toBe(unsafeRequestId);
+  });
 });

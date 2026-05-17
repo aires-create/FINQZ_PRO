@@ -3,6 +3,8 @@ import { Counter, Histogram } from 'prom-client';
 import { metricsRegistry } from './registry.js';
 
 const httpMetricLabels = ['method', 'route', 'status_code'] as const;
+// Keep requestId out of Prometheus labels. It is high-cardinality by design;
+// per-request investigation belongs in structured logs and security events.
 
 type HttpMetricLabel = (typeof httpMetricLabels)[number];
 

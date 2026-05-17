@@ -2,21 +2,9 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import fp from 'fastify-plugin';
-import crypto from 'node:crypto';
 import { config } from '../../config/app.js';
 import { authenticate } from '../../core/http/middleware.js';
-
-const getHeaderValue = (value: string | string[] | undefined) => {
-  return Array.isArray(value) ? value[0] : value;
-};
-
-const resolveRequestId = (value: string | string[] | undefined) => {
-  const inboundRequestId = getHeaderValue(value);
-
-  return inboundRequestId && inboundRequestId.length <= 128
-    ? inboundRequestId
-    : crypto.randomUUID();
-};
+import { applyRequestCorrelation } from '../../core/http/request-correlation.js';
 
 const authJwtPluginHandler: FastifyPluginAsync = async (app) => {
   await app.register(cookie, {
@@ -50,13 +38,7 @@ const authJwtPluginHandler: FastifyPluginAsync = async (app) => {
   });
 
   app.addHook('onRequest', async (request, reply) => {
-    const requestId = resolveRequestId(request.headers['x-request-id']);
-
-    request.requestId = requestId;
-    request.correlationId = requestId;
-    request.startTime = Date.now();
-
-    reply.header('X-Request-Id', requestId);
+    applyRequestCorrelation(request, reply);
   });
 };
 
