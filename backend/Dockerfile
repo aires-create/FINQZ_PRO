@@ -34,6 +34,9 @@ RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
 
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 4000
 
 CMD ["node", "dist/server.js"]
