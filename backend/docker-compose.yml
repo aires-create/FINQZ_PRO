@@ -23,6 +23,19 @@ services:
     networks:
       - finqz_pro_network
 
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: finqz-pro-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - finqz_pro_network
+
   postgres:
     image: postgres:16-alpine
     container_name: finqz-pro-postgres
