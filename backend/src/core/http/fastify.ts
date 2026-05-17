@@ -15,6 +15,10 @@ import {
 import { authJwtPlugin } from '../../modules/auth/jwt.plugin.js';
 import authRoutes from '../../modules/auth/auth.routes.js';
 import { enterpriseRateLimitPlugin } from './plugins/rate-limit.plugin.js';
+import {
+  hasRecordedSecurityEvent,
+  recordRequestSecurityEvent,
+} from '../../modules/security-events/index.js';
 
 import { crmRoutes } from '../../modules/crm/routes.js';
 import { auditRoutes } from '../../modules/audit/routes.js';
@@ -54,7 +58,7 @@ const getAllowedCorsOrigins = () => {
 
 const getRequestUrlForLog = (url: string) => url.split('?')[0] || url;
 
-const getRouteForLog = (request: any) => {
+const getRouteForLog = (request: FastifyRequest) => {
   return request.routeOptions?.url ?? request.url;
 };
 
@@ -197,6 +201,27 @@ const getErrorLogMeta = (
   return meta;
 };
 
+const recordUnclassifiedForbiddenEvent = (
+  error: FastifyError,
+  request: FastifyRequest,
+  statusCode: number,
+) => {
+  if (statusCode !== 403 || hasRecordedSecurityEvent(request)) {
+    return;
+  }
+
+  recordRequestSecurityEvent(request, {
+    eventType: 'ACCESS_FORBIDDEN',
+    severity: 'MEDIUM',
+    outcome: 'BLOCKED',
+    metadata: {
+      reason: 'unclassified_forbidden',
+      errorName: error.name,
+      errorMessage: redactSensitiveText(error.message),
+    },
+  });
+};
+
 const sendErrorResponse = (
   error: FastifyError,
   _request: FastifyRequest,
@@ -207,6 +232,8 @@ const sendErrorResponse = (
   const statusCode = operationalError
     ? getErrorStatusCode(operationalError)
     : 500;
+
+  recordUnclassifiedForbiddenEvent(error, _request, statusCode);
 
   logger[getLogLevelForStatusCode(statusCode)](
     isKnownOperationalError

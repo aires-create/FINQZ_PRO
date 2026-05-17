@@ -8,6 +8,7 @@ declare module 'fastify' {
     requestId: string | null;
     correlationId: string | null;
     startTime: number | null;
+    securityEventLogKeys?: string[];
   }
 
   interface FastifyInstance {

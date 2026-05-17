@@ -1,8 +1,31 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticationError, AuthorizationError } from '../../types/index.js';
 import type { JWTPayload, TenantContext } from '../../shared/types/index.js';
+import { recordRequestSecurityEvent } from '../../modules/security-events/index.js';
 
 type TenantBearingSource = Record<string, unknown> | null | undefined;
+type ErrorWithCode = {
+  code?: unknown;
+};
+
+const jwtAuthRequiredCodes = new Set([
+  'FST_JWT_NO_AUTHORIZATION_IN_HEADER',
+  'FST_JWT_NO_AUTHORIZATION_IN_COOKIE',
+]);
+
+const jwtExpiredCodes = new Set([
+  'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED',
+]);
+
+const getErrorCode = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') {
+    return undefined;
+  }
+
+  const code = (error as ErrorWithCode).code;
+
+  return typeof code === 'string' ? code : undefined;
+};
 
 const asRecord = (value: unknown): TenantBearingSource => {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -55,6 +78,49 @@ export const buildTenantContext = (payload: JWTPayload): TenantContext => ({
   ...(payload.role ? { role: payload.role } : {}),
 });
 
+const recordJwtVerificationFailure = (
+  request: FastifyRequest,
+  error: unknown,
+) => {
+  const code = getErrorCode(error);
+
+  if (code && jwtAuthRequiredCodes.has(code)) {
+    recordRequestSecurityEvent(request, {
+      eventType: 'AUTH_REQUIRED',
+      severity: 'LOW',
+      outcome: 'BLOCKED',
+      metadata: {
+        reason: 'missing_authorization',
+        source: 'jwt_authenticate',
+      },
+    });
+    return;
+  }
+
+  if (code && jwtExpiredCodes.has(code)) {
+    recordRequestSecurityEvent(request, {
+      eventType: 'JWT_EXPIRED',
+      severity: 'LOW',
+      outcome: 'BLOCKED',
+      metadata: {
+        reason: 'token_expired',
+        source: 'jwt_authenticate',
+      },
+    });
+    return;
+  }
+
+  recordRequestSecurityEvent(request, {
+    eventType: 'JWT_INVALID',
+    severity: 'MEDIUM',
+    outcome: 'BLOCKED',
+    metadata: {
+      reason: code ?? 'token_verification_failed',
+      source: 'jwt_authenticate',
+    },
+  });
+};
+
 /**
  * Fastify middleware to authenticate JWT tokens
  */
@@ -66,6 +132,15 @@ export async function authenticate(
     const payload = await request.jwtVerify<JWTPayload>();
 
     if (!isJwtPayload(payload)) {
+      recordRequestSecurityEvent(request, {
+        eventType: 'JWT_INVALID',
+        severity: 'MEDIUM',
+        outcome: 'BLOCKED',
+        metadata: {
+          reason: 'invalid_payload',
+          source: 'jwt_authenticate',
+        },
+      });
       throw new AuthenticationError('Invalid token payload', 401);
     }
 
@@ -78,6 +153,8 @@ export async function authenticate(
     if (error instanceof AuthenticationError) {
       throw error;
     }
+
+    recordJwtVerificationFailure(request, error);
 
     throw new AuthenticationError('Invalid or expired access token', 401);
   }
@@ -93,6 +170,15 @@ export async function tenantContextMiddleware(
   const user = request.currentUser;
 
   if (!isJwtPayload(user)) {
+    recordRequestSecurityEvent(request, {
+      eventType: 'AUTH_REQUIRED',
+      severity: 'LOW',
+      outcome: 'BLOCKED',
+      metadata: {
+        reason: 'missing_authenticated_user',
+        source: 'tenant_context',
+      },
+    });
     throw new AuthenticationError('Authentication required');
   }
 
@@ -105,6 +191,17 @@ export async function tenantContextMiddleware(
   const requestedTenantId = getRequestedTenantId(request);
 
   if (requestedTenantId && requestedTenantId !== user.tenantId) {
+    recordRequestSecurityEvent(request, {
+      eventType: 'CROSS_TENANT_ACCESS_DENIED',
+      severity: 'HIGH',
+      outcome: 'BLOCKED',
+      tenantId: user.tenantId,
+      userId: user.userId,
+      metadata: {
+        requestedTenantId,
+        source: 'tenant_context',
+      },
+    });
     throw new AuthorizationError('Cross-tenant access denied');
   }
 }

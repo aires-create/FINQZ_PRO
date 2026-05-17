@@ -1,3 +1,5 @@
+import type { FastifyRequest } from 'fastify';
+
 import { createModuleLogger } from '../../shared/logger.js';
 import {
   createSecurityEventLog,
@@ -5,8 +7,12 @@ import {
 } from './repository.js';
 import type {
   RecordSecurityEventInput,
+  SecurityEventContext,
   SecurityEventMetadata,
   SecurityEventMetadataValue,
+  SecurityEventOutcome,
+  SecurityEventSeverity,
+  SecurityEventType,
 } from './types.js';
 
 const logger = createModuleLogger('SecurityEvents');
@@ -21,6 +27,24 @@ const maxStringLength = 512;
 
 type SecurityEventMetadataRecord = {
   [key: string]: SecurityEventMetadataValue;
+};
+
+export interface RecordRequestSecurityEventInput {
+  eventType: SecurityEventType;
+  severity: SecurityEventSeverity;
+  outcome: SecurityEventOutcome;
+  tenantId?: string | null;
+  userId?: string | null;
+  metadata?: SecurityEventMetadata | null;
+  dedupeKey?: string;
+}
+
+const getHeaderValue = (value: string | string[] | undefined) => {
+  return Array.isArray(value) ? value[0] : value;
+};
+
+const getRequestRoute = (request: FastifyRequest) => {
+  return request.routeOptions?.url ?? request.url;
 };
 
 const isMetadataRecord = (
@@ -144,4 +168,52 @@ export async function recordSecurityEvent(
       ...getErrorLogMeta(error),
     });
   }
+}
+
+export function getSecurityEventContextFromRequest(
+  request: FastifyRequest,
+): SecurityEventContext {
+  const userAgent = getHeaderValue(request.headers['user-agent']);
+  const route = getRequestRoute(request);
+
+  return {
+    ...(request.currentTenant?.tenantId
+      ? { tenantId: request.currentTenant.tenantId }
+      : {}),
+    ...(request.currentUser?.userId
+      ? { userId: request.currentUser.userId }
+      : {}),
+    ...(request.ip ? { ipAddress: request.ip } : {}),
+    ...(userAgent ? { userAgent } : {}),
+    ...(request.requestId ?? request.id
+      ? { requestId: request.requestId ?? request.id }
+      : {}),
+    ...(route ? { route } : {}),
+    ...(request.method ? { method: request.method } : {}),
+  };
+}
+
+export function hasRecordedSecurityEvent(request: FastifyRequest): boolean {
+  return Boolean(request.securityEventLogKeys?.length);
+}
+
+export function recordRequestSecurityEvent(
+  request: FastifyRequest,
+  input: RecordRequestSecurityEventInput,
+): void {
+  const eventKey = input.dedupeKey ?? input.eventType;
+  const recordedKeys = request.securityEventLogKeys ?? [];
+
+  if (recordedKeys.includes(eventKey)) {
+    return;
+  }
+
+  request.securityEventLogKeys = [...recordedKeys, eventKey];
+
+  const { dedupeKey: _dedupeKey, ...eventInput } = input;
+
+  void recordSecurityEvent({
+    ...getSecurityEventContextFromRequest(request),
+    ...eventInput,
+  });
 }
