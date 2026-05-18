@@ -1,13 +1,13 @@
 // FINQZ PRO - Main App
 import React, { useEffect, useState, useCallback, createContext, useContext, Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { createEdgeSpark } from "@edgespark/client";
 import useAppStore from "./store";
 import { Layout } from "./layouts/MainLayout";
 import { ProtectedRoute, AccessDenied } from "./auth/guards";
 import { AuthUser, Module, Action } from "./auth/permissions";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
+import { finqzAuth } from "./auth/finqzAuth";
 
 // Lazy loading for code splitting - improves initial load time
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
@@ -54,9 +54,7 @@ import {
 
 import { SdrIaHubPage } from "./pages/SdrIaHub";
 
-import "@edgespark/client/styles.css";
-
-import { API_BASE_URL, STORAGE_KEYS } from "./config/environment";
+import { STORAGE_KEYS } from "./config/environment";
 import { generateSecurePassword } from "./utils/auth";
 
 // Page loader for lazy-loaded routes
@@ -68,11 +66,6 @@ const PageLoader = () => (
     </div>
   </div>
 );
-
-// Create EdgeSpark client
-const client = createEdgeSpark({
-  baseUrl: new URL(API_BASE_URL, window.location.origin).toString(),
-});
 
 // Auth Context
 interface AuthContextType {
@@ -122,7 +115,7 @@ const AuthScreen = () => {
         );
 
         const session = await Promise.race([
-          client.auth.getSession(),
+          finqzAuth.getSession(),
           timeoutPromise,
         ]);
 
@@ -345,7 +338,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
 
         const session = await Promise.race([
-          client.auth.getSession(),
+          finqzAuth.getSession(),
           timeoutPromise,
         ]);
 

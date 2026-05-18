@@ -2,258 +2,28 @@
 // Client HTTP com interceptors e tratamento de erros
 // Nota: Substituir por chamada real ao backend quando disponível
 
-import { createEdgeSpark } from "@edgespark/client";
-import { API_BASE_URL, API_CONFIG, STORAGE_KEYS } from "../config/environment";
-import type { ApiError, ErrorResponse } from "../types/api";
+import { finqzClient } from "./finqzClient";
+import {
+  apiFetch,
+  buildQueryString,
+} from "./http";
+export {
+  ApiException,
+  apiFetch,
+  apiFetchWithRetry,
+  buildQueryString,
+  getErrorMessage,
+  isAuthError,
+  isNetworkError,
+  isPermissionError,
+  isValidationError,
+} from "./http";
 
 // ============================================
 // CLIENT CONFIGURATION
 // ============================================
 
-// Create EdgeSpark client
-export const client = createEdgeSpark({
-  baseUrl: new URL(API_BASE_URL, window.location.origin).toString(),
-});
-
-// ============================================
-// ERROR HANDLING
-// ============================================
-
-/**
- * Mapeia códigos de erro HTTP para mensagens amigáveis
- */
-export const getErrorMessage = (status: number, defaultMessage: string): string => {
-  const errorMessages: Record<number, string> = {
-    400: 'Dados inválidos. Verifique os campos preenchidos.',
-    401: 'Sessão expirada. Faça login novamente.',
-    403: 'Você não tem permissão para realizar esta ação.',
-    404: 'Recurso não encontrado.',
-    422: 'Erro de validação. Verifique os dados enviados.',
-    429: 'Muitas requisições. Aguarde um momento.',
-    500: 'Erro interno do servidor. Tente novamente mais tarde.',
-    502: 'Serviço temporariamente indisponível.',
-    503: 'Serviço em manutenção. Tente novamente mais tarde.',
-  };
-  
-  return errorMessages[status] || defaultMessage;
-};
-
-/**
- * Classe de erro da API
- */
-export class ApiException extends Error {
-  status: number;
-  code?: string;
-  details?: Record<string, string[]>;
-  
-  constructor(message: string, status: number, code?: string, details?: Record<string, string[]>) {
-    super(message);
-    this.name = 'ApiException';
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
-
-/**
- * Verifica se o erro é de autenticação (401)
- */
-export const isAuthError = (status: number): boolean => {
-  return status === 401;
-};
-
-/**
- * Verifica se o erro é de permissão (403)
- */
-export const isPermissionError = (status: number): boolean => {
-  return status === 403;
-};
-
-/**
- * Verifica se o erro é de validação (422)
- */
-export const isValidationError = (status: number): boolean => {
-  return status === 422;
-};
-
-/**
- * Verifica se o erro é de rede
- */
-export const isNetworkError = (error: unknown): boolean => {
-  return error instanceof TypeError && error.message === 'Failed to fetch';
-};
-
-// ============================================
-// API FETCH
-// ============================================
-
-/**
- * Obtém o token de autenticação
- */
-const getAuthToken = (): string | null => {
-  try {
-    return localStorage.getItem(STORAGE_KEYS.TOKEN);
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Wrapper para fetch com tratamento de erros
- */
-export async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const token = getAuthToken();
-  
-  // Headers padrão
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    ...options.headers,
-  };
-  
-  // Adiciona token se existir
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
-  
-  try {
-    const normalizedEndpoint = endpoint.startsWith("/api/")
-  ? endpoint.replace(/^\/api/, "")
-  : endpoint;
-
-const response = await fetch(`${API_BASE_URL}${normalizedEndpoint}`, {
-  ...options,
-  headers,
-});
-
-    // Trata respostas de erro
-    if (!response.ok) {
-      let errorData: Record<string, unknown> = {};
-      
-      try {
-        errorData = await response.json();
-      } catch {
-        // Ignora erro de parse
-      }
-      
-      const status = response.status;
-      const message = getErrorMessage(status, (errorData.message as string) || 'Erro na requisição');
-      
-      // Dispara evento de erro para tratamento global
-      if (isAuthError(status)) {
-        // Limpa sessão e redireciona para login
-        handleAuthError();
-      }
-      
-      throw new ApiException(
-        message,
-        status,
-        errorData.code as string | undefined,
-        errorData.details as Record<string, string[]> | undefined
-      );
-    }
-
-    // Retorna dados
-    return response.json();
-  } catch (error) {
-    // Se já é ApiException, relança
-    if (error instanceof ApiException) {
-      throw error;
-    }
-    
-    // Erro de rede
-    if (isNetworkError(error)) {
-      throw new ApiException(
-        'Erro de conexão. Verifique sua internet.',
-        0,
-        'NETWORK_ERROR'
-      );
-    }
-    
-    // Outro erro
-    console.error('[API] Erro na requisição:', error);
-    throw new ApiException(
-      'Erro inesperado. Tente novamente.',
-      0,
-      'UNKNOWN_ERROR'
-    );
-  }
-}
-
-// ============================================
-// AUTH ERROR HANDLER
-// ============================================
-
-/**
- * trata erros de autenticação
- */
-const handleAuthError = (): void => {
-  // Limpa tokens
-  localStorage.removeItem(STORAGE_KEYS.TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-  localStorage.removeItem(STORAGE_KEYS.USER);
-  
-  // Dispara evento para redirect
-  window.dispatchEvent(new CustomEvent('auth:error', { 
-    detail: { message: 'Sessão expirada' } 
-  }));
-};
-
-// ============================================
-// API HELPERS
-// ============================================
-
-/**
- * Constrói query string
- */
-export const buildQueryString = (params: Record<string, unknown>): string => {
-  const searchParams = new URLSearchParams();
-  
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      searchParams.append(key, String(value));
-    }
-  }
-  
-  const queryString = searchParams.toString();
-  return queryString ? `?${queryString}` : '';
-};
-
-/**
- * Wrapper com retry
- */
-export async function apiFetchWithRetry<T>(
-  endpoint: string,
-  options: RequestInit = {},
-  attempts: number = API_CONFIG.RETRY_ATTEMPTS
-): Promise<T> {
-  let lastError: Error | null = null;
-  
-  for (let i = 0; i < attempts; i++) {
-    try {
-      return await apiFetch<T>(endpoint, options);
-    } catch (error) {
-      lastError = error as Error;
-      
-      // Não retry em erros de autenticação ou validação
-      if (error instanceof ApiException) {
-        if (isAuthError(error.status) || isValidationError(error.status)) {
-          throw error;
-        }
-      }
-      
-      // Espera antes de tentar novamente
-      if (i < attempts - 1) {
-        await new Promise(resolve => setTimeout(resolve, API_CONFIG.RETRY_DELAY));
-      }
-    }
-  }
-  
-  throw lastError;
-}
+export const client = finqzClient;
 
 // ============================================
 // API ENDPOINTS (mantido para compatibilidade)

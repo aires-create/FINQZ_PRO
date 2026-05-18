@@ -45,12 +45,7 @@ import {
   Sun,
 } from "lucide-react";
 import useAppStore from "../store";
-import { createEdgeSpark } from "@edgespark/client";
-import { API_BASE_URL } from "../config/environment";
-
-const client = createEdgeSpark({
-  baseUrl: new URL(API_BASE_URL, window.location.origin).toString(),
-});
+import { finqzAuth } from "../auth/finqzAuth";
 
 // ============================================
 // HELPER - Verificar Permissões RBAC
@@ -330,7 +325,7 @@ const dashboardSidebarItems: MenuItem[] = [
 ];
 
 export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.ReactNode }> = ({ customMenuItems, children }) => {
-  const { sidebarOpen, setSidebarOpen, user, theme, toggleTheme } = useAppStore();
+  const { sidebarOpen, setSidebarOpen, user, theme, toggleTheme, setAuth } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -464,7 +459,8 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     : "lg:ml-20";
 
   const handleLogout = async () => {
-    await client.auth.signOut();
+    await finqzAuth.signOut();
+    setAuth(null);
     navigate("/");
   };
 

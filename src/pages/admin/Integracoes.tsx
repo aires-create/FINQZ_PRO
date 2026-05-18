@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Key, ExternalLink, Check, X, RefreshCw, Loader2 } from "lucide-react";
 import { Button, Input } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
-import { client } from "../../api/client";
+import { finqzClient } from "../../api/finqzClient";
 
 interface Integracao {
   id: string;
@@ -49,7 +49,7 @@ export const IntegracoesPage: React.FC = () => {
     setStormResult(null);
     
     try {
-      const response = await client.post('/api/integrations/storm/test-connection', {});
+      const response = await finqzClient.post<StormTestResult>('/api/integrations/storm/test-connection', {});
       const data = response.data;
       setStormResult(data);
       
