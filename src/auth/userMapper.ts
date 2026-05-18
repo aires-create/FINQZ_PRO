@@ -48,6 +48,11 @@ const roleAliases: Record<string, Role> = {
   admin: "ROLE_ADMIN_SISTEMA",
   administrator: "ROLE_ADMIN_SISTEMA",
   admin_sistema: "ROLE_ADMIN_SISTEMA",
+  platform_admin: "ROLE_ADMIN_SISTEMA",
+  root: "ROLE_ADMIN_SISTEMA",
+  super_admin: "ROLE_ADMIN_SISTEMA",
+  super_administrator: "ROLE_ADMIN_SISTEMA",
+  superadmin: "ROLE_ADMIN_SISTEMA",
   system_admin: "ROLE_ADMIN_SISTEMA",
   user: DEFAULT_ROLE,
   backoffice: DEFAULT_ROLE,
@@ -118,4 +123,3 @@ export const mapBackendAuthUser = (user: BackendAuthUser): MappedFinqzUser => {
     perfil: role,
   };
 };
-
