@@ -9,6 +9,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
 import { finqzAuth } from "./auth/finqzAuth";
 import { getCurrentUser, setSessionUser } from "./auth/session";
+import { mergeFrontendAdminPermissions } from "./config/permissions";
 
 // Lazy loading for code splitting - improves initial load time
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
@@ -50,7 +51,7 @@ import {
   HubDisparos,
   HubAutomacao,
   HubHigienizacao,
-  HubMailing
+  HubEmailMarketing
 } from "./pages/Placeholders";
 
 import { SdrIaHubPage } from "./pages/SdrIaHub";
@@ -194,100 +195,6 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// ============================================
-// ADMIN PERMISSIONS - Permissões explícitas para Admin Sistema
-// ============================================
-
-/**
- * Lista completa de permissões para Admin do Sistema
- * Formato: modulo_acao (seguindo o padrão de ROLE_PERMISSIONS)
- */
-const ADMIN_PERMISSIONS = [
-  // Wildcard - acesso total (com logging de risco)
-  '*',
-  
-  // Dashboard
-  'DASHBOARD_VIEW',
-  
-  // Clientes
-  'CLIENTES_VIEW',
-  'CLIENTES_CREATE',
-  'CLIENTES_EDIT',
-  'CLIENTES_DELETE',
-  'CLIENTES_EXPORT',
-  
-  // Oportunidades
-  'OPORTUNIDADES_VIEW',
-  'OPORTUNIDADES_CREATE',
-  'OPORTUNIDADES_EDIT',
-  'OPORTUNIDADES_DELETE',
-  'OPORTUNIDADES_MOVE_OPPORTUNITY',
-  'OPORTUNIDADES_EXPORT',
-  
-  // Parceiros
-  'PARCEIROS_VIEW',
-  'PARCEIROS_CREATE',
-  'PARCEIROS_EDIT',
-  'PARCEIROS_DELETE',
-  'PARCEIROS_RESET_PASSWORD',
-  'PARCEIROS_EXPORT',
-  
-  // Estrutura Comercial
-  'ESTRUTURA_COMERCIAL_VIEW',
-  'ESTRUTURA_COMERCIAL_CREATE',
-  'ESTRUTURA_COMERCIAL_EDIT',
-  'ESTRUTURA_COMERCIAL_DELETE',
-  'ESTRUTURA_COMERCIAL_EXPORT',
-  
-  // Roteiros Operacionais
-  'ROTEIROS_OPERACIONAIS_VIEW',
-  'ROTEIROS_OPERACIONAIS_CREATE',
-  'ROTEIROS_OPERACIONAIS_EDIT',
-  'ROTEIROS_OPERACIONAIS_DELETE',
-  'ROTEIROS_OPERACIONAIS_EXPORT',
-  
-  // Financeiro
-  'FINANCEIRO_VIEW',
-  'FINANCEIRO_VIEW_FINANCIAL',
-  'FINANCEIRO_CREATE',
-  'FINANCEIRO_EDIT',
-  'FINANCEIRO_EXPORT',
-  
-  // Conta Corrente
-  'CONTA_CORRENTE_VIEW',
-  'CONTA_CORRENTE_VIEW_FINANCIAL',
-  'CONTA_CORRENTE_EDIT',
-  
-  // Relatórios
-  'RELATORIOS_VIEW',
-  'RELATORIOS_VIEW_REPORTS',
-  'RELATORIOS_EXPORT',
-  
-  // Usuários
-  'USUARIOS_VIEW',
-  'USUARIOS_CREATE',
-  'USUARIOS_EDIT',
-  'USUARIOS_DELETE',
-  'USUARIOS_RESET_PASSWORD',
-  
-  // Configurações
-  'CONFIGURACOES_VIEW',
-  'CONFIGURACOES_CHANGE_SETTINGS',
-  
-  // Automações
-  'AUTOMACOES_VIEW',
-  'AUTOMACOES_CREATE',
-  'AUTOMACOES_EDIT',
-  'AUTOMACOES_DELETE',
-  
-  // Produtos
-  'PRODUTOS_VIEW',
-  'PRODUTOS_CREATE',
-  'PRODUTOS_EDIT',
-  'PRODUTOS_DELETE',
-  'PRODUTOS_EXPORT',
-];
-
 // Auth Provider
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
@@ -300,10 +207,10 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       currentUser?.perfil === "admin" ||
       currentUser?.perfil === "Admin Sistema";
 
-    if (isAdmin && (!currentUser.permissions || currentUser.permissions.length === 0)) {
+    if (isAdmin) {
       return {
         ...currentUser,
-        permissions: ADMIN_PERMISSIONS,
+        permissions: mergeFrontendAdminPermissions(currentUser.permissions),
         role: "ROLE_ADMIN_SISTEMA",
         scope: "GLOBAL",
         perfil: currentUser.perfil || "Admin Sistema",
@@ -589,7 +496,7 @@ const AppRoutes = () => {
         } />
         <Route path="hub/mailing" element={
           <ProtectedRoute requiredModule="hub" requiredAction="view">
-            <HubMailing />
+            <HubEmailMarketing />
           </ProtectedRoute>
         } />
 

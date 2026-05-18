@@ -818,7 +818,11 @@ const useAppStore = create<AppState>()(
         const state = useAppStore.getState();
         
         // Admin tem acesso total
-        if (state.user?.perfil === 'admin' || state.user?.perfil === 'Admin Sistema') return true;
+        if (
+          state.user?.role === 'ROLE_ADMIN_SISTEMA' ||
+          state.user?.perfil === 'admin' ||
+          state.user?.perfil === 'Admin Sistema'
+        ) return true;
         
         // Se tem permissões customizadas, usa elas
         const modulePerms = state.userPermissions[module];

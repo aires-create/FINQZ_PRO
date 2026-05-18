@@ -1,4 +1,4 @@
-// Permissões/Roles - Página Administrativa
+// Permissões/Funções - Página Administrativa
 import React, { useState } from "react";
 import { Shield, Plus, Users, Key, ChevronRight, Search, MoreVertical, Edit, Trash2, Copy, X, Check, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -85,12 +85,12 @@ const mockRoles: Role[] = [
   },
 ];
 
-// Modal para criar/editar role
+// Modal para criar/editar função
 const NovaRoleModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onSave: (role: Omit<Role, "id" | "usuarios" | "permissoes" | "createdAt"> & { permissoes: string[] }) => void;
-  editingRole?: Role | null; // Role sendo editada (se fornecida, modo edição)
+  editingRole?: Role | null; // Função sendo editada (se fornecida, modo edição)
 }> = ({ isOpen, onClose, onSave, editingRole }) => {
   const isEditing = !!editingRole;
   const [nome, setNome] = useState("");
@@ -189,12 +189,12 @@ const NovaRoleModal: React.FC<{
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">
-                {isEditing ? "Editar Role" : "Nova Role"}
+                {isEditing ? "Editar Função" : "Nova Função"}
               </h2>
               <p className="text-sm text-slate-500">
                 {isEditing 
-                  ? "Edite as permissões da role selecionada" 
-                  : "Crie uma nova role com permissões personalizadas"}
+                  ? "Edite as permissões da função selecionada" 
+                  : "Crie uma nova função com permissões personalizadas"}
               </p>
             </div>
           </div>
@@ -218,7 +218,7 @@ const NovaRoleModal: React.FC<{
           {/* Nome */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
-              Nome da Role <span className="text-red-500">*</span>
+              Nome da Função <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -237,7 +237,7 @@ const NovaRoleModal: React.FC<{
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Descreva o propósito desta role..."
+              placeholder="Descreva o propósito desta função..."
               rows={3}
               className="w-full px-4 py-3 border border-[#1f2937] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
             />
@@ -313,7 +313,7 @@ const NovaRoleModal: React.FC<{
             ) : (
               <>
                 <Check size={18} />
-                {isEditing ? "Salvar Alterações" : "Criar Role"}
+                {isEditing ? "Salvar Alterações" : "Criar Função"}
               </>
             )}
           </button>
@@ -372,7 +372,7 @@ const PermissoesPage: React.FC = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      {/* Modal de Nova Role */}
+      {/* Modal de Nova Função */}
       <NovaRoleModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -388,7 +388,7 @@ const PermissoesPage: React.FC = () => {
         <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
           <span>Administração</span>
           <ChevronRight size={16} />
-          <span className="text-white">Permissões/Roles</span>
+          <span className="text-white">Permissões/Funções</span>
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -396,10 +396,10 @@ const PermissoesPage: React.FC = () => {
               <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center">
                 <Shield className="text-white" size={20} />
               </div>
-              Permissões/Roles
+              Permissões/Funções
             </h1>
             <p className="text-slate-600 mt-1">
-              Gerenciamento de roles e permissões do sistema
+              Gerenciamento de funções e permissões do sistema
             </p>
           </div>
           <button
@@ -407,7 +407,7 @@ const PermissoesPage: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Plus size={18} />
-            Nova Role
+            Nova Função
           </button>
         </div>
       </div>
@@ -417,7 +417,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Total de Roles</p>
+              <p className="text-sm text-slate-500">Total de Funções</p>
               <p className="text-2xl font-bold text-white">{roles.length}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -428,7 +428,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Roles do Sistema</p>
+              <p className="text-sm text-slate-500">Funções do Sistema</p>
               <p className="text-2xl font-bold text-white">
                 {roles.filter((r) => r.tipo === "sistema").length}
               </p>
@@ -441,7 +441,7 @@ const PermissoesPage: React.FC = () => {
         <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-slate-500">Roles Personalizadas</p>
+              <p className="text-sm text-slate-500">Funções Personalizadas</p>
               <p className="text-2xl font-bold text-white">
                 {roles.filter((r) => r.tipo === "personalizada").length}
               </p>
@@ -473,7 +473,7 @@ const PermissoesPage: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
-              placeholder="Buscar roles por nome ou descrição..."
+              placeholder="Buscar funções por nome ou descrição..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-[#1f2937] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
@@ -482,13 +482,13 @@ const PermissoesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Roles Table */}
+      {/* Tabela de funções */}
       <div className="bg-[#111827] rounded-xl border border-[#1f2937] overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-[#1f2937]">
             <tr>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Role
+                Função
               </th>
               <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Descrição
@@ -585,11 +585,11 @@ const PermissoesPage: React.FC = () => {
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="text-slate-400" size={32} />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">Nenhuma role encontrada</h3>
+            <h3 className="text-lg font-medium text-white mb-2">Nenhuma função encontrada</h3>
             <p className="text-slate-500">
               {searchTerm
                 ? "Tente buscar com outros termos"
-                : "Comece criando uma nova role para o sistema"}
+                : "Comece criando uma nova função para o sistema"}
             </p>
           </div>
         )}

@@ -172,7 +172,7 @@ export const PipelinesPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Pipelines"
-        subtitle="Configure os pipelines e etapas do seu funil de vendas PF Credit"
+        subtitle="Configure os pipelines e etapas do funil de vendas FINQZ PRO"
         onRefresh={() => setPipelineSettings(loadPipelineSettings())}
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
@@ -202,9 +202,9 @@ export const PipelinesPage: React.FC = () => {
         <div className="space-y-6">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines PF Credit</h3>
+              <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines FINQZ PRO</h3>
               <p className="text-sm text-slate-500">
-                Configure os 8 pipelines de crédito PF: Consignado, CDC, Empréstimo com Garantia, Financiamento, Cartão, Antecipação, Seguro e Consórcio
+                Configure os pipelines oficiais: Antecipação FGTS, Cartão, Consignado, Consórcio, Crédito Pessoal, Empréstimo com Garantia, Energia, Financiamento e Seguros.
               </p>
             </div>
           </div>

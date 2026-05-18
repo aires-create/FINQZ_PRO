@@ -3,7 +3,7 @@ import React, { useState, useMemo } from "react";
 import { Plus, Search, Edit, Trash2, X, User, Shield, ToggleLeft, ToggleRight, UserCheck, UserX, Eye, Globe, Building2, Store, UserCircle, Lock, Unlock } from "lucide-react";
 import useAppStore from "../store";
 import { Role, ROLE_LABELS, ROLE_PERMISSIONS, ROLE_SCOPES, SCOPE_LABELS, Permission, PERMISSION_LABELS } from "../types";
-import { Button, Card as DSCard, Input, Select, Table } from "../components/ui";
+import { Button, Card as DSCard, Input, Modal, Select, Table } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
 

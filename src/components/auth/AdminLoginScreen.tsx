@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, ArrowLeft, Eye, EyeOff, KeyRound, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck } from "lucide-react";
 import { Button, Input } from "../ui";
 import finqzLogoBlue from "../../assets/brand/finqz-logo-blue.png";
 
@@ -88,30 +88,29 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
   };
 
   const inputClassName =
-    "auth-login-field h-10 px-3 text-base shadow-none";
+    "auth-login-field h-10 px-3 pl-11 text-base shadow-none";
   const primaryButtonClassName =
-    "auth-login-button h-12 min-w-[148px] rounded-none px-8 text-sm font-semibold uppercase tracking-[0.24em] shadow-none";
+    "auth-login-button h-11 min-w-[220px] px-8 text-sm font-medium shadow-none";
 
   return (
     <div className="auth-login-shell relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_16%_8%,rgba(99,196,255,0.18),transparent_28%),radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.08),transparent_30%)]" />
-        <div className="absolute -bottom-[30rem] -right-[28rem] h-[58rem] w-[58rem] rounded-full border-[10px] border-[#ff1717] opacity-90 sm:-bottom-[34rem] sm:-right-[26rem] sm:h-[66rem] sm:w-[66rem]" />
-        <div className="absolute -bottom-[18rem] -right-[12rem] h-[34rem] w-[34rem] rounded-full border-[8px] border-[#ff1717] opacity-90 sm:-bottom-[23rem] sm:-right-[9rem] sm:h-[42rem] sm:w-[42rem]" />
+      <div className="pointer-events-none absolute inset-0 auth-login-network" />
+      <div className="pointer-events-none absolute left-[7%] top-1/2 hidden -translate-y-1/2 select-none text-[34rem] font-black leading-none text-white/[0.055] lg:block">
+        F
       </div>
 
-      <div className="auth-login-panel relative z-10 w-full max-w-[760px] overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.32)]">
-        <div className="px-6 py-9 sm:px-20 sm:py-12">
+      <div className="auth-login-panel relative z-10 w-full max-w-[370px] overflow-hidden rounded-xl">
+        <div className="px-7 py-10 sm:px-9">
           <div className="flex flex-col items-center text-center">
             <img
               src={finqzLogoBlue}
               alt="FINQZ"
-              className="h-auto w-[188px] sm:w-[230px]"
+              className="auth-login-logo h-auto w-[168px] sm:w-[190px]"
             />
-            <p className="mt-4 text-sm font-medium tracking-[0.26em] text-[#2d3767]">PRO</p>
+            <p className="auth-login-product-mark mt-2 text-lg font-light tracking-normal">PRO</p>
           </div>
 
-          <div className="mx-auto mt-10 max-w-[410px] sm:mt-12">
+          <div className="mx-auto mt-8 max-w-[320px]">
             {mode === "login" && (
               <>
                 {error && (
@@ -121,26 +120,30 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-9">
+                <form onSubmit={handleLogin} className="space-y-5">
                   <div>
-                    <label className="auth-login-label mb-1 block text-xl font-normal leading-tight">
+                    <label className="auth-login-label mb-2 block text-base font-normal leading-tight">
                       Login
                     </label>
-                    <Input
-                      value={identifier}
-                      onChange={(event) => setIdentifier(event.target.value)}
-                      placeholder="Código de acesso ou e-mail"
-                      autoComplete="username"
-                      required
-                      className={inputClassName}
-                    />
+                    <div className="relative">
+                      <Mail className="auth-login-field-icon absolute left-4 top-1/2 -translate-y-1/2" size={18} />
+                      <Input
+                        value={identifier}
+                        onChange={(event) => setIdentifier(event.target.value)}
+                        placeholder="E-mail"
+                        autoComplete="username"
+                        required
+                        className={inputClassName}
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="auth-login-label mb-1 block text-xl font-normal leading-tight">
+                    <label className="auth-login-label mb-2 block text-base font-normal leading-tight">
                       Senha
                     </label>
                     <div className="relative">
+                      <Lock className="auth-login-field-icon absolute left-4 top-1/2 -translate-y-1/2" size={18} />
                       <Input
                         type={showPassword ? "text" : "password"}
                         value={password}
@@ -161,14 +164,14 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex justify-center pt-2">
+                  <div className="flex justify-center pt-1">
                     <Button type="submit" size="lg" loading={loading} className={primaryButtonClassName}>
                       Entrar
                     </Button>
                   </div>
                 </form>
 
-                <div className="mt-6 flex flex-col gap-3 text-base sm:flex-row sm:items-center sm:justify-between">
+                <div className="mt-5 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                   <button
                     type="button"
                     onClick={() => {
@@ -176,11 +179,11 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                       setError("");
                       setRecoveryIdentifier(identifier);
                     }}
-                    className="font-bold text-[#005fff] transition-colors hover:text-[#0018ff]"
+                    className="auth-login-link font-medium transition-colors"
                   >
                     Esqueci minha senha
                   </button>
-                  <span className="text-sm text-slate-500">ou use seu código</span>
+                  <span className="auth-login-muted text-sm">ou use seu código</span>
                 </div>
               </>
             )}
@@ -215,17 +218,20 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
 
                 <form onSubmit={handleRecovery} className="space-y-7">
                   <div>
-                    <label className="auth-login-label mb-1 block text-xl font-normal leading-tight">
+                    <label className="auth-login-label mb-2 block text-base font-normal leading-tight">
                       Login
                     </label>
-                    <Input
-                      value={recoveryIdentifier}
-                      onChange={(event) => setRecoveryIdentifier(event.target.value)}
-                      placeholder="Código de acesso ou e-mail"
-                      autoComplete="username"
-                      required
-                      className={inputClassName}
-                    />
+                    <div className="relative">
+                      <Mail className="auth-login-field-icon absolute left-4 top-1/2 -translate-y-1/2" size={18} />
+                      <Input
+                        value={recoveryIdentifier}
+                        onChange={(event) => setRecoveryIdentifier(event.target.value)}
+                        placeholder="E-mail"
+                        autoComplete="username"
+                        required
+                        className={inputClassName}
+                      />
+                    </div>
                   </div>
 
                   <div className="flex justify-center">
@@ -272,12 +278,6 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
           </div>
         </div>
 
-        <div className="flex min-h-28 items-center justify-center bg-[#2d3767] px-6 py-7 text-center">
-          <div>
-            <p className="text-sm font-medium text-white/80">FINQZ PRO</p>
-            <p className="mt-1 text-xs tracking-[0.24em] text-white/55">GESTÃO FINANCEIRA</p>
-          </div>
-        </div>
       </div>
     </div>
   );

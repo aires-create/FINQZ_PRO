@@ -59,7 +59,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-consignado",
     pipelineCode: "PIPELINE_CONSIGNADO",
-    pipelineName: "Pipeline Consignado",
+    pipelineName: "Pipeline - Consignado",
     automationEvents: ["OPPORTUNITY_CREATED", "OFFER_GENERATED", "CONTRACT_SIGNED", "DISBURSEMENT_COMPLETED"],
     subproducts: [
       { id: "inss", code: "INSS", name: "INSS", active: true, modalities: ["NOVO", "REFINANCIAMENTO", "PORTABILIDADE"], rules: { requiresMargin: true, requiresCollateral: false, requiresBureau: true, isRevolving: false } },
@@ -84,7 +84,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-credito-pessoal-cdc",
     pipelineCode: "PIPELINE_CREDITO_PESSOAL_CDC",
-    pipelineName: "Pipeline Crédito Pessoal CDC",
+    pipelineName: "Pipeline - Crédito Pessoal",
     automationEvents: ["OPPORTUNITY_CREATED", "CREDIT_ANALYSIS_STARTED", "OFFER_GENERATED", "CONTRACT_SIGNED", "DISBURSEMENT_COMPLETED"],
     subproducts: [
       { id: "clean-sem-garantia", code: "CLEAN_SEM_GARANTIA", name: "Clean sem garantia", active: true, modalities: ["NOVO", "REFINANCIAMENTO"], rules: { requiresMargin: false, requiresCollateral: false, requiresBureau: true, isRevolving: false } },
@@ -103,7 +103,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-emprestimo-com-garantia",
     pipelineCode: "PIPELINE_EMPRESTIMO_COM_GARANTIA",
-    pipelineName: "Pipeline Empréstimo com Garantia",
+    pipelineName: "Pipeline - Empréstimo com Garantia",
     automationEvents: ["OPPORTUNITY_CREATED", "COLLATERAL_ANALYSIS_STARTED", "OFFER_GENERATED", "CONTRACT_SIGNED", "DISBURSEMENT_COMPLETED"],
     subproducts: [
       { id: "home-equity", code: "HOME_EQUITY", name: "Home Equity", active: true, modalities: ["NOVO", "REFINANCIAMENTO", "PORTABILIDADE"], rules: { requiresMargin: false, requiresCollateral: true, collateralType: "REAL_ESTATE", requiresBureau: true, isRevolving: false } },
@@ -121,7 +121,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-financiamento",
     pipelineCode: "PIPELINE_FINANCIAMENTO",
-    pipelineName: "Pipeline Financiamento",
+    pipelineName: "Pipeline - Financiamento",
     automationEvents: ["OPPORTUNITY_CREATED", "ASSET_ANALYSIS_STARTED", "OFFER_GENERATED", "CONTRACT_SIGNED", "DISBURSEMENT_COMPLETED"],
     subproducts: [
       { id: "veiculo-novo", code: "VEICULO_NOVO", name: "Veículo Novo", active: true, modalities: ["NOVO", "REFINANCIAMENTO", "PORTABILIDADE"], rules: { requiresMargin: false, requiresCollateral: true, collateralType: "VEHICLE", requiresBureau: true, isRevolving: false } },
@@ -142,7 +142,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-cartao",
     pipelineCode: "PIPELINE_CARTAO",
-    pipelineName: "Pipeline Cartão",
+    pipelineName: "Pipeline - Cartão",
     automationEvents: ["OPPORTUNITY_CREATED", "LIMIT_ANALYSIS_STARTED", "CARD_ISSUED"],
     subproducts: [
       { id: "credito-rotativo", code: "CREDITO_ROTATIVO", name: "Crédito Rotativo", active: true, modalities: ["NOVO"], rules: { requiresMargin: false, requiresCollateral: false, requiresBureau: true, isRevolving: true } },
@@ -161,7 +161,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-antecipacao",
     pipelineCode: "PIPELINE_ANTECIPACAO",
-    pipelineName: "Pipeline Antecipação",
+    pipelineName: "Pipeline - Antecipação FGTS",
     automationEvents: ["OPPORTUNITY_CREATED", "ELIGIBILITY_CHECKED", "DISBURSEMENT_COMPLETED"],
     subproducts: [
       { id: "fgts-saque-aniversario", code: "FGTS_SAQUE_ANIVERSARIO", name: "Saque-Aniversário FGTS", active: true, modalities: ["NOVO"], rules: { requiresMargin: false, requiresCollateral: false, requiresBureau: false, requiresEligibilityCheck: true, isRevolving: false } },
@@ -170,9 +170,27 @@ export const creditPfCatalog: CreditProduct[] = [
     ]
   },
   {
+    id: "energia",
+    code: "ENERGIA",
+    name: "Energia",
+    groupCode: "CREDITO_PF",
+    groupName: "Crédito PF",
+    version: 1,
+    active: true,
+    providers: ["DEFAULT"],
+    pipelineId: "pipeline-energia",
+    pipelineCode: "PIPELINE_ENERGIA",
+    pipelineName: "Pipeline - Energia",
+    automationEvents: ["OPPORTUNITY_CREATED", "OFFER_GENERATED", "CONTRACT_SIGNED"],
+    subproducts: [
+      { id: "geracao-distribuida", code: "GERACAO_DISTRIBUIDA", name: "Geração Distribuída", active: true, modalities: ["NOVO"], rules: { requiresBureau: false, isRevolving: false } },
+      { id: "mercado-livre-energia", code: "MERCADO_LIVRE_ENERGIA", name: "Mercado Livre de Energia", active: true, modalities: ["NOVO"], rules: { requiresBureau: false, isRevolving: false } }
+    ]
+  },
+  {
     id: "seguro",
     code: "SEGURO",
-    name: "Seguro",
+    name: "Seguros",
     groupCode: "CREDITO_PF",
     groupName: "Crédito PF",
     version: 1,
@@ -180,7 +198,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-seguro",
     pipelineCode: "PIPELINE_SEGURO",
-    pipelineName: "Pipeline Seguro",
+    pipelineName: "Pipeline - Seguros",
     automationEvents: ["OPPORTUNITY_CREATED", "POLICY_QUOTED", "POLICY_ISSUED"],
     subproducts: [
       { id: "prestamista", code: "PRESTAMISTA", name: "Prestamista", active: true, modalities: ["NOVO"], rules: { requiresMargin: false, requiresCollateral: false, requiresBureau: false, isInsurance: true } },
@@ -199,7 +217,7 @@ export const creditPfCatalog: CreditProduct[] = [
     providers: ["DEFAULT"],
     pipelineId: "pipeline-consorcio",
     pipelineCode: "PIPELINE_CONSORCIO",
-    pipelineName: "Pipeline Consórcio",
+    pipelineName: "Pipeline - Consórcio",
     automationEvents: ["OPPORTUNITY_CREATED", "QUOTE_GENERATED", "CONTRACT_SIGNED"],
     subproducts: [
       { id: "imobiliario", code: "IMOBILIARIO", name: "Imobiliário", active: true, modalities: ["NOVO", "TRANSFERENCIA_COTA"], rules: { requiresMargin: false, requiresCollateral: false, requiresBureau: true, isConsortium: true } },
@@ -213,6 +231,18 @@ export const creditPfCatalog: CreditProduct[] = [
 // ============================================
 // HELPERS REUTILIZÁVEIS
 // ============================================
+
+const PIPELINE_DISPLAY_ORDER: Record<string, number> = {
+  "pipeline-antecipacao": 1,
+  "pipeline-cartao": 2,
+  "pipeline-consignado": 3,
+  "pipeline-consorcio": 4,
+  "pipeline-credito-pessoal-cdc": 5,
+  "pipeline-emprestimo-com-garantia": 6,
+  "pipeline-energia": 7,
+  "pipeline-financiamento": 8,
+  "pipeline-seguro": 9,
+};
 
 /**
  * Retorna produtos ativos do catálogo
@@ -231,13 +261,19 @@ export const getPipelineOptions = (): Array<{
   productId: string;
   productCode: string;
 }> => {
-  return getActiveProducts().map((item) => ({
-    id: item.pipelineId,
-    code: item.pipelineCode,
-    name: item.pipelineName,
-    productId: item.id,
-    productCode: item.code
-  }));
+  return getActiveProducts()
+    .map((item) => ({
+      id: item.pipelineId,
+      code: item.pipelineCode,
+      name: item.pipelineName,
+      productId: item.id,
+      productCode: item.code
+    }))
+    .sort((a, b) => {
+      const orderA = PIPELINE_DISPLAY_ORDER[a.id] ?? 999;
+      const orderB = PIPELINE_DISPLAY_ORDER[b.id] ?? 999;
+      return orderA - orderB || a.name.localeCompare(b.name, "pt-BR");
+    });
 };
 
 /**

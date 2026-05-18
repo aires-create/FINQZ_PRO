@@ -1333,20 +1333,23 @@ const OportunidadesPageInner = () => {
   
   // Handle product/pipeline selection - switch pipeline
   const handleProductChange = (produtoId: string) => {
-    setSelectedProductId(produtoId);
+    const selectedCatalogProductId =
+      catalogPipelineOptions.find((pipeline) => pipeline.id === produtoId)?.productId || produtoId;
+
+    setSelectedProductId(selectedCatalogProductId);
     // 🎯 Limpar subproduto e modalidade ao mudar de produto
     setSelectedSubproductId("");
     setSelectedModality("");
     
     // Usar novo sistema de PIPELINES do catálogo
-    if (produtoId) {
+    if (selectedCatalogProductId) {
       // Primeiro tenta usar o catálogo novo
-      const catalogPipeline = getPipelineByProductId(produtoId);
+      const catalogPipeline = getPipelineByProductId(selectedCatalogProductId);
       if (catalogPipeline) {
         setCurrentPipelineId(catalogPipeline.id);
       } else {
         // Fallback para o sistema antigo de pipelines
-        const pipelineConfig = getPipelineConfigById(produtoId);
+        const pipelineConfig = getPipelineConfigById(selectedCatalogProductId);
         if (pipelineConfig) {
           setCurrentPipelineId(pipelineConfig.id);
         }
@@ -2391,11 +2394,14 @@ const OportunidadesPageInner = () => {
         onOpenFilters={() => setShowFilterDrawer(true)}
         extraLeft={
           <select
-            value={currentPipelineId || "pipeline-consignado"}
+            value={currentPipelineId || ""}
             onChange={(e) => handleProductChange(e.target.value)}
             className="border border-[#1f2937] px-3 py-2 rounded-lg text-sm w-[240px] focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
           >
             {/* 🎯 APENAS PIPELINES DO CATÁLOGO PF */}
+            <option value="" disabled>
+              Pipeline - Selecionar
+            </option>
             {catalogPipelineOptions.map((pipeline) => (
               <option key={pipeline.id} value={pipeline.id}>
                 {pipeline.name}

@@ -46,7 +46,7 @@ export const HubDisparos = () => (
     description="Sistema de disparo de mensagens em massa com automação e controle de frequência."
     icon={Rocket}
     features={[
-      "Disparo via WhatsApp, SMS e Email",
+      "Disparo via WhatsApp, SMS e E-mail",
       "Agendamento de campanhas",
       "Controle de frequência por contato",
       "Relatórios de entrega",
@@ -80,14 +80,14 @@ export const HubSdrIa = () => (
       "Chatbot inteligente",
       "Agendamento de reuniões",
       "Follow-up automatizado",
-      "Análise de sentiment"
+      "Análise de sentimento"
     ]}
   />
 );
 
 export const HubHigienizacao = () => (
   <PlaceholderPage
-    title="Higienização de Base"
+    title="Higienização"
     description="Limpeza e validação de bases de dados para melhorar a qualidade dos contatos."
     icon={Database}
     features={[
@@ -100,15 +100,15 @@ export const HubHigienizacao = () => (
   />
 );
 
-export const HubMailing = () => (
+export const HubEmailMarketing = () => (
   <PlaceholderPage
-    title="Mailing"
-    description="Gestão de listas de Mailing para campanhas de email marketing."
+    title="E-mail Marketing"
+    description="Gestão de campanhas e listas para comunicação por e-mail marketing."
     icon={Mail}
     features={[
       "Importação de listas",
       "Segmentação avançada",
-      "Templates de email",
+      "Templates de e-mail",
       "Automação de envios",
       "Análise de resultados"
     ]}
@@ -147,11 +147,11 @@ export const CrmPipelines = () => (
 
 export const AdminPermissoes = () => (
   <PlaceholderPage
-    title="Permissões"
-    description="Gerencie roles e permissões de usuários do sistema."
+    title="Permissões/Funções"
+    description="Gerencie funções e permissões de usuários do sistema."
     icon={Lock}
     features={[
-      "Criação de roles",
+      "Criação de funções",
       "Permissões granulares",
       "Herança de permissões",
       "Auditoria de acessos",

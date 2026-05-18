@@ -92,7 +92,7 @@ export interface AuthUser {
   tenant_id?: string;
   parceiroId?: number;
   codigo?: number;
-  permissions?: Permission[];
+  permissions?: string[];
 }
 
 // ============================================

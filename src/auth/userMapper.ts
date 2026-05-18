@@ -9,6 +9,7 @@ import {
   type Role,
   type Scope,
 } from "../types";
+import { getFrontendPermissionsForRole } from "../config/permissions";
 
 export interface BackendAuthUser {
   id: string;
@@ -99,7 +100,7 @@ const buildDisplayName = (user: BackendAuthUser): string => {
 
 export const mapBackendAuthUser = (user: BackendAuthUser): MappedFinqzUser => {
   const role = mapBackendRole(user.role);
-  const permissions = ROLE_PERMISSIONS[role] ?? [];
+  const permissions = getFrontendPermissionsForRole(role);
   const now = Date.now();
 
   return {

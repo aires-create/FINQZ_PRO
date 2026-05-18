@@ -3,9 +3,10 @@
 // Nota: Integração com backend real necessária para validação de tokens
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { AuthUser, getScopeByRole, isAdminRole, Permission } from './permissions';
+import { AuthUser, getScopeByRole, isAdminRole } from './permissions';
 import useAppStore from '../store';
 import { PROFILE_PERMISSIONS } from '../types';
+import { mergeFrontendAdminPermissions } from '../config/permissions';
 
 // ============================================
 // TYPES
@@ -38,100 +39,6 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const useAuth = () => useContext(AuthContext);
-
-// ============================================
-// ADMIN PERMISSIONS - Permissões explícitas para Admin Sistema
-// ============================================
-
-/**
- * Lista completa de permissões para Admin do Sistema
- * Formato: modulo_acao (seguindo o padrão de ROLE_PERMISSIONS)
- */
-const ADMIN_PERMISSIONS: Permission[] = [
-  // Wildcard - acesso total (com logging de risco)
-  '*',
-  
-  // Dashboard
-  'DASHBOARD_VIEW',
-  
-  // Clientes
-  'CLIENTES_VIEW',
-  'CLIENTES_CREATE',
-  'CLIENTES_EDIT',
-  'CLIENTES_DELETE',
-  'CLIENTES_EXPORT',
-  
-  // Oportunidades
-  'OPORTUNIDADES_VIEW',
-  'OPORTUNIDADES_CREATE',
-  'OPORTUNIDADES_EDIT',
-  'OPORTUNIDADES_DELETE',
-  'OPORTUNIDADES_MOVE_OPPORTUNITY',
-  'OPORTUNIDADES_EXPORT',
-  
-  // Parceiros
-  'PARCEIROS_VIEW',
-  'PARCEIROS_CREATE',
-  'PARCEIROS_EDIT',
-  'PARCEIROS_DELETE',
-  'PARCEIROS_RESET_PASSWORD',
-  'PARCEIROS_EXPORT',
-  
-  // Estrutura Comercial
-  'ESTRUTURA_COMERCIAL_VIEW',
-  'ESTRUTURA_COMERCIAL_CREATE',
-  'ESTRUTURA_COMERCIAL_EDIT',
-  'ESTRUTURA_COMERCIAL_DELETE',
-  'ESTRUTURA_COMERCIAL_EXPORT',
-  
-  // Roteiros Operacionais
-  'ROTEIROS_OPERACIONAIS_VIEW',
-  'ROTEIROS_OPERACIONAIS_CREATE',
-  'ROTEIROS_OPERACIONAIS_EDIT',
-  'ROTEIROS_OPERACIONAIS_DELETE',
-  'ROTEIROS_OPERACIONAIS_EXPORT',
-  
-  // Financeiro
-  'FINANCEIRO_VIEW',
-  'FINANCEIRO_VIEW_FINANCIAL',
-  'FINANCEIRO_CREATE',
-  'FINANCEIRO_EDIT',
-  'FINANCEIRO_EXPORT',
-  
-  // Conta Corrente
-  'CONTA_CORRENTE_VIEW',
-  'CONTA_CORRENTE_VIEW_FINANCIAL',
-  'CONTA_CORRENTE_EDIT',
-  
-  // Relatórios
-  'RELATORIOS_VIEW',
-  'RELATORIOS_VIEW_REPORTS',
-  'RELATORIOS_EXPORT',
-  
-  // Usuários
-  'USUARIOS_VIEW',
-  'USUARIOS_CREATE',
-  'USUARIOS_EDIT',
-  'USUARIOS_DELETE',
-  'USUARIOS_RESET_PASSWORD',
-  
-  // Configurações
-  'CONFIGURACOES_VIEW',
-  'CONFIGURACOES_CHANGE_SETTINGS',
-  
-  // Automações
-  'AUTOMACOES_VIEW',
-  'AUTOMACOES_CREATE',
-  'AUTOMACOES_EDIT',
-  'AUTOMACOES_DELETE',
-  
-  // Produtos
-  'PRODUTOS_VIEW',
-  'PRODUTOS_CREATE',
-  'PRODUTOS_EDIT',
-  'PRODUTOS_DELETE',
-  'PRODUTOS_EXPORT',
-];
 
 // ============================================
 // FALLBACK USER (para ambiente atual sem backend)
@@ -171,8 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (storedUser) {
           // Garante que Admin Sistema tenha permissões explícitas
-          if (storedUser.role === 'ROLE_ADMIN_SISTEMA' && (!storedUser.permissions || storedUser.permissions.length === 0)) {
-            storedUser.permissions = ADMIN_PERMISSIONS;
+          if (storedUser.role === 'ROLE_ADMIN_SISTEMA') {
+            storedUser.permissions = mergeFrontendAdminPermissions(storedUser.permissions);
             storedUser.scope = 'GLOBAL';
             localStorage.setItem('finqz_user', JSON.stringify(storedUser));
           }
@@ -210,8 +117,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Garante que Admin Sistema tenha permissões explícitas
-      if (result.user.role === 'ROLE_ADMIN_SISTEMA' && (!result.user.permissions || result.user.permissions.length === 0)) {
-        result.user.permissions = ADMIN_PERMISSIONS;
+      if (result.user.role === 'ROLE_ADMIN_SISTEMA') {
+        result.user.permissions = mergeFrontendAdminPermissions(result.user.permissions);
         result.user.scope = 'GLOBAL';
       }
 
@@ -269,8 +176,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const updated = { ...prev, ...userData };
       
       // Garante que Admin sempre tenha permissões
-      if (updated.role === 'ROLE_ADMIN_SISTEMA' && (!updated.permissions || updated.permissions.length === 0)) {
-        updated.permissions = ADMIN_PERMISSIONS;
+      if (updated.role === 'ROLE_ADMIN_SISTEMA') {
+        updated.permissions = mergeFrontendAdminPermissions(updated.permissions);
       }
       
       localStorage.setItem('finqz_user', JSON.stringify(updated));

@@ -108,7 +108,7 @@ export interface OpportunityEventPayload {
 
 /**
  * Emite evento para automações futuras
- * Por enquanto é uma função segura/no-op que loga no console
+ * Por enquanto é uma função segura/no-op
  * 
  * Futura implementação pode enviar para um barramento de eventos,
  * webhook, ou sistema de automação como Zapier, Make, etc.
@@ -117,11 +117,8 @@ export const emitOpportunityEvent = (
   eventName: string,
   payload: OpportunityEventPayload
 ): void => {
-  // Log para debug/development
-  console.log('[automation-event]', eventName, {
-    ...payload,
-    timestamp: new Date().toISOString()
-  });
+  void eventName;
+  void payload;
   
   // TODO: Implementar envio para sistema de eventos futuro
   // Exemplos de implementação futura:
@@ -231,6 +228,16 @@ export const defaultPipelineStages: Record<string, string[]> = {
     "Aprovação",
     "Formalização",
     "Liberação",
+    "Encerrado"
+  ],
+  "pipeline-energia": [
+    "Novo Lead",
+    "Contato",
+    "Simulação",
+    "Análise",
+    "Proposta",
+    "Formalização",
+    "Ativação",
     "Encerrado"
   ],
   "pipeline-seguro": [

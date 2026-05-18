@@ -189,7 +189,7 @@ const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   "/app/hub/whatsapp": { title: "WhatsApp", icon: Phone },
   "/app/hub/sdr-ia": { title: "SDR IA", icon: Bot },
   "/app/hub/higienizacao": { title: "Higienização", icon: Database },
-  "/app/hub/mailing": { title: "Mailing", icon: Mail },
+  "/app/hub/mailing": { title: "E-mail Marketing", icon: Mail },
   // CRM
   "/app/crm/clientes": { title: "Clientes", icon: Users },
   "/app/crm/pipeline": { title: "Pipeline", icon: TrendingUp },
@@ -203,7 +203,7 @@ const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   "/app/operacoes/relatorios": { title: "Relatórios", icon: BarChart3 },
   // Administração
   "/app/admin/usuarios": { title: "Usuários", icon: UserCog },
-  "/app/admin/permissoes": { title: "Permissões/Roles", icon: Lock },
+  "/app/admin/permissoes": { title: "Permissões/Funções", icon: Lock },
   "/app/admin/auditoria": { title: "Auditoria", icon: Shield },
   "/app/admin/eventos": { title: "Eventos", icon: Activity },
   "/app/admin/geral": { title: "Geral", icon: Settings },
@@ -277,13 +277,12 @@ const menuGroups: MenuGroup[] = [
     icon: Zap,
     permission: "hub:read",
     items: [
-      { path: "/app/hub/audiencias", label: "Audiências", icon: Users, permission: "audiencias:read" },
-      { path: "/app/hub/campanhas", label: "Campanhas", icon: Send, permission: "campanhas:read" },
-      { path: "/app/hub/disparos", label: "Disparos", icon: Rocket, permission: "disparos:read" },
       { path: "/app/hub/whatsapp", label: "WhatsApp", icon: Phone, permission: "whatsapp:read" },
       { path: "/app/hub/sdr-ia", label: "SDR IA", icon: Bot, permission: "sdr_ia:read" },
       { path: "/app/hub/higienizacao", label: "Higienização", icon: Database, permission: "higienizacao:read" },
-      { path: "/app/hub/mailing", label: "Mailing", icon: Mail, permission: "mailing:read" },
+      { path: "/app/hub/campanhas", label: "Campanhas", icon: Send, permission: "campanhas:read" },
+      { path: "/app/hub/disparos", label: "Disparos", icon: Rocket, permission: "disparos:read" },
+      { path: "/app/hub/mailing", label: "E-mail Marketing", icon: Mail, permission: "mailing:read" },
     ],
   },
   {
@@ -293,7 +292,7 @@ const menuGroups: MenuGroup[] = [
     permission: "admin:read",
     items: [
       { path: "/app/admin/usuarios", label: "Usuários", icon: UserCog, permission: "usuarios:read" },
-      { path: "/app/admin/permissoes", label: "Permissões/Roles", icon: Lock, permission: "permissoes:read" },
+      { path: "/app/admin/permissoes", label: "Permissões/Funções", icon: Lock, permission: "permissoes:read" },
       { path: "/app/admin/auditoria", label: "Auditoria", icon: Shield, permission: "auditoria:read" },
       { path: "/app/admin/eventos", label: "Eventos", icon: Activity, permission: "admin:read" },
       { path: "/app/admin/geral", label: "Geral", icon: Settings, permission: "configuracoes:read" },
