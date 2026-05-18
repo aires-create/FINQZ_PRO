@@ -12,6 +12,33 @@ const redisErrorLogIntervalMs = 30_000;
 let redisClient: Redis | null = null;
 let lastRedisErrorLogAt = 0;
 
+const redisRuntimeContext = () => ({
+  component: 'redis',
+  environment: config.nodeEnv,
+  host: config.redis.host,
+  port: config.redis.port,
+  db: config.redis.db,
+  tls: config.redis.tls,
+});
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const getErrorCode = (error: unknown) => {
+  if (!isRecord(error)) {
+    return undefined;
+  }
+
+  const errorCode = error.code;
+
+  if (typeof errorCode === 'string' || typeof errorCode === 'number') {
+    return String(errorCode);
+  }
+
+  return undefined;
+};
+
 const buildRedisOptions = (): RedisOptions => ({
   host: config.redis.host,
   port: config.redis.port,
@@ -46,19 +73,16 @@ const shouldLogRedisError = () => {
 const attachRedisEventHandlers = (client: Redis) => {
   client.on('ready', () => {
     logger.info('Redis client ready', {
-      host: config.redis.host,
-      port: config.redis.port,
-      db: config.redis.db,
-      tls: config.redis.tls,
+      ...redisRuntimeContext(),
+      status: client.status,
     });
   });
 
   client.on('reconnecting', (delayMs: number) => {
     logger.warn('Redis client reconnecting', {
+      ...redisRuntimeContext(),
       delayMs,
-      host: config.redis.host,
-      port: config.redis.port,
-      db: config.redis.db,
+      status: client.status,
     });
   });
 
@@ -68,14 +92,19 @@ const attachRedisEventHandlers = (client: Redis) => {
     }
 
     logger.warn('Redis client error', {
+      ...redisRuntimeContext(),
       status: client.status,
       errorName: error.name,
-      message: error.message,
+      errorCode: getErrorCode(error),
+      errorMessage:
+        config.nodeEnv === 'production'
+          ? 'Redis runtime failure'
+          : error.message,
     });
   });
 
   client.on('end', () => {
-    logger.info('Redis client connection closed');
+    logger.info('Redis client connection closed', redisRuntimeContext());
   });
 };
 
@@ -117,8 +146,10 @@ export const disconnectRedis = async (): Promise<void> => {
     await client.quit();
   } catch (error) {
     logger.warn('Redis graceful shutdown failed; forcing disconnect', {
+      ...redisRuntimeContext(),
       status: client.status,
       errorName: error instanceof Error ? error.name : 'UnknownError',
+      errorCode: getErrorCode(error),
     });
     client.disconnect();
   }

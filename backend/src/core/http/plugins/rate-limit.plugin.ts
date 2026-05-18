@@ -139,6 +139,7 @@ const recordExceeded = (policy: RateLimitPolicyName) => (
   const tenantId =
     request.currentTenant?.tenantId ?? request.currentUser?.tenantId;
   const userId = request.currentUser?.userId;
+  const ip = request.normalizedIp ?? request.ip;
   const userAgent = getHeaderValue(request.headers['user-agent']);
 
   recordRateLimitExceeded({
@@ -152,7 +153,7 @@ const recordExceeded = (policy: RateLimitPolicyName) => (
     eventType: 'RATE_LIMIT_EXCEEDED',
     severity: policy === 'auth_login' ? 'HIGH' : 'MEDIUM',
     outcome: 'BLOCKED',
-    ipAddress: request.ip,
+    ipAddress: ip,
     ...(userAgent ? { userAgent } : {}),
     requestId: request.requestId ?? request.id,
     route,
@@ -169,8 +170,13 @@ const recordExceeded = (policy: RateLimitPolicyName) => (
 
   logger.warn('Rate limit exceeded', {
     requestId: request.requestId ?? request.id,
+    tenantId,
+    userId,
     method: request.method,
     route,
+    statusCode: 429,
+    ip,
+    userAgent,
     policy,
     keyHash,
   });

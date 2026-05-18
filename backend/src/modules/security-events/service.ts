@@ -1,5 +1,6 @@
 import type { FastifyRequest } from 'fastify';
 
+import { config } from '../../config/app.js';
 import { createModuleLogger } from '../../shared/logger.js';
 import {
   createSecurityEventLog,
@@ -128,17 +129,43 @@ const redactSensitiveText = (value: string) => {
   );
 };
 
-const getErrorLogMeta = (error: unknown) => {
-  if (error instanceof Error) {
-    return {
-      errorName: error.name,
-      errorMessage: redactSensitiveText(error.message),
-    };
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const getErrorCode = (error: unknown) => {
+  if (!isRecord(error)) {
+    return undefined;
   }
 
-  return {
+  const errorCode = error.code;
+
+  if (typeof errorCode === 'string' || typeof errorCode === 'number') {
+    return String(errorCode);
+  }
+
+  return undefined;
+};
+
+const getErrorLogMeta = (error: unknown) => {
+  const meta: Record<string, unknown> = {
     errorName: 'UnknownError',
+    errorCode: getErrorCode(error),
   };
+
+  if (error instanceof Error) {
+    meta.errorName = error.name;
+    meta.errorMessage =
+      config.nodeEnv === 'production'
+        ? 'Security event logging failed'
+        : redactSensitiveText(error.message);
+
+    if (config.nodeEnv !== 'production' && error.stack) {
+      meta.stack = redactSensitiveText(error.stack);
+    }
+  }
+
+  return meta;
 };
 
 export async function recordSecurityEvent(
@@ -164,7 +191,15 @@ export async function recordSecurityEvent(
   } catch (error) {
     logger.error('Security event logging failed', {
       eventType: input.eventType,
+      severity: input.severity,
+      outcome: input.outcome,
       requestId: input.requestId,
+      tenantId: input.tenantId,
+      userId: input.userId,
+      method: input.method,
+      route: input.route,
+      ip: input.ipAddress,
+      userAgent: input.userAgent,
       ...getErrorLogMeta(error),
     });
   }

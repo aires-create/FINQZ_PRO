@@ -8,9 +8,10 @@ import type {
 
 import { config } from '../../config/app.js';
 import { swaggerSpec } from '../../config/swagger.js';
-import { logger } from '../../shared/logger.js';
+import { logger, sanitizeLogText } from '../../shared/logger.js';
 import { AppError } from '../../shared/errors/AppError.js';
 import { prisma } from '../prisma/client.js';
+import { connectRedis } from '../redis/index.js';
 import {
   getPrometheusMetrics,
   initializeObservability,
@@ -77,6 +78,46 @@ const getRequestUrlForLog = (url: string) => url.split('?')[0] || url;
 const getRouteForLog = (request: FastifyRequest) => {
   return request.routeOptions?.url ?? request.url;
 };
+
+const getRequestIp = (request: FastifyRequest) => {
+  return request.normalizedIp ?? request.ip;
+};
+
+const getRequestUserAgent = (request: FastifyRequest) => {
+  return getHeaderValue(request.headers['user-agent']);
+};
+
+const getRequestTenantId = (request: FastifyRequest) => {
+  return request.currentTenant?.tenantId ?? request.currentUser?.tenantId;
+};
+
+const getRequestUserId = (request: FastifyRequest) => {
+  return request.currentUser?.userId;
+};
+
+const getRequestLatencyMs = (request: FastifyRequest) => {
+  if (!request.startTime) {
+    return undefined;
+  }
+
+  return Date.now() - request.startTime;
+};
+
+const getRequestLogContext = (
+  request: FastifyRequest,
+  statusCode?: number,
+) => ({
+  requestId: request.requestId ?? request.id,
+  method: request.method,
+  url: getRequestUrlForLog(request.url),
+  route: getRouteForLog(request),
+  ...(statusCode ? { statusCode } : {}),
+  tenantId: getRequestTenantId(request),
+  userId: getRequestUserId(request),
+  ip: getRequestIp(request),
+  userAgent: getRequestUserAgent(request),
+  environment: config.nodeEnv,
+});
 
 const getLogLevelForStatusCode = (statusCode: number) => {
   if (statusCode >= 500) {
@@ -153,6 +194,20 @@ const isOperationalError = (error: unknown): error is OperationalError => {
   );
 };
 
+const getErrorCode = (error: unknown) => {
+  if (!isRecord(error)) {
+    return undefined;
+  }
+
+  const errorCode = error.code;
+
+  if (typeof errorCode === 'string' || typeof errorCode === 'number') {
+    return String(errorCode);
+  }
+
+  return undefined;
+};
+
 const getErrorStatusCode = (error: OperationalError) => {
   const statusCode = Number(error.statusCode);
 
@@ -162,41 +217,46 @@ const getErrorStatusCode = (error: OperationalError) => {
 };
 
 const getErrorResponseErrors = (error: OperationalError) => {
-  return Array.isArray(error.errors) && error.errors.every((item) => typeof item === 'string')
-    ? error.errors
+  return Array.isArray(error.errors) &&
+    error.errors.every((item) => typeof item === 'string')
+    ? error.errors.map((item) => sanitizeLogText(item))
     : undefined;
 };
 
-const redactSensitiveText = (value: string) => {
-  return value.replace(
-    /\b(password|senha|token|authorization|cookie)\b\s*[:=]\s*[^,\s}]+/gi,
-    '$1=[REDACTED]',
-  );
+const getErrorMessageForLog = (
+  error: Error,
+  statusCode: number,
+  isKnownOperationalError: boolean,
+) => {
+  if (config.nodeEnv === 'production' && statusCode >= 500) {
+    return isKnownOperationalError
+      ? sanitizeLogText(error.message)
+      : 'Internal server error';
+  }
+
+  return sanitizeLogText(error.message);
 };
 
 const getErrorLogMeta = (
   error: FastifyError,
   request: FastifyRequest,
   statusCode: number,
+  isKnownOperationalError: boolean,
 ) => {
-  const url = getRequestUrlForLog(request.url);
-  const route = getRouteForLog(request);
-  const errorMessage = redactSensitiveText(error.message);
   const meta: Record<string, unknown> = {
-    requestId: request.requestId ?? request.id,
-    method: request.method,
-    url,
-    route,
-    statusCode,
+    ...getRequestLogContext(request, statusCode),
+    latencyMs: getRequestLatencyMs(request),
     errorName: error.name,
-    errorMessage,
-    tenantId: request.currentTenant?.tenantId ?? request.currentUser?.tenantId,
-    userId: request.currentUser?.userId,
-    environment: config.nodeEnv,
+    errorMessage: getErrorMessageForLog(
+      error,
+      statusCode,
+      isKnownOperationalError,
+    ),
+    errorCode: getErrorCode(error),
   };
 
   if (config.nodeEnv !== 'production' && error.stack) {
-    meta.stack = redactSensitiveText(error.stack);
+    meta.stack = sanitizeLogText(error.stack);
   }
 
   return meta;
@@ -218,9 +278,37 @@ const recordUnclassifiedForbiddenEvent = (
     metadata: {
       reason: 'unclassified_forbidden',
       errorName: error.name,
-      errorMessage: redactSensitiveText(error.message),
+      errorMessage: sanitizeLogText(error.message),
     },
   });
+};
+
+const getReadinessErrorLogMeta = (
+  request: FastifyRequest,
+  component: 'database' | 'redis',
+  error: unknown,
+) => {
+  const meta: Record<string, unknown> = {
+    ...getRequestLogContext(request, 503),
+    component,
+    status: 'not_ready',
+    errorName: 'UnknownError',
+    errorCode: getErrorCode(error),
+  };
+
+  if (error instanceof Error) {
+    meta.errorName = error.name;
+    meta.errorMessage =
+      config.nodeEnv === 'production'
+        ? 'Readiness check failed'
+        : sanitizeLogText(error.message);
+
+    if (config.nodeEnv !== 'production' && error.stack) {
+      meta.stack = sanitizeLogText(error.stack);
+    }
+  }
+
+  return meta;
 };
 
 const sendErrorResponse = (
@@ -240,7 +328,7 @@ const sendErrorResponse = (
     isKnownOperationalError
       ? 'Operational API error'
       : 'Unexpected API error',
-    getErrorLogMeta(error, _request, statusCode),
+    getErrorLogMeta(error, _request, statusCode, isKnownOperationalError),
   );
 
   if (operationalError) {
@@ -253,7 +341,7 @@ const sendErrorResponse = (
     } = {
       success: false,
       requestId: _request.requestId ?? _request.id,
-      message: operationalError.message,
+      message: sanitizeLogText(operationalError.message),
     };
 
     if (typeof operationalError.code === 'string') {
@@ -364,20 +452,12 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
     const durationMs = Date.now() - startedAt;
     const statusCode = reply.statusCode;
     const level = getLogLevelForStatusCode(statusCode);
-    const url = getRequestUrlForLog(request.url);
     const route = getRouteForLog(request);
 
     logger[level]('HTTP request completed', {
-      requestId: request.requestId ?? request.id,
-      method: request.method,
-      url,
-      route,
-      statusCode,
+      ...getRequestLogContext(request, statusCode),
       durationMs,
       latencyMs: durationMs,
-      tenantId: request.currentTenant?.tenantId ?? request.currentUser?.tenantId,
-      userId: request.currentUser?.userId,
-      environment: config.nodeEnv,
     });
 
     recordHttpRequestMetrics({
@@ -399,28 +479,42 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   }));
 
   // Readiness
-  app.get('/ready', async (_request, reply) => {
+  app.get('/ready', async (request, reply) => {
     const timestamp = new Date().toISOString();
+    let database: 'connected' | 'disconnected' = 'connected';
+    let redis: 'connected' | 'disconnected' = 'connected';
 
     try {
       await prisma.$queryRaw`SELECT 1`;
-
-      return reply.send({
-        success: true,
-        status: 'ready',
-        service: 'FINQZ PRO API',
-        database: 'connected',
-        timestamp,
-      });
-    } catch {
-      return reply.status(503).send({
-        success: false,
-        status: 'not_ready',
-        service: 'FINQZ PRO API',
-        database: 'disconnected',
-        timestamp,
-      });
+    } catch (error) {
+      database = 'disconnected';
+      logger.warn(
+        'Database readiness failure',
+        getReadinessErrorLogMeta(request, 'database', error),
+      );
     }
+
+    try {
+      const redisClient = await connectRedis();
+      await redisClient.ping();
+    } catch (error) {
+      redis = 'disconnected';
+      logger.warn(
+        'Redis readiness failure',
+        getReadinessErrorLogMeta(request, 'redis', error),
+      );
+    }
+
+    const isReady = database === 'connected' && redis === 'connected';
+
+    return reply.status(isReady ? 200 : 503).send({
+      success: isReady,
+      status: isReady ? 'ready' : 'not_ready',
+      service: 'FINQZ PRO API',
+      database,
+      redis,
+      timestamp,
+    });
   });
 
   // Metrics
