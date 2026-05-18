@@ -2,6 +2,7 @@
 // FINQZ PRO - JWT Utilities
 // ============================================
 
+import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/app.js';
 import { AppError } from '../types/index.js';
@@ -13,6 +14,7 @@ export interface JWTPayload {
   role: string;
   email: string;
   permissions?: string[];
+  jti?: string;
   iat?: number;
   exp?: number;
 }
@@ -22,15 +24,24 @@ export interface TokenPair {
   refreshToken: string;
 }
 
+const withTokenId = (
+  payload: Omit<JWTPayload, 'iat' | 'exp'>,
+): Omit<JWTPayload, 'iat' | 'exp'> => ({
+  ...payload,
+  jti: payload.jti ?? randomUUID(),
+});
+
 /**
  * Generate JWT access and refresh tokens
  */
 export function generateTokens(payload: Omit<JWTPayload, 'iat' | 'exp'>): TokenPair {
-  const accessToken = jwt.sign(payload, config.jwt.secret as any, {
+  const tokenPayload = withTokenId(payload);
+
+  const accessToken = jwt.sign(tokenPayload, config.jwt.secret as any, {
     expiresIn: config.jwt.expiresIn as any,
   });
 
-  const refreshToken = jwt.sign(payload, config.jwt.refreshSecret as any, {
+  const refreshToken = jwt.sign(tokenPayload, config.jwt.refreshSecret as any, {
     expiresIn: config.jwt.refreshExpiresIn as any,
   });
 
@@ -41,7 +52,7 @@ export function generateTokens(payload: Omit<JWTPayload, 'iat' | 'exp'>): TokenP
  * Generate only access token
  */
 export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, config.jwt.secret as any, {
+  return jwt.sign(withTokenId(payload), config.jwt.secret as any, {
     expiresIn: config.jwt.expiresIn as any,
   });
 }
@@ -50,7 +61,7 @@ export function generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): s
  * Generate only refresh token
  */
 export function generateRefreshToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, config.jwt.refreshSecret as any, {
+  return jwt.sign(withTokenId(payload), config.jwt.refreshSecret as any, {
     expiresIn: config.jwt.refreshExpiresIn as any,
   });
 }
