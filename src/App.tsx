@@ -361,30 +361,51 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [applyAuthenticatedUser]);
 
   const login = useCallback(async ({ access_code_or_email, senha }: { access_code_or_email: string; senha: string }) => {
-    const identifier = access_code_or_email.trim().toLowerCase();
-    const { usuarios } = useAppStore.getState();
+    const runLegacyLogin = () => {
+      const identifier = access_code_or_email.trim().toLowerCase();
+      const { usuarios } = useAppStore.getState();
 
-    const matchedUser = usuarios.find((currentUser) => {
-      const emailMatch = currentUser.email?.toLowerCase() === identifier;
-      const accessCodeMatch = currentUser.access_code?.toLowerCase() === identifier;
-      return (emailMatch || accessCodeMatch) && currentUser.senha === senha;
-    });
+      const matchedUser = usuarios.find((currentUser) => {
+        const emailMatch = currentUser.email?.toLowerCase() === identifier;
+        const accessCodeMatch = currentUser.access_code?.toLowerCase() === identifier;
+        return (emailMatch || accessCodeMatch) && currentUser.senha === senha;
+      });
 
-    if (!matchedUser) {
-      return { success: false, error: "E-mail, código ou senha inválidos." };
+      if (!matchedUser) {
+        return { success: false, error: "E-mail, código ou senha inválidos." };
+      }
+
+      if (matchedUser.status !== "ATIVO") {
+        return { success: false, error: "Seu acesso está inativo no momento." };
+      }
+
+      applyAuthenticatedUser({
+        ...matchedUser,
+        parceiroId: matchedUser.partner_id,
+        perfil: matchedUser.perfil,
+      });
+
+      return { success: true, must_change_password: matchedUser.must_change_password };
+    };
+
+    const nativeLogin = await finqzAuth.login({ access_code_or_email, senha });
+
+    if (nativeLogin.success && nativeLogin.user) {
+      applyAuthenticatedUser(nativeLogin.user);
+      return {
+        success: true,
+        must_change_password: nativeLogin.must_change_password,
+      };
     }
 
-    if (matchedUser.status !== "ATIVO") {
-      return { success: false, error: "Seu acesso está inativo no momento." };
+    if (!nativeLogin.backendUnavailable) {
+      return {
+        success: false,
+        error: nativeLogin.error || "Não foi possível entrar agora.",
+      };
     }
 
-    applyAuthenticatedUser({
-      ...matchedUser,
-      parceiroId: matchedUser.partner_id,
-      perfil: matchedUser.perfil,
-    });
-
-    return { success: true, must_change_password: matchedUser.must_change_password };
+    return runLegacyLogin();
   }, [applyAuthenticatedUser]);
 
   const requestPasswordReset = useCallback(async (identifier: string) => {
