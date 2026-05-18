@@ -18,11 +18,10 @@ const getApiBaseUrl = (): string => {
     return envUrl;
   }
   
-  // Em produção, mostrar warning mas não quebrar (fallback para ambiente Youware)
+  // Em produção, usar mesma origem para evitar dependência de plataforma externa
   if (import.meta.env.PROD) {
-    console.warn('WARNING: VITE_API_BASE_URL não definida em produção, usando fallback Youware');
-    // Fallback para ambiente Youware - não quebra a aplicação
-    return 'https://staging--81irdofnlgfsx9dqddsk.youbase.cloud';
+    console.warn('WARNING: VITE_API_BASE_URL não definida em produção, usando fallback same-origin');
+    return '';
   }
   
   // Em desenvolvimento, usar fallback local

@@ -10,6 +10,7 @@ import { TAGS_SISTEMA, listarTags, criarTag, editarTag, excluirTag, CORES_DISPON
 import { AUTOMAÇÕES_BASE, getConfigPipeline, salvarConfigPipeline, toggleAutomacaoPipeline, getPipelinesComAutomacao, getTipoPipelineLabel, getCorTipoPipeline, resetarConfigPipeline, ConfigAutomacaoPipeline } from "../config/configAutomacoes";
 import { Button, Card as DSCard, Input, Select } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
+import { API_BASE_URL } from "../config/environment";
 
 interface ConfiguracoesPageProps {
   defaultTab?: string;
@@ -319,7 +320,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
     setSaving(true);
     try {
       // Save email template settings to backend
-      const response = await fetch("https://staging--81irdofnlgfsx9dqddsk.youbase.cloud/api/settings/email-template", {
+      const response = await fetch(`${API_BASE_URL}/api/settings/email-template`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1214,7 +1215,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         }
                         setTestingEmail(true);
                         try {
-                          const result = await fetch("https://staging--81irdofnlgfsx9dqddsk.youbase.cloud/api/email/send", {
+                          const result = await fetch(`${API_BASE_URL}/api/email/send`, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({

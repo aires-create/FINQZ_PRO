@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { API_BASE_URL } from '../config/environment';
 
 interface LeadQualificationResult {
   score: number;
@@ -12,6 +11,7 @@ interface LeadQualificationResult {
 }
 
 interface LeadData {
+  id?: number;
   nome?: string;
   email?: string;
   celular?: string;
@@ -23,6 +23,89 @@ interface LeadData {
   ultima_interacao_at?: number;
   tags?: string[];
 }
+
+interface LeadQualificationConfig {
+  system_prompt?: string;
+  model: string;
+  temperature?: number;
+  maxTokens?: number;
+  baseURL?: string;
+  apiKey?: string;
+}
+
+interface FinqzRuntimeConfig {
+  ai_config?: {
+    lead_qualification?: LeadQualificationConfig;
+  };
+}
+
+type FinqzGlobal = typeof globalThis & {
+  finqzConfig?: FinqzRuntimeConfig;
+};
+
+const getLeadQualificationConfig = () => {
+  return (globalThis as FinqzGlobal).finqzConfig?.ai_config?.lead_qualification;
+};
+
+const getAiBaseUrl = (config: LeadQualificationConfig) => {
+  return (
+    config.baseURL ||
+    import.meta.env.VITE_AI_BASE_URL ||
+    `${API_BASE_URL}/api/ai`
+  ).replace(/\/$/, '');
+};
+
+const getAiHeaders = (config: LeadQualificationConfig) => {
+  const apiKey = config.apiKey || import.meta.env.VITE_AI_API_KEY;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (apiKey) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  return headers;
+};
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  return error instanceof Error ? error.message : fallback;
+};
+
+const requestLeadQualification = async (
+  config: LeadQualificationConfig,
+  messages: Array<{ role: 'system' | 'user'; content: string }>,
+) => {
+  const response = await fetch(`${getAiBaseUrl(config)}/lead-qualification`, {
+    method: 'POST',
+    headers: getAiHeaders(config),
+    body: JSON.stringify({
+      model: config.model,
+      messages,
+      temperature: config.temperature || 0.3,
+      maxTokens: config.maxTokens || 2000,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API Error - AI request failed with status ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    text?: string;
+    result?: LeadQualificationResult;
+  };
+
+  if (data.text) {
+    return data.text;
+  }
+
+  if (data.result) {
+    return JSON.stringify(data.result);
+  }
+
+  throw new Error('API Error - Invalid response format from AI');
+};
 
 export function useLeadQualification() {
   const [isQualifying, setIsQualifying] = useState(false);
@@ -36,7 +119,7 @@ export function useLeadQualification() {
 
     console.log('[START] Starting lead qualification:', { leadId: lead.id || lead.celular, nome: lead.nome });
 
-    const config = globalThis.ywConfig?.ai_config?.lead_qualification;
+    const config = getLeadQualificationConfig();
     if (!config) {
       const errorMsg = 'API Error - Configuration lead_qualification not found';
       console.error('[ERROR]', errorMsg);
@@ -82,21 +165,14 @@ ${leadInfo}`;
       }
     });
 
-    const openai = createOpenAI({
-      baseURL: 'https://api.youware.com/public/v1/ai',
-      apiKey: 'sk-YOUWARE'
-    });
-
     try {
-      const { text } = await generateText({
-        model: openai(config.model),
-        messages: [
+      const text = await requestLeadQualification(
+        config,
+        [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }
         ],
-        temperature: config.temperature || 0.3,
-        maxTokens: config.maxTokens || 2000
-      });
+      );
 
       console.log('[SUCCESS] AI API Response (Lead Qualification):', {
         model: config.model,
@@ -114,11 +190,14 @@ ${leadInfo}`;
       } else {
         throw new Error('API Error - Invalid response format from AI');
       }
-    } catch (err: any) {
-      const errorMessage = err.message || 'API Error - Lead qualification failed';
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(
+        err,
+        'API Error - Lead qualification failed',
+      );
       console.error('[ERROR] API Error - Lead qualification failed:', {
         model: config.model,
-        error: err.message,
+        error: errorMessage,
         processingTime: `${Date.now() - startTime}ms`
       });
       setError(errorMessage);
@@ -158,15 +237,10 @@ export function useBatchLeadQualification() {
     const total = leads.length;
     let current = 0;
 
-    const config = globalThis.ywConfig?.ai_config?.lead_qualification;
+    const config = getLeadQualificationConfig();
     if (!config) {
       throw new Error('API Error - Configuration lead_qualification not found');
     }
-
-    const openai = createOpenAI({
-      baseURL: 'https://api.youware.com/public/v1/ai',
-      apiKey: 'sk-YOUWARE'
-    });
 
     for (const lead of leads) {
       try {
@@ -185,23 +259,24 @@ Dados do Lead:
 {"score": 1-10, "probability": 0-100, "nextSteps": ["string"], "observations": "string", "tags": ["string"], "analysis": "string"}
 ${leadInfo}`;
 
-        const { text } = await generateText({
-          model: openai(config.model),
-          messages: [
+        const text = await requestLeadQualification(
+          config,
+          [
             { role: 'system', content: config.system_prompt || '' },
             { role: 'user', content: userMessage }
           ],
-          temperature: config.temperature || 0.3,
-          maxTokens: config.maxTokens || 2000
-        });
+        );
 
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           setResults(prev => new Map(prev).set(lead.id as number, parsed));
         }
-      } catch (err: any) {
-        setErrors(prev => new Map(prev).set(lead.id as number, err.message));
+      } catch (err: unknown) {
+        setErrors(prev => new Map(prev).set(
+          lead.id as number,
+          getErrorMessage(err, 'API Error - Lead qualification failed'),
+        ));
       }
 
       current++;

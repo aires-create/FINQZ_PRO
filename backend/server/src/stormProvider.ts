@@ -56,10 +56,10 @@ export interface StormTestResult {
 }
 
 // ============================================
-// ENVIRONMENT VARIABLES (set via Youbase secrets)
+// ENVIRONMENT VARIABLES (set via FINQZ PRO runtime secrets)
 // ============================================
 
-// These are read from process.env in Youbase/EdgeSpark
+// These are read from process.env in the FINQZ PRO runtime
 // ST少: STORM_BASE_URL, STORM_API_KEY, STORM_USERNAME, STORM_PASSWORD, STORM_ENABLED
 
 function getStormConfig(): StormConfig {
