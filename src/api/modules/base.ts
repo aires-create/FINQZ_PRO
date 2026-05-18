@@ -1,7 +1,7 @@
 // FINQZ PRO - Base API Module
 // Configuração base para todos os módulos de API
 
-import { client } from '../client';
+import { httpRequest } from '../http';
 
 // ============================================
 // TYPES
@@ -49,8 +49,9 @@ export async function apiCall<T>(
   options: RequestInit = {}
 ): Promise<T> {
   try {
-    const response = await client.api.fetch(endpoint, {
+    const { response } = await httpRequest(endpoint, {
       ...options,
+      preserveApiPrefix: true,
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -58,11 +59,11 @@ export async function apiCall<T>(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Erro HTTP ${response.status}`);
+      const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
+      throw new Error((errorData.message as string | undefined) || `Erro HTTP ${response.status}`);
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   } catch (error) {
     if (error instanceof Error) {
       console.error(`[API Error] ${endpoint}:`, error.message);
@@ -104,7 +105,7 @@ export async function withErrorHandling<T>(
  * @param params - Objeto com parâmetros
  * @returns Query string formatada
  */
-export function buildQueryString(params: Record<string, any>): string {
+export function buildQueryString(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams();
   
   for (const [key, value] of Object.entries(params)) {
