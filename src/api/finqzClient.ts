@@ -7,32 +7,94 @@ import {
   apiRequest,
   buildRequestHeaders,
   getResolvedApiBaseUrl,
+  httpRequest,
   type FinqzHttpResponse,
   type FinqzRequestInit,
   type HttpMethod,
 } from "./http";
-import { clearStoredSession } from "../auth/session";
+import {
+  clearSession,
+  getSessionSnapshot,
+  setSessionUser,
+  type FinqzSession,
+} from "../auth/session";
 
 type EdgeSparkSession = Awaited<ReturnType<EdgeSparkClient["auth"]["getSession"]>>;
-type EdgeSparkSignOutResult = Awaited<ReturnType<EdgeSparkClient["auth"]["signOut"]>>;
 
 export type FinqzClientResponse<T> = FinqzHttpResponse<T>;
+export type FinqzAuthSession = FinqzSession | EdgeSparkSession;
+
+type FinqzSignOutResult = {
+  data: null;
+  error: unknown;
+};
 
 const edgeSparkClient = createEdgeSpark({
   baseUrl: getResolvedApiBaseUrl(),
 });
 
-const fetchWithStandardHeaders = (endpoint: string, options: FinqzRequestInit = {}): Promise<Response> => {
+const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestInit = {}): Promise<Response> => {
   const { requestId, ...requestOptions } = options;
   const prepared = buildRequestHeaders(requestOptions.headers, {
     body: requestOptions.body,
     requestId,
   });
 
-  return edgeSparkClient.api.fetch(endpoint, {
+  const { response } = await httpRequest(endpoint, {
     ...requestOptions,
+    preserveApiPrefix: requestOptions.preserveApiPrefix ?? true,
     headers: prepared.headers,
   });
+
+  return response;
+};
+
+const fetchWithEdgeSparkFallback = async (endpoint: string, options: FinqzRequestInit = {}): Promise<Response> => {
+  try {
+    return await fetchWithStandardHeaders(endpoint, options);
+  } catch {
+    const { requestId, preserveApiPrefix, ...requestOptions } = options;
+    const prepared = buildRequestHeaders(requestOptions.headers, {
+      body: requestOptions.body,
+      requestId,
+    });
+
+    return edgeSparkClient.api.fetch(endpoint, {
+      ...requestOptions,
+      headers: prepared.headers,
+    });
+  }
+};
+
+const getFallbackSession = async (): Promise<EdgeSparkSession> => {
+  const session = await edgeSparkClient.auth.getSession();
+  const fallbackUser = session.data?.user;
+
+  if (fallbackUser && typeof fallbackUser === "object") {
+    setSessionUser(fallbackUser);
+  }
+
+  return session;
+};
+
+const getSession = async (): Promise<FinqzAuthSession> => {
+  const nativeSession = getSessionSnapshot();
+  if (nativeSession.isAuthenticated) {
+    return nativeSession;
+  }
+
+  return getFallbackSession();
+};
+
+const signOut = async (): Promise<FinqzSignOutResult> => {
+  clearSession();
+
+  try {
+    await edgeSparkClient.auth.signOut();
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
 };
 
 const request = <T>(
@@ -53,17 +115,11 @@ const request = <T>(
 
 export const finqzClient = {
   auth: {
-    getSession: (): Promise<EdgeSparkSession> => edgeSparkClient.auth.getSession(),
-    signOut: async (): Promise<EdgeSparkSignOutResult> => {
-      try {
-        return await edgeSparkClient.auth.signOut();
-      } finally {
-        clearStoredSession();
-      }
-    },
+    getSession,
+    signOut,
   },
   api: {
-    fetch: fetchWithStandardHeaders,
+    fetch: fetchWithEdgeSparkFallback,
   },
   get: <T = unknown>(endpoint: string, options?: FinqzRequestInit) =>
     request<T>("GET", endpoint, undefined, options),

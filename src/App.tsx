@@ -8,6 +8,7 @@ import { AuthUser, Module, Action } from "./auth/permissions";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
 import { finqzAuth } from "./auth/finqzAuth";
+import { getCurrentUser, setSessionUser } from "./auth/session";
 
 // Lazy loading for code splitting - improves initial load time
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
@@ -54,7 +55,6 @@ import {
 
 import { SdrIaHubPage } from "./pages/SdrIaHub";
 
-import { STORAGE_KEYS } from "./config/environment";
 import { generateSecurePassword } from "./utils/auth";
 
 // Page loader for lazy-loaded routes
@@ -317,7 +317,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const normalizedUser = normalizeAdminUser(nextUser);
     setUser(normalizedUser);
     setAuth(normalizedUser);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(normalizedUser));
+    setSessionUser(normalizedUser);
     return normalizedUser;
   }, [setAuth]);
 
@@ -326,9 +326,8 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const checkAuth = async () => {
       try {
-        const storedUserRaw = localStorage.getItem(STORAGE_KEYS.USER);
-        if (storedUserRaw && isMounted) {
-          const storedUser = JSON.parse(storedUserRaw);
+        const storedUser = getCurrentUser();
+        if (storedUser && isMounted) {
           applyAuthenticatedUser(storedUser);
           return;
         }

@@ -2,7 +2,7 @@
 // Owns base URL, headers, auth token injection and request correlation.
 
 import { API_BASE_URL, API_CONFIG } from "../config/environment";
-import { clearStoredSession, getStoredAuthToken } from "../auth/session";
+import { clearSession, getAccessToken } from "../auth/session";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -153,7 +153,7 @@ export const buildRequestHeaders = (
     mergedHeaders.delete("Content-Type");
   }
 
-  const token = getStoredAuthToken();
+  const token = getAccessToken();
   if (token) {
     mergedHeaders.set("Authorization", `Bearer ${token}`);
   }
@@ -164,7 +164,7 @@ export const buildRequestHeaders = (
 };
 
 const handleAuthError = (): void => {
-  clearStoredSession();
+  clearSession();
   window.dispatchEvent(new CustomEvent("auth:error", {
     detail: { message: "Sessao expirada" },
   }));
