@@ -2,9 +2,16 @@
 // Feature code should depend on this adapter instead of platform clients.
 
 import { finqzClient } from "../api/finqzClient";
-import { ApiException } from "../api/http";
+import { ApiException, refreshSessionTokens } from "../api/http";
 import type { LoginCredentials } from "../types";
-import { clearSession, getSessionSnapshot, setSessionUser, storeSessionTokens } from "./session";
+import {
+  clearSession,
+  getAccessToken,
+  getRefreshToken,
+  getSessionSnapshot,
+  setSessionUser,
+  storeSessionTokens,
+} from "./session";
 import {
   mapBackendAuthUser,
   type BackendLoginResponse,
@@ -17,6 +24,22 @@ export interface FinqzLoginResult {
   error?: string;
   must_change_password?: boolean;
   backendUnavailable?: boolean;
+}
+
+export interface FinqzRefreshResult {
+  success: boolean;
+  error?: string;
+}
+
+export interface FinqzLogoutResult {
+  success: boolean;
+  error?: string;
+  backendUnavailable?: boolean;
+}
+
+interface NativeLogoutResponse {
+  success: boolean;
+  message?: string;
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,6 +65,24 @@ const getLoginErrorMessage = (error: unknown): string => {
   }
 
   return "Não foi possível entrar agora.";
+};
+
+const buildLogoutPayload = (): { refreshToken: string } | undefined => {
+  const refreshToken = getRefreshToken();
+  return refreshToken ? { refreshToken } : undefined;
+};
+
+const executeNativeLogout = async (): Promise<boolean> => {
+  const response = await finqzClient.post<NativeLogoutResponse>(
+    "/api/v1/auth/logout",
+    buildLogoutPayload(),
+    {
+      credentials: "include",
+      skipAuthRefresh: true,
+    },
+  );
+
+  return response.data.success;
 };
 
 export const finqzAuth = {
@@ -103,6 +144,55 @@ export const finqzAuth = {
       };
     }
   },
+  refreshSession: async (): Promise<FinqzRefreshResult> => {
+    const refreshed = await refreshSessionTokens();
+
+    if (!refreshed) {
+      return {
+        success: false,
+        error: "Sessão expirada. Faça login novamente.",
+      };
+    }
+
+    return { success: true };
+  },
+  logoutNative: async (): Promise<FinqzLogoutResult> => {
+    if (!getAccessToken()) {
+      return {
+        success: false,
+        error: "Sessão nativa ausente.",
+      };
+    }
+
+    try {
+      return { success: await executeNativeLogout() };
+    } catch (error) {
+      if (error instanceof ApiException && error.status === 401 && getRefreshToken()) {
+        const refreshed = await refreshSessionTokens();
+
+        if (refreshed && getAccessToken()) {
+          try {
+            return { success: await executeNativeLogout() };
+          } catch (retryError) {
+            return {
+              success: false,
+              error: retryError instanceof ApiException
+                ? retryError.message
+                : "Não foi possível encerrar a sessão nativa.",
+            };
+          }
+        }
+      }
+
+      return {
+        success: false,
+        backendUnavailable: isBackendUnavailable(error),
+        error: error instanceof ApiException
+          ? error.message
+          : "Não foi possível encerrar a sessão nativa.",
+      };
+    }
+  },
   getSession: async () => {
     const nativeSession = getSessionSnapshot();
     if (nativeSession.isAuthenticated) {
@@ -112,11 +202,31 @@ export const finqzAuth = {
     return finqzClient.auth.getSession();
   },
   signOut: async () => {
-    clearSession();
-    return finqzClient.auth.signOut();
+    let nativeLogout: FinqzLogoutResult | undefined;
+    let fallbackError: unknown = null;
+
+    try {
+      if (getAccessToken()) {
+        nativeLogout = await finqzAuth.logoutNative();
+      }
+
+      if (!nativeLogout?.success) {
+        const fallback = await finqzClient.auth.signOut();
+        fallbackError = fallback.error;
+      }
+
+      return {
+        data: null,
+        error: nativeLogout?.success ? null : nativeLogout?.error ?? fallbackError,
+      };
+    } finally {
+      clearSession();
+    }
   },
 };
 
 export const getSession = finqzAuth.getSession;
 export const login = finqzAuth.login;
+export const logoutNative = finqzAuth.logoutNative;
+export const refreshSession = finqzAuth.refreshSession;
 export const signOut = finqzAuth.signOut;

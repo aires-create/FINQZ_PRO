@@ -2,13 +2,14 @@
 // Owns base URL, headers, auth token injection and request correlation.
 
 import { API_BASE_URL, API_CONFIG } from "../config/environment";
-import { clearSession, getAccessToken } from "../auth/session";
+import { clearSession, getAccessToken, getRefreshToken, storeSessionTokens } from "../auth/session";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export interface FinqzRequestInit extends RequestInit {
   requestId?: string;
   preserveApiPrefix?: boolean;
+  skipAuthRefresh?: boolean;
 }
 
 export interface FinqzHttpResponse<T> {
@@ -30,6 +31,14 @@ export class ApiException extends Error {
     this.code = code;
     this.details = details;
   }
+}
+
+interface NativeRefreshResponse {
+  success: boolean;
+  data?: {
+    accessToken?: string;
+    refreshToken?: string;
+  };
 }
 
 export const getErrorMessage = (status: number, defaultMessage: string): string => {
@@ -68,6 +77,13 @@ const generateRequestId = (): string => {
   }
 
   return `finqz-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+};
+
+const isAuthControlEndpoint = (endpoint: string): boolean => {
+  const normalizedEndpoint = endpoint.toLowerCase();
+  return normalizedEndpoint.includes("/auth/login") ||
+    normalizedEndpoint.includes("/auth/logout") ||
+    normalizedEndpoint.includes("/auth/refresh");
 };
 
 const getHeaderValue = (headers: HeadersInit | undefined, name: string): string | null => {
@@ -129,12 +145,37 @@ export const normalizeApiEndpoint = (endpoint: string, preserveApiPrefix = false
   return endpoint;
 };
 
+const trimTrailingSlashes = (value: string): string => {
+  return value.replace(/\/+$/g, "");
+};
+
+const ensureLeadingSlash = (value: string): string => {
+  return value.startsWith("/") ? value : `/${value}`;
+};
+
+const stripLeadingApiPrefix = (value: string): string => {
+  return value.replace(/^\/api(?=\/|$)/i, "");
+};
+
 export const buildApiUrl = (endpoint: string, options: { preserveApiPrefix?: boolean } = {}): string => {
   if (/^https?:\/\//i.test(endpoint)) {
     return endpoint;
   }
 
-  return `${API_BASE_URL}${normalizeApiEndpoint(endpoint, options.preserveApiPrefix)}`;
+  const baseUrl = trimTrailingSlashes(API_BASE_URL);
+  const apiEndpoint = ensureLeadingSlash(
+    normalizeApiEndpoint(endpoint, options.preserveApiPrefix),
+  );
+
+  if (!baseUrl) {
+    return apiEndpoint;
+  }
+
+  if (/\/api$/i.test(baseUrl) && /^\/api(\/|$)/i.test(apiEndpoint)) {
+    return `${baseUrl}${stripLeadingApiPrefix(apiEndpoint)}`;
+  }
+
+  return `${baseUrl}${apiEndpoint}`;
 };
 
 export const buildRequestHeaders = (
@@ -165,9 +206,11 @@ export const buildRequestHeaders = (
 
 const handleAuthError = (): void => {
   clearSession();
-  window.dispatchEvent(new CustomEvent("auth:error", {
-    detail: { message: "Sessao expirada" },
-  }));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("auth:error", {
+      detail: { message: "Sessao expirada" },
+    }));
+  }
 };
 
 const parseErrorPayload = async (response: Response): Promise<Record<string, unknown>> => {
@@ -179,11 +222,71 @@ const parseErrorPayload = async (response: Response): Promise<Record<string, unk
   }
 };
 
+const parseJsonPayload = async <T>(response: Response): Promise<T | null> => {
+  try {
+    return await response.json() as T;
+  } catch {
+    return null;
+  }
+};
+
+const canRetryAfterRefresh = (endpoint: string, options: FinqzRequestInit): boolean => {
+  return Boolean(
+    !options.skipAuthRefresh &&
+      !isAuthControlEndpoint(endpoint) &&
+      getAccessToken() &&
+      getRefreshToken()
+  );
+};
+
+export const refreshSessionTokens = async (): Promise<boolean> => {
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    return false;
+  }
+
+  const body = JSON.stringify({ refreshToken });
+  const requestId = generateRequestId();
+  const headers = new Headers(API_CONFIG.DEFAULT_HEADERS);
+  headers.set("X-Request-ID", requestId);
+
+  try {
+    const response = await fetch(buildApiUrl("/api/v1/auth/refresh", { preserveApiPrefix: true }), {
+      method: "POST",
+      body,
+      headers,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const payload = await parseJsonPayload<NativeRefreshResponse>(response);
+    const accessToken = payload?.data?.accessToken;
+    const nextRefreshToken = payload?.data?.refreshToken;
+
+    if (!payload?.success || !accessToken || !nextRefreshToken) {
+      return false;
+    }
+
+    storeSessionTokens({
+      accessToken,
+      refreshToken: nextRefreshToken,
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export async function httpRequest(
   endpoint: string,
   options: FinqzRequestInit = {}
 ): Promise<{ response: Response; requestId: string }> {
-  const { requestId, preserveApiPrefix, ...requestOptions } = options;
+  const { requestId, preserveApiPrefix, skipAuthRefresh: _skipAuthRefresh, ...requestOptions } = options;
   const prepared = buildRequestHeaders(requestOptions.headers, {
     body: requestOptions.body,
     requestId,
@@ -191,44 +294,80 @@ export async function httpRequest(
 
   const response = await fetch(buildApiUrl(endpoint, { preserveApiPrefix }), {
     ...requestOptions,
+    credentials: requestOptions.credentials ?? "include",
     headers: prepared.headers,
   });
 
   return { response, requestId: prepared.requestId };
 }
 
+const sendApiRequest = async <T>(
+  endpoint: string,
+  options: FinqzRequestInit,
+): Promise<FinqzHttpResponse<T>> => {
+  const { response, requestId } = await httpRequest(endpoint, options);
+
+  if (!response.ok) {
+    const errorData = await parseErrorPayload(response);
+    const status = response.status;
+    const message = getErrorMessage(status, (errorData.message as string | undefined) || "Erro na requisicao");
+
+    throw new ApiException(
+      message,
+      status,
+      errorData.code as string | undefined,
+      errorData.details as Record<string, string[]> | undefined
+    );
+  }
+
+  const data = await response.json() as T;
+  return {
+    data,
+    status: response.status,
+    headers: response.headers,
+    requestId,
+  };
+};
+
 export async function apiRequest<T>(
   endpoint: string,
   options: FinqzRequestInit = {}
 ): Promise<FinqzHttpResponse<T>> {
   try {
-    const { response, requestId } = await httpRequest(endpoint, options);
+    return await sendApiRequest<T>(endpoint, options);
+  } catch (error) {
+    if (
+      error instanceof ApiException &&
+      isAuthError(error.status) &&
+      canRetryAfterRefresh(endpoint, options)
+    ) {
+      const refreshed = await refreshSessionTokens();
 
-    if (!response.ok) {
-      const errorData = await parseErrorPayload(response);
-      const status = response.status;
-      const message = getErrorMessage(status, (errorData.message as string | undefined) || "Erro na requisicao");
+      if (refreshed) {
+        try {
+          return await sendApiRequest<T>(endpoint, {
+            ...options,
+            skipAuthRefresh: true,
+          });
+        } catch (retryError) {
+          if (retryError instanceof ApiException && isAuthError(retryError.status)) {
+            handleAuthError();
+          }
 
-      if (isAuthError(status)) {
-        handleAuthError();
+          throw retryError;
+        }
       }
 
-      throw new ApiException(
-        message,
-        status,
-        errorData.code as string | undefined,
-        errorData.details as Record<string, string[]> | undefined
-      );
+      handleAuthError();
+    } else if (
+      error instanceof ApiException &&
+      isAuthError(error.status) &&
+      !options.skipAuthRefresh &&
+      !isAuthControlEndpoint(endpoint)
+    ) {
+      handleAuthError();
     }
 
-    const data = await response.json() as T;
-    return {
-      data,
-      status: response.status,
-      headers: response.headers,
-      requestId,
-    };
-  } catch (error) {
     if (error instanceof ApiException) {
       throw error;
     }

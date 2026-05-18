@@ -8,6 +8,7 @@ import {
   buildRequestHeaders,
   getResolvedApiBaseUrl,
   httpRequest,
+  refreshSessionTokens,
   type FinqzHttpResponse,
   type FinqzRequestInit,
   type HttpMethod,
@@ -45,6 +46,21 @@ const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestI
     preserveApiPrefix: requestOptions.preserveApiPrefix ?? true,
     headers: prepared.headers,
   });
+
+  if (response.status === 401 && !requestOptions.skipAuthRefresh) {
+    const refreshed = await refreshSessionTokens();
+
+    if (refreshed) {
+      const retry = await httpRequest(endpoint, {
+        ...requestOptions,
+        preserveApiPrefix: requestOptions.preserveApiPrefix ?? true,
+        skipAuthRefresh: true,
+        headers: prepared.headers,
+      });
+
+      return retry.response;
+    }
+  }
 
   return response;
 };
