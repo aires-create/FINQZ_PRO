@@ -778,13 +778,13 @@ const useAppStore = create<AppState>()(
         ),
       })),
 
-      currentPipelineId: "finqz-auto",
+      currentPipelineId: "",
       setCurrentPipelineId: (id) => set({ currentPipelineId: id }),
       
       // Função para resetar pipelines para valores padrão
       resetPipelines: () => set({ 
         pipelines: initialPipelines,
-        currentPipelineId: "finqz-auto",
+        currentPipelineId: "",
         oportunidadesKanban: initialOportunidades,
       }),
 

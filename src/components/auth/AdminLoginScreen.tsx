@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck } from "lucide-react";
 import { Button, Input } from "../ui";
-import finqzLogoBlue from "../../assets/brand/finqz-logo-blue.png";
 
 interface LoginResult {
   success: boolean;
@@ -102,12 +101,12 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
       <div className="auth-login-panel relative z-10 w-full max-w-[370px] overflow-hidden rounded-xl">
         <div className="px-7 py-10 sm:px-9">
           <div className="flex flex-col items-center text-center">
-            <img
-              src={finqzLogoBlue}
-              alt="FINQZ"
-              className="auth-login-logo h-auto w-[168px] sm:w-[190px]"
-            />
-            <p className="auth-login-product-mark mt-2 text-lg font-light tracking-normal">PRO</p>
+            <div className="auth-login-wordmark" aria-label="FINQZ PRO">
+              <span className="auth-login-wordmark-main">
+                Finqz<sup>®</sup>
+              </span>
+              <span className="auth-login-product-mark mt-2 text-lg font-light tracking-normal">PRO</span>
+            </div>
           </div>
 
           <div className="mx-auto mt-8 max-w-[320px]">

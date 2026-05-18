@@ -13,6 +13,7 @@ import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor,
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
 import { KanbanColumn, PipelineSelect, getStageColor, formatCurrency, filterOportunitiesByPipeline, groupOportunitiesByStage, calculateTotalsByStage } from "../components/pipeline";
 import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, getPipelineByProductId, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages } from "../data/catalogRepository";
+import type { PipelineColumn, PipelineTipo } from "../types";
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
 const normalizeKey = (value: any): string => {
@@ -58,6 +59,37 @@ export const OFICIAL_ETAPAS = [
 ] as const;
 
 export type EtapaKey = typeof OFICIAL_ETAPAS[number]['key'];
+
+type PipelineRuntimeConfig = {
+  id: string;
+  nome: string;
+  tipo: PipelineTipo;
+  descricao?: string;
+  etapas?: string[];
+  colunas?: PipelineColumn[];
+};
+
+const LEGACY_PIPELINE_IDS_BY_CATALOG: Record<string, string[]> = {
+  "pipeline-antecipacao": ["pipeline-antecipacao", "fgts"],
+  "pipeline-cartao": ["pipeline-cartao"],
+  "pipeline-consignado": ["pipeline-consignado", "finqz-consignado", "credito_consignado", "consignado"],
+  "pipeline-consorcio": ["pipeline-consorcio"],
+  "pipeline-credito-pessoal-cdc": ["pipeline-credito-pessoal-cdc", "finqz-auto", "emprestimo_pessoal", "personalizado"],
+  "pipeline-emprestimo-com-garantia": ["pipeline-emprestimo-com-garantia", "emprestimo_com_garantia"],
+  "pipeline-energia": ["pipeline-energia", "energia_gd", "mercado_livre_energia"],
+  "pipeline-financiamento": ["pipeline-financiamento", "financiamento_veiculo"],
+  "pipeline-seguro": ["pipeline-seguro"],
+};
+
+const getEquivalentPipelineIds = (pipelineId: string): string[] => {
+  return LEGACY_PIPELINE_IDS_BY_CATALOG[pipelineId] || [pipelineId];
+};
+
+const inferPipelineTipo = (pipelineId: string): PipelineTipo => {
+  if (pipelineId === "pipeline-energia") return "energia";
+  if (pipelineId === "pipeline-financiamento") return "veiculo";
+  return "credito";
+};
 
 
 // 📋 MOTIVOS DE PENDÊNCIA
@@ -237,11 +269,11 @@ const OportunidadesPageInner = () => {
   const safeProdutos = Array.isArray(produtos) ? produtos : [];
   const safeUsuarios = Array.isArray(usuarios) ? usuarios : [];
 
-  // ✅ Safe currentPipelineId com fallback padrão
+  // ✅ Safe currentPipelineId sem pipeline default operacional
   const safeCurrentPipelineId =
     typeof currentPipelineId === "string" && currentPipelineId
       ? currentPipelineId
-      : "consignado";
+      : "";
 
   // ✅ Safe setters e actions do store
   const safeSetCurrentPipelineId =
@@ -268,22 +300,6 @@ const OportunidadesPageInner = () => {
     typeof deleteOportunidade === "function"
       ? deleteOportunidade
       : () => {};
-
-  // ✅ GARANTIR PIPELINE INICIAL VÁLIDO (apenas pipelines do catálogo PF)
-  React.useEffect(() => {
-    // Pipeline padrão do catálogo PF
-    const defaultPipelineId = "pipeline-consignado";
-    
-    // Se não há pipeline selecionado ou se é um pipeline antigo (legado), usar o padrão
-    const isLegacyPipeline = safePipelinesStore.some(p => 
-      p.id === currentPipelineId && 
-      ["finqz-auto", "finqz-consignado", "fgts"].includes(p.id.toLowerCase())
-    );
-    
-    if (!currentPipelineId || isLegacyPipeline) {
-      setCurrentPipelineId(defaultPipelineId);
-    }
-  }, [currentPipelineId, safePipelinesStore, setCurrentPipelineId]);
 
   const isDark = theme === "dark";
   // ✅ Fallback seguro para hasPermission - evita erro se store ainda não carregou
@@ -313,9 +329,17 @@ const OportunidadesPageInner = () => {
   // 🎯 NOVA TAXONOMIA PF - Estado para subproduto e modalidade
   const [selectedSubproductId, setSelectedSubproductId] = useState<string>("");
   const [selectedModality, setSelectedModality] = useState<string>("");
+  const [pipelineSelectionReady, setPipelineSelectionReady] = useState(false);
   
   // Opções do catálogo de crédito PF (memoized para performance)
   const catalogPipelineOptions = useMemo(() => getPipelineOptions(), []);
+  const selectedPipelineId = useMemo(() => {
+    if (!pipelineSelectionReady) return "";
+    if (!safeCurrentPipelineId) return "";
+    return catalogPipelineOptions.some((pipeline) => pipeline.id === safeCurrentPipelineId)
+      ? safeCurrentPipelineId
+      : "";
+  }, [catalogPipelineOptions, pipelineSelectionReady, safeCurrentPipelineId]);
   const catalogProductOptions = useMemo(() => getProductOptions(), []);
   const catalogSubproducts = useMemo(() => 
     selectedProductId ? getSubproductsByProductId(selectedProductId) : [], 
@@ -327,6 +351,21 @@ const OportunidadesPageInner = () => {
       : [],
     [selectedProductId, selectedSubproductId]
   );
+
+  React.useEffect(() => {
+    if (!pipelineSelectionReady) {
+      safeSetCurrentPipelineId("");
+      setSelectedProductId("");
+      setSelectedSubproductId("");
+      setSelectedModality("");
+      setPipelineSelectionReady(true);
+      return;
+    }
+
+    if (safeCurrentPipelineId && !selectedPipelineId) {
+      safeSetCurrentPipelineId("");
+    }
+  }, [pipelineSelectionReady, safeCurrentPipelineId, safeSetCurrentPipelineId, selectedPipelineId]);
   
   // Ordenação por coluna: { [etapaId]: 'valor_asc' | 'valor_desc' | 'data_asc' | 'data_desc' }
   const [columnSort, setColumnSort] = useState<Record<string, string>>({});
@@ -1333,6 +1372,14 @@ const OportunidadesPageInner = () => {
   
   // Handle product/pipeline selection - switch pipeline
   const handleProductChange = (produtoId: string) => {
+    if (!produtoId) {
+      setSelectedProductId("");
+      setSelectedSubproductId("");
+      setSelectedModality("");
+      safeSetCurrentPipelineId("");
+      return;
+    }
+
     const selectedCatalogProductId =
       catalogPipelineOptions.find((pipeline) => pipeline.id === produtoId)?.productId || produtoId;
 
@@ -1346,22 +1393,29 @@ const OportunidadesPageInner = () => {
       // Primeiro tenta usar o catálogo novo
       const catalogPipeline = getPipelineByProductId(selectedCatalogProductId);
       if (catalogPipeline) {
-        setCurrentPipelineId(catalogPipeline.id);
+        safeSetCurrentPipelineId(catalogPipeline.id);
       } else {
         // Fallback para o sistema antigo de pipelines
         const pipelineConfig = getPipelineConfigById(selectedCatalogProductId);
         if (pipelineConfig) {
-          setCurrentPipelineId(pipelineConfig.id);
+          safeSetCurrentPipelineId(pipelineConfig.id);
         }
       }
     }
   };
   
   // Get current pipeline config - considers selected product with fallback
-  const productPipeline = selectedProductId ? getPipelineConfigById(selectedProductId) : null;
-  // ✅ Fallback seguro para currentPipelineConfig
-  // ✅ PROTEÇÃO DE CONFIGURAÇÃO GLOBAL
-  const currentPipelineConfig = productPipeline || getPipelineConfigById?.(safeCurrentPipelineId) || PIPELINES?.[0] || null;
+  const selectedCatalogPipeline = catalogPipelineOptions.find((pipeline) => pipeline.id === selectedPipelineId);
+  const selectedCatalogStages = selectedCatalogPipeline ? getPipelineStages(selectedCatalogPipeline.id) : [];
+  const currentPipelineConfig: PipelineRuntimeConfig | null = selectedCatalogPipeline
+    ? {
+        id: selectedCatalogPipeline.id,
+        nome: selectedCatalogPipeline.name,
+        tipo: inferPipelineTipo(selectedCatalogPipeline.id),
+        descricao: selectedCatalogPipeline.name,
+        etapas: selectedCatalogStages.map((stage) => normalizeKey(stage)),
+      }
+    : null;
   
   // ✅ ETAPAS DINÂMICAS do pipeline atual - usar OFICIAL_ETAPAS como base
   // ✅ HARDENING: Com normalizeKey e fallback seguro
@@ -1396,6 +1450,9 @@ const OportunidadesPageInner = () => {
   
   // ✅ BLINDAGEM DE ARRAY - Filter oportunidades - based on current pipeline (novo sistema PIPELINES)
   const oportunidadesBase = Array.isArray(safeOportunidadesKanban) ? safeOportunidadesKanban : [];
+  const equivalentPipelineIds = currentPipelineConfig
+    ? getEquivalentPipelineIds(currentPipelineConfig.id)
+    : [];
   const oportunidades = oportunidadesBase.filter((o: any) => {
     // ✅ Proteção: verificar se o objeto existe
     if (!o) return false;
@@ -1405,11 +1462,12 @@ const OportunidadesPageInner = () => {
 
     // Se a oportunidade tem o novo campo pipeline_id, usar ele
     if (o?.pipeline_id) {
-      return o.pipeline_id === currentPipelineConfig.id;
+      return equivalentPipelineIds.includes(String(o.pipeline_id));
     }
     // Se não, verificar se o produto antigo mapeia para o pipeline atual
     if (o?.produto && typeof mapearProdutoLegadoParaPipeline === "function") {
-      return mapearProdutoLegadoParaPipeline(o.produto) === currentPipelineConfig.id;
+      const mappedPipelineId = mapearProdutoLegadoParaPipeline(o.produto);
+      return mappedPipelineId ? equivalentPipelineIds.includes(mappedPipelineId) : false;
     }
     // ✅ Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
     return true;
@@ -2370,6 +2428,46 @@ const OportunidadesPageInner = () => {
     setSelectedLead(null);
   };
 
+  const pipelineSelectControl = (
+    <select
+      value={selectedPipelineId}
+      onChange={(e) => handleProductChange(e.target.value)}
+      className="border border-[#1f2937] px-3 py-2 rounded-lg text-sm w-[240px] focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+    >
+      <option value="" disabled>
+        Pipeline - Selecionar
+      </option>
+      {catalogPipelineOptions.map((pipeline) => (
+        <option key={pipeline.id} value={pipeline.id}>
+          {pipeline.name}
+        </option>
+      ))}
+    </select>
+  );
+
+  if (!selectedPipelineId) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          view={viewMode}
+          setView={setViewMode}
+          onSearch={setSearchQuery}
+          onRefresh={() => {}}
+          extraLeft={pipelineSelectControl}
+        />
+
+        <div className="finqz-card flex min-h-[320px] items-center justify-center p-8 text-center">
+          <div className="max-w-md">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Pipeline - Selecionar</h2>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Escolha um pipeline oficial para carregar etapas, oportunidades e filtros operacionais.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!isPipelineValid) {
     return (
       <div className={`p-4 ${isDark ? "text-white" : "text-white"}`}>
@@ -2392,23 +2490,7 @@ const OportunidadesPageInner = () => {
         createLabel="Nova Oportunidade"
         // Ativar FilterDrawer (padrão premium)
         onOpenFilters={() => setShowFilterDrawer(true)}
-        extraLeft={
-          <select
-            value={currentPipelineId || ""}
-            onChange={(e) => handleProductChange(e.target.value)}
-            className="border border-[#1f2937] px-3 py-2 rounded-lg text-sm w-[240px] focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
-          >
-            {/* 🎯 APENAS PIPELINES DO CATÁLOGO PF */}
-            <option value="" disabled>
-              Pipeline - Selecionar
-            </option>
-            {catalogPipelineOptions.map((pipeline) => (
-              <option key={pipeline.id} value={pipeline.id}>
-                {pipeline.name}
-              </option>
-            ))}
-          </select>
-        }
+        extraLeft={pipelineSelectControl}
         filters={[
           { label: 'Etapa', key: 'etapa_id', type: 'select', options: OFICIAL_ETAPAS.map(e => ({ label: e.label, value: e.key })), placeholder: 'Todas as etapas' },
           { label: 'Status', key: 'status', type: 'select', options: [

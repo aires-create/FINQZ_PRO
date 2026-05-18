@@ -615,9 +615,31 @@ html:not(.dark) [class*="bg-[#2673c8]"] .text-white {
   border-radius: 999px !important;
 }
 
-.auth-login-logo {
-  filter: brightness(0) invert(1);
-  opacity: 0.98;
+.auth-login-wordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #ffffff;
+  text-shadow: 0 0 22px rgba(255, 255, 255, 0.12);
+}
+
+.auth-login-wordmark-main {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  font-size: clamp(3rem, 8vw, 4rem);
+  font-weight: 800;
+  line-height: 0.88;
+  letter-spacing: 0;
+  color: #ffffff !important;
+}
+
+.auth-login-wordmark-main sup {
+  margin-left: 0.18rem;
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .auth-login-product-mark {
