@@ -623,10 +623,9 @@ export function sendLeadToSimulator(payload: {
   energyConsumption?: number;
 }): void {
   // Função segura (no-op) para integração com SDR IA
-  console.log('[SDR IA] Lead enviado para simulador:', payload);
+  void payload;
   
   // Aqui seria a integração real com o módulo de IA
-  // Por enquanto, apenas log
 }
 
 // ============================================
@@ -635,8 +634,8 @@ export function sendLeadToSimulator(payload: {
 
 export function emitAutomationEvent(eventName: string, payload: any): void {
   // Função segura para emitir eventos
-  console.log(`[Automation Event] ${eventName}:`, payload);
+  void eventName;
+  void payload;
   
   // Aqui seria a integração com o event bus real
-  // Por enquanto, apenas log
 }

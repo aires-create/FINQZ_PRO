@@ -48,12 +48,12 @@ interface SdrPanelProps {
 }
 
 const intentLabels: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  interessado: { label: "Interessado", color: "bg-green-100 text-green-700", icon: <CheckCircle className="w-4 h-4" /> },
-  duvida: { label: "Dúvida", color: "bg-yellow-100 text-yellow-700", icon: <HelpCircle className="w-4 h-4" /> },
-  preco: { label: "Pergunta sobre Preço", color: "bg-purple-100 text-purple-700", icon: <TrendingUp className="w-4 h-4" /> },
-  sem_interesse: { label: "Sem Interesse", color: "bg-red-100 text-red-700", icon: <XCircle className="w-4 h-4" /> },
-  quer_humano: { label: "Quer Humano", color: "bg-orange-100 text-orange-700", icon: <User className="w-4 h-4" /> },
-  dados_insuficientes: { label: "Dados Insuficientes", color: "bg-gray-100 text-slate-700", icon: <AlertTriangle className="w-4 h-4" /> },
+  interessado: { label: "Interessado", color: "bg-green-500/10 text-green-600 dark:text-green-300 border border-green-500/20", icon: <CheckCircle className="w-4 h-4" /> },
+  duvida: { label: "Dúvida", color: "bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20", icon: <HelpCircle className="w-4 h-4" /> },
+  preco: { label: "Preço", color: "bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/20", icon: <TrendingUp className="w-4 h-4" /> },
+  sem_interesse: { label: "Sem Interesse", color: "bg-red-500/10 text-red-600 dark:text-red-300 border border-red-500/20", icon: <XCircle className="w-4 h-4" /> },
+  quer_humano: { label: "Quer Humano", color: "bg-orange-500/10 text-orange-600 dark:text-orange-300 border border-orange-500/20", icon: <User className="w-4 h-4" /> },
+  dados_insuficientes: { label: "Dados Insuficientes", color: "bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-muted)]", icon: <AlertTriangle className="w-4 h-4" /> },
 };
 
 const actionLabels: Record<string, string> = {
@@ -120,9 +120,8 @@ export function SdrPanel({
       } else {
         setError(response.data.error || "Erro ao analisar mensagem");
       }
-    } catch (err: any) {
-      console.error("[SDR] Analysis error:", err);
-      setError(err.message || "Erro ao analisar mensagem");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao analisar mensagem");
     } finally {
       setIsAnalyzing(false);
     }
@@ -136,8 +135,8 @@ export function SdrPanel({
         reason: decision?.intent || "Escalado pelo usuário",
       });
       onEscalate?.();
-    } catch (err) {
-      console.error("[SDR] Escalate error:", err);
+    } catch {
+      setError("Erro ao escalar atendimento");
     }
   };
 
@@ -157,26 +156,25 @@ export function SdrPanel({
       } else {
         setError(response.data.error || "Erro ao criar oportunidade");
       }
-    } catch (err: any) {
-      console.error("[SDR] Create opportunity error:", err);
-      setError(err.message || "Erro ao criar oportunidade");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao criar oportunidade");
     }
   };
 
   const intentInfo = decision ? intentLabels[decision.intent] : null;
 
   return (
-    <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="sdr-context-panel overflow-hidden">
       {/* Header */}
       <div
-        className="p-3 bg-gradient-to-r from-[#000dff] to-[#3388d9] text-white flex items-center justify-between cursor-pointer"
+        className="sdr-context-header p-3 flex items-center justify-between cursor-pointer"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5" />
           <span className="font-semibold">SDR IA</span>
           {decision && (
-            <span className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10/20 px-2 py-0.5 rounded text-xs">
+            <span className="rounded border border-[var(--border-muted)] bg-[var(--bg-elevated)] px-2 py-0.5 text-xs text-[var(--text-secondary)]">
               {intentInfo?.label || decision.intent}
             </span>
           )}
@@ -211,7 +209,7 @@ export function SdrPanel({
 
           {/* Erro */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 dark:text-red-300 text-sm">
               {error}
             </div>
           )}
@@ -223,22 +221,22 @@ export function SdrPanel({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${intentInfo?.color || "bg-gray-100 text-slate-700"}`}
+                    className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${intentInfo?.color || "bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-muted)]"}`}
                   >
                     {intentInfo?.icon}
                     {intentInfo?.label || decision.intent}
                   </span>
                 </div>
-                <div className="text-sm text-slate-500">
+                <div className="text-sm text-[var(--text-muted)]">
                   Confiança:{" "}
-                  <span className="font-semibold text-slate-700">
+                  <span className="font-semibold text-[var(--text-primary)]">
                     {Math.round(decision.confidence * 100)}%
                   </span>
                 </div>
               </div>
 
               {/* Barra de confiança */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-[var(--bg-surface-strong)] rounded-full h-2">
                 <div
                   className={`h-2 rounded-full transition-all ${
                     decision.confidence >= 0.7
@@ -252,21 +250,21 @@ export function SdrPanel({
               </div>
 
               {/* Ação recomendada */}
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="text-xs text-slate-500 mb-1">Ação Recomendada</div>
-                <div className="text-sm font-medium text-slate-800">
+              <div className="p-3 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-muted)]">
+                <div className="text-xs text-[var(--text-muted)] mb-1">Ação Recomendada</div>
+                <div className="text-sm font-medium text-[var(--text-primary)]">
                   {actionLabels[decision.recommended_action] || decision.recommended_action}
                 </div>
               </div>
 
               {/* Resposta sugerida */}
               {decision.response_text && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="text-xs text-blue-600 mb-1 flex items-center gap-1">
+                <div className="p-3 bg-[var(--color-primary-faint)] border border-[var(--border-default)] rounded-lg">
+                  <div className="text-xs text-[var(--color-primary-soft)] mb-1 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     Resposta Sugerida
                   </div>
-                  <div className="text-sm text-slate-700">{decision.response_text}</div>
+                  <div className="text-sm text-[var(--text-primary)]">{decision.response_text}</div>
                 </div>
               )}
 
@@ -323,10 +321,10 @@ export function SdrPanel({
 
           {/* Estado inicial */}
           {!decision && !error && !isAnalyzing && (
-            <div className="text-center py-4 text-slate-500">
-              <Brain className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            <div className="text-center py-4 text-[var(--text-muted)]">
+              <Brain className="w-8 h-8 mx-auto mb-2 text-[var(--text-muted)]" />
               <p className="text-sm">
-                Clique em "Analisar Mensagem" para obter insights do SDR IA
+                Analise a mensagem quando houver ação operacional.
               </p>
             </div>
           )}

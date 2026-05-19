@@ -179,32 +179,53 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   description,
   icon,
   actions,
-  className = ""
+  className = "",
+  onSearch,
+  onRefresh,
+  extraLeft
 }) => {
   return (
-    <div className={`flex items-center justify-between ${className}`}>
-      <div className="flex items-center gap-4">
+    <div className={`flex flex-col gap-5 ${className}`}>
+      <div className="flex items-center gap-4 min-w-0">
         {icon && (
-          <div className="p-2 rounded-lg bg-primary/20">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--border-primary)] bg-[var(--surface-secondary)]">
             {icon}
           </div>
         )}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
+
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+            {title}
+          </h1>
+
           {description && (
-            <p className="text-slate-500 mt-0.5">{description}</p>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+              {description}
+            </p>
           )}
         </div>
       </div>
-      {actions && (
-        <div className="flex items-center gap-2">
-          {actions}
+
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center gap-3 min-w-0">
+          {view && setView && <ViewToggle view={view} setView={setView} />}
+
+          {extraLeft}
+
+          {onSearch && <SearchInput onSearch={onSearch} />}
+
+          {onRefresh && <RefreshButton onClick={onRefresh} />}
         </div>
-      )}
+
+        {actions && (
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {actions}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
-
 // 🔲 TABLECONTAINER - Wrapper padronizado para tabelas
 // Use em TODAS as tabelas para garantir consistência visual
 interface TableContainerProps {

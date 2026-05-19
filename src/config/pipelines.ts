@@ -1,7 +1,7 @@
 // FINQZ PRO - Configuração de Pipelines
 import { Pipeline, Etapa, PipelineConfig, PipelineTipo } from "../types";
 
-// 🎯 PIPELINES CONFIGURÁVEIS - Ordem Alfabética
+// PIPELINES CONFIGURÁVEIS - Ordem Alfabética
 export const PIPELINES: PipelineConfig[] = [
   {
     id: "assinatura_veiculos",

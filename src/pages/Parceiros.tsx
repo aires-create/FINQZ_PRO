@@ -294,22 +294,22 @@ export const ParceirosPage: React.FC = () => {
       });
 
       // Feedback real
-      let msg = "✅ Senha resetada com sucesso!\n";
+      let msg = "Senha resetada com sucesso.\n";
 
       if (podeEnviarEmail) {
         msg += result.notifications?.email?.success
-          ? "✉️ Email enviado\n"
-          : "⚠️ Falha no email\n";
+          ? "Email enviado\n"
+          : "Falha no email\n";
       } else {
-        msg += "⚠️ Sem email cadastrado\n";
+        msg += "Sem email cadastrado\n";
       }
 
       if (podeEnviarWhatsapp) {
         msg += result.notifications?.whatsapp?.success
-          ? "📱 WhatsApp enviado\n"
-          : "⚠️ Falha no WhatsApp\n";
+          ? "WhatsApp enviado\n"
+          : "Falha no WhatsApp\n";
       } else {
-        msg += "⚠️ Sem celular cadastrado\n";
+        msg += "Sem celular cadastrado\n";
       }
 
       alert(msg);
@@ -767,6 +767,8 @@ export const ParceirosPage: React.FC = () => {
         }
       />
 
+      <h2 className="text-base font-semibold text-[var(--text-primary)]">Visão Geral</h2>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3 lg:gap-4">
         <KpiCard
@@ -774,71 +776,47 @@ export const ParceirosPage: React.FC = () => {
           value={parceiros.length}
           icon={<Store size={18} />}
           variant="blue"
-          className="shadow-2xl shadow-slate-950/20"
         />
         <KpiCard
           label="Ativos"
           value={parceiros.filter(p => p.status === 'ativo').length}
           icon={<UserCheck size={18} />}
           variant="green"
-          className="shadow-2xl shadow-slate-950/20"
         />
         <KpiCard
           label="Inativos"
           value={parceiros.filter(p => p.status === 'inativo').length}
           icon={<UserX size={18} />}
           variant="red"
-          className="shadow-2xl shadow-slate-950/20"
         />
         <KpiCard
           label="Franquias"
           value={parceiros.filter(p => p.tipo === 'franquia').length}
           icon={<Building2 size={18} />}
           variant="purple"
-          className="shadow-2xl shadow-slate-950/20"
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
-        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0F172A]/90 p-4 sm:p-5 shadow-2xl shadow-black/20">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Resumo de Parceiros</p>
-          <h3 className="mt-2 sm:mt-3 text-xl sm:text-2xl font-bold text-white">Visão geral da carteira</h3>
-          <p className="mt-2 text-xs sm:text-sm text-slate-400 leading-relaxed">
-            Acompanhe os status-chave, a performance de franquias e maior visibilidade de contatos ativos em um painel premium.
-          </p>
-        </div>
-        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0F172A]/90 p-4 sm:p-5 shadow-2xl shadow-black/20">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Parceiros ativos</p>
-          <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-emerald-300">{parceiros.filter(p => p.status === 'ativo').length}</p>
-          <p className="mt-2 text-xs sm:text-sm text-slate-400">Parceiros em operação e com contato regular.</p>
-        </div>
-        <div className="rounded-2xl sm:rounded-3xl border border-white/10 bg-[#0F172A]/90 p-4 sm:p-5 shadow-2xl shadow-black/20">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Franquias cadastradas</p>
-          <p className="mt-2 sm:mt-3 text-2xl sm:text-3xl font-semibold text-violet-300">{parceiros.filter(p => p.tipo === 'franquia').length}</p>
-          <p className="mt-2 text-xs sm:text-sm text-slate-400">Contagem de unidades franqueadas no sistema.</p>
-        </div>
-      </div>
-
       {/* Partners List - Apenas Lista */}
-      <div className="hidden md:block rounded-3xl border border-white/10 bg-[#0F172A]/90 shadow-2xl shadow-black/20 overflow-x-auto">
+      <div className="table-container hidden md:block overflow-x-auto">
         <div className="min-w-full overflow-x-auto">
           <table className="w-full min-w-[1100px]">
             <thead>
-            <tr className="border-b border-white/10 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950">
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">ID/Código</th>
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Parceiro</th>
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Tipo</th>
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Status</th>
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Responsável</th>
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Contato</th>
-              <th className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Localização</th>
-              <th className="text-right px-4 py-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">Ações</th>
+            <tr>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">ID/Código</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Parceiro</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Tipo</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Responsável</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Contato</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Localização</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Ações</th>
             </tr>
           </thead>
-            <tbody className="divide-y divide-[#1f2937]">
+            <tbody className="divide-y divide-[var(--border-muted)]">
               {filteredParceiros.map((parceiro) => (
-                <tr key={parceiro.id} className="transition-colors duration-200 hover:bg-slate-900/70">
-                  <td className="px-4 py-4 text-white font-semibold">{normalizeCodigoParceiro(parceiro.codigo)}</td>
+                <tr key={parceiro.id} className="transition-colors duration-200 hover:bg-[var(--bg-surface-hover)]">
+                  <td className="px-4 py-3 text-[var(--text-primary)] font-semibold">{normalizeCodigoParceiro(parceiro.codigo)}</td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
                       <EntityAvatar 
@@ -846,11 +824,11 @@ export const ParceirosPage: React.FC = () => {
                         type={parceiro.tipo === 'franquia' ? 'empresa' : 'parceiro'} 
                         size="sm" 
                       />
-                      <span className="font-medium text-white">{parceiro.nome}</span>
+                      <span className="font-medium text-[var(--text-primary)]">{parceiro.nome}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-slate-300 border border-[#374151]">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-default)]">
                       {getTipoLabel(parceiro.tipo)}
                     </span>
                   </td>
@@ -865,14 +843,14 @@ export const ParceirosPage: React.FC = () => {
                       {getStatusLabel(parceiro.status)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{parceiro.responsavel || '-'}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{parceiro.responsavel || '-'}</td>
                   <td className="px-4 py-3">
                     <div className="text-sm">
-                      {parceiro.telefone && <div className="text-slate-600">{parceiro.telefone}</div>}
-                      {parceiro.email && <div className="text-slate-500 text-xs">{parceiro.email}</div>}
+                      {parceiro.telefone && <div className="text-[var(--text-secondary)]">{parceiro.telefone}</div>}
+                      {parceiro.email && <div className="text-[var(--text-muted)] text-xs">{parceiro.email}</div>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">
                     {parceiro.cidade || parceiro.estado ? `${parceiro.cidade || ''}${parceiro.cidade && parceiro.estado ? ', ' : ''}${parceiro.estado || ''}` : '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -901,7 +879,7 @@ export const ParceirosPage: React.FC = () => {
       {/* Mobile Cards View */}
       <div className="md:hidden space-y-3 sm:space-y-4">
         {filteredParceiros.map((parceiro) => (
-          <div key={parceiro.id} className="rounded-2xl border border-white/10 bg-[#0F172A]/90 p-3 sm:p-4 shadow-2xl shadow-black/20">
+          <div key={parceiro.id} className="finqz-card p-3 sm:p-4">
             <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <EntityAvatar 
@@ -910,8 +888,8 @@ export const ParceirosPage: React.FC = () => {
                   size="sm" 
                 />
                 <div className="min-w-0">
-                  <h3 className="font-medium text-white text-sm sm:text-base truncate">{parceiro.nome}</h3>
-                  <p className="text-xs sm:text-sm text-slate-400">{normalizeCodigoParceiro(parceiro.codigo)}</p>
+                  <h3 className="font-medium text-[var(--text-primary)] text-sm sm:text-base truncate">{parceiro.nome}</h3>
+                  <p className="text-xs sm:text-sm text-[var(--text-muted)]">{normalizeCodigoParceiro(parceiro.codigo)}</p>
                 </div>
               </div>
               <Badge
@@ -926,29 +904,29 @@ export const ParceirosPage: React.FC = () => {
             </div>
             <div className="space-y-2 mb-3 sm:mb-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Tipo:</span>
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#1f2937] text-slate-300 border border-[#374151]">                  {getTipoLabel(parceiro.tipo)}
+                <span className="text-xs text-[var(--text-muted)] flex-shrink-0">Tipo:</span>
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-default)]">                  {getTipoLabel(parceiro.tipo)}
                 </span>
               </div>
               {parceiro.responsavel && (
                 <div className="flex items-start gap-2">
-                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Resp:</span>
-                  <span className="text-xs sm:text-sm text-slate-300 line-clamp-1">{parceiro.responsavel}</span>
+                  <span className="text-xs text-[var(--text-muted)] flex-shrink-0">Resp:</span>
+                  <span className="text-xs sm:text-sm text-[var(--text-secondary)] line-clamp-1">{parceiro.responsavel}</span>
                 </div>
               )}
               {(parceiro.telefone || parceiro.email) && (
                 <div className="flex items-start gap-2">
-                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Contato:</span>
+                  <span className="text-xs text-[var(--text-muted)] flex-shrink-0">Contato:</span>
                   <div className="text-xs sm:text-sm space-y-0.5 min-w-0">
-                    {parceiro.telefone && <div className="text-slate-300 truncate">{parceiro.telefone}</div>}
-                    {parceiro.email && <div className="text-slate-400 text-xs truncate">{parceiro.email}</div>}
+                    {parceiro.telefone && <div className="text-[var(--text-secondary)] truncate">{parceiro.telefone}</div>}
+                    {parceiro.email && <div className="text-[var(--text-muted)] text-xs truncate">{parceiro.email}</div>}
                   </div>
                 </div>
               )}
               {(parceiro.cidade || parceiro.estado) && (
                 <div className="flex items-start gap-2">
-                  <span className="text-xs text-slate-500 uppercase tracking-[0.25em] flex-shrink-0">Local:</span>
-                  <span className="text-xs sm:text-sm text-slate-300 truncate">
+                  <span className="text-xs text-[var(--text-muted)] flex-shrink-0">Local:</span>
+                  <span className="text-xs sm:text-sm text-[var(--text-secondary)] truncate">
                     {parceiro.cidade || parceiro.estado ? `${parceiro.cidade || ''}${parceiro.cidade && parceiro.estado ? ', ' : ''}${parceiro.estado || ''}` : '-'}
                   </span>
                 </div>
@@ -1602,22 +1580,21 @@ export const ParceirosPage: React.FC = () => {
             className="flex-1 bg-black/40"
             onClick={() => setOpenFilterDrawer(false)}
           />
-          <div className="w-full max-w-sm bg-[#0F172A]/95 backdrop-blur-2xl h-full shadow-2xl p-3 sm:p-4 lg:p-6 overflow-y-auto border-l border-white/10">
+          <div className="w-full max-w-sm bg-[var(--bg-elevated)] h-full shadow-panel p-3 sm:p-4 lg:p-6 overflow-y-auto border-l border-[var(--border-default)]">
             <div className="flex justify-between items-start mb-3 sm:mb-4 lg:mb-6 gap-2">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Painel de filtros</p>
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-white">Refinar parceiros</h2>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Filtros</h2>
               </div>
               <button 
                 onClick={() => setOpenFilterDrawer(false)}
-                className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white/5 text-slate-300 hover:bg-white/10 transition-colors flex-shrink-0"
+                className="finqz-control h-9 w-9 flex-shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               <div>
-                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Tipo</label>
+                <label className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-1 sm:mb-2 block">Tipo</label>
                 <Select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} className="text-xs sm:text-sm">
                   <option value="">Todos os Tipos</option>
                   {PARCEIRO_TIPOS.map(t => (
@@ -1626,7 +1603,7 @@ export const ParceirosPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Status</label>
+                <label className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-1 sm:mb-2 block">Status</label>
                 <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="text-xs sm:text-sm">
                   <option value="">Todos os Status</option>
                   {PARCEIRO_STATUSES.map(s => (
@@ -1635,7 +1612,7 @@ export const ParceirosPage: React.FC = () => {
                 </Select>
               </div>
               <div>
-                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Cidade</label>
+                <label className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-1 sm:mb-2 block">Cidade</label>
                 <Input
                   type="text"
                   value={filterCidade}
@@ -1645,7 +1622,7 @@ export const ParceirosPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Estado</label>
+                <label className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-1 sm:mb-2 block">Estado</label>
                 <Input
                   type="text"
                   value={filterEstado}
@@ -1655,7 +1632,7 @@ export const ParceirosPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Responsável</label>
+                <label className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-1 sm:mb-2 block">Responsável</label>
                 <Input
                   type="text"
                   value={filterResponsavel}
@@ -1665,7 +1642,7 @@ export const ParceirosPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2 block">Email</label>
+                <label className="text-xs sm:text-sm font-medium text-[var(--text-secondary)] mb-1 sm:mb-2 block">Email</label>
                 <Input
                   type="text"
                   value={filterEmail}
@@ -1674,11 +1651,11 @@ export const ParceirosPage: React.FC = () => {
                   className="text-xs sm:text-sm"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-white/10">
-                <Button variant="outline" onClick={() => { setFilterTipo(""); setFilterStatus(""); setFilterCidade(""); setFilterEstado(""); setFilterResponsavel(""); setFilterEmail(""); }} className="text-slate-300 text-xs sm:text-sm w-full sm:flex-1">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-3 lg:pt-4 border-t border-[var(--border-muted)]">
+                <Button variant="outline" onClick={() => { setFilterTipo(""); setFilterStatus(""); setFilterCidade(""); setFilterEstado(""); setFilterResponsavel(""); setFilterEmail(""); }} className="text-xs sm:text-sm w-full sm:flex-1">
                   Limpar
                 </Button>
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-xs sm:text-sm w-full sm:flex-1">
+                <Button className="text-xs sm:text-sm w-full sm:flex-1">
                   Aplicar
                 </Button>
               </div>

@@ -283,7 +283,7 @@ interface AppState {
     scope?: string;
     tenant_id?: string;
     partner_id?: number;
-    avatar?: string;
+    avatar?: string | null;
     telefone?: string;
     cargo?: string;
     bio?: string;
@@ -291,7 +291,7 @@ interface AppState {
     dataNascimento?: string;
   } | null;
   setAuth: (user: any | null) => void;
-  updateUserAvatar: (avatar: string) => void;
+  updateUserAvatar: (avatar: string | null) => void;
   updateUserProfile: (data: Partial<{
     nome: string;
     telefone: string;
@@ -408,6 +408,44 @@ interface AppState {
   hasPermission: (module: string, action: string) => boolean;
 }
 
+type StoreUser = NonNullable<AppState["user"]>;
+
+const USER_AVATAR_STORAGE_PREFIX = "finqz_user_avatar";
+
+const getUserAvatarStorageKey = (user: StoreUser | null): string | null => {
+  const userKey = user?.id || user?.email;
+  return userKey ? `${USER_AVATAR_STORAGE_PREFIX}:${userKey}` : null;
+};
+
+const loadStoredUserAvatar = (user: StoreUser | null): string | null => {
+  if (typeof localStorage === "undefined") return null;
+  const key = getUserAvatarStorageKey(user);
+  if (!key) return null;
+
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const persistUserAvatar = (user: StoreUser | null, avatar: string | null): void => {
+  if (typeof localStorage === "undefined") return;
+  const key = getUserAvatarStorageKey(user);
+  if (!key) return;
+
+  try {
+    if (avatar) {
+      localStorage.setItem(key, avatar);
+      return;
+    }
+
+    localStorage.removeItem(key);
+  } catch {
+    return;
+  }
+};
+
 const useAppStore = create<AppState>()(
   persist(
     (set) => ({
@@ -420,20 +458,24 @@ const useAppStore = create<AppState>()(
       isAuthenticated: false,
       user: null,
       setAuth: (user) => {
+        const hydratedUser = user
+          ? { ...user, avatar: loadStoredUserAvatar(user) || user.avatar }
+          : null;
         // Inicializa permissões baseadas no perfil do usuário
         let permissions: Record<string, string[]> = {};
-        if (user?.perfil && PROFILE_PERMISSIONS[user.perfil]) {
-          permissions = PROFILE_PERMISSIONS[user.perfil];
+        if (hydratedUser?.perfil && PROFILE_PERMISSIONS[hydratedUser.perfil]) {
+          permissions = PROFILE_PERMISSIONS[hydratedUser.perfil];
         }
         set({ 
-          isAuthenticated: !!user, 
-          user,
+          isAuthenticated: !!hydratedUser, 
+          user: hydratedUser,
           userPermissions: permissions
         });
       },
       updateUserAvatar: (avatar) => {
         const state = useAppStore.getState();
         if (state.user) {
+          persistUserAvatar(state.user, avatar);
           set({ user: { ...state.user, avatar } });
         }
       },
@@ -837,9 +879,10 @@ const useAppStore = create<AppState>()(
         if (userRole) {
           const rolePerms = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS];
           if (rolePerms && rolePerms.length > 0) {
+            const rolePermsAsStrings: readonly string[] = rolePerms;
             // Admin role tem todas as permissões
-            if (rolePerms.includes('*' as any)) return true;
-            return rolePerms.includes(action as any);
+            if (rolePermsAsStrings.includes('*')) return true;
+            return rolePermsAsStrings.includes(action);
           }
         }
         

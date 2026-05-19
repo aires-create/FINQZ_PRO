@@ -117,8 +117,6 @@ export function useLeadQualification() {
     setIsQualifying(true);
     setError(null);
 
-    console.log('[START] Starting lead qualification:', { leadId: lead.id || lead.celular, nome: lead.nome });
-
     const config = getLeadQualificationConfig();
     if (!config) {
       const errorMsg = 'API Error - Configuration lead_qualification not found';
@@ -155,16 +153,6 @@ Dados do Lead:
 
 ${leadInfo}`;
 
-    console.log('[REQUEST] AI API Request (Lead Qualification):', {
-      model: config.model,
-      scene: 'lead_qualification',
-      input: leadInfo.substring(0, 100) + '...',
-      parameters: {
-        temperature: config.temperature || 0.3,
-        maxTokens: config.maxTokens || 2000
-      }
-    });
-
     try {
       const text = await requestLeadQualification(
         config,
@@ -173,13 +161,6 @@ ${leadInfo}`;
           { role: 'user', content: userMessage }
         ],
       );
-
-      console.log('[SUCCESS] AI API Response (Lead Qualification):', {
-        model: config.model,
-        outputLength: text.length,
-        responsePreview: text.substring(0, 150) + '...',
-        processingTime: `${Date.now() - startTime}ms`
-      });
 
       // Parse JSON from response
       const jsonMatch = text.match(/\{[\s\S]*\}/);

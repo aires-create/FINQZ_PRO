@@ -4,7 +4,7 @@ import {
   Table2, Plus, Edit, Trash2, Search, Filter, RefreshCw, 
   Download, ChevronDown, ChevronRight, Building2, X, Check, Zap
 } from "lucide-react";
-import { Button, Modal } from "../components/ui";
+import { Button, KpiCard, Modal } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { 
   providerRepository, 
@@ -402,7 +402,7 @@ export const TabelasComerciaisPage: React.FC = () => {
       return;
     }
     
-    let tableData: any;
+    let tableData: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">;
     let tableId: string;
     
     if (isEnergyProvider) {
@@ -640,155 +640,184 @@ export const TabelasComerciaisPage: React.FC = () => {
     link.click();
   };
 
+  const importColumns = [
+    { key: "provider", label: "Banco/Fornecedor", required: true },
+    { key: "produto", label: "Produto", required: true },
+    { key: "subproduto", label: "Subproduto", required: false },
+    { key: "modalidade", label: "Modalidade", required: false },
+    { key: "nome", label: "Nome da Tabela", required: true },
+    { key: "codigo", label: "Código", required: true },
+    { key: "ativo", label: "Ativo", required: false },
+  ];
+
+  const handleImportTables = (rows: Record<string, string>[]) => {
+    rows.forEach((row) => {
+      const providerRef = row.provider?.toLowerCase();
+      const provider = providers.find((item) =>
+        item.id.toLowerCase() === providerRef ||
+        item.code.toLowerCase() === providerRef ||
+        item.name.toLowerCase() === providerRef
+      );
+
+      if (!provider) return;
+
+      const isEnergy = provider.type === "ENERGY_PROVIDER";
+      const productOptions = isEnergy ? energyProducts : products;
+      const productRef = row.produto?.toLowerCase();
+      const product = productOptions.find((item) =>
+        item.id.toLowerCase() === productRef ||
+        item.code.toLowerCase() === productRef ||
+        item.name.toLowerCase() === productRef
+      ) || productOptions[0];
+
+      if (!product) return;
+
+      if (isEnergy) {
+        const energyType: "GD" | "ACL" = row.subproduto === "ACL" ? "ACL" : "GD";
+        const customerType: "residencial" | "comercial" | "industrial" = row.modalidade === "industrial" || row.modalidade === "comercial"
+          ? row.modalidade
+          : "residencial";
+
+        commercialTableRepository.createTable({
+          providerId: provider.id,
+          providerCode: provider.code,
+          providerName: provider.name,
+          providerType: provider.type,
+          productId: product.id,
+          productCode: product.code,
+          productName: product.name,
+          subproductId: energyType,
+          subproductCode: energyType,
+          subproductName: ENERGY_TYPE_LABELS[energyType],
+          modality: customerType,
+          modalityLabel: CUSTOMER_TYPE_LABELS[customerType],
+          name: row.nome,
+          code: row.codigo,
+          active: row.ativo?.toLowerCase() !== "inativo" && row.ativo !== "0",
+          energyType,
+          customerType,
+        });
+        return;
+      }
+
+      const subproductOptions = getSubproductsForProduct(product.id);
+      const subproductRef = row.subproduto?.toLowerCase();
+      const subproduct = subproductOptions.find((item) =>
+        item.id.toLowerCase() === subproductRef ||
+        item.code.toLowerCase() === subproductRef ||
+        item.name.toLowerCase() === subproductRef
+      ) || subproductOptions[0];
+
+      if (!subproduct) return;
+
+      const modalityOptions = getModalitiesForSubproduct(subproduct.id, product.id);
+      const modalityRef = row.modalidade?.toLowerCase();
+      const modality = modalityOptions.find((item) =>
+        item.value.toLowerCase() === modalityRef ||
+        item.label.toLowerCase() === modalityRef
+      ) || modalityOptions[0];
+
+      if (!modality) return;
+
+      commercialTableRepository.createTable({
+        providerId: provider.id,
+        providerCode: provider.code,
+        providerName: provider.name,
+        providerType: provider.type,
+        productId: product.id,
+        productCode: product.code,
+        productName: product.name,
+        subproductId: subproduct.id,
+        subproductCode: subproduct.code,
+        subproductName: subproduct.name,
+        modality: modality.value,
+        modalityLabel: modality.label,
+        name: row.nome,
+        code: row.codigo,
+        active: row.ativo?.toLowerCase() !== "inativo" && row.ativo !== "0",
+      });
+    });
+
+    loadData();
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="app-page">
       <PageHeader
         title="Tabelas Comerciais"
-        subtitle="Gerencie tabelas comerciais por banco, produto e condições"
+        onSearch={setSearchTerm}
         onRefresh={loadData}
+        onCreate={handleCreate}
+        createLabel="Nova Tabela"
+        onImport={handleImportTables}
+        importColumns={importColumns}
+        onExport={() => handleExport()}
+        filterValues={{
+          providerType: filtroProviderType,
+          provider: filtroProvider,
+          produto: filtroProduto,
+        }}
+        onClearFilters={() => {
+          setFiltroProviderType("");
+          setFiltroProvider("");
+          setFiltroProduto("");
+        }}
+        filters={[
+          { label: "Tipo", key: "providerType", type: "select", options: [
+            { label: "Bancos", value: "BANK" },
+            { label: "Comercializadoras", value: "ENERGY_PROVIDER" },
+            { label: "Financeiras", value: "FINANCIAL" },
+            { label: "Fintechs", value: "FINTECH" },
+            { label: "Seguradoras", value: "INSURER" },
+          ], placeholder: "Todos os tipos" },
+          { label: "Fornecedor", key: "provider", type: "select", options: filteredProviders.map((item) => ({ label: item.name, value: item.id })), placeholder: "Todos" },
+          { label: "Produto", key: "produto", type: "select", options: (filtroProviderType === "ENERGY_PROVIDER" ? energyProducts : products).map((item) => ({ label: item.name, value: item.id })), placeholder: "Todos" },
+        ]}
+        onFilterChange={(key, value) => {
+          if (key === "providerType") {
+            setFiltroProviderType(value as ProviderType | "");
+            setFiltroProvider("");
+          }
+          if (key === "provider") setFiltroProvider(value);
+          if (key === "produto") {
+            setFiltroProduto(value);
+            setFiltroSubproduto("");
+            setFiltroModalidade("");
+          }
+        }}
       />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-900/20 rounded-lg">
-              <Table2 className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Tabelas</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-900/20 rounded-lg">
-              <Check className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Ativas</p>
-              <p className="text-2xl font-bold text-white">{stats.ativas}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Table2 className="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Com Condições</p>
-              <p className="text-2xl font-bold text-white">{stats.comCondicoes}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Table2 className="w-5 h-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">Total Condições</p>
-              <p className="text-2xl font-bold text-white">{stats.totalCondicoes}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex-1 min-w-[200px]">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar por tabela, código ou banco..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          
-          {/* Filtro por tipo de provider */}
-          <select
-            value={filtroProviderType}
-            onChange={(e) => { setFiltroProviderType(e.target.value as ProviderType | ""); setFiltroProvider(""); }}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Todos os tipos</option>
-            <option value="BANK">Bancos</option>
-            <option value="ENERGY_PROVIDER">Comercializadoras de Energia</option>
-            <option value="FINANCIAL">Financeiras</option>
-            <option value="FINTECH">Fintechs</option>
-            <option value="INSURER">Seguradoras</option>
-          </select>
-          
-          <select
-            value={filtroProvider}
-            onChange={(e) => setFiltroProvider(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">{filtroProviderType === 'ENERGY_PROVIDER' ? 'Todas as comercializadoras' : 'Todos os bancos'}</option>
-            {filteredProviders.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-
-          <select
-            value={filtroProduto}
-            onChange={(e) => { setFiltroProduto(e.target.value); setFiltroSubproduto(""); setFiltroModalidade(""); }}
-            className="px-4 py-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">{filtroProviderType === 'ENERGY_PROVIDER' ? 'Todos os produtos de energia' : 'Todos os produtos'}</option>
-            {filtroProviderType === 'ENERGY_PROVIDER' ? (
-              energyProducts.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))
-            ) : (
-              products.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))
-            )}
-          </select>
-
-          <Button variant="primary" onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Tabela
-          </Button>
-
-          <Button variant="secondary" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </Button>
-        </div>
+        <KpiCard label="Total Tabelas" value={stats.total} icon={<Table2 size={18} />} variant="blue" />
+        <KpiCard label="Ativas" value={stats.ativas} icon={<Check size={18} />} variant="green" />
+        <KpiCard label="Com Condições" value={stats.comCondicoes} icon={<Table2 size={18} />} variant="blue" />
+        <KpiCard label="Total Condições" value={stats.totalCondicoes} icon={<Table2 size={18} />} variant="orange" />
       </div>
 
       {/* Tables List - Grouped by Provider */}
-      <div className="bg-[#111827] border border-[#1f2937] rounded-xl overflow-hidden">
+      <div className="finqz-card overflow-hidden">
         {Object.keys(groupedTables).length === 0 ? (
           <div className="p-8 text-center text-slate-500">
             Nenhuma tabela comercial encontrada
           </div>
         ) : (
           Object.entries(groupedTables).map(([providerId, group]) => (
-            <div key={providerId} className="border-b border-[#1f2937] last:border-b-0">
+            <div key={providerId} className="border-b border-[var(--border-muted)] last:border-b-0">
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup(providerId)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors"
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-[var(--bg-surface-hover)] transition-colors"
               >
                 {expandedGroups.has(providerId) ? (
                   <ChevronDown className="w-5 h-5 text-slate-400" />
                 ) : (
                   <ChevronRight className="w-5 h-5 text-slate-400" />
                 )}
-                <Building2 className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-white">{group.provider.name}</span>
+                <Building2 className="w-5 h-5 text-[var(--color-primary-soft)]" />
+                <span className="font-medium text-[var(--text-primary)]">{group.provider.name}</span>
                 {group.provider.type === 'ENERGY_PROVIDER' && (
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-900/20 text-yellow-700 flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-600 dark:text-amber-300 flex items-center gap-1">
                     <Zap className="w-3 h-3" />
                     Comercializadora de Energia
                   </span>
@@ -798,18 +827,18 @@ export const TabelasComerciaisPage: React.FC = () => {
 
               {/* Group Content */}
               {expandedGroups.has(providerId) && (
-                <div className="bg-gray-50">
+                <div className="bg-[var(--bg-surface)]">
                   {group.tables.map(table => {
                     const tableConditions = conditions[table.id] || [];
                     return (
-                      <div key={table.id} className="px-4 py-3 border-t border-[#1f2937]">
+                      <div key={table.id} className="px-4 py-3 border-t border-[var(--border-muted)]">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-white">{table.name}</span>
+                              <span className="font-medium text-[var(--text-primary)]">{table.name}</span>
                               <span className="text-sm text-slate-500">({table.code})</span>
                               <span className={`px-2 py-0.5 rounded-full text-xs ${
-                                table.active ? "bg-green-900/20 text-green-700" : "bg-red-900/20 text-red-700"
+                                table.active ? "bg-green-500/10 text-green-600 dark:text-green-300" : "bg-red-500/10 text-red-600 dark:text-red-300"
                               }`}>
                                 {table.active ? "Ativo" : "Inativo"}
                               </span>
@@ -822,8 +851,8 @@ export const TabelasComerciaisPage: React.FC = () => {
                                 {tableConditions.map(cond => (
                                   <span key={cond.id} className={`text-xs border px-2 py-1 rounded ${
                                     table.providerType === 'ENERGY_PROVIDER' 
-                                      ? 'bg-green-900/20 border-green-200 text-green-700' 
-                                      : 'bg-[#111827] border-[#1f2937]'
+                                      ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-300' 
+                                      : 'bg-[var(--bg-elevated)] border-[var(--border-muted)] text-[var(--text-secondary)]'
                                   }`}>
                                     {table.providerType === 'ENERGY_PROVIDER' ? (
                                       // Condições de energia

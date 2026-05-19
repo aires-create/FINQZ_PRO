@@ -92,6 +92,29 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const formatDate = (value?: string | number | Date) => {
+  if (!value) return "-";
+
+  const date = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const normalizeCurrencyInput = (value?: string) => {
+  if (!value) return 0;
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const getStatusColor = (status: MovimentoStatus) => {
   switch (status) {
     case "disponivel": return "bg-green-500/20 text-green-400 border border-green-500/30";
@@ -118,6 +141,7 @@ export const ContaCorrentePage: React.FC = () => {
   const movimentosContaCorrente = store.movimentosContaCorrente || [];
   const parceiros = store.parceiros || [];
   const solicitarSaque = store.solicitarSaque;
+  const addMovimentoContaCorrente = store.addMovimentoContaCorrente;
 
   // Estados
   const [searchQuery, setSearchQuery] = useState("");
@@ -301,21 +325,73 @@ export const ContaCorrentePage: React.FC = () => {
     link.click();
   };
 
+  const importColumns = [
+    { key: "parceiro_id", label: "Parceiro ID", required: true },
+    { key: "codigo", label: "Código", required: false },
+    { key: "tipo", label: "Tipo", required: true },
+    { key: "categoria", label: "Categoria", required: true },
+    { key: "origem", label: "Origem", required: false },
+    { key: "status", label: "Status", required: false },
+    { key: "valor", label: "Valor", required: true },
+    { key: "data_movimento", label: "Data", required: true },
+    { key: "descricao", label: "Descrição", required: true },
+  ];
+
+  const handleImportMovimentos = (rows: Record<string, string>[]) => {
+    const baseId = Math.max(...(movimentosContaCorrente || []).map((m) => m.id), 0);
+
+    rows.forEach((row, index) => {
+      const tipo = TIPOS_MOVIMENTO.some((item) => item.value === row.tipo)
+        ? row.tipo as MovimentoTipo
+        : "credito";
+      const categoria = CATEGORIAS.some((item) => item.value === row.categoria)
+        ? row.categoria as MovimentoCategoria
+        : "recebimento";
+      const origem = (row.origem && ["venda", "comissao", "repasse", "cashback", "estorno", "ajuste", "taxa", "saque", "transferencia"].includes(row.origem))
+        ? row.origem as MovimentoOrigem
+        : categoria === "comissao" || categoria === "repasse" || categoria === "cashback" || categoria === "estorno" || categoria === "ajuste"
+          ? categoria
+          : categoria === "taxa" || categoria === "taxa_administrativa"
+            ? "taxa"
+            : "venda";
+      const status = STATUS.some((item) => item.value === row.status)
+        ? row.status as MovimentoStatus
+        : "disponivel";
+      const valor = normalizeCurrencyInput(row.valor);
+      const parceiroId = Number(row.parceiro_id) || parceiroSelecionado || parceiros[0]?.id || 0;
+      const now = Date.now();
+
+      addMovimentoContaCorrente({
+        id: baseId + index + 1,
+        parceiro_id: parceiroId,
+        codigo: row.codigo || `CC-IMP-${String(baseId + index + 1).padStart(4, "0")}`,
+        tipo,
+        categoria,
+        origem,
+        status,
+        valor,
+        valor_liquido: valor,
+        data_movimento: row.data_movimento || new Date().toISOString().split("T")[0],
+        descricao: row.descricao || "Movimentação importada",
+        created_at: now,
+        updated_at: now,
+      });
+    });
+  };
+
   return (
-    <div className="app-page relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-8 top-10 h-36 rounded-full bg-primary/10 blur-3xl" />
-      
+    <div className="app-page">
       {/* PageHeader Padronizado */}
       <PageHeader
         title="Conta Corrente"
-        subtitle="Gerencie o saldo e movimentações dos parceiros"
-        onSearch={() => {}}
+        onSearch={setSearchQuery}
         onRefresh={() => {}}
         onOpenFilters={() => setShowFiltros(!showFiltros)}
+        onImport={handleImportMovimentos}
+        importColumns={importColumns}
         importLabel="Importar Movimentos"
         exportLabel="Exportar"
-        exportData={[]}
-        exportColumns={[]}
+        onExport={() => handleExport()}
         exportFilename="conta_corrente"
       />
 
@@ -323,15 +399,12 @@ export const ContaCorrentePage: React.FC = () => {
         <div className="relative z-10">
           <div className="finqz-card mb-6 p-5 sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-[var(--text-primary)]">Saldo Total</h1>
-                <p className="text-[var(--text-secondary)] text-sm mt-1">Visão geral dos parceiros</p>
-              </div>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Parceiros</h2>
               <div className="flex flex-wrap gap-3">
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/25">
+                <button className="finqz-control px-4 py-2 text-sm">
                   <RefreshCw size={16} /> Atualizar
                 </button>
-                <button className="finqz-control px-4 py-2 text-sm">
+                <button onClick={handleExport} className="finqz-control px-4 py-2 text-sm">
                   <Download size={16} /> Exportar
                 </button>
               </div>
@@ -379,7 +452,7 @@ export const ContaCorrentePage: React.FC = () => {
                         {/* Avatar com iniciais */}
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${
                           isSelected 
-                            ? "bg-blue-500 text-white" 
+                            ? "bg-[var(--color-primary-faint)] text-[var(--color-primary-soft)] border border-[var(--border-default)]" 
                             : "finqz-icon-badge text-[var(--text-secondary)]"
                         }`}>
                           {parceiro.nome?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?'}
@@ -395,7 +468,7 @@ export const ContaCorrentePage: React.FC = () => {
                         
                         {/* Saldo preview */}
                         <div className="text-right">
-                          <div className={`font-bold text-sm ${isSelected ? "text-blue-500 dark:text-blue-300" : "text-[var(--text-primary)]"}`}>
+                          <div className={`financial-value font-bold text-sm ${isSelected ? "text-blue-500 dark:text-blue-300" : "text-[var(--text-primary)]"}`}>
                             {formatCurrency(saldo.disponivel)}
                           </div>
                           <div className={`text-xs ${isSelected ? "text-blue-500/80 dark:text-blue-300/80" : "text-[var(--text-muted)]"}`}>
@@ -405,8 +478,8 @@ export const ContaCorrentePage: React.FC = () => {
                         
                         {/* Indicador de seleção */}
                         {isSelected && (
-                          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                            <CheckCircle className="w-3.5 h-3.5 text-white" />
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full border border-green-500/30 bg-green-500/10">
+                            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                           </div>
                         )}
                       </button>
@@ -423,83 +496,70 @@ export const ContaCorrentePage: React.FC = () => {
         {/* Card Principal de Saldo - Estilo Banco */}
         {parceiroSelecionado ? (
           <div className="space-y-6">
-            {/* Hero Card de Saldo - Visual Premium escuro */}
-            <div className="rounded-lg border border-blue-500/20 bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 p-6 text-white shadow-[0_22px_60px_rgba(37,99,235,0.28)] dark:from-blue-600/25 dark:via-blue-900/20 dark:to-cyan-500/15">
+            <div className="financial-panel p-6">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <p className="text-blue-300 text-sm font-medium mb-1">Saldo disponível</p>
-                  <h2 className="text-4xl font-bold text-white">{formatCurrency(saldoParceiro.disponivel)}</h2>
+                  <p className="text-[var(--text-muted)] text-sm font-medium mb-1">Saldo disponível</p>
+                  <h2 className="financial-value text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">{formatCurrency(saldoParceiro.disponivel)}</h2>
                 </div>
-                <div className="bg-blue-500/20 backdrop-blur-sm rounded-full p-3">
-                  <Wallet className="w-8 h-8 text-blue-400" />
+                <div className="finqz-icon-badge h-12 w-12">
+                  <Wallet className="w-6 h-6" />
                 </div>
               </div>
 
               {/* Quick Actions estilo banco */}
-              <div className="grid grid-cols-4 gap-3 mt-6">
+              <div className="grid grid-cols-2 gap-3 mt-6 sm:grid-cols-4">
                 <button 
                   onClick={() => setShowSaqueModal(true)}
-                  className="bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center gap-2 transition-all border border-white/15"
+                  className="finqz-control min-h-[82px] flex-col p-3 text-sm"
                 >
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <ArrowUpRight className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <span className="text-sm font-medium text-white/85">Sacar</span>
+                  <ArrowUpRight className="w-5 h-5 text-[var(--color-primary-soft)]" />
+                  <span>Sacar</span>
                 </button>
-                <button className="bg-gradient-to-br from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 rounded-xl p-3 flex flex-col items-center gap-2 transition-all shadow-lg shadow-blue-500/30 border border-blue-400/30">
-                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                    <Smartphone className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-sm font-medium text-white">Pix</span>
+                <button className="finqz-control min-h-[82px] flex-col p-3 text-sm">
+                  <Smartphone className="w-5 h-5 text-[var(--color-primary-soft)]" />
+                  <span>Pix</span>
                 </button>
-                <button className="bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center gap-2 transition-all border border-white/15">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <Banknote className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <span className="text-sm font-medium text-white/85">Depositar</span>
+                <button className="finqz-control min-h-[82px] flex-col p-3 text-sm">
+                  <Banknote className="w-5 h-5 text-[var(--color-primary-soft)]" />
+                  <span>Depositar</span>
                 </button>
-                <button className="bg-white/10 hover:bg-white/15 backdrop-blur-sm rounded-xl p-3 flex flex-col items-center gap-2 transition-all border border-white/15">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <Repeat className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <span className="text-sm font-medium text-white/85">Transferir</span>
+                <button className="finqz-control min-h-[82px] flex-col p-3 text-sm">
+                  <Repeat className="w-5 h-5 text-[var(--color-primary-soft)]" />
+                  <span>Transferir</span>
                 </button>
               </div>
             </div>
 
-            {/* Cards de Saldo Secundários com glass effect */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="finqz-card p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-amber-400" />
+                  <div className="finqz-icon-badge h-10 w-10">
+                    <Clock className="w-5 h-5 text-amber-500" />
                   </div>
-                  <span className="text-slate-300 font-medium">Pendente</span>
+                  <span className="text-[var(--text-secondary)] font-medium">Pendente</span>
                 </div>
-                <p className="text-2xl font-bold text-slate-50">{formatCurrency(saldoParceiro.pendente)}</p>
-                <p className="text-sm text-slate-500 mt-1">A receber</p>
+                <p className="financial-value text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(saldoParceiro.pendente)}</p>
               </div>
               
               <div className="finqz-card p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-blue-400" />
+                  <div className="finqz-icon-badge h-10 w-10">
+                    <CreditCard className="w-5 h-5 text-[var(--color-primary-soft)]" />
                   </div>
-                  <span className="text-slate-300 font-medium">Reservado</span>
+                  <span className="text-[var(--text-secondary)] font-medium">Reservado</span>
                 </div>
-                <p className="text-2xl font-bold text-slate-50">{formatCurrency(saldoParceiro.reservado)}</p>
-                <p className="text-sm text-slate-500 mt-1">Bloqueado</p>
+                <p className="financial-value text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(saldoParceiro.reservado)}</p>
               </div>
               
               <div className="finqz-card p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-blue-400" />
+                  <div className="finqz-icon-badge h-10 w-10">
+                    <TrendingUp className="w-5 h-5 text-[var(--color-primary-soft)]" />
                   </div>
-                  <span className="text-slate-300 font-medium">Resultado</span>
+                  <span className="text-[var(--text-secondary)] font-medium">Resultado</span>
                 </div>
-                <p className="text-2xl font-bold text-slate-50">{formatCurrency(saldoParceiro.total)}</p>
-                <p className="text-sm text-slate-500 mt-1">Saldo total</p>
+                <p className="financial-value text-2xl font-bold text-[var(--text-primary)]">{formatCurrency(saldoParceiro.total)}</p>
               </div>
             </div>
 
@@ -615,15 +675,15 @@ export const ContaCorrentePage: React.FC = () => {
                           {getTipoIcon(movimento.tipo)}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-200">{movimento.descricao}</p>
+                          <p className="font-semibold text-[var(--text-primary)]">{movimento.descricao}</p>
                           <p className="text-sm text-slate-500">
-                            {movimento.codigo} • {movimento.data_movimento}
+                            {movimento.codigo} • <span className="financial-date">{formatDate(movimento.data_movimento)}</span>
                             {movimento.cliente_nome && ` • ${movimento.cliente_nome}`}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold text-lg ${
+                        <p className={`financial-value font-bold text-lg ${
                           movimento.tipo === 'credito' ? 'text-green-400' : 'text-red-400'
                         }`}>
                           {movimento.tipo === 'credito' ? '+' : '-'}{formatCurrency(movimento.valor)}
@@ -785,7 +845,7 @@ export const ContaCorrentePage: React.FC = () => {
                   {getTipoIcon(movimentoSelecionado.tipo)}
                 </div>
                 <div>
-                  <p className={`text-2xl font-bold ${
+                  <p className={`financial-value text-2xl font-bold ${
                     movimentoSelecionado.tipo === 'credito' ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {movimentoSelecionado.tipo === 'credito' ? '+' : '-'}{formatCurrency(movimentoSelecionado.valor)}
@@ -795,17 +855,17 @@ export const ContaCorrentePage: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <p className="font-semibold text-slate-200">{movimentoSelecionado.descricao}</p>
+              <p className="font-semibold text-[var(--text-primary)]">{movimentoSelecionado.descricao}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-slate-500">Código</p>
-                <p className="font-medium text-slate-300">{movimentoSelecionado.codigo}</p>
+                <p className="font-medium text-[var(--text-secondary)]">{movimentoSelecionado.codigo}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Data</p>
-                <p className="font-medium text-slate-300">{movimentoSelecionado.data_movimento}</p>
+                <p className="financial-date font-medium text-[var(--text-secondary)]">{formatDate(movimentoSelecionado.data_movimento)}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-500">Tipo</p>

@@ -152,7 +152,6 @@ export abstract class BaseIntegrationAdapter {
         
         if (attempt < retryConfig.maxRetries) {
           const delay = this.calculateBackoff(attempt, retryConfig);
-          console.log(`[${this.name}] Retry ${attempt}/${retryConfig.maxRetries} em ${delay}ms`);
           await this.sleep(delay);
         }
       } catch (error) {
@@ -161,7 +160,6 @@ export abstract class BaseIntegrationAdapter {
         
         if (attempt < retryConfig.maxRetries) {
           const delay = this.calculateBackoff(attempt, retryConfig);
-          console.log(`[${this.name}] Retry ${attempt}/${retryConfig.maxRetries} em ${delay}ms`);
           await this.sleep(delay);
         }
       }

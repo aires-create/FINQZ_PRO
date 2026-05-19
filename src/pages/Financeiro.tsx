@@ -107,6 +107,29 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
+const formatDate = (value?: string | number | Date) => {
+  if (!value) return "-";
+
+  const date = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? new Date(`${value}T00:00:00`)
+    : new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const normalizeCurrencyInput = (value?: string) => {
+  if (!value) return 0;
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const getTypeBadgeVariant = (tipo: TransacaoTipo) => {
   if (tipo === "credito") return "success";
   if (tipo === "debito") return "danger";
@@ -254,6 +277,50 @@ export const FinanceiroPage: React.FC = () => {
     setShowModal(true);
   };
 
+  const importColumns = [
+    { key: "codigo", label: "Código", required: false },
+    { key: "tipo", label: "Tipo", required: true },
+    { key: "categoria", label: "Categoria", required: true },
+    { key: "status", label: "Status", required: false },
+    { key: "valor", label: "Valor", required: true },
+    { key: "data_transacao", label: "Data", required: true },
+    { key: "descricao", label: "Descrição", required: true },
+    { key: "parceiro_nome", label: "Parceiro", required: false },
+  ];
+
+  const handleImportFinanceiro = (rows: Record<string, string>[]) => {
+    const baseId = Math.max(...(transacoesFinanceiras || []).map((t) => t.id), 0);
+
+    rows.forEach((row, index) => {
+      const tipo = TIPOS_TRANSACAO.some((item) => item.value === row.tipo)
+        ? row.tipo as TransacaoTipo
+        : "credito";
+      const categoria = CATEGORIAS.some((item) => item.value === row.categoria)
+        ? row.categoria as TransacaoCategoria
+        : "outro";
+      const status = STATUS.some((item) => item.value === row.status)
+        ? row.status as TransacaoStatus
+        : "pendente";
+      const valor = normalizeCurrencyInput(row.valor);
+      const now = Date.now();
+
+      addTransacaoFinanceira({
+        id: baseId + index + 1,
+        codigo: row.codigo || `FIN-IMP-${String(baseId + index + 1).padStart(4, "0")}`,
+        tipo,
+        categoria,
+        status,
+        valor,
+        valor_liquido: valor,
+        data_transacao: row.data_transacao || new Date().toISOString().split("T")[0],
+        descricao: row.descricao || "Lançamento importado",
+        parceiro_nome: row.parceiro_nome,
+        created_at: now,
+        updated_at: now,
+      });
+    });
+  };
+
   const handleEdit = (item: TransacaoFinanceira) => {
     setEditingItem(item);
     setFormData({ ...item });
@@ -371,82 +438,79 @@ export const FinanceiroPage: React.FC = () => {
           if (key === 'dataInicio') setFiltroDataInicio(value)
           if (key === 'dataFim') setFiltroDataFim(value)
         }}
+        onImport={handleImportFinanceiro}
+        importColumns={importColumns}
         importLabel="Importar Lançamentos"
         exportLabel="Exportar"
-        exportData={[]}
-        exportColumns={[]}
+        onExport={() => handleExport()}
         exportFilename="financeiro"
       />
 
       {/* Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+      <div className="financial-kpi-grid grid gap-4">
         <KpiCard
           label="Receitas"
           value={formatCurrency(cards.totalCreditos)}
           icon={<TrendingUp size={18} />}
           variant="green"
-          className="shadow-2xl shadow-emerald-500/10"
+          className="financial-kpi-card"
         />
         <KpiCard
           label="Despesas"
           value={formatCurrency(cards.totalDebitos)}
           icon={<TrendingDown size={18} />}
           variant="red"
-          className="shadow-2xl shadow-red-500/10"
+          className="financial-kpi-card"
         />
         <KpiCard
           label="Saldo"
           value={formatCurrency(cards.saldo)}
           icon={<Wallet size={18} />}
           variant={cards.saldo >= 0 ? "green" : "red"}
-          className="shadow-2xl shadow-blue-500/10"
+          className="financial-kpi-card"
         />
         <KpiCard
           label="Pendentes"
           value={formatCurrency(cards.pendentes)}
           icon={<Clock size={18} />}
           variant="orange"
-          className="shadow-2xl shadow-amber-500/10"
+          className="financial-kpi-card"
         />
         <KpiCard
           label="Cashback"
           value={formatCurrency(cards.cashback)}
           icon={<Gift size={18} />}
           variant="purple"
-          className="shadow-2xl shadow-violet-500/10"
+          className="financial-kpi-card"
         />
         <KpiCard
           label="Comissões"
           value={formatCurrency(cards.comissoes)}
           icon={<Percent size={18} />}
           variant="orange"
-          className="shadow-2xl shadow-orange-500/10"
+          className="financial-kpi-card"
         />
       </div>
 
       <div className="finqz-card p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Painel financeiro</p>
-            <h2 className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">Fluxo de caixa e baixa de transações</h2>
-            <p className="mt-2 text-sm text-[var(--text-secondary)] max-w-2xl">
-              Filtros aplicados em tempo real para priorizar cobranças, validar recebimentos e mapear oportunidades de capital de giro.
-            </p>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Fluxo de caixa</h2>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center shadow-sm">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Transações</p>
-              <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{filteredData.length}</p>
+            <div className="financial-summary-card text-center">
+              <p className="text-xs font-medium text-[var(--text-muted)]">Transações</p>
+              <p className="financial-metric mt-2 text-lg font-semibold text-[var(--text-primary)]">{filteredData.length}</p>
             </div>
-            <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center shadow-sm">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Última</p>
-              <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
-                {filteredData[0]?.data_transacao || "-"}
+            <div className="financial-summary-card text-center">
+              <p className="text-xs font-medium text-[var(--text-muted)]">Última</p>
+              <p className="financial-date mt-2 text-lg font-semibold text-[var(--text-primary)]">
+                {formatDate(filteredData[0]?.data_transacao)}
               </p>
             </div>
-            <div className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 text-center shadow-sm">
-              <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">Saldo atual</p>
-              <p className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{formatCurrency(cards.saldo)}</p>
+            <div className="financial-summary-card text-center">
+              <p className="text-xs font-medium text-[var(--text-muted)]">Saldo atual</p>
+              <p className="financial-value mt-2 text-lg font-semibold text-[var(--text-primary)]">{formatCurrency(cards.saldo)}</p>
             </div>
           </div>
         </div>
@@ -461,25 +525,21 @@ export const FinanceiroPage: React.FC = () => {
               {filteredData.length} lançamentos encontrados • ordenado por data mais recente
             </p>
           </div>
-          <div className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-secondary)] shadow-sm">
-            <Download size={16} className="text-blue-500 dark:text-blue-300" />
-            Exporte seus dados direto do painel
-          </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[1120px] border-separate border-spacing-0">
+          <table className="financial-table">
             <thead>
               <tr>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Código</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Tipo</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Categoria</th>
-                <th className="px-4 py-4 text-right text-[11px] font-semibold uppercase tracking-[0.3em]">Valor</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Data</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Descrição</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Parceiro</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Status</th>
-                <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.3em]">Ações</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Código</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Tipo</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Categoria</th>
+                <th className="px-4 py-4 text-right text-xs font-semibold">Valor</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Data</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Descrição</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Parceiro</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Status</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -513,10 +573,10 @@ export const FinanceiroPage: React.FC = () => {
                     <td className="px-4 py-4 text-sm text-[var(--text-secondary)] whitespace-nowrap">
                       {CATEGORIAS.find((c) => c.value === item.categoria)?.label || item.categoria}
                     </td>
-                    <td className={`px-4 py-4 text-right text-sm font-semibold ${item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "text-emerald-300" : "text-red-300"}`}>
+                    <td className={`financial-value px-4 py-4 text-right text-sm font-semibold ${item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "text-emerald-600 dark:text-emerald-300" : "text-red-600 dark:text-red-300"}`}>
                       {item.tipo === "credito" || item.tipo.includes("estorno_debito") ? "+" : "-"}{formatCurrency(item.valor)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-[var(--text-muted)] whitespace-nowrap">{item.data_transacao}</td>
+                    <td className="financial-date px-4 py-4 text-sm text-[var(--text-muted)]">{formatDate(item.data_transacao)}</td>
                     <td className="px-4 py-4 text-sm text-[var(--text-secondary)] max-w-[260px] truncate">{item.descricao}</td>
                     <td className="px-4 py-4 text-sm text-[var(--text-secondary)] whitespace-nowrap">{item.parceiro_nome || "-"}</td>
                     <td className="px-4 py-4 whitespace-nowrap">

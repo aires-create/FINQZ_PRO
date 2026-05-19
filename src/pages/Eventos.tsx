@@ -109,21 +109,21 @@ const getEventTypeLabel = (tipo: unknown): string => {
 };
 
 const getEventTypeColor = (tipo: unknown): string => {
-  if (!tipo) return "bg-gray-100 text-slate-200";
+  if (!tipo) return "bg-[var(--bg-elevated)] text-[var(--text-secondary)]";
   const tipoStr = String(tipo);
   if (tipoStr.includes("created") || tipoStr.includes("started") || tipoStr.includes("finished")) {
-    return "bg-green-100 text-green-800";
+    return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
   }
   if (tipoStr.includes("updated") || tipoStr.includes("changed") || tipoStr.includes("moved")) {
-    return "bg-blue-100 text-blue-800";
+    return "bg-blue-500/10 text-blue-700 dark:text-blue-300";
   }
   if (tipoStr.includes("deleted") || tipoStr.includes("failed")) {
-    return "bg-red-100 text-red-800";
+    return "bg-red-500/10 text-red-700 dark:text-red-300";
   }
   if (tipoStr.includes("login") || tipoStr.includes("logout")) {
-    return "bg-purple-100 text-purple-800";
+    return "bg-violet-500/10 text-violet-700 dark:text-violet-300";
   }
-  return "bg-gray-100 text-slate-200";
+  return "bg-[var(--bg-elevated)] text-[var(--text-secondary)]";
 };
 
 // Safe JSON stringify
@@ -324,31 +324,30 @@ export default function Eventos() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#00010b]">
+    <div className="app-page">
       <PageHeader
         title="Eventos"
-        subtitle="Visualize todos os eventos do sistema para auditoria e debugging"
         icon={<Activity className="w-5 h-5" />}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="space-y-5">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <DSCard className="p-4">
-            <div className="text-sm text-slate-500">Total de Eventos</div>
-            <div className="text-2xl font-bold text-white">{renderStatsTotal()}</div>
+            <div className="text-sm text-[var(--text-muted)]">Total de Eventos</div>
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">{renderStatsTotal()}</div>
           </DSCard>
           <DSCard className="p-4">
-            <div className="text-sm text-slate-500">Tipos de Eventos</div>
-            <div className="text-2xl font-bold text-white">{renderByTypeCount()}</div>
+            <div className="text-sm text-[var(--text-muted)]">Tipos de Eventos</div>
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">{renderByTypeCount()}</div>
           </DSCard>
           <DSCard className="p-4">
-            <div className="text-sm text-slate-500">Eventos via API</div>
-            <div className="text-2xl font-bold text-white">{renderBySourceApi()}</div>
+            <div className="text-sm text-[var(--text-muted)]">Eventos via API</div>
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">{renderBySourceApi()}</div>
           </DSCard>
           <DSCard className="p-4">
-            <div className="text-sm text-slate-500">Eventos do Sistema</div>
-            <div className="text-2xl font-bold text-white">{renderBySourceSystem()}</div>
+            <div className="text-sm text-[var(--text-muted)]">Eventos do Sistema</div>
+            <div className="text-2xl font-semibold text-[var(--text-primary)]">{renderBySourceSystem()}</div>
           </DSCard>
         </div>
 
@@ -356,7 +355,7 @@ export default function Eventos() {
         <DSCard className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Tipo</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Tipo</label>
               <Select
                 options={EVENT_TYPES}
                 value={tipoFilter}
@@ -364,7 +363,7 @@ export default function Eventos() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Fonte</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Fonte</label>
               <Select
                 options={EVENT_SOURCES}
                 value={sourceFilter}
@@ -372,7 +371,7 @@ export default function Eventos() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Período</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Período</label>
               <Select
                 options={PERIODOS_OPTIONS}
                 value={periodoFilter}
@@ -380,7 +379,7 @@ export default function Eventos() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Buscar</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Buscar</label>
               <Input
                 type="text"
                 placeholder="Buscar por tipo, recurso ou usuário"
@@ -397,7 +396,7 @@ export default function Eventos() {
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
             </Button>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-[var(--text-muted)]">
               Mostrando {filteredEvents.length} de {total} eventos
             </div>
           </div>
@@ -407,17 +406,17 @@ export default function Eventos() {
         <DSCard className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-[#1f2937]">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Data/Hora</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tipo</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fonte</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Recurso</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Usuário</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Ações</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Data/Hora</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Tipo</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Fonte</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Recurso</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Usuário</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-[var(--text-secondary)] uppercase">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-[var(--border-muted)]">
                 {loading ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
@@ -450,8 +449,8 @@ export default function Eventos() {
                   </tr>
                 ) : (
                   filteredEvents.map((event, index) => (
-                    <tr key={event?.id ?? index} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                    <tr key={event?.id ?? index} className="hover:bg-[var(--bg-surface-hover)]">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-primary)]">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-slate-400" />
                           {formatDate(event?.createdAt)}
@@ -465,7 +464,7 @@ export default function Eventos() {
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                         {event?.source ?? "-"}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-[var(--text-primary)]">
                         {event?.resource ? (
                           <span>
                             {event.resource}
@@ -535,11 +534,11 @@ export default function Eventos() {
           onClick={handleCloseModal}
         >
           <div 
-            className="bg-[#111827] rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden"
+            className="finqz-card w-full max-w-2xl mx-4 max-h-[80vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2937]">
-              <h2 className="text-lg font-semibold text-white">Detalhes do Evento</h2>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-muted)]">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Detalhes do Evento</h2>
               <button
                 onClick={handleCloseModal}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-gray-100"
@@ -551,36 +550,36 @@ export default function Eventos() {
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium text-slate-500">Data/Hora</label>
-                  <p className="text-white">{formatDate(selectedEvent.createdAt)}</p>
+                  <p className="text-[var(--text-primary)]">{formatDate(selectedEvent.createdAt)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-500">Tipo</label>
-                  <p className="text-white">{getEventTypeLabel(selectedEvent.tipo)}</p>
+                  <p className="text-[var(--text-primary)]">{getEventTypeLabel(selectedEvent.tipo)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-500">Fonte</label>
-                  <p className="text-white">{selectedEvent.source ?? "-"}</p>
+                  <p className="text-[var(--text-primary)]">{selectedEvent.source ?? "-"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-500">Recurso</label>
-                  <p className="text-white">
+                  <p className="text-[var(--text-primary)]">
                     {selectedEvent.resource ?? "-"}
                     {selectedEvent.resourceId && ` (#${selectedEvent.resourceId})`}
                   </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-500">Usuário</label>
-                  <p className="text-white">{selectedEvent.usuarioId ?? "Sistema"}</p>
+                  <p className="text-[var(--text-primary)]">{selectedEvent.usuarioId ?? "Sistema"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-500">Dados</label>
-                  <pre className="mt-1 p-3 bg-gray-50 rounded-lg text-sm overflow-x-auto">
+                  <pre className="mt-1 p-3 bg-[var(--bg-elevated)] rounded-lg text-sm overflow-x-auto">
                     {safeJson(selectedEvent.dados)}
                   </pre>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-500">Metadata</label>
-                  <pre className="mt-1 p-3 bg-gray-50 rounded-lg text-sm overflow-x-auto">
+                  <pre className="mt-1 p-3 bg-[var(--bg-elevated)] rounded-lg text-sm overflow-x-auto">
                     {safeJson(selectedEvent.metadata)}
                   </pre>
                 </div>

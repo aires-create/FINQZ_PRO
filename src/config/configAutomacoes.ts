@@ -18,14 +18,14 @@ export interface ConfigPipeline {
   automacoes: ConfigAutomacaoPipeline[];
 }
 
-// 🎯 AUTOMAÇÕES DISPONÍVEIS COM SUAS CONFIGURAÇÕES PADRÃO
+// AUTOMAÇÕES DISPONÍVEIS COM SUAS CONFIGURAÇÕES PADRÃO
 export const AUTOMAÇÕES_BASE = [
   {
     id: 'auto-criar-parceiro',
     nome: 'Criar Parceiro Comercial',
     descricao: 'Cria automaticamente um registro de parceiro quando o contrato é assinado',
     tipo: 'criar_parceiro' as TipoAutomacao,
-    icone: '🏢',
+    icone: 'PC',
     cor: '#8b5cf6'
   },
   {
@@ -33,7 +33,7 @@ export const AUTOMAÇÕES_BASE = [
     nome: 'Criar Usuário no Sistema',
     descricao: 'Cria automaticamente acesso ao sistema para o novo parceiro/colaborador',
     tipo: 'criar_usuario' as TipoAutomacao,
-    icone: '👤',
+    icone: 'US',
     cor: '#3b82f6'
   },
   {
@@ -41,7 +41,7 @@ export const AUTOMAÇÕES_BASE = [
     nome: 'Enviar E-mail de Boas-vindas',
     descricao: 'Envia e-mail automático com instruções e credenciais',
     tipo: 'enviar_email_bemvindo' as TipoAutomacao,
-    icone: '📧',
+    icone: 'EM',
     cor: '#22c55e'
   },
   {
@@ -49,7 +49,7 @@ export const AUTOMAÇÕES_BASE = [
     nome: 'Atualizar Etapa do Pipeline',
     descricao: 'Move automaticamente a oportunidade para "Contrato Assinado" ou "Ativo"',
     tipo: 'atualizar_etapa' as TipoAutomacao,
-    icone: '➡️',
+    icone: 'ET',
     cor: '#f59e0b',
     campos: [
       {
@@ -69,7 +69,7 @@ export const AUTOMAÇÕES_BASE = [
     nome: 'Notificar Gestor',
     descricao: 'Envia notificação para o gestor sobre nova assinatura',
     tipo: 'notificar_gestor' as TipoAutomacao,
-    icone: '🔔',
+    icone: 'NT',
     cor: '#ef4444'
   },
   {
@@ -77,12 +77,12 @@ export const AUTOMAÇÕES_BASE = [
     nome: 'Criar Conta Corrente',
     descricao: 'Cria registro de conta corrente para o novo parceiro',
     tipo: 'criar_conta_corrente' as TipoAutomacao,
-    icone: '💳',
+    icone: 'CC',
     cor: '#06b6d4'
   }
 ];
 
-// 🎯 CONFIGURAÇÃO PADRÃO POR TIPO DE PIPELINE
+// CONFIGURAÇÃO PADRÃO POR TIPO DE PIPELINE
 export const CONFIG_DEFAULT_POR_TIPO: Record<string, ConfigAutomacaoPipeline[]> = {
   onboarding_parceiro: [
     { automacaoId: 'auto-criar-parceiro', ativo: true, ordem: 1 },
@@ -111,7 +111,7 @@ export const CONFIG_DEFAULT_POR_TIPO: Record<string, ConfigAutomacaoPipeline[]> 
   ]
 };
 
-// 🎯 CARREGAR CONFIGURAÇÃO DE UM PIPELINE
+// CARREGAR CONFIGURAÇÃO DE UM PIPELINE
 export function getConfigPipeline(pipelineId: string): ConfigPipeline {
   const pipeline = getPipelineConfigById(pipelineId);
   const tipo = pipeline?.tipo || 'default';
@@ -125,25 +125,24 @@ export function getConfigPipeline(pipelineId: string): ConfigPipeline {
   };
 }
 
-// 🎯 SALVAR CONFIGURAÇÃO DE UM PIPELINE (simulado - em produção salvar no backend)
+// SALVAR CONFIGURAÇÃO DE UM PIPELINE (simulado - em produção salvar no backend)
 let configuracoesSalvas: Record<string, ConfigPipeline> = {};
 
 export function salvarConfigPipeline(config: ConfigPipeline): void {
   configuracoesSalvas[config.pipelineId] = config;
-  console.log('[CONFIG] Configuração salva:', config.pipelineId, config);
 }
 
 export function getConfigSalva(pipelineId: string): ConfigPipeline | null {
   return configuracoesSalvas[pipelineId] || null;
 }
 
-// 🎯 OBTER AUTOMAÇÕES ATIVAS PARA UM PIPELINE
+// OBTER AUTOMAÇÕES ATIVAS PARA UM PIPELINE
 export function getAutomacoesAtivasPipeline(pipelineId: string): ConfigAutomacaoPipeline[] {
   const config = getConfigPipeline(pipelineId);
   return config.automacoes.filter(a => a.ativo).sort((a, b) => a.ordem - b.ordem);
 }
 
-// 🎯 OBTER PIPELINES COM AUTOMAÇÃO
+// OBTER PIPELINES COM AUTOMAÇÃO
 export function getPipelinesComAutomacao(): { id: string; nome: string; tipo: string; automacoesAtivas: number }[] {
   return PIPELINES.map(p => ({
     id: p.id,
@@ -153,7 +152,7 @@ export function getPipelinesComAutomacao(): { id: string; nome: string; tipo: st
   }));
 }
 
-// 🎯 TOGGLE AUTOMACAO
+// TOGGLE AUTOMACAO
 export function toggleAutomacaoPipeline(
   pipelineId: string, 
   automacaoId: string, 
@@ -170,7 +169,7 @@ export function toggleAutomacaoPipeline(
   return novoConfig;
 }
 
-// 🎯 REORDENAR AUTOMAÇÕES
+// REORDENAR AUTOMAÇÕES
 export function reordenarAutomacoes(
   pipelineId: string,
   automacaoId: string,
@@ -195,7 +194,7 @@ export function reordenarAutomacoes(
   return novoConfig;
 }
 
-// 🎯 RESETAR PARA PADRÃO
+// RESETAR PARA PADRÃO
 export function resetarConfigPipeline(pipelineId: string): ConfigPipeline {
   const pipeline = getPipelineConfigById(pipelineId);
   const tipo = pipeline?.tipo || 'default';
@@ -210,7 +209,7 @@ export function resetarConfigPipeline(pipelineId: string): ConfigPipeline {
   return novoConfig;
 }
 
-// 🎯 EXPORTAR/IMPORTAR CONFIGURAÇÕES
+// EXPORTAR/IMPORTAR CONFIGURAÇÕES
 export function exportarConfiguracoes(): string {
   return JSON.stringify(configuracoesSalvas, null, 2);
 }
@@ -225,7 +224,7 @@ export function importarConfiguracoes(json: string): boolean {
   }
 }
 
-// 🎯 LABELS
+// LABELS
 export function getTipoPipelineLabel(tipo: string): string {
   const labels: Record<string, string> = {
     onboarding_parceiro: 'Onboarding Parceiro',

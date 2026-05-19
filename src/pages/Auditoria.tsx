@@ -554,10 +554,7 @@ export default function Auditoria() {
                 pageSize={pagination.limit}
                 onPageChange={handlePageChange}
                 showPageSizeSelector={true}
-                onPageSizeChange={(newSize) => {
-                  // Implementar mudança de pageSize se necessário
-                  console.log('Page size changed to:', newSize);
-                }}
+                onPageSizeChange={() => {}}
               />
             </>
           )}

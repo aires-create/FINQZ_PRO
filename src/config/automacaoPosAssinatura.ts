@@ -77,7 +77,7 @@ export interface OportunidadeAssinada {
   franqueado_id?: number;
 }
 
-// 🎯 REGISTRO DE AUTOMAÇÕES DISPONÍVEIS
+// REGISTRO DE AUTOMAÇÕES DISPONÍVEIS
 export const AUTOMAÇÕES_DISPONIVEIS: ConfiguracaoAutomacao[] = [
   {
     id: 'auto-criar-parceiro',
@@ -137,7 +137,7 @@ export const AUTOMAÇÕES_DISPONIVEIS: ConfiguracaoAutomacao[] = [
   }
 ];
 
-// 🎯 EXECUTAR TODAS AS AUTOMAÇÕES
+// EXECUTAR TODAS AS AUTOMAÇÕES
 export async function executarAutomacoes(
   oportunidade: OportunidadeAssinada
 ): Promise<ResultadoAutomacao[]> {
@@ -167,7 +167,7 @@ export async function executarAutomacoes(
   return resultados;
 }
 
-// 🎯 EXECUTAR UMA AUTOMAÇÃO ESPECÍFICA
+// EXECUTAR UMA AUTOMAÇÃO ESPECÍFICA
 async function executarAutomacao(
   automacao: ConfiguracaoAutomacao,
   oportunidade: OportunidadeAssinada
@@ -199,7 +199,7 @@ async function executarAutomacao(
   }
 }
 
-// 🎯 IMPLEMENTAÇÕES DAS AUTOMAÇÕES
+// IMPLEMENTAÇÕES DAS AUTOMAÇÕES
 
 // 1. Criar Parceiro Comercial
 async function criarParceiroComercial(
@@ -222,8 +222,6 @@ async function criarParceiroComercial(
     status: 'ativo',
     createdAt: timestamp
   };
-  
-  console.log('[AUTOMAÇÃO] Criando parceiro comercial:', novoParceiro);
   
   return {
     automacaoId: automacao.id,
@@ -251,8 +249,6 @@ async function criarUsuario(
     status: 'pendente_senha', // Usuário precisa definir senha
     createdAt: timestamp
   };
-  
-  console.log('[AUTOMAÇÃO] Criando usuário:', novoUsuario);
   
   return {
     automacaoId: automacao.id,
@@ -286,8 +282,6 @@ async function enviarEmailBoasVindas(
     `
   };
   
-  console.log('[AUTOMAÇÃO] Enviando e-mail:', emailContent);
-  
   return {
     automacaoId: automacao.id,
     oportunidadeId: oportunidade.id,
@@ -305,8 +299,6 @@ async function atualizarEtapaPipeline(
   timestamp: string
 ): Promise<ResultadoAutomacao> {
   const etapaDestino = automacao.config?.etapaDestino || 'ativo';
-  
-  console.log(`[AUTOMAÇÃO] Atualizando oportunidade ${oportunidade.id} para etapa: ${etapaDestino}`);
   
   // Atualizar no store
   const store = useAppStore.getState();
@@ -336,8 +328,6 @@ async function notificarGestor(
   oportunidade: OportunidadeAssinada,
   timestamp: string
 ): Promise<ResultadoAutomacao> {
-  console.log(`[AUTOMAÇÃO] Notificando gestor sobre nova assinatura: ${oportunidade.id}`);
-  
   return {
     automacaoId: automacao.id,
     oportunidadeId: oportunidade.id,
@@ -365,8 +355,6 @@ async function criarContaCorrente(
     createdAt: timestamp
   };
   
-  console.log('[AUTOMAÇÃO] Criando conta corrente:', contaCorrente);
-  
   return {
     automacaoId: automacao.id,
     oportunidadeId: oportunidade.id,
@@ -378,14 +366,14 @@ async function criarContaCorrente(
   };
 }
 
-// 🎯 VERIFICAR SE HÁ AUTOMAÇÕES PENDENTES
+// VERIFICAR SE HÁ AUTOMAÇÕES PENDENTES
 export function getAutomacoesPendentes(pipelineId: string): ConfiguracaoAutomacao[] {
   return AUTOMAÇÕES_DISPONIVEIS.filter(
     auto => auto.ativo && auto.pipelineIds.includes(pipelineId)
   );
 }
 
-// 🎯 OBTER LABEL TIPO DE AUTOMAÇÃO
+// OBTER LABEL TIPO DE AUTOMAÇÃO
 export function getTipoAutomacaoLabel(tipo: TipoAutomacao): string {
   const labels: Record<TipoAutomacao, string> = {
     criar_parceiro: 'Criar Parceiro',
@@ -400,7 +388,7 @@ export function getTipoAutomacaoLabel(tipo: TipoAutomacao): string {
   return labels[tipo] || tipo;
 }
 
-// 🎯 OBTER COR DO STATUS DE AUTOMAÇÃO
+// OBTER COR DO STATUS DE AUTOMAÇÃO
 export function getStatusAutomacaoColor(status: StatusAutomacao): string {
   const cores: Record<StatusAutomacao, string> = {
     pendente: '#6b7280',

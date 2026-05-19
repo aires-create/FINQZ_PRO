@@ -67,6 +67,8 @@ import { dataService } from "../api/dataService";
 import useAppStore from "../store";
 
 // Types
+type SdrTab = 'metrics' | 'config' | 'intelligence' | 'actions' | 'templates' | 'agentes';
+
 interface SdrMetrics {
   leadsAnalisadosHoje: number;
   leadsQualificados: number;
@@ -418,7 +420,7 @@ export const SdrIaHubPage: React.FC = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'config' | 'intelligence' | 'actions' | 'templates' | 'agentes'>('metrics');
+  const [activeTab, setActiveTab] = useState<SdrTab>('metrics');
   const [showCreateOppModal, setShowCreateOppModal] = useState(false);
   const [selectedAnalysis, setSelectedAnalysis] = useState<SdrAnalysis | null>(null);
   const [oppData, setOppData] = useState({
@@ -512,8 +514,11 @@ export const SdrIaHubPage: React.FC = () => {
         setOriginMetrics(response.data.originMetrics);
         setProductMetrics(response.data.productMetrics);
       }
-    } catch (error) {
-      console.log("[SDR] Using mock metrics");
+    } catch {
+      setMetrics(mockMetrics);
+      setChannelMetrics(mockChannelMetrics);
+      setOriginMetrics(mockOriginMetrics);
+      setProductMetrics(mockProductMetrics);
     } finally {
       setIsLoading(false);
     }
@@ -526,8 +531,8 @@ export const SdrIaHubPage: React.FC = () => {
       if (response.data.success) {
         setAnalyses(response.data.analyses);
       }
-    } catch (error) {
-      console.log("[SDR] Using mock analyses");
+    } catch {
+      setAnalyses(mockAnalyses);
     }
   };
 
@@ -1042,7 +1047,6 @@ export const SdrIaHubPage: React.FC = () => {
     <div className="app-page">
       <PageHeader
         title="SDR IA"
-        subtitle="Centro de controle operacional"
         actions={
           <div className="flex items-center gap-3">
             <div className="finqz-control px-3 py-1.5">
@@ -1068,7 +1072,7 @@ export const SdrIaHubPage: React.FC = () => {
           <button
             onClick={handleAttackHotLeads}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#ef4444] hover:bg-[#dc2626] text-white rounded-xl font-medium transition-all shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 disabled:opacity-50"
+            className="finqz-control px-4 py-2.5 text-sm font-medium hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500 disabled:opacity-50"
           >
             <Flame className="w-4 h-4" />
             Atacar leads quentes
@@ -1076,7 +1080,7 @@ export const SdrIaHubPage: React.FC = () => {
           <button
             onClick={handleSendFollowUp}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#000dff] hover:bg-[#0011cc] text-white rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
             Enviar follow-up automático
@@ -1084,7 +1088,7 @@ export const SdrIaHubPage: React.FC = () => {
           <button
             onClick={handleReprocessLeads}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white rounded-xl font-medium transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 disabled:opacity-50"
+            className="finqz-control px-4 py-2.5 text-sm font-medium disabled:opacity-50"
           >
             <RefreshCw className="w-4 h-4" />
             Reprocessar leads
@@ -1092,7 +1096,7 @@ export const SdrIaHubPage: React.FC = () => {
           <button
             onClick={handleGenerateResponses}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#10b981] hover:bg-[#059669] text-white rounded-xl font-medium transition-all shadow-lg shadow-green-500/20 hover:shadow-green-500/30 disabled:opacity-50"
+            className="finqz-control px-4 py-2.5 text-sm font-medium hover:border-green-500/30 hover:bg-green-500/10 hover:text-green-500 disabled:opacity-50"
           >
             <Sparkles className="w-4 h-4" />
             Gerar respostas
@@ -1101,9 +1105,9 @@ export const SdrIaHubPage: React.FC = () => {
 
         {/* Action Feedback */}
         {actionFeedback && (
-          <div className="bg-green-500/20 border border-green-500/30 rounded-xl p-3 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-400" />
-            <span className="text-green-400 text-sm">{actionFeedback}</span>
+          <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-3 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            <span className="text-green-600 dark:text-green-300 text-sm">{actionFeedback}</span>
           </div>
         )}
 
@@ -1116,50 +1120,50 @@ export const SdrIaHubPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-2xl font-bold text-[var(--text-primary)]">SDR IA Ativo</h2>
+                  <h2 className="text-xl font-semibold text-[var(--text-primary)]">SDR IA</h2>
                   <Badge variant="success">
                     Online
                   </Badge>
                 </div>
-                <p className="text-[var(--text-secondary)]">
-                  {config.autoMode ? "Modo automático ativado" : "Modo manual"}
-                  {config.assistedResponse ? " • Resposta assistida ativada" : ""}
-                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={config.autoMode ? "success" : "outline"}>{config.autoMode ? "Automático" : "Manual"}</Badge>
+                  {config.assistedResponse && <Badge variant="outline">Resposta assistida</Badge>}
+                </div>
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
-                  <Flame className="w-5 h-5 text-orange-300" />
-                  {metrics.leadsQuentes} 🔥
+                <div className="text-2xl font-semibold flex items-center justify-center gap-1 text-[var(--text-primary)]">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                  {metrics.leadsQuentes}
                 </div>
                 <div className="text-[var(--text-secondary)] text-sm">Leads Quentes</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
-                  <AlertTriangle className="w-5 h-5 text-yellow-300" />
-                  {metrics.leadsEmRisco} ⚠️
+                <div className="text-2xl font-semibold flex items-center justify-center gap-1 text-[var(--text-primary)]">
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  {metrics.leadsEmRisco}
                 </div>
                 <div className="text-[var(--text-secondary)] text-sm">Leads em Risco</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
-                  <DollarSign className="w-5 h-5 text-green-300" />
-                  {metrics.leadsProximoFechar} 💰
+                <div className="text-2xl font-semibold flex items-center justify-center gap-1 text-[var(--text-primary)]">
+                  <DollarSign className="w-5 h-5 text-green-500" />
+                  {metrics.leadsProximoFechar}
                 </div>
                 <div className="text-[var(--text-secondary)] text-sm">Próximos de Fechar</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
-                  <CheckCircle className="w-5 h-5 text-green-300" />
+                <div className="text-2xl font-semibold flex items-center justify-center gap-1 text-[var(--text-primary)]">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
                   {metrics.conversoesHoje}
                 </div>
                 <div className="text-[var(--text-secondary)] text-sm">Conversões Hoje</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold flex items-center justify-center gap-1 text-[var(--text-primary)]">
-                  <Gauge className="w-5 h-5 text-purple-300" />
+                <div className="text-2xl font-semibold flex items-center justify-center gap-1 text-[var(--text-primary)]">
+                  <Gauge className="w-5 h-5 text-[var(--color-primary-soft)]" />
                   {metrics.scoreMedio}%
                 </div>
                 <div className="text-[var(--text-secondary)] text-sm">Score Médio</div>
@@ -1202,17 +1206,17 @@ export const SdrIaHubPage: React.FC = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 border-b border-[var(--border-muted)] pb-2 overflow-x-auto">
-          {[
+          {([
             { id: 'metrics', label: 'Métricas', icon: Activity },
             { id: 'config', label: 'Configuração', icon: Settings },
             { id: 'intelligence', label: 'Inteligência', icon: Brain },
             { id: 'actions', label: 'Ações', icon: Zap },
             { id: 'templates', label: 'Templates', icon: FileText },
             { id: 'agentes', label: 'Agentes', icon: Bot },
-          ].map((tab) => (
+          ] as Array<{ id: SdrTab; label: string; icon: React.ElementType }>).map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-blue-600 text-white'
@@ -1357,14 +1361,15 @@ export const SdrIaHubPage: React.FC = () => {
         )}
 
         {/* Dynamic Insights Section */}
+        {activeTab === 'intelligence' && insights.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Brain className="w-5 h-5 text-purple-400" />
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+            <Brain className="w-5 h-5 text-[var(--color-primary-soft)]" />
             Insights Dinâmicos
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {insights.map((insight, i) => (
-              <div key={i} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex items-start gap-3">
+              <div key={i} className="finqz-card p-4 flex items-start gap-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                   insight.tipo === 'tendencia' ? 'bg-green-500/20' :
                   insight.tipo === 'campanha' ? 'bg-blue-500/20' :
@@ -1377,8 +1382,8 @@ export const SdrIaHubPage: React.FC = () => {
                   {insight.tipo === 'sugestao' && <Lightbulb className="w-5 h-5 text-yellow-400" />}
                 </div>
                 <div>
-                  <p className="text-white text-sm font-medium">{insight.mensagem}</p>
-                  <p className="text-slate-400 text-xs mt-1">
+                  <p className="text-[var(--text-primary)] text-sm font-medium">{insight.mensagem}</p>
+                  <p className="text-[var(--text-muted)] text-xs mt-1">
                     {insight.tipo === 'tendencia' && 'IA detectou tendência'}
                     {insight.tipo === 'campanha' && 'Melhor campanha do dia'}
                     {insight.tipo === 'conversao' && 'Probabilidade de conversão'}
@@ -1389,15 +1394,17 @@ export const SdrIaHubPage: React.FC = () => {
             ))}
           </div>
         </div>
+        )}
 
         {/* Analyzed Leads List */}
+        {activeTab === 'intelligence' && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
             <Users className="w-5 h-5 text-blue-400" />
             Leads Analisados
           </h3>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-            <div className="grid grid-cols-6 gap-4 p-4 bg-slate-900/50 text-slate-400 text-sm font-medium">
+          <div className="finqz-card overflow-hidden">
+            <div className="grid grid-cols-6 gap-4 p-4 bg-[var(--bg-surface-strong)] text-[var(--text-secondary)] text-sm font-medium">
               <div>Nome</div>
               <div>Score</div>
               <div>Intenção</div>
@@ -1405,14 +1412,14 @@ export const SdrIaHubPage: React.FC = () => {
               <div>Ação Sugerida</div>
               <div>Prioridade</div>
             </div>
-            <div className="divide-y divide-slate-700">
+            <div className="divide-y divide-[var(--border-muted)]">
               {analyses.map((analysis) => (
-                <div key={analysis.id} className="grid grid-cols-6 gap-4 p-4 hover:bg-slate-700/30 transition-colors items-center">
+                <div key={analysis.id} className="grid grid-cols-6 gap-4 p-4 hover:bg-[var(--bg-surface-hover)] transition-colors items-center">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[#000dff] rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    <div className="finqz-icon-badge h-8 w-8 text-xs font-semibold">
                       {analysis.leadNome.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <span className="text-white text-sm">{analysis.leadNome}</span>
+                    <span className="text-[var(--text-primary)] text-sm">{analysis.leadNome}</span>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -1426,7 +1433,7 @@ export const SdrIaHubPage: React.FC = () => {
                           style={{ width: `${analysis.score}%` }}
                         />
                       </div>
-                      <span className="text-white text-sm">{analysis.score}</span>
+                      <span className="text-[var(--text-primary)] text-sm">{analysis.score}</span>
                     </div>
                   </div>
                   <div>
@@ -1440,13 +1447,10 @@ export const SdrIaHubPage: React.FC = () => {
                       analysis.intentPriority === 'media' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
                       'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                     }`}>
-                      {analysis.intentPriority === 'alta' && '🔥'}
-                      {analysis.intentPriority === 'media' && '⏳'}
-                      {analysis.intentPriority === 'baixa' && '❄️'}
                       {analysis.intentPriority.charAt(0).toUpperCase() + analysis.intentPriority.slice(1)}
                     </span>
                   </div>
-                  <div className="text-slate-300 text-sm truncate">
+                  <div className="text-[var(--text-secondary)] text-sm truncate">
                     {analysis.suggestedResponse.substring(0, 50)}...
                   </div>
                   <div>
@@ -1462,6 +1466,7 @@ export const SdrIaHubPage: React.FC = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Templates Tab */}
         {activeTab === 'templates' && (

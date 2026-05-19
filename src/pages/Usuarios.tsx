@@ -476,13 +476,16 @@ export const UsuariosPage: React.FC = () => {
             key: "nome",
             header: "Usuário",
             render: (value, row) => (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">
+              <div className="flex min-w-[220px] items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)]">
+                  <span className="text-sm font-semibold text-[var(--text-secondary)]">
                     {value.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <span className="font-medium text-slate-900 dark:text-slate-100">{value}</span>
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-900 dark:text-slate-100">{value}</p>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">{row.email}</p>
+                </div>
               </div>
             )
           },
@@ -498,7 +501,7 @@ export const UsuariosPage: React.FC = () => {
             header: "Perfil",
             render: (value, row) => (
               <div className="flex items-center gap-2">
-                <span className="px-2 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                <span className="max-w-[180px] truncate px-2 py-1 rounded-full text-xs font-medium bg-[var(--bg-elevated)] border border-[var(--border-default)] text-[var(--text-secondary)]">
                   {getRoleLabel(value)}
                 </span>
                 <button

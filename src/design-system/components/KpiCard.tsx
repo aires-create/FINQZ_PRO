@@ -83,7 +83,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({
       <div className="flex h-full items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold uppercase text-[var(--text-muted)]">{label}</p>
-          <p className={`mt-2 max-w-full text-[clamp(1.3rem,1.6vw,1.75rem)] font-semibold leading-tight ${valueClasses}`}>
+          <p className={`mt-2 max-w-full whitespace-nowrap text-[1.35rem] font-semibold leading-tight tracking-tight tabular-nums sm:text-[1.5rem] ${valueClasses}`}>
             {value}
           </p>
           {(variation !== undefined && variation !== null) && (

@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import useAppStore from "../store";
 import { finqzAuth } from "../auth/finqzAuth";
+import finqzLogoBlue from "../assets/brand/finqz-logo-blue.png";
 
 // ============================================
 // HELPER - Verificar Permissões RBAC
@@ -494,21 +495,14 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
       >
         <div className="flex h-16 items-center justify-between border-b border-[var(--sidebar-border)] px-4">
           <div className={`flex items-center gap-3 ${sidebarOpen ? "" : "lg:justify-center lg:w-full"}`}>
-            {isDashboardPage && sidebarOpen ? (
-              <div className="min-w-0">
-                <div className="text-[1.65rem] font-light leading-none tracking-normal text-[var(--sidebar-text)]">
-                  FINQZ <span className="align-top text-[0.72rem] font-bold text-[#1f75ff]">PRO</span>
-                </div>
+            {sidebarOpen ? (
+              <div className={`finqz-sidebar-brand min-w-0 ${isDashboardPage ? "" : "finqz-sidebar-brand-compact"}`} aria-label="FINQZ PRO">
+                <img src={finqzLogoBlue} alt="FINQZ" className="finqz-sidebar-logo" draggable={false} />
+                <span>PRO</span>
               </div>
             ) : (
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm shadow-primary/25">
                 <span className="text-lg font-bold text-white">F</span>
-              </div>
-            )}
-            {sidebarOpen && !isDashboardPage && (
-              <div className="min-w-0">
-                <div className="text-base font-bold tracking-tight text-[var(--sidebar-text)]">FINQZ</div>
-                <div className="text-[10px] font-semibold uppercase text-[var(--sidebar-muted)]">PRO</div>
               </div>
             )}
           </div>
@@ -713,15 +707,6 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
             >
               <Menu size={18} />
             </button>
-            <div className="finqz-icon-badge h-10 w-10">
-              <PageIcon size={19} />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-semibold uppercase text-[var(--text-muted)]">{currentArea}</p>
-              <h1 className="truncate text-base font-semibold tracking-tight text-[var(--text-primary)] sm:text-lg">
-                {currentPage.title}
-              </h1>
-            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">

@@ -333,9 +333,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
       });
       const data = await response.json();
       
-      if (data.success) {
-        console.log("Email settings saved:", data);
-      } else {
+      if (!data.success) {
         console.warn("Settings save warning:", data.error);
       }
       
@@ -542,12 +540,12 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
 
   const getPageSubtitle = () => {
     const subtitles: Record<string, string> = {
-      general: "Gerencie as configurações gerais do sistema",
-      tags: "Crie e gerencie tags para classificar seus leads e oportunidades",
-      pipelines: "Configure os pipelines e etapas do seu funil de vendas",
+      general: "",
+      tags: "",
+      pipelines: "",
       integrations: "Gerencie integrações com serviços externos",
-      automations: "Configure automações para otimizar seus processos",
-      notifications: "Gerencie as notificações do sistema",
+      automations: "",
+      notifications: "",
       security: "Configure as opções de segurança do sistema",
     };
     return subtitles[activeTab] || "Gerencie as configurações do sistema";
@@ -767,7 +765,6 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           {activeTab === "tags" && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-white">Gerenciar Tags</h3>
-              <p className="text-sm text-slate-500">Crie e gerencie tags para classificar seus leads e oportunidades</p>
               
               {/* Formulário para criar/editar tag */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-4">
@@ -859,7 +856,6 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           {activeTab === "pipelines" && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines</h3>
-              <p className="text-sm text-slate-500">Configure os pipelines e etapas do seu funil de vendas</p>
               
               {/* Lista de Pipelines */}
               <div className="space-y-4">
@@ -962,7 +958,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
             </div>
           )}
 
-          {/* ✅ Modal de Edição de Etapa */}
+          {/* Modal de Edição de Etapa */}
           {editingStage && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-[#111827] rounded-xl p-6 w-full max-w-md shadow-xl">
@@ -1334,8 +1330,8 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                         }}
                       >
                         <p style={{ color: '#64748b', margin: '0 0 10px', fontSize: '12px' }}>Suas Credenciais</p>
-                        <p style={{ margin: '5px 0' }}><span style={{ color: '#64748b' }}>📋 Login:</span> <strong>1234</strong></p>
-                        <p style={{ margin: '5px 0' }}><span style={{ color: '#64748b' }}>🔑 Senha:</span> <strong style={{ color: emailSettings.primaryColor }}>senha123</strong></p>
+                        <p style={{ margin: '5px 0' }}><span style={{ color: '#64748b' }}>Login:</span> <strong>1234</strong></p>
+                        <p style={{ margin: '5px 0' }}><span style={{ color: '#64748b' }}>Senha:</span> <strong style={{ color: emailSettings.primaryColor }}>senha123</strong></p>
                       </div>
                     </div>
                   </div>
@@ -1874,7 +1870,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
   );
 };
 
-// 🎯 COMPONENTE DE CONFIGURAÇÃO DE AUTOMAÇÕES
+// COMPONENTE DE CONFIGURAÇÃO DE AUTOMAÇÕES
 const AutomationsConfig: React.FC = () => {
   const [pipelineSelecionado, setPipelineSelecionado] = useState<string>("parceiros_comerciais");
   const [config, setConfig] = useState(() => getConfigPipeline(pipelineSelecionado));

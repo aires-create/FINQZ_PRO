@@ -28,7 +28,6 @@ export const AutomacoesPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Automações"
-        subtitle="Configure automações para otimizar seus processos"
         onRefresh={() => {}}
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
@@ -39,28 +38,28 @@ export const AutomacoesPage: React.FC = () => {
         exportFilename="automacoes"
       />
       
-      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-slate-900">Automações Disponíveis</h3>
+      <div className="finqz-card p-4 sm:p-5">
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">Automações disponíveis</h3>
           
           {/* Lista de Automações */}
           <div className="space-y-3">
             {automacoes.map((automacao) => (
-              <div key={automacao.id} className="border border-gray-200 rounded-xl p-4">
+              <div key={automacao.id} className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <Zap size={18} className="text-[#000dff]" />
-                      <h4 className="font-semibold text-slate-900">{automacao.nome}</h4>
+                      <Zap size={18} className="text-[var(--color-primary-soft)]" />
+                      <h4 className="font-semibold text-[var(--text-primary)]">{automacao.nome}</h4>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        automacao.ativa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate-500'
+                        automacao.ativa ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
                       }`}>
                         {automacao.ativa ? 'Ativa' : 'Inativa'}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-500 mt-1">{automacao.descricao}</p>
+                    <p className="text-sm text-[var(--text-secondary)] mt-1">{automacao.descricao}</p>
                     {automacao.pipelineId && (
-                      <p className="text-xs text-slate-400 mt-2">
+                      <p className="text-xs text-[var(--text-muted)] mt-2">
                         Pipeline: {initialPipelines.find(p => p.id === automacao.pipelineId)?.nome || automacao.pipelineId}
                       </p>
                     )}
@@ -70,14 +69,14 @@ export const AutomacoesPage: React.FC = () => {
                       onClick={() => toggleAutomacao(automacao.id)}
                       className={`p-2 rounded-lg transition-colors ${
                         automacao.ativa 
-                          ? 'text-orange-500 hover:bg-orange-50' 
-                          : 'text-green-500 hover:bg-green-50'
+                          ? 'text-orange-500 hover:bg-orange-500/10' 
+                          : 'text-green-500 hover:bg-green-500/10'
                       }`}
                       title={automacao.ativa ? 'Pausar' : 'Ativar'}
                     >
                       {automacao.ativa ? <Pause size={18} /> : <Play size={18} />}
                     </button>
-                    <button className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg">
+                    <button className="p-2 text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-surface-hover)] rounded-lg">
                       <Edit size={18} />
                     </button>
                   </div>
@@ -88,7 +87,7 @@ export const AutomacoesPage: React.FC = () => {
 
           {/* Botão adicionar automação */}
           <button
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
           >
             <Plus size={18} />
             Nova Automação

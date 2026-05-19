@@ -301,14 +301,6 @@ export const createAuditEntry = (
     timestampISO: new Date(now).toISOString(),
   };
 
-  // Log no console para desenvolvimento
-  console.log(`[AUDIT] ${entry.category}/${entry.action}:`, {
-    user: entry.userEmail,
-    entity: entry.entityId,
-    result: entry.result,
-    timestamp: entry.timestampISO,
-  });
-
   return entry;
 };
 

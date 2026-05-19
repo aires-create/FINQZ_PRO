@@ -5,7 +5,7 @@ import React from "react";
 
 export interface BadgeProps {
   children: React.ReactNode;
-  variant?: "default" | "primary" | "success" | "warning" | "danger" | "info";
+  variant?: "default" | "primary" | "success" | "warning" | "danger" | "destructive" | "error" | "info" | "outline";
   size?: "sm" | "md";
   className?: string;
 }
@@ -24,7 +24,10 @@ export const Badge: React.FC<BadgeProps> = ({
     success: "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 dark:text-emerald-200",
     warning: "bg-amber-500/10 text-amber-700 border border-amber-500/20 dark:text-amber-200",
     danger: "bg-red-500/10 text-red-700 border border-red-500/20 dark:text-red-200",
+    destructive: "bg-red-500/10 text-red-700 border border-red-500/20 dark:text-red-200",
+    error: "bg-red-500/10 text-red-700 border border-red-500/20 dark:text-red-200",
     info: "bg-blue-500/10 text-blue-700 border border-blue-500/20 dark:text-blue-200",
+    outline: "bg-transparent text-[var(--text-secondary)] border border-[var(--border-default)]",
   };
 
   const sizes = {

@@ -3,6 +3,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, CheckCircle, Info, Zap } from 'lucide-react';
 import { ApiException, isAuthError, isPermissionError, isValidationError, getErrorMessage } from '../api/client';
 import { STORAGE_KEYS } from '../config/environment';
 
@@ -132,17 +133,22 @@ export const ApiErrorDisplay = ({
   onRetry?: () => void 
 }) => {
   const navigate = useNavigate();
+  const Icon = error.type === 'error'
+    ? AlertTriangle
+    : error.type === 'warning'
+      ? Zap
+      : error.type === 'success'
+        ? CheckCircle
+        : Info;
 
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
-      <div className={`text-4xl mb-4 ${
+      <div className={`mb-4 ${
         error.type === 'error' ? 'text-red-500' :
         error.type === 'warning' ? 'text-yellow-500' :
         error.type === 'success' ? 'text-green-500' : 'text-blue-500'
       }`}>
-        {error.type === 'error' ? '⚠️' : 
-         error.type === 'warning' ? '⚡' : 
-         error.type === 'success' ? '✅' : 'ℹ️'}
+        <Icon className="h-10 w-10" />
       </div>
       <h3 className="text-lg font-semibold mb-2">{error.title}</h3>
       <p className="text-slate-600 mb-4">{error.message}</p>

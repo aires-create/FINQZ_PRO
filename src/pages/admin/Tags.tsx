@@ -52,7 +52,6 @@ export const TagsPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Tags"
-        subtitle="Crie e gerencie tags para classificar seus leads e oportunidades"
         onRefresh={() => setTagsList(listarTags())}
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
@@ -69,16 +68,15 @@ export const TagsPage: React.FC = () => {
         exportFilename="tags"
       />
       
-      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-slate-900">Gerenciar Tags</h3>
-          <p className="text-sm text-slate-500">Crie e gerencie tags para classificar seus leads e oportunidades</p>
+      <div className="finqz-card p-4 sm:p-5">
+        <div className="space-y-5">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">Gerenciar tags</h3>
           
           {/* Formulário para criar/editar tag */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4">
             <div className="flex gap-4 items-end">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Tag</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Nome da Tag</label>
                 <Input
                   value={tagForm.nome}
                   onChange={(e) => setTagForm({ ...tagForm, nome: e.target.value })}
@@ -87,7 +85,7 @@ export const TagsPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Cor</label>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Cor</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -124,26 +122,26 @@ export const TagsPage: React.FC = () => {
             {tagsList.map((tag) => (
               <div 
                 key={tag.id} 
-                className="flex items-center justify-between p-3 bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                className="flex items-center justify-between rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-colors hover:bg-[var(--bg-surface-hover)]"
               >
                 <div className="flex items-center gap-2">
                   <span 
                     className="w-3 h-3 rounded-full flex-shrink-0" 
                     style={{ backgroundColor: tag.cor }}
                   />
-                  <span className="font-medium text-slate-900 truncate">{tag.nome}</span>
+                  <span className="font-medium text-[var(--text-primary)] truncate">{tag.nome}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <button 
                     onClick={() => handleEditarTag(tag)}
-                    className="p-1.5 text-slate-400 hover:text-[#000dff] hover:bg-gray-100 rounded transition-colors"
+                    className="p-1.5 text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-surface-hover)] rounded transition-colors"
                     title="Editar"
                   >
                     <Edit size={14} />
                   </button>
                   <button 
                     onClick={() => handleExcluirTag(tag.id)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-gray-100 rounded transition-colors"
+                    className="p-1.5 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded transition-colors"
                     title="Excluir"
                   >
                     <Trash2 size={14} />

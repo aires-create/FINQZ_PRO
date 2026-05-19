@@ -73,7 +73,7 @@ let configuracoes: Record<ProvedorAssinatura, ConfiguracaoProvedor | null> = {
   clicksign: null
 };
 
-// 🎯 CONFIGURAÇÃO DOS PROVEDORES
+// CONFIGURAÇÃO DOS PROVEDORES
 export function configurarProvedor(
   provedor: ProvedorAssinatura, 
   config: ConfiguracaoProvedor
@@ -87,7 +87,7 @@ export function getConfiguracaoProvedor(
   return configuracoes[provedor];
 }
 
-// 🎯 CRIAÇÃO DE ENVELOPE DE ASSINATURA
+// CRIAÇÃO DE ENVELOPE DE ASSINATURA
 export async function criarEnvelopeAssinatura(
   requisicao: RequisicaoAssinatura
 ): Promise<RespostaAssinatura> {
@@ -105,7 +105,7 @@ export async function criarEnvelopeAssinatura(
   }
 }
 
-// 🎯 AUTHENTIC - Implementação
+// AUTHENTIC - Implementação
 async function criarEnvelopeAuthentic(
   requisicao: RequisicaoAssinatura
 ): Promise<RespostaAssinatura> {
@@ -129,7 +129,7 @@ async function criarEnvelopeAuthentic(
   };
 }
 
-// 🎯 DOCUSIGN - Implementação
+// DOCUSIGN - Implementação
 async function criarEnvelopeDocuSign(
   requisicao: RequisicaoAssinatura
 ): Promise<RespostaAssinatura> {
@@ -152,7 +152,7 @@ async function criarEnvelopeDocuSign(
   };
 }
 
-// 🎯 CLICKSIGN - Implementação
+// CLICKSIGN - Implementação
 async function criarEnvelopeClicksign(
   requisicao: RequisicaoAssinatura
 ): Promise<RespostaAssinatura> {
@@ -175,7 +175,7 @@ async function criarEnvelopeClicksign(
   };
 }
 
-// 🎯 VERIFICAÇÃO DE STATUS
+// VERIFICAÇÃO DE STATUS
 export async function verificarStatusAssinatura(
   envelopeId: string,
   provider: ProvedorAssinatura
@@ -189,7 +189,7 @@ export async function verificarStatusAssinatura(
   };
 }
 
-// 🎯 CANCELAMENTO DE ASSINATURA
+// CANCELAMENTO DE ASSINATURA
 export async function cancelarAssinatura(
   envelopeId: string,
   provider: ProvedorAssinatura,
@@ -203,7 +203,7 @@ export async function cancelarAssinatura(
   }
 }
 
-// 🎯 REENVIO DE SOLICITAÇÃO
+// REENVIO DE SOLICITAÇÃO
 export async function reenviarSolicitacao(
   envelopeId: string,
   signatarioEmail: string,
@@ -217,7 +217,7 @@ export async function reenviarSolicitacao(
   }
 }
 
-// 🎯 DOWNLOAD DO DOCUMENTO ASSINADO
+// DOWNLOAD DO DOCUMENTO ASSINADO
 export async function downloadDocumentoAssinado(
   envelopeId: string,
   provider: ProvedorAssinatura
@@ -232,7 +232,7 @@ export async function downloadDocumentoAssinado(
   }
 }
 
-// 🎯 HELPERS
+// HELPERS
 
 // Verifica se todos os signatários assinaram
 export function todosAssinaram(resposta: RespostaAssinatura): boolean {

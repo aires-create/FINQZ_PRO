@@ -12,7 +12,7 @@ import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
 import { KanbanColumn, PipelineSelect, getStageColor, formatCurrency, filterOportunitiesByPipeline, groupOportunitiesByStage, calculateTotalsByStage } from "../components/pipeline";
-import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, getPipelineByProductId, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages } from "../data/catalogRepository";
+import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, getPipelineByProductId, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages, getPipelineStageColor } from "../data/catalogRepository";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
@@ -37,7 +37,7 @@ const toStageLabel = (stage: any): string => {
   return String(stage?.nome || stage?.label || stage?.id || stage?.key || "Etapa");
 };
 
-// 🎯 LISTA ÚNICA OFICIAL DE ETAPAS DO PIPELINE (inclui etapas de onboarding)
+// LISTA ÚNICA OFICIAL DE ETAPAS DO PIPELINE (inclui etapas de onboarding)
 export const OFICIAL_ETAPAS = [
   // Etapas básicas
   { key: "novo_lead", label: "Novo Lead" },
@@ -69,6 +69,17 @@ type PipelineRuntimeConfig = {
   colunas?: PipelineColumn[];
 };
 
+const DETAIL_TABS = [
+  { id: 'tarefas', label: 'Tarefas', icon: Check },
+  { id: 'anotacoes', label: 'Anotações', icon: FileText },
+  { id: 'simulador', label: 'Simulador', icon: Calculator },
+  { id: 'tags', label: 'Tags', icon: Tag },
+  { id: 'anexos', label: 'Anexos', icon: Paperclip },
+  { id: 'historico', label: 'Histórico', icon: History }
+] as const;
+
+type DetailTabId = typeof DETAIL_TABS[number]['id'];
+
 const LEGACY_PIPELINE_IDS_BY_CATALOG: Record<string, string[]> = {
   "pipeline-antecipacao": ["pipeline-antecipacao", "fgts"],
   "pipeline-cartao": ["pipeline-cartao"],
@@ -92,7 +103,7 @@ const inferPipelineTipo = (pipelineId: string): PipelineTipo => {
 };
 
 
-// 📋 MOTIVOS DE PENDÊNCIA
+// MOTIVOS DE PENDÊNCIA
 export const MOTIVOS_PENDENCIA = [
   { key: "documentacao_pendente", label: "Documentação pendente" },
   { key: "dados_bancarios_pendentes", label: "Dados bancários pendentes" },
@@ -102,7 +113,7 @@ export const MOTIVOS_PENDENCIA = [
   { key: "outro", label: "Outro" }
 ] as const;
 
-// 📋 VALIDAÇÕES DE CAMPOS POR ETAPA
+// VALIDAÇÕES DE CAMPOS POR ETAPA
 export const VALIDACOES_ETAPA: Partial<Record<EtapaKey, { obrigatorios: string[]; mensagem: string }>> = {
   novo_lead: {
     obrigatorios: ['nome', 'telefone'],
@@ -156,7 +167,7 @@ export const VALIDACOES_ETAPA: Partial<Record<EtapaKey, { obrigatorios: string[]
 
 // Função para validar se a oportunidade pode avançar para uma etapa
 export const validarEtapa = (oportunidade: any, etapaDestino: EtapaKey): { valido: boolean; mensagem: string; camposFaltantes: string[] } => {
-  // ✅ PROTEÇÃO DE VALIDACOES_ETAPA
+  // PROTEÇÃO DE VALIDACOES_ETAPA
   const validacao = VALIDACOES_ETAPA?.[etapaDestino];
   if (!validacao || !Array.isArray(validacao.obrigatorios)) return { valido: true, mensagem: '', camposFaltantes: [] };
   
@@ -263,19 +274,19 @@ const OportunidadesPageInner = () => {
     hasPermission 
   } = useAppStore();
 
-  // ✅ PROTEÇÃO COMPLETA DO STORE - Safe fallbacks para todos os dados
+  // PROTEÇÃO COMPLETA DO STORE - Safe fallbacks para todos os dados
   const safePipelinesStore = Array.isArray(pipelines) ? pipelines : [];
   const safeOportunidadesKanban = Array.isArray(oportunidadesKanban) ? oportunidadesKanban : [];
   const safeProdutos = Array.isArray(produtos) ? produtos : [];
   const safeUsuarios = Array.isArray(usuarios) ? usuarios : [];
 
-  // ✅ Safe currentPipelineId sem pipeline default operacional
+  // Safe currentPipelineId sem pipeline default operacional
   const safeCurrentPipelineId =
     typeof currentPipelineId === "string" && currentPipelineId
       ? currentPipelineId
       : "";
 
-  // ✅ Safe setters e actions do store
+  // Safe setters e actions do store
   const safeSetCurrentPipelineId =
     typeof setCurrentPipelineId === "function"
       ? setCurrentPipelineId
@@ -302,13 +313,13 @@ const OportunidadesPageInner = () => {
       : () => {};
 
   const isDark = theme === "dark";
-  // ✅ Fallback seguro para hasPermission - evita erro se store ainda não carregou
+  // Fallback seguro para hasPermission - evita erro se store ainda não carregou
   const can = typeof hasPermission === "function" ? hasPermission : () => false;
   
-  // 📋 ETAPAS QUE PERMITEM EDIÇÃO LIVRE (até Negociação)
+  // ETAPAS QUE PERMITEM EDIÇÃO LIVRE (até Negociação)
   const ETAPAS_EDICAO_LIVRE = ['novo_lead', 'negociacao'];
   
-  // 📋 Função helper para verificar se pode editar (por permissão OU por etapa)
+  // Função helper para verificar se pode editar (por permissão OU por etapa)
   const canEditOportunidade = (oportunidade: any): boolean => {
     // Se tem permissão, pode editar
     if (can('oportunidades', 'edit')) return true;
@@ -318,15 +329,14 @@ const OportunidadesPageInner = () => {
     return ETAPAS_EDICAO_LIVRE.includes(etapa);
   };
   
-  // Toolbar State (visual only - no pipeline logic)
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
+ // Toolbar State
+const [searchQuery, setSearchQuery] = useState("");
+const [showFilters, setShowFilters] = useState(false);
+const [showFilterDrawer, setShowFilterDrawer] = useState(false);
+const [showAdvanced, setShowAdvanced] = useState(false);
+const [selectedProductId, setSelectedProductId] = useState<string>("");
   
-  // 🎯 NOVA TAXONOMIA PF - Estado para subproduto e modalidade
+  // NOVA TAXONOMIA PF - Estado para subproduto e modalidade
   const [selectedSubproductId, setSelectedSubproductId] = useState<string>("");
   const [selectedModality, setSelectedModality] = useState<string>("");
   const [pipelineSelectionReady, setPipelineSelectionReady] = useState(false);
@@ -451,7 +461,7 @@ const OportunidadesPageInner = () => {
   const [showOpportunityForm, setShowOpportunityForm] = useState(false);
   
   // Aba ativa no modal fullscreen
-  const [activeTab, setActiveTab] = useState<'tarefas' | 'anotacoes' | 'simulador' | 'tags' | 'anexos' | 'historico'>('tarefas');
+  const [activeTab, setActiveTab] = useState<DetailTabId>('tarefas');
   
   // Estado do simulador
   const [tipoSimulacao, setTipoSimulacao] = useState('');
@@ -1040,7 +1050,7 @@ const OportunidadesPageInner = () => {
     estado: "",
     // Dados da Oportunidade
     produto: "",
-    // 🎯 NOVA TAXONOMIA PF - Campos do catálogo
+    // NOVA TAXONOMIA PF - Campos do catálogo
     productId: "",
     productCode: "",
     subproductId: "",
@@ -1078,7 +1088,7 @@ const OportunidadesPageInner = () => {
     franqueado_id: null as number | null,
     // Motivo de pendência
     pendenciaMotivo: "",
-    // 🎯 Dados Onboarding Parceiro Comercial
+    // Dados Onboarding Parceiro Comercial
     parceiroTipo: "",
     razaoSocial: "",
     cnpj: "",
@@ -1088,7 +1098,7 @@ const OportunidadesPageInner = () => {
     cpfResponsavel: "",
     cargoResponsavel: "",
     documentosEnviados: [] as string[],
-    // 🎯 Dados Onboarding Colaborador FINQZ
+    // Dados Onboarding Colaborador FINQZ
     vinculoTipo: "",
     cargo: "",
     departamento: "",
@@ -1098,7 +1108,7 @@ const OportunidadesPageInner = () => {
     disponibilidade: [] as string[]
   });
   
-  // 🎯 Estado para Assinatura Digital
+  // Estado para Assinatura Digital
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureLoading, setSignatureLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ProvedorAssinatura>('clicksign');
@@ -1155,7 +1165,7 @@ const OportunidadesPageInner = () => {
     }
   };
   
-  // 🎯 Função para confirmar assinatura e executar automações
+  // Função para confirmar assinatura e executar automações
   const handleConfirmarAssinatura = async () => {
     if (!editingOportunidade && !selectedLead) {
       alert('Selecione uma oportunidade primeiro');
@@ -1227,7 +1237,7 @@ const OportunidadesPageInner = () => {
       const sucesso = resultados.filter(r => r.status === 'sucesso').length;
       const erro = resultados.filter(r => r.status === 'erro').length;
       
-      alert(`🎉 Contrato assinado com sucesso!\n\n📋 Automações executadas:\n✅ ${sucesso} concluídas\n${erro > 0 ? `❌ ${erro} com erro` : ''}`);
+      alert(`Contrato assinado com sucesso.\n\nAutomações executadas:\n${sucesso} concluídas\n${erro > 0 ? `${erro} com erro` : ''}`);
       
       // Fechar modal se estiver editando
       if (editingOportunidade) {
@@ -1240,10 +1250,10 @@ const OportunidadesPageInner = () => {
     }
   };
   
-  // 🎯 Tipo de pessoa para CPF/CNPJ
+  // Tipo de pessoa para CPF/CNPJ
   const [tipoPessoa, setTipoPessoa] = useState<"CPF" | "CNPJ">("CPF");
   
-  // 🎯 Funções de máscara (igual Clientes)
+  // Funções de máscara (igual Clientes)
   const formatCPFInput = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     if (digits.length <= 3) return digits;
@@ -1269,7 +1279,7 @@ const OportunidadesPageInner = () => {
     return `(${digits.slice(0,2)}) ${digits.slice(2,3)} ${digits.slice(3,7)}-${digits.slice(7)}`;
   };
   
-  // 🎯 Dados de Hierarquia Comercial (mock - substituir por API depois)
+  // Dados de Hierarquia Comercial (mock - substituir por API depois)
   const [racionalCompanies, setRacionalCompanies] = useState<any[]>([
     { id: 1, nome: "Racional Company SP" },
     { id: 2, nome: "Racional Company RJ" },
@@ -1291,12 +1301,12 @@ const OportunidadesPageInner = () => {
     { id: 5, nome: "Franqueado Carlos Lima", franquia_id: 4 }
   ]);
   
-  // 🎯 Estado da Hierarquia selecionada
+  // Estado da Hierarquia selecionada
   const [selectedRacionalCompany, setSelectedRacionalCompany] = useState<number | null>(null);
   const [selectedFranquia, setSelectedFranquia] = useState<number | null>(null);
   const [selectedFranqueado, setSelectedFranqueado] = useState<number | null>(null);
   
-  // 🎯 Handlers de Hierarquia
+  // Handlers de Hierarquia
   const handleRacionalCompanyChange = (companyId: number | null) => {
     setSelectedRacionalCompany(companyId);
     setSelectedFranquia(null);
@@ -1384,7 +1394,7 @@ const OportunidadesPageInner = () => {
       catalogPipelineOptions.find((pipeline) => pipeline.id === produtoId)?.productId || produtoId;
 
     setSelectedProductId(selectedCatalogProductId);
-    // 🎯 Limpar subproduto e modalidade ao mudar de produto
+    // Limpar subproduto e modalidade ao mudar de produto
     setSelectedSubproductId("");
     setSelectedModality("");
     
@@ -1413,21 +1423,26 @@ const OportunidadesPageInner = () => {
         nome: selectedCatalogPipeline.name,
         tipo: inferPipelineTipo(selectedCatalogPipeline.id),
         descricao: selectedCatalogPipeline.name,
-        etapas: selectedCatalogStages.map((stage) => normalizeKey(stage)),
+        etapas: selectedCatalogStages,
       }
     : null;
   
-  // ✅ ETAPAS DINÂMICAS do pipeline atual - usar OFICIAL_ETAPAS como base
-  // ✅ HARDENING: Com normalizeKey e fallback seguro
+  // ETAPAS DINÂMICAS do pipeline atual - usar OFICIAL_ETAPAS como base
+  // HARDENING: Com normalizeKey e fallback seguro
   const etapasAtivasRaw = Array.isArray(currentPipelineConfig?.etapas)
     ? currentPipelineConfig.etapas.map((key: string, index: number) => {
-        const etapaOriginal = OFICIAL_ETAPAS.find(e => normalizeKey(e.key) === normalizeKey(key));
+        const stageName = selectedCatalogStages[index] || String(key);
+        const etapaOriginal = OFICIAL_ETAPAS.find(
+          e => normalizeKey(e.key) === normalizeKey(key) || normalizeKey(e.label) === normalizeKey(stageName)
+        );
         return {
-          id: key,
-          nome: etapaOriginal?.label ?? String(key),
+          id: normalizeKey(key),
+          nome: etapaOriginal?.label ?? stageName,
           ordem: index + 1,
           ativo: true,
-          cor: typeof getCorEtapa === "function" ? getCorEtapa(key, index) : "#3B82F6"
+          cor: currentPipelineConfig
+            ? getPipelineStageColor(currentPipelineConfig.id, stageName, index)
+            : getCorEtapa(normalizeKey(key), index)
         };
       })
     : [];
@@ -1448,16 +1463,16 @@ const OportunidadesPageInner = () => {
   const isColaborador = currentPipelineConfig ? isPipelineColaborador(currentPipelineConfig.id) : false;
   const pipelineTipoLabel = currentPipelineConfig ? getPipelineTipoLabel(currentPipelineConfig.tipo) : '';
   
-  // ✅ BLINDAGEM DE ARRAY - Filter oportunidades - based on current pipeline (novo sistema PIPELINES)
+  // BLINDAGEM DE ARRAY - Filter oportunidades - based on current pipeline (novo sistema PIPELINES)
   const oportunidadesBase = Array.isArray(safeOportunidadesKanban) ? safeOportunidadesKanban : [];
   const equivalentPipelineIds = currentPipelineConfig
     ? getEquivalentPipelineIds(currentPipelineConfig.id)
     : [];
   const oportunidades = oportunidadesBase.filter((o: any) => {
-    // ✅ Proteção: verificar se o objeto existe
+    // Proteção: verificar se o objeto existe
     if (!o) return false;
     
-    // ✅ Se currentPipelineConfig não existe, não filtrar (mostrar tudo)
+    // Se currentPipelineConfig não existe, não filtrar (mostrar tudo)
     if (!currentPipelineConfig?.id) return true;
 
     // Se a oportunidade tem o novo campo pipeline_id, usar ele
@@ -1469,17 +1484,17 @@ const OportunidadesPageInner = () => {
       const mappedPipelineId = mapearProdutoLegadoParaPipeline(o.produto);
       return mappedPipelineId ? equivalentPipelineIds.includes(mappedPipelineId) : false;
     }
-    // ✅ Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
+    // Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
     return true;
   });
   
   // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
-  // ✅ Fallback seguro para useTenantFilter
+  // Fallback seguro para useTenantFilter
   const tenantFilteredResult = useTenantFilter(oportunidades);
   const tenantFilteredOportunidades = Array.isArray(tenantFilteredResult) ? tenantFilteredResult : [];
   
   // Filter by search term - includes nome, CPF/CNPJ, telefone
-  // ✅ OTIMIZAÇÃO: useMemo para evitar recálculos desnecessários
+  // OTIMIZAÇÃO: useMemo para evitar recálculos desnecessários
   const filteredOportunidadesBase = Array.isArray(tenantFilteredOportunidades) ? tenantFilteredOportunidades : [];
   const filteredOportunidades = useMemo(() => filteredOportunidadesBase.filter((op: any) => {
     // Filter by search query
@@ -1580,7 +1595,7 @@ const OportunidadesPageInner = () => {
     return true;
   }), [filteredOportunidadesBase, searchQuery, filters]);
   
-  // ✅ OTIMIZAÇÃO: Agrupar oportunidades por etapa uma única vez com ordenação
+  // OTIMIZAÇÃO: Agrupar oportunidades por etapa uma única vez com ordenação
   const oportunidadesPorEtapa = useMemo(() => {
     const etapas = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
     const resultado: Record<string, typeof filteredOportunidades> = {};
@@ -1612,7 +1627,7 @@ const OportunidadesPageInner = () => {
     return resultado;
   }, [filteredOportunidades, columnSort, etapasAtivas]);
 
-  // ✅ OTIMIZAÇÃO: Calcular totais por etapa uma única vez
+  // OTIMIZAÇÃO: Calcular totais por etapa uma única vez
   const totaisPorEtapa = useMemo(() => {
     const resultado: Record<string, number> = {};
     for (const etapa of etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE) {
@@ -1655,12 +1670,12 @@ const OportunidadesPageInner = () => {
 
     if (!cardId) return;
 
-    // ✅ VALIDAÇÃO DE AVANÇO: Verifica campos obrigatórios por etapa
+    // VALIDAÇÃO DE AVANÇO: Verifica campos obrigatórios por etapa
     const oportunidade = safeOportunidadesKanban.find(o => o.id.toString() === cardId);
     if (oportunidade && etapaId !== 'perdido') {
       const validacao = validarEtapa(oportunidade, etapaId as EtapaKey);
       if (!validacao.valido) {
-        alert(`⚠️ Não é possível avançar para esta etapa!\n\n${validacao.mensagem}`);
+        alert(`Não é possível avançar para esta etapa.\n\n${validacao.mensagem}`);
         setDraggedCard(null);
         setDragOverColumn(null);
         return;
@@ -1919,7 +1934,7 @@ const OportunidadesPageInner = () => {
       // Tags
       tags: Array.isArray(formData.tags) ? formData.tags : [],
       
-      // 🎯 Dados Onboarding Parceiro Comercial
+      // Dados Onboarding Parceiro Comercial
       parceiroTipo: formData.parceiroTipo || "",
       razaoSocial: formData.razaoSocial || "",
       cnpj: formData.cnpj || "",
@@ -1930,7 +1945,7 @@ const OportunidadesPageInner = () => {
       cargoResponsavel: formData.cargoResponsavel || "",
       documentosEnviados: formData.documentosEnviados || [],
       
-      // 🎯 Dados Onboarding Colaborador FINQZ
+      // Dados Onboarding Colaborador FINQZ
       vinculoTipo: formData.vinculoTipo || "",
       cargo: formData.cargo || "",
       departamento: formData.departamento || "",
@@ -1956,7 +1971,7 @@ const OportunidadesPageInner = () => {
       conta: "", tipoConta: "", titular: "", documentoTitular: "", pixTipo: "", pixChave: "",
       rdStatus: "nao_consultado", rdConsultedAt: "", rdNotes: "",
       racionalCompany_id: null, franquia_id: null, franqueado_id: null, pendenciaMotivo: "",
-      // 🎯 Onboarding fields reset
+      // Onboarding fields reset
       parceiroTipo: "", razaoSocial: "", cnpj: "", telefoneComercial: "", emailCorporativo: "",
       responsavelLegal: "", cpfResponsavel: "", cargoResponsavel: "", documentosEnviados: [],
       vinculoTipo: "", cargo: "", departamento: "", salario: "", formacao: "",
@@ -2038,7 +2053,7 @@ const OportunidadesPageInner = () => {
 
       pendenciaMotivo: etapaId === "pendencia" ? formData.pendenciaMotivo : "",
       
-      // 🎯 Dados Onboarding Parceiro Comercial
+      // Dados Onboarding Parceiro Comercial
       parceiroTipo: formData.parceiroTipo || "",
       razaoSocial: formData.razaoSocial || "",
       cnpj: formData.cnpj || "",
@@ -2049,7 +2064,7 @@ const OportunidadesPageInner = () => {
       cargoResponsavel: formData.cargoResponsavel || "",
       documentosEnviados: formData.documentosEnviados || [],
       
-      // 🎯 Dados Onboarding Colaborador FINQZ
+      // Dados Onboarding Colaborador FINQZ
       vinculoTipo: formData.vinculoTipo || "",
       cargo: formData.cargo || "",
       departamento: formData.departamento || "",
@@ -2334,7 +2349,7 @@ const OportunidadesPageInner = () => {
     if (etapaAnterior !== editDrawerData.etapa_id && editDrawerData.etapa_id !== 'perdido') {
       const validacao = validarEtapa(editDrawerData, editDrawerData.etapa_id as EtapaKey);
       if (!validacao.valido) {
-        alert(`⚠️ Não é possível avançar para esta etapa!\n\n${validacao.mensagem}`);
+        alert(`Não é possível avançar para esta etapa.\n\n${validacao.mensagem}`);
         return;
       }
     }
@@ -2449,8 +2464,6 @@ const OportunidadesPageInner = () => {
     return (
       <div className="space-y-5">
         <PageHeader
-          view={viewMode}
-          setView={setViewMode}
           onSearch={setSearchQuery}
           onRefresh={() => {}}
           extraLeft={pipelineSelectControl}
@@ -2482,16 +2495,15 @@ const OportunidadesPageInner = () => {
     <div className="space-y-5">
       {/* Header Padronizado - COM SELECT DE PIPELINE NA MESMA LINHA */}
       <PageHeader
-        view={viewMode}
-        setView={setViewMode}
-        onSearch={setSearchQuery}
-        onRefresh={() => {}}
-        onCreate={() => setShowModal(true)}
-        createLabel="Nova Oportunidade"
-        // Ativar FilterDrawer (padrão premium)
-        onOpenFilters={() => setShowFilterDrawer(true)}
-        extraLeft={pipelineSelectControl}
-        filters={[
+  title="Pipeline"
+  icon={<TrendingUp className="w-5 h-5 text-blue-400" />}
+  onSearch={setSearchQuery}
+  onRefresh={() => {}}
+  onCreate={() => setShowModal(true)}
+  createLabel="Nova Oportunidade"
+  onOpenFilters={() => setShowFilterDrawer(true)}
+  extraLeft={pipelineSelectControl}
+  filters={[
           { label: 'Etapa', key: 'etapa_id', type: 'select', options: OFICIAL_ETAPAS.map(e => ({ label: e.label, value: e.key })), placeholder: 'Todas as etapas' },
           { label: 'Status', key: 'status', type: 'select', options: [
             { label: 'Ativo', value: 'ativo' },
@@ -2711,8 +2723,8 @@ const OportunidadesPageInner = () => {
       {/* 🚨 ÁREA DO PIPELINE - COM SCROLL VERTICAL E HORIZONTAL */}
       <div className="flex-1 overflow-auto bg-gray-50">
         <div className="flex gap-3 p-4 min-h-full">
-          {/* ✅ Kanban dinâmico baseado no pipeline configurado */}
-          {/* ✅ OTIMIZAÇÃO: Usar dados pré-calculados de oportunidadesPorEtapa */}
+          {/* Kanban dinâmico baseado no pipeline configurado */}
+          {/* OTIMIZAÇÃO: Usar dados pré-calculados de oportunidadesPorEtapa */}
           {(etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map((etapa) => {
           const columnOportunidades = oportunidadesPorEtapa[etapa.id] || [];
           const totalValor = totaisPorEtapa[etapa.id] || 0;
@@ -3144,7 +3156,7 @@ const OportunidadesPageInner = () => {
                       {safeProdutos.filter(sp => !catalogProductOptions.find(cp => cp.name === sp.nome)).map((p) => <option key={`legacy-${p.id}`} value={p.nome}>{p.nome}</option>)}
                     </select>
                   </div>
-                  {/* 🎯 Subproduto */}
+                  {/* Subproduto */}
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Subproduto</label>
                     <select 
@@ -3168,7 +3180,7 @@ const OportunidadesPageInner = () => {
                       {catalogSubproducts.map((sp) => <option key={sp.id} value={sp.id}>{sp.name}</option>)}
                     </select>
                   </div>
-                  {/* 🎯 Modalidade */}
+                  {/* Modalidade */}
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Modalidade</label>
                     <select 
@@ -3238,7 +3250,7 @@ const OportunidadesPageInner = () => {
                 </div>
               </div>
               
-              {/* 🎯 SEÇÃO ONBOARDING PARCEIROS COMERCIAIS */}
+              {/* SEÇÃO ONBOARDING PARCEIROS COMERCIAIS */}
               {isParceiro && (
                 <div className="border-b pb-3 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-lg">
                   <h3 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
@@ -3332,7 +3344,7 @@ const OportunidadesPageInner = () => {
                   
                   {/* Documentos Obrigatórios Checklist */}
                   <div className="mt-4 p-3 bg-[#111827] rounded-lg border border-purple-200">
-                    <h4 className="text-xs font-semibold text-purple-800 mb-2">📋 Documentos Obrigatórios</h4>
+                    <h4 className="text-xs font-semibold text-purple-800 mb-2">Documentos Obrigatórios</h4>
                     <div className="space-y-2">
                       {documentosObrigatorios.map((doc: string) => (
                         <label key={doc} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
@@ -3356,7 +3368,7 @@ const OportunidadesPageInner = () => {
                 </div>
               )}
               
-              {/* 🎯 SEÇÃO ONBOARDING COLABORADOR FINQZ */}
+              {/* SEÇÃO ONBOARDING COLABORADOR FINQZ */}
               {isColaborador && (
                 <div className="border-b pb-3 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
                   <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
@@ -3468,7 +3480,7 @@ const OportunidadesPageInner = () => {
                   
                   {/* Documentos Obrigatórios Checklist */}
                   <div className="mt-4 p-3 bg-[#111827] rounded-lg border border-green-200">
-                    <h4 className="text-xs font-semibold text-green-800 mb-2">📋 Documentos Obrigatórios</h4>
+                    <h4 className="text-xs font-semibold text-green-800 mb-2">Documentos Obrigatórios</h4>
                     <div className="space-y-2">
                       {documentosObrigatorios.map((doc: string) => (
                         <label key={doc} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
@@ -3492,7 +3504,7 @@ const OportunidadesPageInner = () => {
                 </div>
               )}
               
-              {/* 🎯 SEÇÃO ASSINATURA DIGITAL */}
+              {/* SEÇÃO ASSINATURA DIGITAL */}
               {requerAssinaturaDigital && (
                 <div className="border-b pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg">
                   <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
@@ -3525,7 +3537,7 @@ const OportunidadesPageInner = () => {
                         </a>
                       )}
                       
-                      {/* 🎯 Botão para confirmar assinatura concluída */}
+                      {/* Botão para confirmar assinatura concluída */}
                       {envelopeStatus.status === 'enviado' && (
                         <button
                           type="button"
@@ -3533,7 +3545,7 @@ const OportunidadesPageInner = () => {
                           className="mt-3 w-full py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
                         >
                           <CheckCircle size={16} />
-                          ✅ Confirmar Assinatura Concluída
+                          Confirmar Assinatura Concluída
                         </button>
                       )}
                     </div>
@@ -3587,7 +3599,7 @@ const OportunidadesPageInner = () => {
                   
                   {!formData.email && (
                     <p className="text-xs text-amber-600 mt-2 text-center">
-                      ⚠️ Cadastre um e-mail para enviar a solicitação de assinatura
+                      Cadastre um e-mail para enviar a solicitação de assinatura
                     </p>
                   )}
                 </div>
@@ -4229,8 +4241,8 @@ const OportunidadesPageInner = () => {
                   <div className="bg-[#111827] rounded-xl border border-[#1f2937] shadow-sm">
                     <div className="border-b border-[#1f2937] px-4">
                       <div className="flex gap-1">
-                        {[{ id: 'tarefas', label: 'Tarefas', icon: Check }, { id: 'anotacoes', label: 'Anotações', icon: FileText }, { id: 'simulador', label: 'Simulador', icon: Calculator }, { id: 'tags', label: 'Tags', icon: Tag }, { id: 'anexos', label: 'Anexos', icon: Paperclip }, { id: 'historico', label: 'Histórico', icon: History }].map((tab) => (
-                          <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 ${activeTab === tab.id ? 'border-[#000dff] text-[#000dff]' : 'border-transparent text-slate-500'}`}><tab.icon size={16} />{tab.label}</button>
+                        {DETAIL_TABS.map((tab) => (
+                          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 ${activeTab === tab.id ? 'border-[#000dff] text-[#000dff]' : 'border-transparent text-slate-500'}`}><tab.icon size={16} />{tab.label}</button>
                         ))}
                       </div>
                     </div>
@@ -5155,7 +5167,7 @@ const OportunidadesPageInner = () => {
                 </div>
               </div>
               
-              {/* 🎯 SEÇÃO ONBOARDING PARCEIROS COMERCIAIS (Edit Form) */}
+              {/* SEÇÃO ONBOARDING PARCEIROS COMERCIAIS (Edit Form) */}
               {isParceiro && (
                 <div className="border-b pb-3 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-lg">
                   <h3 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
@@ -5196,7 +5208,7 @@ const OportunidadesPageInner = () => {
                 </div>
               )}
               
-              {/* 🎯 SEÇÃO ONBOARDING COLABORADOR FINQZ (Edit Form) */}
+              {/* SEÇÃO ONBOARDING COLABORADOR FINQZ (Edit Form) */}
               {isColaborador && (
                 <div className="border-b pb-3 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
                   <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
@@ -5249,7 +5261,7 @@ const OportunidadesPageInner = () => {
   );
 };
 
-// 🎯 COMPONENTE DE ERRO LOCAL - Exibe erro de runtime de forma amigável
+// COMPONENTE DE ERRO LOCAL - Exibe erro de runtime de forma amigável
 const PipelineRuntimeError = ({ error }: { error: any }) => (
   <div className="p-6">
     <div className="bg-[#111827] border border-red-200 rounded-xl p-6">
@@ -5266,7 +5278,7 @@ const PipelineRuntimeError = ({ error }: { error: any }) => (
   </div>
 );
 
-// 🎯 WRAPPER SEGURO - Captura erros de runtime e exibe UI amigável
+// WRAPPER SEGURO - Captura erros de runtime e exibe UI amigável
 const OportunidadesPageSafe = () => {
   try {
     return <OportunidadesPageInner />;

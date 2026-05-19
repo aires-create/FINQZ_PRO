@@ -283,11 +283,11 @@ const calculateMetrics = (rows: DashboardRow[]) => {
 };
 
 const FUNNEL_GRADIENTS = [
-  "linear-gradient(135deg, #1878ff 0%, #155ed9 100%)",
-  "linear-gradient(135deg, #3c63f6 0%, #4148d7 100%)",
-  "linear-gradient(135deg, #7b3dd6 0%, #9235d1 100%)",
-  "linear-gradient(135deg, #f47c18 0%, #f59e0b 100%)",
-  "linear-gradient(135deg, #f7c915 0%, #eaa10b 100%)",
+  "linear-gradient(135deg, #1d6fff 0%, #155ee8 100%)",
+  "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+  "linear-gradient(135deg, #475569 0%, #334155 100%)",
+  "linear-gradient(135deg, #b7791f 0%, #a16207 100%)",
+  "linear-gradient(135deg, #047857 0%, #065f46 100%)",
 ];
 
 const FUNNEL_WIDTH_FLOORS = [96, 78, 60, 45, 34];
@@ -370,16 +370,8 @@ function Sparkline({ values, id, color = "#1d6fff" }: { values: number[]; id: st
           <stop offset="72%" stopColor={color} stopOpacity="0.05" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
-        <filter id={`${gradientId}-glow`} x="-14%" y="-26%" width="128%" height="152%">
-          <feGaussianBlur stdDeviation="0.95" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
       <path d={areaPath} fill={`url(#${gradientId})`} />
-      <path d={linePath} fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.18" filter={`url(#${gradientId}-glow)`} />
       <path d={linePath} fill="none" stroke={color} strokeWidth="1.45" strokeLinecap="round" strokeLinejoin="round" opacity="0.82" />
     </svg>
   );
@@ -419,17 +411,9 @@ function RevenueChart({ series, previousSeries }: { series: { label: string; val
             <stop offset="62%" stopColor="var(--chart-fill)" stopOpacity="0.08" />
             <stop offset="100%" stopColor="var(--chart-fill)" stopOpacity="0" />
           </linearGradient>
-          <filter id="revenueGlow" x="-8%" y="-22%" width="116%" height="144%">
-            <feGaussianBlur stdDeviation="1.15" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
         <path d={areaPath} fill="url(#revenueFill)" stroke="none" />
         <path d={previousPath} fill="none" stroke="var(--chart-line-2)" strokeWidth="1.35" strokeDasharray="6 7" strokeLinecap="round" strokeLinejoin="round" opacity="0.42" />
-        <path d={linePath} fill="none" stroke="var(--chart-line)" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.14" filter="url(#revenueGlow)" />
         <path d={linePath} fill="none" stroke="var(--chart-line)" strokeWidth="2.05" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
         {points.map((point, index) => {
           const item = series[index];
@@ -469,13 +453,13 @@ function FunnelVisual({
           <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_64px] items-center gap-3">
             <div className="flex min-w-0 justify-center">
               <div
-                className="flex h-11 flex-col items-center justify-center text-center text-xs font-semibold text-white shadow-[0_12px_28px_rgba(29,111,255,0.16)] transition-all duration-200 hover:scale-[1.01] sm:h-[52px]"
+                className="flex h-11 flex-col items-center justify-center text-center text-xs font-semibold text-white transition-colors duration-200 sm:h-[52px]"
                 style={{
                   width: `${visualWidth}%`,
                   minWidth: row.count > 0 ? "8.25rem" : "6.5rem",
                   background: FUNNEL_GRADIENTS[index] ?? FUNNEL_GRADIENTS[0],
                   clipPath: `polygon(${inset}% 0, ${100 - inset}% 0, ${100 - inset - 8}% 100%, ${inset + 8}% 100%)`,
-                  filter: "drop-shadow(0 0 10px rgba(29, 111, 255, 0.12))",
+                  filter: "none",
                 }}
               >
                 <span className="leading-tight">{row.label}</span>
@@ -502,7 +486,7 @@ function DonutChart({
   return (
     <div className="grid items-center gap-5 lg:grid-cols-[11.5rem_minmax(0,1fr)] xl:grid-cols-[11rem_minmax(0,1fr)]">
       <div
-        className="relative mx-auto h-40 w-40 shrink-0 rounded-full border border-[var(--border-default)] shadow-xl shadow-blue-950/15"
+        className="relative mx-auto h-40 w-40 shrink-0 rounded-full border border-[var(--border-default)] shadow-panel"
         style={{ background: gradient }}
       >
         <div className="absolute inset-7 flex flex-col items-center justify-center rounded-full border border-[var(--border-muted)] bg-[var(--bg-elevated)] text-center shadow-inner">
@@ -928,7 +912,7 @@ export default function Dashboard() {
           >
             <Menu size={18} />
           </button>
-          <h2 className="text-2xl font-extrabold leading-tight tracking-normal text-[var(--text-primary)] sm:text-3xl">
+          <h2 className="text-2xl font-semibold leading-tight text-[var(--text-primary)] sm:text-3xl">
             Dashboard
           </h2>
         </div>
@@ -966,7 +950,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={handleRefresh}
-            className="h-11 rounded-lg bg-gradient-to-r from-[#136fff] to-[#2356e8] px-4 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 hover:shadow-blue-600/30"
+            className="h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
           >
             <span className="flex items-center gap-2">
               <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
@@ -1137,7 +1121,7 @@ export default function Dashboard() {
                     className="group flex min-h-[178px] min-w-0 flex-col rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/30 hover:bg-[var(--bg-elevated)]"
                   >
                     <div className="mb-3 flex h-8 items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1473ff] to-[#1d4ed8] text-white shadow-sm shadow-blue-600/15">
+                      <div className="finqz-icon-badge flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
                         <Icon size={16} />
                       </div>
                       <p className="min-w-0 truncate text-sm font-bold text-[var(--text-primary)]">{product.produto}</p>
@@ -1261,7 +1245,7 @@ export default function Dashboard() {
                     alertFilter ? "cursor-pointer hover:-translate-y-0.5 hover:border-blue-500/25 hover:bg-[var(--bg-elevated)]" : "hover:border-[var(--border-strong)]"
                   }`}
                 >
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${visual.bg} ${visual.color}`}>
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] ${visual.color}`}>
                     <Icon size={18} strokeWidth={1.8} />
                   </div>
                   <div className="min-w-0">

@@ -53,11 +53,11 @@ body {
   .app-section,
   .card {
     @apply rounded-lg border;
-    background: var(--bg-surface-soft);
+    background: var(--bg-surface);
     border-color: var(--border-default);
     box-shadow: var(--shadow-panel);
     color: var(--text-primary);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
   }
 
   .app-section {
@@ -66,15 +66,20 @@ body {
 
   .finqz-card {
     @apply relative overflow-hidden rounded-lg border;
-    background:
-      linear-gradient(150deg, rgba(29, 111, 255, 0.055), transparent 34%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
-      var(--bg-surface);
+    background: var(--bg-surface);
     border-color: var(--border-default);
     box-shadow: var(--shadow-card);
     color: var(--text-primary);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
     transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .finqz-page-header {
+    @apply flex flex-col gap-4 rounded-lg border p-3 sm:p-4;
+    background: var(--bg-surface);
+    border-color: var(--border-default);
+    box-shadow: var(--shadow-panel);
+    color: var(--text-primary);
   }
 
   .finqz-card-hover {
@@ -85,46 +90,78 @@ body {
   .card-hover:hover {
     background: var(--bg-elevated);
     border-color: var(--border-strong);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-panel);
     transform: translateY(-1px);
   }
 
   .finqz-kpi-card {
-    @apply relative min-h-[128px] overflow-hidden rounded-lg border p-4 transition-all duration-200;
-    background:
-      radial-gradient(circle at 18% 12%, var(--color-primary-faint), transparent 30%),
-      linear-gradient(150deg, rgba(255, 255, 255, 0.032), transparent 42%),
-      var(--bg-surface);
+    @apply relative min-h-[112px] overflow-hidden rounded-lg border p-4 transition-all duration-200;
+    background: var(--bg-surface);
     border-color: var(--border-default);
     box-shadow: var(--shadow-panel);
     color: var(--text-primary);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
   }
 
   .finqz-kpi-card:hover {
     border-color: var(--border-strong);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-panel);
   }
 
   .finqz-sidebar {
     background: var(--sidebar-bg);
     border-color: var(--sidebar-border);
     color: var(--sidebar-text);
-    box-shadow: 18px 0 52px rgba(0, 0, 0, 0.24);
+    box-shadow: 12px 0 30px rgba(0, 0, 0, 0.16);
+  }
+
+  .finqz-sidebar-brand {
+    display: inline-flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.08rem;
+  }
+
+  .finqz-sidebar-brand span {
+    margin-left: 0.18rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--sidebar-muted);
+    letter-spacing: 0;
+  }
+
+  .finqz-sidebar-brand-compact .finqz-sidebar-logo {
+    width: 86px;
+  }
+
+  .finqz-sidebar-logo {
+    display: block;
+    width: 112px;
+    height: auto;
+    object-fit: contain;
+    filter: none;
+    mix-blend-mode: multiply;
+  }
+
+  .dark .finqz-sidebar-logo {
+    filter: invert(1) grayscale(1) brightness(2.35) contrast(1.04);
+    mix-blend-mode: screen;
   }
 
   .finqz-topbar {
     background: var(--topbar-bg);
     border-color: var(--border-muted);
     color: var(--text-primary);
-    backdrop-filter: blur(18px);
+    backdrop-filter: none;
   }
 
   .finqz-nav-active {
     background: var(--nav-active-bg);
     color: var(--nav-active-text);
-    box-shadow: inset 0 0 0 1px rgba(29, 111, 255, 0.16), 0 10px 22px rgba(29, 111, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(29, 111, 255, 0.12);
   }
 
   .finqz-nav-idle {
@@ -615,31 +652,22 @@ html:not(.dark) [class*="bg-[#2673c8]"] .text-white {
   border-radius: 999px !important;
 }
 
-.auth-login-wordmark {
+.auth-login-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #ffffff;
   text-shadow: 0 0 22px rgba(255, 255, 255, 0.12);
 }
 
-.auth-login-wordmark-main {
-  position: relative;
-  display: inline-flex;
-  align-items: flex-start;
-  font-size: clamp(3rem, 8vw, 4rem);
-  font-weight: 800;
-  line-height: 0.88;
-  letter-spacing: 0;
-  color: #ffffff !important;
-}
-
-.auth-login-wordmark-main sup {
-  margin-left: 0.18rem;
-  margin-top: 0.25rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1;
+.auth-login-logo {
+  display: block;
+  width: min(190px, 70vw);
+  height: auto;
+  object-fit: contain;
+  filter: invert(1) grayscale(1) brightness(2.35) contrast(1.04);
+  mix-blend-mode: screen;
+  opacity: 0.98;
+  user-select: none;
 }
 
 .auth-login-product-mark {
@@ -719,4 +747,244 @@ html:not(.dark) [class*="bg-[#2673c8]"] .text-white {
 
 .auth-login-code-label {
   color: rgba(209, 226, 255, 0.64) !important;
+}
+
+.whatsapp-workspace {
+  --whatsapp-green: #128c7e;
+  --whatsapp-green-bright: #25d366;
+  --whatsapp-surface: rgba(255, 255, 255, 0.88);
+  --whatsapp-panel: rgba(248, 250, 252, 0.94);
+  --whatsapp-chat-bg: #efeae2;
+  --whatsapp-border: rgba(15, 23, 42, 0.1);
+  --whatsapp-muted: #64748b;
+  background:
+    linear-gradient(180deg, rgba(18, 140, 126, 0.05), transparent 24%),
+    var(--bg-app-gradient);
+}
+
+.dark .whatsapp-workspace {
+  --whatsapp-surface: rgba(15, 23, 42, 0.9);
+  --whatsapp-panel: rgba(2, 6, 23, 0.86);
+  --whatsapp-chat-bg: #0f1d1b;
+  --whatsapp-border: rgba(148, 163, 184, 0.18);
+  --whatsapp-muted: #94a3b8;
+}
+
+.whatsapp-page-content {
+  color: var(--text-primary);
+}
+
+.whatsapp-control {
+  border: 1px solid var(--whatsapp-border);
+  border-radius: 10px;
+  background: var(--whatsapp-surface);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.whatsapp-control:focus {
+  border-color: rgba(37, 211, 102, 0.62);
+  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.16);
+}
+
+.whatsapp-chip {
+  border: 1px solid var(--whatsapp-border);
+  background: var(--whatsapp-surface);
+  color: var(--text-secondary);
+}
+
+.whatsapp-primary-action,
+.whatsapp-queue-toggle {
+  border: 1px solid rgba(37, 211, 102, 0.28);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #25d366, #128c7e);
+  color: #ffffff;
+  font-weight: 700;
+  transition: filter 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 8px 18px rgba(18, 140, 126, 0.14);
+}
+
+.whatsapp-primary-action:hover,
+.whatsapp-queue-toggle:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+.whatsapp-queue-toggle:not(.whatsapp-queue-toggle-active) {
+  background: var(--whatsapp-surface);
+  color: var(--whatsapp-green);
+  box-shadow: none;
+}
+
+.whatsapp-queue-panel,
+.whatsapp-list-card,
+.whatsapp-chat-shell {
+  border: 1px solid var(--whatsapp-border);
+  border-radius: 8px;
+  background: var(--whatsapp-panel);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.whatsapp-queue-header,
+.whatsapp-chat-header,
+.whatsapp-composer {
+  border-color: var(--whatsapp-border);
+  background: var(--whatsapp-surface);
+}
+
+.whatsapp-chat-header {
+  border-bottom: 1px solid var(--whatsapp-border);
+  border-radius: 8px 8px 0 0;
+}
+
+.whatsapp-composer {
+  border-top: 1px solid var(--whatsapp-border);
+  border-radius: 0 0 8px 8px;
+}
+
+.whatsapp-conversation-item {
+  border-color: var(--whatsapp-border) !important;
+  color: var(--text-primary);
+  border-radius: 0;
+}
+
+.whatsapp-conversation-item:hover {
+  background: rgba(37, 211, 102, 0.08);
+}
+
+.whatsapp-conversation-active {
+  background: rgba(37, 211, 102, 0.12);
+  border-left: 3px solid var(--whatsapp-green-bright);
+}
+
+.whatsapp-messages {
+  background:
+    linear-gradient(135deg, rgba(18, 140, 126, 0.045), transparent 32%),
+    var(--whatsapp-chat-bg);
+}
+
+.whatsapp-bubble-out {
+  background: #128c7e;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(18, 140, 126, 0.12);
+}
+
+.whatsapp-bubble-in {
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.financial-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
+}
+
+.financial-kpi-card {
+  min-height: 108px !important;
+  box-shadow: var(--shadow-panel) !important;
+}
+
+.financial-value,
+.financial-date,
+.financial-metric {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.financial-panel {
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.financial-summary-card {
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  padding: 0.85rem 1rem;
+  box-shadow: none;
+}
+
+.financial-table {
+  min-width: 1120px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.financial-table th {
+  background: var(--bg-surface-strong);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.financial-table td {
+  border-top: 1px solid var(--border-muted);
+}
+
+.financial-table tr:hover td {
+  background: var(--bg-surface-hover);
+}
+
+.dark .whatsapp-bubble-in {
+  background: rgba(15, 23, 42, 0.96);
+  color: #e5edf7;
+}
+
+.whatsapp-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0.18rem 0.52rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.whatsapp-status-open {
+  border-color: rgba(37, 211, 102, 0.24);
+  background: rgba(37, 211, 102, 0.12);
+  color: #087857;
+}
+
+.whatsapp-status-waiting {
+  border-color: rgba(245, 158, 11, 0.24);
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+}
+
+.whatsapp-status-bot {
+  border-color: rgba(20, 184, 166, 0.24);
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+}
+
+.whatsapp-status-human {
+  border-color: rgba(14, 165, 233, 0.24);
+  background: rgba(14, 165, 233, 0.12);
+  color: #0369a1;
+}
+
+.whatsapp-status-closed {
+  border-color: rgba(100, 116, 139, 0.28);
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--text-secondary);
+}
+
+.sdr-context-panel {
+  border: 1px solid var(--whatsapp-border, var(--border-default));
+  border-radius: 8px;
+  background: var(--whatsapp-surface, var(--bg-surface));
+  box-shadow: none;
+}
+
+.sdr-context-header {
+  border-bottom: 1px solid var(--whatsapp-border, var(--border-muted));
+  background: rgba(18, 140, 126, 0.08);
+  color: var(--text-primary);
 }

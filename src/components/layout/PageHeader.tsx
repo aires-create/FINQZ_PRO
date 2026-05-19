@@ -1,5 +1,46 @@
 import React, { useEffect, useState } from "react"
-import { Search, RefreshCw, Plus, Filter, Download, LayoutGrid, List, ChevronDown, FileSpreadsheet, FileText, File, Upload } from "lucide-react"
+import { useLocation } from "react-router-dom"
+import {
+  Activity,
+  BarChart3,
+  Bell,
+  Bot,
+  Building2,
+  Calculator,
+  ClipboardList,
+  Database,
+  Download,
+  File,
+  FileBarChart,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  Handshake,
+  Key,
+  LayoutDashboard,
+  LayoutGrid,
+  List,
+  Lock,
+  Mail,
+  Package,
+  Phone,
+  PiggyBank,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  Settings,
+  Shield,
+  Table2,
+  Tag,
+  TrendingUp,
+  Upload,
+  UserCog,
+  Users,
+  Wallet,
+  Zap,
+  ChevronDown
+} from "lucide-react"
 import { zIndex } from "../../config/zIndex"
 import { ImportModal } from "../../design-system/components/ImportModal"
 
@@ -46,14 +87,52 @@ type PageHeaderProps = {
   exportFilename?: string
   exportLabel?: string
   onExport?: (format: string, data: any[]) => void
+  actions?: React.ReactNode
   // Novas props opcionais
   showSearch?: boolean
   showFilter?: boolean
+  activeFiltersCount?: number
+  onClearFilters?: () => void
   // Props de importação
   onImport?: (data: any[]) => void
   importColumns?: ImportColumn[]
   importLabel?: string
   extra?: React.ReactNode
+}
+
+const pageDefaults: Record<string, { title: string; icon: React.ElementType }> = {
+  "/app/dashboard": { title: "Dashboard", icon: LayoutDashboard },
+  "/app/crm/clientes": { title: "Clientes", icon: Users },
+  "/app/crm/pipeline": { title: "Pipeline", icon: TrendingUp },
+  "/app/crm/simulador": { title: "Simulador", icon: Calculator },
+  "/app/operacoes/parceiros": { title: "Parceiros", icon: Handshake },
+  "/app/operacoes/estrutura-comercial": { title: "Estrutura Comercial", icon: Building2 },
+  "/app/operacoes/tabelas-comerciais": { title: "Tabelas Comerciais", icon: Table2 },
+  "/app/operacoes/roteiros": { title: "Roteiros Operacionais", icon: ClipboardList },
+  "/app/operacoes/financeiro": { title: "Financeiro", icon: Wallet },
+  "/app/operacoes/conta-corrente": { title: "Conta Corrente", icon: PiggyBank },
+  "/app/operacoes/relatorios": { title: "Relatórios", icon: BarChart3 },
+  "/app/admin/usuarios": { title: "Usuários", icon: UserCog },
+  "/app/admin/permissoes": { title: "Permissões/Funções", icon: Lock },
+  "/app/admin/auditoria": { title: "Auditoria", icon: Shield },
+  "/app/admin/eventos": { title: "Eventos", icon: Activity },
+  "/app/admin/geral": { title: "Geral", icon: Settings },
+  "/app/admin/tags": { title: "Tags", icon: Tag },
+  "/app/admin/pipelines": { title: "Pipelines", icon: TrendingUp },
+  "/app/admin/integracoes": { title: "Integrações", icon: Key },
+  "/app/admin/automacoes": { title: "Automações", icon: Zap },
+  "/app/admin/notificacoes": { title: "Notificações", icon: Bell },
+  "/app/admin/seguranca": { title: "Segurança", icon: Shield },
+  "/app/admin/bancos": { title: "Bancos & Providers", icon: Building2 },
+  "/app/hub/audiencias": { title: "Audiências", icon: Users },
+  "/app/hub/campanhas": { title: "Campanhas", icon: Send },
+  "/app/hub/disparos": { title: "Disparos", icon: FileBarChart },
+  "/app/hub/whatsapp": { title: "WhatsApp", icon: Phone },
+  "/app/hub/sdr-ia": { title: "SDR IA", icon: Bot },
+  "/app/hub/higienizacao": { title: "Higienização", icon: Database },
+  "/app/hub/mailing": { title: "E-mail Marketing", icon: Mail },
+  "/app/produtos": { title: "Produtos", icon: Package },
+  "/app/automacoes": { title: "Automações", icon: Settings },
 }
 
 // Funções de exportação
@@ -188,13 +267,17 @@ export function PageHeader({
   exportFilename = 'export',
   exportLabel = 'Exportar',
   onExport,
+  actions,
   showSearch,
   showFilter = true,
+  activeFiltersCount,
+  onClearFilters,
   onImport,
   importColumns = [],
   importLabel = "Importar",
   extra
 }: PageHeaderProps) {
+  const location = useLocation()
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   const [showExportDropdown, setShowExportDropdown] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -228,7 +311,7 @@ export function PageHeader({
     }
   }
 
-  const activeFiltersCount = Object.values(localFilterValues).filter(v => v && v !== '').length
+  const computedActiveFiltersCount = activeFiltersCount ?? Object.values(localFilterValues).filter(v => v && v !== '').length
 
   const exportOptions: ExportConfig[] = [
     { label: 'CSV', value: 'csv', icon: <FileText size={16} className="text-green-600" /> },
@@ -238,31 +321,30 @@ export function PageHeader({
 
   const shouldShowSearch = showSearch ?? Boolean(onSearch)
   const shouldShowExport = Boolean(onExport || exportData !== undefined)
-  const headerIconNode = icon
-    ? React.isValidElement(icon)
-      ? icon
-      : React.createElement(icon as React.ElementType, { className: "h-5 w-5" })
+  const defaultPage = pageDefaults[location.pathname]
+  const resolvedTitle = title || defaultPage?.title
+  const resolvedIcon = icon || defaultPage?.icon
+  const headerIconNode = resolvedIcon
+    ? React.isValidElement(resolvedIcon)
+      ? resolvedIcon
+      : React.createElement(resolvedIcon as React.ElementType, { className: "h-5 w-5" })
     : null
+  const trailingActions = actions ?? extra
 
   return (
-    <div className="finqz-card p-3">
-      {(title || subtitle || icon) && (
-        <div className="mb-4 flex items-start gap-3 border-b border-slate-700/50 pb-4">
-          {icon && (
+    <div className="finqz-page-header">
+      {(resolvedTitle || resolvedIcon) && (
+        <div className="flex items-center gap-3">
+          {resolvedIcon && (
             <div className="finqz-icon-badge h-10 w-10 shrink-0">
               {headerIconNode}
             </div>
           )}
           <div className="min-w-0">
-            {title && (
-              <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)] sm:text-2xl">
-                {title}
+            {resolvedTitle && (
+              <h1 className="truncate text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
+                {resolvedTitle}
               </h1>
-            )}
-            {subtitle && (
-              <p className="mt-1 text-sm text-[var(--text-secondary)]">
-                {subtitle}
-              </p>
             )}
           </div>
         </div>
@@ -274,13 +356,13 @@ export function PageHeader({
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {/* Kanban / Lista Toggle */}
           {view && setView && (
-            <div className="flex rounded-lg border border-slate-700/60 bg-[#111827] p-1">
+            <div className="flex rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1">
               <button
                 onClick={() => setView('kanban')}
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'kanban' 
                     ? 'bg-primary text-white shadow-sm' 
-                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-white'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]'
                 }`}
                 title="Kanban"
               >
@@ -291,7 +373,7 @@ export function PageHeader({
                 className={`p-2 rounded-md transition-all duration-200 ${
                   view === 'list' 
                     ? 'bg-primary text-white shadow-sm' 
-                    : 'text-slate-400 hover:bg-white/[0.06] hover:text-white'
+                    : 'text-[var(--text-muted)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]'
                 }`}
                 title="Lista"
               >
@@ -306,10 +388,10 @@ export function PageHeader({
           {/* Buscar - opcional */}
           {shouldShowSearch && (
             <div className="relative min-w-0">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 placeholder="Buscar..."
-                className="h-10 w-full min-w-[220px] max-w-[320px] rounded-lg border border-slate-700/60 bg-[#111827] pl-10 pr-3 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-10 w-full min-w-[220px] max-w-[320px] rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--placeholder)] focus:border-primary focus:ring-2 focus:ring-primary/20"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             </div>
@@ -319,7 +401,7 @@ export function PageHeader({
           {onRefresh && (
             <button 
               onClick={onRefresh} 
-              className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="finqz-control h-10 w-10"
               title="Atualizar"
             >
               <RefreshCw size={18} />
@@ -341,16 +423,16 @@ export function PageHeader({
                   }
                 }}
                 className={`flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors ${
-                  activeFiltersCount > 0 || showFilterDropdown
-                    ? 'border-primary bg-primary/10 text-slate-100'
-                    : 'border-slate-700/60 bg-[#111827] text-slate-300 hover:bg-white/[0.06]'
+                  computedActiveFiltersCount > 0 || showFilterDropdown
+                    ? 'border-primary bg-primary/10 text-[var(--text-primary)]'
+                    : 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)]'
                 }`}
               >
-                <Filter size={16} className={activeFiltersCount > 0 ? 'text-primary-soft' : 'text-slate-500'} />
+                <Filter size={16} className={computedActiveFiltersCount > 0 ? 'text-primary-soft' : 'text-[var(--text-muted)]'} />
                 Filtros
-                {activeFiltersCount > 0 && (
+                {computedActiveFiltersCount > 0 && (
                   <span className="rounded-full bg-primary px-1.5 py-0.5 text-xs text-white">
-                    {activeFiltersCount}
+                    {computedActiveFiltersCount}
                   </span>
                 )}
                 {!onOpenFilters && (
@@ -367,15 +449,16 @@ export function PageHeader({
                     onClick={() => setShowFilterDropdown(false)} 
                   />
                   <div 
-                    className="absolute right-0 top-full mt-2 w-72 rounded-lg border border-slate-700/70 bg-[#0F172A] p-4 shadow-panel"
+                    className="absolute right-0 top-full mt-2 w-72 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-4 shadow-panel"
                     style={{ zIndex: zIndex.dropdown + 1 }}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-slate-100">Filtros</h3>
+                      <h3 className="font-semibold text-[var(--text-primary)]">Filtros</h3>
                       <button 
                         onClick={() => {
                           setLocalFilterValues({})
                           filters.forEach(f => onFilterChange?.(f.key, ''))
+                          onClearFilters?.()
                         }}
                         className="text-xs font-semibold text-primary-soft hover:text-white"
                       >
@@ -385,14 +468,14 @@ export function PageHeader({
                     <div className="space-y-3">
                       {filters.map((filter) => (
                         <div key={filter.key}>
-                          <label className="block text-xs font-medium text-slate-300 mb-1">
+                          <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                             {filter.label}
                           </label>
                           {filter.type === 'select' && filter.options ? (
                             <select
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                              className="w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                              className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/20"
                             >
                               <option value="">{filter.placeholder || 'Selecione...'}</option>
                               {filter.options.map((opt) => (
@@ -405,14 +488,14 @@ export function PageHeader({
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
                               placeholder={filter.placeholder}
-                              className="w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                              className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--placeholder)] focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                           ) : filter.type === 'date' ? (
                             <input
                               type="date"
                               value={localFilterValues[filter.key] || ''}
                               onChange={(e) => handleFilterChange(filter.key, e.target.value)}
-                              className="w-full rounded-lg border border-slate-700/60 bg-[#111827] px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                              className="w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-primary/20"
                             />
                           ) : null}
                         </div>
@@ -434,9 +517,9 @@ export function PageHeader({
           {onImport && importColumns.length > 0 && (
             <button
               onClick={() => setShowImportModal(true)}
-              className="flex h-10 items-center gap-2 rounded-lg border border-slate-700/60 bg-[#111827] px-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+              className="finqz-control h-10 px-3 text-sm"
             >
-              <Upload size={16} className="text-slate-500" />
+              <Upload size={16} className="text-[var(--text-muted)]" />
               {importLabel}
             </button>
           )}
@@ -446,9 +529,9 @@ export function PageHeader({
             <div className="relative">
               <button 
                 onClick={() => setShowExportDropdown(!showExportDropdown)}
-                className="flex h-10 items-center gap-2 rounded-lg border border-slate-700/60 bg-[#111827] px-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                className="finqz-control h-10 px-3 text-sm"
               >
-                <Download size={16} className="text-slate-500" />
+                <Download size={16} className="text-[var(--text-muted)]" />
                 {exportLabel}
                 <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
               </button>
@@ -461,14 +544,14 @@ export function PageHeader({
                     onClick={() => setShowExportDropdown(false)} 
                   />
                   <div 
-                    className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-slate-700/70 bg-[#0F172A] py-2 shadow-panel"
+                    className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] py-2 shadow-panel"
                     style={{ zIndex: zIndex.dropdown + 1 }}
                   >
                     {exportOptions.map((option) => (
                       <button
                         key={option.value}
                         onClick={() => handleExport(option.value)}
-                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-slate-200 transition-colors hover:bg-white/[0.06]"
+                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
                       >
                         {option.icon}
                         {option.label}
@@ -480,7 +563,7 @@ export function PageHeader({
             </div>
           )}
 
-          {extra}
+          {trailingActions}
 
           {/* Novo Cliente - Botão Primário */}
           {onCreate && (

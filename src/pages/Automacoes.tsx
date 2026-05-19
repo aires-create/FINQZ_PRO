@@ -765,7 +765,6 @@ const AutomacoesPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <PageHeader
         title="Automações"
-        subtitle="Configure automações baseadas em eventos do sistema"
       />
       
       <div className="p-6">

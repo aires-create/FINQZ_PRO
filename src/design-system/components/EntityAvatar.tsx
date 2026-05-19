@@ -23,24 +23,24 @@ const sizeConfig: Record<EntitySize, { container: string; icon: number; text: st
 
 const typeConfig: Record<EntityType, { bg: string; icon: React.ReactNode }> = {
   user: {
-    bg: "bg-blue-950/40",
-    icon: <User className="text-blue-300" />,
+    bg: "bg-[var(--bg-elevated)] border border-[var(--border-default)]",
+    icon: <User className="text-[var(--text-muted)]" />,
   },
   cliente: {
-    bg: "bg-emerald-950/40",
-    icon: <User className="text-emerald-300" />,
+    bg: "bg-[var(--bg-elevated)] border border-[var(--border-default)]",
+    icon: <User className="text-[var(--text-muted)]" />,
   },
   parceiro: {
-    bg: "bg-violet-950/40",
-    icon: <Store className="text-violet-300" />,
+    bg: "bg-[var(--bg-elevated)] border border-[var(--border-default)]",
+    icon: <Store className="text-[var(--text-muted)]" />,
   },
   empresa: {
-    bg: "bg-indigo-950/40",
-    icon: <Building2 className="text-indigo-300" />,
+    bg: "bg-[var(--bg-elevated)] border border-[var(--border-default)]",
+    icon: <Building2 className="text-[var(--text-muted)]" />,
   },
   sistema: {
-    bg: "bg-slate-800",
-    icon: <Shield className="text-slate-300" />,
+    bg: "bg-[var(--bg-elevated)] border border-[var(--border-default)]",
+    icon: <Shield className="text-[var(--text-muted)]" />,
   },
 };
 
@@ -77,7 +77,7 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
     <div
       className={`${sizes.container} ${config.bg} rounded-full flex items-center justify-center ${className}`}
     >
-      <span className="font-medium text-slate-200">
+      <span className="font-medium text-[var(--text-secondary)]">
         {getInitials(name)}
       </span>
     </div>

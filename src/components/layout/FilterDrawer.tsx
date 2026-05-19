@@ -151,7 +151,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
 
       {/* Drawer: container fixed inset-y-0 right-0, width responsivo */}
       <div
-        className={`fixed inset-y-0 right-0 w-full sm:max-w-md bg-gradient-to-br from-slate-900/95 to-slate-800/90 backdrop-blur-2xl border border-white/20 shadow-2xl transform transition-transform duration-300 ease-out flex flex-col h-full ${
+        className={`fixed inset-y-0 right-0 w-full sm:max-w-md border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-panel transform transition-transform duration-300 ease-out flex flex-col h-full ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ zIndex: zIndex.drawer + 1 }}
@@ -160,23 +160,20 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         aria-labelledby="filter-drawer-title"
       >
         {/* Header: shrink-0, border-b */}
-        <div className="shrink-0 flex items-center justify-between px-6 py-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
+        <div className="shrink-0 flex items-center justify-between px-6 py-5 border-b border-[var(--border-muted)] bg-[var(--bg-surface-strong)]">
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="p-3 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl border border-white/10 shadow-lg">
-                <Filter className="w-6 h-6 text-blue-400" />
-              </div>
-              <div className="absolute -inset-1 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-xl blur-lg -z-10" />
+            <div className="finqz-icon-badge h-10 w-10">
+              <Filter className="w-5 h-5" />
             </div>
             <div>
               <h2
                 id="filter-drawer-title"
-                className="text-xl font-bold text-white tracking-tight"
+                className="text-lg font-semibold text-[var(--text-primary)]"
               >
                 {title}
               </h2>
               {activeFiltersCount > 0 && (
-                <p className="text-sm text-slate-400 font-medium">
+                <p className="text-sm text-[var(--text-muted)] font-medium">
                   {activeFiltersCount} filtro{activeFiltersCount !== 1 ? "s" : ""} ativo{activeFiltersCount !== 1 ? "s" : ""}
                 </p>
               )}
@@ -184,10 +181,10 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-all duration-200 hover:scale-105"
+            className="p-2 rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-surface-hover)] hover:text-[var(--text-primary)]"
             aria-label="Fechar filtros"
           >
-            <X className="w-5 h-5 text-slate-400 hover:text-white" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -195,13 +192,13 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {safeFields.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-4 bg-[#111827] rounded-full mb-4">
+              <div className="p-4 bg-[var(--bg-elevated)] rounded-full mb-4">
                 <Filter className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-medium text-slate-200 mb-2">
+              <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">
                 Nenhum filtro disponível
               </h3>
-              <p className="text-slate-400 text-sm max-w-xs">
+              <p className="text-[var(--text-muted)] text-sm max-w-xs">
                 Esta tela não possui filtros configurados no momento.
               </p>
             </div>
@@ -234,7 +231,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   />
                 ) : field.type === "dateRange" ? (
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-300">
+                    <label className="block text-sm font-medium text-[var(--text-secondary)]">
                       {field.label}
                     </label>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -268,7 +265,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   />
                 ) : field.type === "numberRange" ? (
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-300">
+                    <label className="block text-sm font-medium text-[var(--text-secondary)]">
                       {field.label}
                     </label>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -316,24 +313,24 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                       }}
                       className={`
                         relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${localValues[field.key] === "true" ? "bg-[#000dff]" : "bg-white/10"}
+                        ${localValues[field.key] === "true" ? "bg-primary" : "bg-[var(--bg-elevated)] border border-[var(--border-default)]"}
                       `}
                     >
                       <span
                         className={`
-                          inline-block h-4 w-4 transform rounded-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 transition-transform
+                          inline-block h-4 w-4 transform rounded-full bg-[var(--bg-surface-strong)] border border-[var(--border-muted)] transition-transform
                           ${localValues[field.key] === "true" ? "translate-x-6" : "translate-x-1"}
                         `}
                       />
                     </button>
-                    <span className="text-sm text-slate-300">{field.label}</span>
+                    <span className="text-sm text-[var(--text-secondary)]">{field.label}</span>
                   </div>
                 ) : field.type === "multiSelect" ? (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-300">
+                    <label className="block text-sm font-medium text-[var(--text-secondary)]">
                       {field.label}
                     </label>
-                    <div className="flex flex-wrap gap-2 p-3 border border-white/10 bg-[#0F172A] rounded-lg min-h-[44px]">
+                    <div className="flex flex-wrap gap-2 p-3 border border-[var(--border-default)] bg-[var(--bg-elevated)] rounded-lg min-h-[44px]">
                       {(field.options || []).map((option) => {
                         const isSelected = (localValues[field.key] || "").split(",").includes(option.value);
                         return (
@@ -352,8 +349,8 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                             className={`
                               px-3 py-1.5 text-sm rounded-full border transition-all
                               ${isSelected 
-                                ? "bg-[#000dff]/10 border-[#000dff] text-[#000dff]" 
-                                : "bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 text-slate-300 hover:border-white/20"
+                                ? "bg-primary/10 border-primary text-primary" 
+                                : "bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"
                               }
                             `}
                           >
@@ -366,7 +363,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
                   </div>
                 ) : field.type === "currency" ? (
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-300">
+                    <label className="block text-sm font-medium text-[var(--text-secondary)]">
                       {field.label}
                     </label>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -436,11 +433,11 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
         </div>
 
         {/* Footer: shrink-0 border-t */}
-        <div className="shrink-0 px-6 py-6 bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-xl border-t border-white/20 flex items-center gap-4">
+        <div className="shrink-0 px-6 py-5 bg-[var(--bg-surface-strong)] border-t border-[var(--border-muted)] flex items-center gap-4">
           <Button
             variant="outline"
             onClick={handleClear}
-            className="flex-1 bg-white/5 hover:bg-white/10 border-white/20 hover:border-white/30 text-slate-300 hover:text-white transition-all duration-200"
+            className="flex-1"
             disabled={loading}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -449,7 +446,7 @@ export const FilterDrawer: React.FC<FilterDrawerProps> = ({
           <Button
             variant="primary"
             onClick={handleApply}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300"
+            className="flex-1"
             loading={loading}
           >
             {loading ? (
@@ -483,17 +480,17 @@ export const FilterButton: React.FC<FilterButtonProps> = ({
       onClick={onClick}
       className={`
         inline-flex items-center gap-3 px-5 py-3 rounded-xl font-semibold text-sm
-        transition-all duration-300 border shadow-lg hover:shadow-xl
+        transition-colors duration-200 border
         ${activeCount > 0
-          ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-400/30 text-blue-300 shadow-blue-500/20 hover:shadow-blue-500/30 hover:border-blue-400/50"
-          : "bg-gradient-to-r from-slate-800/50 to-slate-700/30 backdrop-blur-xl border-white/20 text-slate-300 hover:bg-white/10 hover:border-white/30 hover:text-white shadow-slate-900/20"
+          ? "bg-primary/10 border-primary/30 text-primary"
+          : "bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
         }
       `}
     >
       <Filter className="w-5 h-5" />
       <span>{label}</span>
       {activeCount > 0 && (
-        <span className="ml-1 flex items-center justify-center min-w-[24px] h-6 px-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg shadow-blue-500/30">
+        <span className="ml-1 flex items-center justify-center min-w-[24px] h-6 px-2 bg-primary text-white text-xs font-bold rounded-full">
           {activeCount > 9 ? "9+" : activeCount}
         </span>
       )}

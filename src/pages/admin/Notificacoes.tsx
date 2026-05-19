@@ -41,7 +41,6 @@ export const NotificacoesPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Notificações"
-        subtitle="Gerencie as notificações do sistema"
         onRefresh={() => {}}
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
@@ -52,18 +51,18 @@ export const NotificacoesPage: React.FC = () => {
         exportFilename="notificacoes"
       />
       
-      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-slate-900">Notificações</h3>
+      <div className="finqz-card p-4 sm:p-5">
+        <div className="space-y-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">Regras de notificação</h3>
           
           {/* Lista de Notificações */}
           <div className="space-y-3">
             {notificacoes.map((notificacao) => (
-              <div key={notificacao.id} className="border border-gray-200 rounded-xl p-4">
+              <div key={notificacao.id} className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900">{notificacao.nome}</h4>
-                    <p className="text-sm text-slate-500 mt-1">{notificacao.descricao}</p>
+                    <h4 className="font-semibold text-[var(--text-primary)]">{notificacao.nome}</h4>
+                    <p className="text-sm text-[var(--text-secondary)] mt-1">{notificacao.descricao}</p>
                   </div>
                 </div>
                 
@@ -73,8 +72,8 @@ export const NotificacoesPage: React.FC = () => {
                     onClick={() => toggleNotificacao(notificacao.id, 'email')}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
                       notificacao.email 
-                        ? 'bg-[#000dff]/10 border-[#000dff] text-[#000dff]' 
-                        : 'border-gray-200 text-slate-400 hover:border-gray-300'
+                        ? 'bg-primary/10 border-primary text-primary' 
+                        : 'border-[var(--border-default)] text-[var(--text-muted)] hover:border-[var(--border-strong)]'
                     }`}
                   >
                     <Mail size={16} />
@@ -86,8 +85,8 @@ export const NotificacoesPage: React.FC = () => {
                     onClick={() => toggleNotificacao(notificacao.id, 'push')}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
                       notificacao.push 
-                        ? 'bg-[#000dff]/10 border-[#000dff] text-[#000dff]' 
-                        : 'border-gray-200 text-slate-400 hover:border-gray-300'
+                        ? 'bg-primary/10 border-primary text-primary' 
+                        : 'border-[var(--border-default)] text-[var(--text-muted)] hover:border-[var(--border-strong)]'
                     }`}
                   >
                     <Bell size={16} />
@@ -99,8 +98,8 @@ export const NotificacoesPage: React.FC = () => {
                     onClick={() => toggleNotificacao(notificacao.id, 'sms')}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
                       notificacao.sms 
-                        ? 'bg-[#000dff]/10 border-[#000dff] text-[#000dff]' 
-                        : 'border-gray-200 text-slate-400 hover:border-gray-300'
+                        ? 'bg-primary/10 border-primary text-primary' 
+                        : 'border-[var(--border-default)] text-[var(--text-muted)] hover:border-[var(--border-strong)]'
                     }`}
                   >
                     <Smartphone size={16} />

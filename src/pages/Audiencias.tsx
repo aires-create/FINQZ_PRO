@@ -494,7 +494,7 @@ export default function Audiencias() {
                     <div>
                       <h3 className="font-semibold text-white">{audience.name}</h3>
                       <p className="text-xs text-slate-500">
-                        {audience.type === 'dynamic' ? '🔄 Dinâmico' : '📋 Manual'}
+                        {audience.type === 'dynamic' ? 'Dinâmico' : 'Manual'}
                       </p>
                     </div>
                   </div>

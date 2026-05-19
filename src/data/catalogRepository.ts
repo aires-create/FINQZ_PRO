@@ -259,6 +259,41 @@ export const defaultPipelineStages: Record<string, string[]> = {
   ]
 };
 
+export const DEFAULT_PIPELINE_STAGE_COLORS = [
+  "#2563eb",
+  "#0ea5e9",
+  "#7c3aed",
+  "#f59e0b",
+  "#f97316",
+  "#10b981",
+  "#14b8a6",
+  "#64748b",
+  "#ef4444"
+];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const isValidPipelineStageColor = (value: string): boolean =>
+  /^#[0-9a-fA-F]{6}$/.test(value);
+
+export const createDefaultStageColors = (stageCount: number): string[] =>
+  Array.from({ length: Math.max(stageCount, 0) }, (_, index) =>
+    DEFAULT_PIPELINE_STAGE_COLORS[index % DEFAULT_PIPELINE_STAGE_COLORS.length]
+  );
+
+const normalizeStageColors = (stageColors: unknown, stageCount: number): string[] => {
+  const defaults = createDefaultStageColors(stageCount);
+  if (!Array.isArray(stageColors)) return defaults;
+
+  return defaults.map((defaultColor, index) => {
+    const candidate = stageColors[index];
+    return typeof candidate === "string" && isValidPipelineStageColor(candidate)
+      ? candidate
+      : defaultColor;
+  });
+};
+
 // ============================================
 // PERSISTÊNCIA DE CONFIGURAÇÕES DE PIPELINE
 // ============================================
@@ -271,8 +306,47 @@ export interface PipelineSettings {
   pipelineName: string;
   active: boolean;
   stages: string[];
+  stageColors: string[];
   updatedAt: string;
 }
+
+const normalizePipelineSettingsRecord = (value: unknown): Record<string, PipelineSettings> | null => {
+  if (!isRecord(value)) return null;
+
+  const normalized: Record<string, PipelineSettings> = {};
+
+  Object.entries(value).forEach(([pipelineId, rawSetting]) => {
+    if (!isRecord(rawSetting)) return;
+
+    const defaultStages = defaultPipelineStages[pipelineId] || [
+      "Novo Lead",
+      "Contato",
+      "Análise",
+      "Aprovação",
+      "Encerrado"
+    ];
+
+    const stages = Array.isArray(rawSetting.stages)
+      ? rawSetting.stages.filter((stage): stage is string => typeof stage === "string" && stage.trim().length > 0)
+      : defaultStages;
+
+    const pipelineCode = typeof rawSetting.pipelineCode === "string" ? rawSetting.pipelineCode : pipelineId;
+    const pipelineName = typeof rawSetting.pipelineName === "string" ? rawSetting.pipelineName : pipelineId;
+    const updatedAt = typeof rawSetting.updatedAt === "string" ? rawSetting.updatedAt : new Date().toISOString();
+
+    normalized[pipelineId] = {
+      pipelineId: typeof rawSetting.pipelineId === "string" ? rawSetting.pipelineId : pipelineId,
+      pipelineCode,
+      pipelineName,
+      active: typeof rawSetting.active === "boolean" ? rawSetting.active : true,
+      stages,
+      stageColors: normalizeStageColors(rawSetting.stageColors, stages.length),
+      updatedAt
+    };
+  });
+
+  return Object.keys(normalized).length > 0 ? normalized : null;
+};
 
 /**
  * Carrega configurações de pipeline do localStorage
@@ -284,13 +358,14 @@ export const loadPipelineSettings = (): Record<string, PipelineSettings> => {
     if (!stored) {
       return getDefaultPipelineSettings();
     }
-    const parsed = JSON.parse(stored);
-    if (!parsed || typeof parsed !== 'object') {
+    const parsed: unknown = JSON.parse(stored);
+    const normalized = normalizePipelineSettingsRecord(parsed);
+    if (!normalized) {
       console.warn('[pipeline-settings] localStorage corrompido, usando padrão');
       localStorage.removeItem(PIPELINE_SETTINGS_KEY);
       return getDefaultPipelineSettings();
     }
-    return parsed;
+    return normalized;
   } catch (error) {
     console.error('[pipeline-settings] Erro ao carregar, usando padrão:', error);
     return getDefaultPipelineSettings();
@@ -302,7 +377,8 @@ export const loadPipelineSettings = (): Record<string, PipelineSettings> => {
  */
 export const savePipelineSettings = (settings: Record<string, PipelineSettings>): void => {
   try {
-    localStorage.setItem(PIPELINE_SETTINGS_KEY, JSON.stringify(settings));
+    const normalized = normalizePipelineSettingsRecord(settings) || getDefaultPipelineSettings();
+    localStorage.setItem(PIPELINE_SETTINGS_KEY, JSON.stringify(normalized));
   } catch (error) {
     console.error('[pipeline-settings] Erro ao salvar:', error);
   }
@@ -335,6 +411,7 @@ export const getDefaultPipelineSettings = (): Record<string, PipelineSettings> =
       pipelineName: option.name,
       active: true,
       stages: defaultStages,
+      stageColors: createDefaultStageColors(defaultStages.length),
       updatedAt: new Date().toISOString()
     };
   });
@@ -358,6 +435,42 @@ export const getPipelineStages = (pipelineId: string): string[] => {
     "Aprovação",
     "Encerrado"
   ];
+};
+
+/**
+ * Obtém a cor configurada de uma etapa, com fallback validado.
+ */
+export const getPipelineStageColor = (
+  pipelineId: string,
+  stageName: string,
+  stageIndex: number
+): string => {
+  const settings = loadPipelineSettings();
+  const setting = settings[pipelineId];
+  const defaultColor = createDefaultStageColors(stageIndex + 1)[stageIndex] || DEFAULT_PIPELINE_STAGE_COLORS[0];
+
+  if (!setting) return defaultColor;
+
+  const byIndex = setting.stageColors[stageIndex];
+  if (typeof byIndex === "string" && isValidPipelineStageColor(byIndex)) {
+    return byIndex;
+  }
+
+  const normalizedTarget = stageName
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+  const matchedIndex = setting.stages.findIndex((stage) =>
+    stage
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim() === normalizedTarget
+  );
+  const byName = matchedIndex >= 0 ? setting.stageColors[matchedIndex] : undefined;
+
+  return typeof byName === "string" && isValidPipelineStageColor(byName) ? byName : defaultColor;
 };
 
 // ============================================

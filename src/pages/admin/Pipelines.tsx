@@ -9,7 +9,9 @@ import {
   savePipelineSettings, 
   getDefaultPipelineSettings,
   PipelineSettings,
-  defaultPipelineStages
+  defaultPipelineStages,
+  createDefaultStageColors,
+  isValidPipelineStageColor
 } from "../../data/catalogRepository";
 import { Button, Input } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -39,11 +41,22 @@ export const PipelinesPage: React.FC = () => {
     arr.findIndex(x => x.id === opt.id) === index
   );
 
+  const displayedPipelines = [
+    ...uniquePipelines,
+    ...Object.values(pipelineSettings)
+      .filter(setting => !uniquePipelines.some(option => option.id === setting.pipelineId))
+      .map(setting => ({
+        id: setting.pipelineId,
+        code: setting.pipelineCode,
+        name: setting.pipelineName,
+      }))
+  ];
+
   const handleEdit = (pipelineId: string) => {
     const setting = pipelineSettings[pipelineId];
     if (setting) {
       setEditingId(pipelineId);
-      setEditForm({ ...setting, stages: [...setting.stages] });
+      setEditForm({ ...setting, stages: [...setting.stages], stageColors: [...setting.stageColors] });
     }
   };
 
@@ -54,11 +67,17 @@ export const PipelinesPage: React.FC = () => {
 
   const handleSaveEdit = () => {
     if (!editForm) return;
+    const defaultColors = createDefaultStageColors(editForm.stages.length);
+    const stageColors = editForm.stages.map((_, index) => {
+      const color = editForm.stageColors[index];
+      return isValidPipelineStageColor(color) ? color : defaultColors[index];
+    });
 
     const updated = {
       ...pipelineSettings,
       [editForm.pipelineId]: {
         ...editForm,
+        stageColors,
         updatedAt: new Date().toISOString()
       }
     };
@@ -90,14 +109,19 @@ export const PipelinesPage: React.FC = () => {
     if (!editForm) return;
     setEditForm({
       ...editForm,
-      stages: [...editForm.stages, `Etapa ${editForm.stages.length + 1}`]
+      stages: [...editForm.stages, `Etapa ${editForm.stages.length + 1}`],
+      stageColors: [
+        ...editForm.stageColors,
+        createDefaultStageColors(editForm.stages.length + 1)[editForm.stages.length]
+      ]
     });
   };
 
   const handleRemoveStage = (index: number) => {
     if (!editForm || editForm.stages.length <= 1) return;
     const newStages = editForm.stages.filter((_, i) => i !== index);
-    setEditForm({ ...editForm, stages: newStages });
+    const newStageColors = editForm.stageColors.filter((_, i) => i !== index);
+    setEditForm({ ...editForm, stages: newStages, stageColors: newStageColors });
   };
 
   const handleUpdateStageName = (index: number, newName: string) => {
@@ -105,6 +129,13 @@ export const PipelinesPage: React.FC = () => {
     const newStages = [...editForm.stages];
     newStages[index] = newName;
     setEditForm({ ...editForm, stages: newStages });
+  };
+
+  const handleUpdateStageColor = (index: number, newColor: string) => {
+    if (!editForm || !isValidPipelineStageColor(newColor)) return;
+    const newStageColors = [...editForm.stageColors];
+    newStageColors[index] = newColor;
+    setEditForm({ ...editForm, stageColors: newStageColors });
   };
 
   // Drag and drop handlers
@@ -132,20 +163,34 @@ export const PipelinesPage: React.FC = () => {
       return;
     }
 
-    const setting = pipelineSettings[targetPipelineId];
+    const setting = editForm?.pipelineId === targetPipelineId ? editForm : pipelineSettings[targetPipelineId];
     if (!setting) return;
 
     const stages = [...setting.stages];
     const [removed] = stages.splice(sourceIndex, 1);
     stages.splice(targetStageIndex, 0, removed);
 
+    const stageColors = [...setting.stageColors];
+    const [removedColor] = stageColors.splice(sourceIndex, 1);
+    stageColors.splice(targetStageIndex, 0, removedColor || createDefaultStageColors(stages.length)[targetStageIndex]);
+
+    const nextSetting = {
+      ...setting,
+      stages,
+      stageColors,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (editForm?.pipelineId === targetPipelineId) {
+      setEditForm(nextSetting);
+      setDraggedStage(null);
+      setDragOverStage(null);
+      return;
+    }
+
     const updated = {
       ...pipelineSettings,
-      [targetPipelineId]: {
-        ...setting,
-        stages,
-        updatedAt: new Date().toISOString()
-      }
+      [targetPipelineId]: nextSetting
     };
 
     savePipelineSettings(updated);
@@ -160,6 +205,30 @@ export const PipelinesPage: React.FC = () => {
     setPipelineSettings(defaults);
   };
 
+  const handleCreatePipeline = () => {
+    const suffix = String(Date.now()).slice(-5);
+    const pipelineId = `custom-${suffix}`;
+    const newPipeline: PipelineSettings = {
+      pipelineId,
+      pipelineCode: `CUSTOM-${suffix}`,
+      pipelineName: "Novo Pipeline",
+      active: true,
+      stages: ["Entrada", "Análise", "Aprovação", "Encerrado"],
+      stageColors: createDefaultStageColors(4),
+      updatedAt: new Date().toISOString()
+    };
+
+    const updated = {
+      ...pipelineSettings,
+      [pipelineId]: newPipeline
+    };
+
+    savePipelineSettings(updated);
+    setPipelineSettings(updated);
+    setEditingId(pipelineId);
+    setEditForm({ ...newPipeline, stages: [...newPipeline.stages], stageColors: [...newPipeline.stageColors] });
+  };
+
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(pipelineSettings, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
@@ -172,8 +241,9 @@ export const PipelinesPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Pipelines"
-        subtitle="Configure os pipelines e etapas do funil de vendas FINQZ PRO"
         onRefresh={() => setPipelineSettings(loadPipelineSettings())}
+        onCreate={handleCreatePipeline}
+        createLabel="Novo Pipeline"
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
         onExport={handleExport}
@@ -198,42 +268,40 @@ export const PipelinesPage: React.FC = () => {
         }
       />
       
-      <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-6">
-        <div className="space-y-6">
+      <div className="finqz-card p-4 sm:p-5">
+        <div className="space-y-5">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines FINQZ PRO</h3>
-              <p className="text-sm text-slate-500">
-                Configure os pipelines oficiais: Antecipação FGTS, Cartão, Consignado, Consórcio, Crédito Pessoal, Empréstimo com Garantia, Energia, Financiamento e Seguros.
-              </p>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">Pipelines cadastrados</h3>
             </div>
           </div>
           
           {/* Lista de Pipelines */}
           <div className="space-y-4">
-            {uniquePipelines.map((option) => {
+            {displayedPipelines.map((option) => {
               const setting = pipelineSettings[option.id] || {
                 pipelineId: option.id,
                 pipelineCode: option.code,
                 pipelineName: option.name,
                 active: true,
                 stages: defaultPipelineStages[option.id] || ["Novo Lead", "Contato", "Análise", "Aprovação", "Encerrado"],
+                stageColors: createDefaultStageColors((defaultPipelineStages[option.id] || ["Novo Lead", "Contato", "Análise", "Aprovação", "Encerrado"]).length),
                 updatedAt: new Date().toISOString()
               };
 
               const isEditing = editingId === option.id;
 
               return (
-                <div key={option.id} className="border border-[#1f2937] rounded-xl p-4">
+                <div key={option.id} className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4">
                   {/* Header do Pipeline */}
                   <div className="flex justify-between items-center">
                     <div>
-                      <h4 className="font-semibold text-white">{setting.pipelineName}</h4>
-                      <p className="text-sm text-slate-500">ID: {setting.pipelineId} | Code: {setting.pipelineCode}</p>
+                      <h4 className="font-semibold text-[var(--text-primary)]">{setting.pipelineName}</h4>
+                      <p className="text-sm text-[var(--text-muted)]">ID: {setting.pipelineId} | Code: {setting.pipelineCode}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        setting.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-slate-500'
+                        setting.active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
                       }`}>
                         {setting.active ? 'Ativo' : 'Inativo'}
                       </span>
@@ -241,13 +309,13 @@ export const PipelinesPage: React.FC = () => {
                         <>
                           <button 
                             onClick={() => handleEdit(option.id)}
-                            className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-lg"
+                            className="p-2 text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-surface-hover)] rounded-lg"
                           >
                             <Edit size={16} />
                           </button>
                           <button 
                             onClick={() => handleToggleAtivo(option.id)}
-                            className="p-2 text-slate-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
+                            className="p-2 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded-lg"
                             title={setting.active ? "Desativar" : "Ativar"}
                           >
                             <Trash2 size={16} />
@@ -264,17 +332,25 @@ export const PipelinesPage: React.FC = () => {
                         Etapas ({setting.stages.length}):
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {setting.stages.map((stage, index) => (
+                        {setting.stages.map((stage, index) => {
+                          const color = setting.stageColors[index] || createDefaultStageColors(setting.stages.length)[index];
+                          return (
                           <div 
                             key={index}
-                            className="px-3 py-1 bg-gray-100 text-slate-300 rounded-full text-sm flex items-center gap-1"
+                            className="px-3 py-1 rounded-full text-sm flex items-center gap-2 border"
+                            style={{
+                              backgroundColor: `${color}18`,
+                              borderColor: `${color}55`,
+                              color
+                            }}
                           >
-                            <span className="w-5 h-5 rounded-full bg-gray-300 text-xs flex items-center justify-center">
+                            <span className="w-5 h-5 rounded-full text-xs flex items-center justify-center text-white" style={{ backgroundColor: color }}>
                               {index + 1}
                             </span>
                             {stage}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -284,13 +360,13 @@ export const PipelinesPage: React.FC = () => {
                     <div className="mt-4 space-y-4">
                       {/* Nome do Pipeline (apenas visual, não editável) */}
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                        <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
                           Nome do Pipeline
                         </label>
                         <Input
                           value={editForm.pipelineName}
                           disabled
-                          className="bg-gray-50"
+                          className="bg-[var(--bg-elevated)]"
                         />
                         <p className="text-xs text-slate-500 mt-1">
                           O nome é definido pelo catálogo e não pode ser alterado.
@@ -306,7 +382,7 @@ export const PipelinesPage: React.FC = () => {
                           onChange={(e) => setEditForm({ ...editForm, active: e.target.checked })}
                           className="w-4 h-4 text-[#000dff] rounded"
                         />
-                        <label htmlFor={`active-${editForm.pipelineId}`} className="text-sm text-slate-300">
+                        <label htmlFor={`active-${editForm.pipelineId}`} className="text-sm text-[var(--text-secondary)]">
                           Pipeline Ativo
                         </label>
                       </div>
@@ -314,7 +390,7 @@ export const PipelinesPage: React.FC = () => {
                       {/* Etapas */}
                       <div>
                         <div className="flex justify-between items-center mb-2">
-                          <p className="text-sm font-medium text-slate-300">
+                          <p className="text-sm font-medium text-[var(--text-secondary)]">
                             Etapas (arraste para reordenar):
                           </p>
                           <Button
@@ -338,8 +414,8 @@ export const PipelinesPage: React.FC = () => {
                               className={`flex items-center gap-2 p-2 rounded-lg border ${
                                 dragOverStage?.pipelineId === editForm.pipelineId && 
                                 dragOverStage?.stageIndex === index
-                                  ? 'border-[#000dff] bg-blue-50'
-                                  : 'border-[#1f2937] bg-[#111827]'
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-[var(--border-muted)] bg-[var(--bg-elevated)]'
                               }`}
                             >
                               <GripVertical size={16} className="text-slate-400 cursor-grab" />
@@ -351,6 +427,19 @@ export const PipelinesPage: React.FC = () => {
                                 onChange={(e) => handleUpdateStageName(index, e.target.value)}
                                 className="flex-1"
                               />
+                              <label className="flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 py-1 text-xs text-[var(--text-secondary)]">
+                                <span
+                                  className="h-5 w-5 rounded-full border border-white/20"
+                                  style={{ backgroundColor: editForm.stageColors[index] }}
+                                />
+                                <input
+                                  type="color"
+                                  value={editForm.stageColors[index] || createDefaultStageColors(editForm.stages.length)[index]}
+                                  onChange={(e) => handleUpdateStageColor(index, e.target.value)}
+                                  className="h-7 w-8 cursor-pointer border-0 bg-transparent p-0"
+                                  aria-label={`Cor da etapa ${stage}`}
+                                />
+                              </label>
                               <button
                                 onClick={() => handleRemoveStage(index)}
                                 disabled={editForm.stages.length <= 1}
@@ -390,12 +479,12 @@ export const PipelinesPage: React.FC = () => {
           </div>
 
           {/* Resumo */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-medium text-white mb-2">Resumo dos Pipelines</h4>
+          <div className="mt-6 rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4">
+            <h4 className="font-medium text-[var(--text-primary)] mb-2">Visão geral</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-slate-500">Total de Pipelines:</span>
-                <span className="ml-2 font-medium">{uniquePipelines.length}</span>
+                <span className="text-[var(--text-muted)]">Total:</span>
+                <span className="ml-2 font-medium">{displayedPipelines.length}</span>
               </div>
               <div>
                 <span className="text-slate-500">Ativos:</span>

@@ -1008,10 +1008,9 @@ const EstruturaComercialPage: React.FC = () => {
   const rootItems = filteredEstrutura.filter((item) => !item.parent_id || item.parent_id === null);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="app-page">
       <PageHeader
         title="Estrutura Comercial"
-        subtitle="Gerencie a hierarquia comercial completa"
         onSearch={setSearchTerm}
         onRefresh={() => {}}
         onCreate={() => handleCreate("vertical")}
@@ -1032,28 +1031,13 @@ const EstruturaComercialPage: React.FC = () => {
           if (key === 'nivel') setFiltroNivel(value)
           if (key === 'status') setFiltroStatus(value)
         }}
-        extra={
+        onImport={handleImportEstrutura}
+        importColumns={importColumns}
+        importLabel="Importar"
+        onExport={handleExportEstrutura}
+        exportLabel="Exportar"
+        actions={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setImportModalOpen(true)}
-              className="flex items-center gap-1"
-            >
-              <Upload size={14} />
-              Importar
-            </Button>
-            <ExportMenu
-              data={filteredEstrutura}
-              columns={exportColumns}
-              filename="estrutura_comercial"
-              onExport={handleExportEstrutura}
-              options={[
-                { id: "csv", label: "CSV", format: "csv", icon: <FileText size={16} className="text-green-500" />, description: "Planilha CSV" },
-                { id: "json", label: "JSON", format: "json", icon: <FileText size={16} className="text-blue-500" />, description: "Dados estruturados" },
-              ]}
-              label="Exportar"
-            />
             <Button
               variant="outline"
               size="sm"
@@ -1067,7 +1051,7 @@ const EstruturaComercialPage: React.FC = () => {
         }
       />
 
-      <div className="p-6">
+      <div className="space-y-6">
         {/* Cards superiores */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
           <KpiCard
@@ -1109,8 +1093,8 @@ const EstruturaComercialPage: React.FC = () => {
         </div>
 
         {/* Lista hierárquica */}
-        <Card className="overflow-hidden">
-          <div className="bg-gray-50 border-b border-[#1f2937] p-3 flex items-center gap-2 text-sm font-medium text-slate-600">
+        <Card className="overflow-hidden" padding="none">
+          <div className="border-b border-[var(--border-muted)] bg-[var(--bg-surface-strong)] p-3 flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)]">
             <div className="w-6" />
             <div className="w-6" />
             <div className="flex-1">Nome</div>

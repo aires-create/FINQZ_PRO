@@ -1,9 +1,9 @@
 // FINQZ PRO - Conversas Page
 import React, { useEffect, useState, useRef } from "react";
-import { Search, Send, X, Phone, MessageCircle, Bot, User, CheckCircle, Clock, ArrowLeft, MoreVertical, Users, AlertCircle, Filter } from "lucide-react";
+import { Search, Send, MessageCircle, Bot, User, ArrowLeft, Users, AlertCircle, Filter } from "lucide-react";
 import api from "../api/client";
 import useAppStore from "../store";
-import { Button, Input, Badge, StatusBadge, EmptyState, LoadingState, Modal, TextArea } from "../components/ui";
+import { Button, EmptyState, LoadingState } from "../components/ui";
 import { SdrPanel } from "../components/ui/SdrPanel";
 import { PageHeader } from "../components/layout/PageHeader";
 import { USE_MOCKS } from "../config/environment";
@@ -62,6 +62,13 @@ interface Conversation {
   campanha?: Campanha;
   ultimaMensagem?: Mensagem;
 }
+
+type ConversationStatus = NonNullable<Conversation["conversationStatus"]>;
+
+const CONVERSATION_STATUSES = new Set<ConversationStatus>(["open", "waiting", "bot", "human", "closed"]);
+
+const parseConversationStatus = (value: string): ConversationStatus | null =>
+  CONVERSATION_STATUSES.has(value as ConversationStatus) ? (value as ConversationStatus) : null;
 
 // Seed para modo mock
 const initialConversasSeed: Conversation[] = [
@@ -205,7 +212,7 @@ export default function Conversas() {
     }
   };
 
-  const handleUpdateStatus = async (conversationStatus: string) => {
+  const handleUpdateStatus = async (conversationStatus: ConversationStatus) => {
     if (!selectedConversation) return;
 
     try {
@@ -214,7 +221,7 @@ export default function Conversas() {
           conversationStatus,
         });
       }
-      setSelectedConversation({ ...selectedConversation, conversationStatus: conversationStatus as any });
+      setSelectedConversation({ ...selectedConversation, conversationStatus });
       loadConversas();
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
@@ -307,28 +314,27 @@ export default function Conversas() {
   const getStatusBadge = (status?: string) => {
     switch (status) {
       case 'open':
-        return <Badge variant="success">Aberta</Badge>;
+        return <span className="whatsapp-status-badge whatsapp-status-open">Aberta</span>;
       case 'waiting':
-        return <Badge variant="warning">Aguardando</Badge>;
+        return <span className="whatsapp-status-badge whatsapp-status-waiting">Aguardando</span>;
       case 'bot':
-        return <Badge variant="info">Bot</Badge>;
+        return <span className="whatsapp-status-badge whatsapp-status-bot">Robô</span>;
       case 'human':
-        return <Badge variant="primary">Humano</Badge>;
+        return <span className="whatsapp-status-badge whatsapp-status-human">Humano</span>;
       case 'closed':
-        return <Badge variant="default">Fechada</Badge>;
+        return <span className="whatsapp-status-badge whatsapp-status-closed">Fechada</span>;
       default:
-        return <Badge variant="default">{status}</Badge>;
+        return <span className="whatsapp-status-badge whatsapp-status-closed">{status}</span>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="whatsapp-workspace min-h-screen">
       <PageHeader 
-        title="Conversas" 
-        subtitle="Gerencie conversas com clientes"
+        title="WhatsApp" 
       />
 
-      <div className="p-6">
+      <div className="whatsapp-page-content p-6">
         {/* Botão de fila de atendimento */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-4">
@@ -339,18 +345,18 @@ export default function Conversas() {
                 placeholder="Buscar por nome ou telefone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-[#1f2937] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000dff] focus:border-transparent"
+                className="whatsapp-control w-full pl-10 pr-4 py-2"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-[#1f2937] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000dff]"
+              className="whatsapp-control px-4 py-2"
             >
               <option value="">Todos os status</option>
               <option value="open">Aberta</option>
               <option value="waiting">Aguardando</option>
-              <option value="bot">Bot</option>
+              <option value="bot">Robô</option>
               <option value="human">Humano</option>
               <option value="closed">Fechada</option>
             </select>
@@ -358,11 +364,7 @@ export default function Conversas() {
           
           <button
             onClick={() => setShowQueue(!showQueue)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-              showQueue 
-                ? 'bg-[#000dff] text-white' 
-                : 'bg-[#111827] border border-[#1f2937] text-slate-300 hover:bg-gray-50'
-            }`}
+            className={`whatsapp-queue-toggle flex items-center gap-2 px-4 py-2 ${showQueue ? 'whatsapp-queue-toggle-active' : ''}`}
           >
             <Users className="w-4 h-4" />
             <span>Fila de Atendimento</span>
@@ -376,8 +378,8 @@ export default function Conversas() {
 
         {/* Fila de Atendimento */}
         {showQueue && (
-          <div className="mb-6 bg-[#111827] rounded-xl border border-[#1f2937] overflow-hidden">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+          <div className="whatsapp-queue-panel mb-6 overflow-hidden">
+            <div className="whatsapp-queue-header p-4 flex justify-between items-center">
               <h3 className="font-semibold text-slate-200 flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-orange-500" />
                 Fila de Atendimento
@@ -386,7 +388,7 @@ export default function Conversas() {
                 <button
                   onClick={() => setQueueFilter("waiting")}
                   className={`px-3 py-1 rounded text-sm ${
-                    queueFilter === "waiting" ? "bg-[#000dff] text-white" : "bg-gray-100 text-slate-600"
+                    queueFilter === "waiting" ? "bg-[#128c7e] text-white" : "whatsapp-chip"
                   }`}
                 >
                   Aguardando
@@ -394,14 +396,14 @@ export default function Conversas() {
                 <button
                   onClick={() => setQueueFilter("priority")}
                   className={`px-3 py-1 rounded text-sm ${
-                    queueFilter === "priority" ? "bg-[#000dff] text-white" : "bg-gray-100 text-slate-600"
+                    queueFilter === "priority" ? "bg-[#128c7e] text-white" : "whatsapp-chip"
                   }`}
                 >
                   Prioridade
                 </button>
                 <button
                   onClick={() => loadQueue()}
-                  className="px-3 py-1 rounded text-sm bg-gray-100 text-slate-600 hover:bg-gray-200"
+                  className="whatsapp-chip px-3 py-1 rounded text-sm"
                 >
                   <Filter className="w-4 h-4" />
                 </button>
@@ -413,19 +415,19 @@ export default function Conversas() {
             ) : queueConversas.length === 0 ? (
               <div className="p-8 text-center text-slate-500">Nenhuma conversa na fila</div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-[var(--border-muted)]">
                 {queueConversas.map((conv) => (
                   <div
                     key={conv.id}
-                    className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer"
+                    className="whatsapp-conversation-item p-4 flex items-center justify-between cursor-pointer"
                     onClick={() => {
                       handleSelectConversation(conv);
                       setShowQueue(false);
                     }}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-[#000dff]/10 flex items-center justify-center">
-                        <span className="text-[#000dff] font-medium">
+                      <div className="w-10 h-10 rounded-full bg-[#25d366]/15 flex items-center justify-center">
+                        <span className="text-[#128c7e] font-medium">
                           {conv.cliente?.nome?.charAt(0) || '?'}
                         </span>
                       </div>
@@ -453,7 +455,7 @@ export default function Conversas() {
                             e.stopPropagation();
                             handleAssumeConversation(conv);
                           }}
-                          className="px-3 py-1.5 bg-[#000dff] text-white text-sm rounded-lg hover:bg-[#000dff]/90"
+                          className="whatsapp-primary-action px-3 py-1.5 text-sm"
                         >
                           Assumir
                         </button>
@@ -477,13 +479,13 @@ export default function Conversas() {
                 description="Conversas com clientes aparecerão aqui"
               />
             ) : (
-              <div className="bg-[#111827] rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="whatsapp-list-card overflow-hidden">
                 {filteredConversas.map((conv) => (
                   <div
                     key={conv.id}
                     onClick={() => handleSelectConversation(conv)}
-                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-4 border-l-[#000dff]' : ''
+                    className={`whatsapp-conversation-item p-4 border-b cursor-pointer transition-colors ${
+                      selectedConversation?.id === conv.id ? 'whatsapp-conversation-active' : ''
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -518,8 +520,8 @@ export default function Conversas() {
                     </div>
                     {conv.campanha && (
                       <div className="mt-2">
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                          📢 {conv.campanha.nome}
+                        <span className="text-xs bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-muted)] px-2 py-0.5 rounded">
+                          {conv.campanha.nome}
                         </span>
                       </div>
                     )}
@@ -531,18 +533,18 @@ export default function Conversas() {
 
           {/* Área de Chat */}
           {selectedConversation && (
-            <div className="flex-1 bg-[#111827] rounded-xl shadow-sm border border-gray-100 flex flex-col h-[calc(100vh-220px)]">
+            <div className="whatsapp-chat-shell flex-1 flex flex-col h-[calc(100vh-220px)]">
               {/* Header do Chat */}
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+              <div className="whatsapp-chat-header p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleCloseChat}
-                    className="p-2 hover:bg-gray-100 rounded-lg lg:hidden"
+                    className="p-2 hover:bg-[#25d366]/10 rounded-lg lg:hidden"
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#000dff] to-[#3388d9] rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold">
+                  <div className="w-10 h-10 rounded-full border border-[#128c7e]/20 bg-[#25d366]/10 flex items-center justify-center">
+                    <span className="text-[#128c7e] font-semibold">
                       {selectedConversation.cliente?.nome?.[0]?.toUpperCase() || 'C'}
                     </span>
                   </div>
@@ -572,7 +574,7 @@ export default function Conversas() {
                   ) : (
                     <button
                       onClick={() => handleAssumeConversation(selectedConversation)}
-                      className="text-xs bg-[#000dff] text-white px-3 py-1.5 rounded-lg hover:bg-[#000dff]/90 flex items-center gap-1"
+                      className="whatsapp-primary-action text-xs px-3 py-1.5 flex items-center gap-1"
                     >
                       <User className="w-3 h-3" />
                       Assumir
@@ -582,18 +584,21 @@ export default function Conversas() {
                   {/* Status selector */}
                   <select
                     value={selectedConversation.conversationStatus || 'open'}
-                    onChange={(e) => handleUpdateStatus(e.target.value)}
-                    className="text-sm border border-[#1f2937] rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#000dff]"
+                    onChange={(e) => {
+                      const nextStatus = parseConversationStatus(e.target.value);
+                      if (nextStatus) handleUpdateStatus(nextStatus);
+                    }}
+                    className="whatsapp-control text-sm px-3 py-1.5"
                   >
-                    <option value="open">🟢 Aberta</option>
-                    <option value="waiting">🟡 Aguardando</option>
-                    <option value="bot">🤖 Bot</option>
-                    <option value="human">👤 Humano</option>
-                    <option value="closed">⚪ Fechada</option>
+                    <option value="open">Aberta</option>
+                    <option value="waiting">Aguardando</option>
+                    <option value="bot">Robô</option>
+                    <option value="human">Humano</option>
+                    <option value="closed">Fechada</option>
                   </select>
                   {selectedConversation.campanha && (
-                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                      📢 {selectedConversation.campanha.nome}
+                    <span className="text-xs bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-muted)] px-2 py-1 rounded">
+                      {selectedConversation.campanha.nome}
                     </span>
                   )}
                   
@@ -603,8 +608,8 @@ export default function Conversas() {
                       onClick={() => setShowSdrPanel(!showSdrPanel)}
                       className={`p-2 rounded-lg transition-colors ${
                         showSdrPanel 
-                          ? 'bg-[#000dff] text-white' 
-                          : 'bg-gray-100 text-slate-600 hover:bg-gray-200'
+                          ? 'bg-[#128c7e] text-white' 
+                          : 'whatsapp-chip'
                       }`}
                       title={showSdrPanel ? "Ocultar SDR IA" : "Mostrar SDR IA"}
                     >
@@ -616,7 +621,7 @@ export default function Conversas() {
 
               {/* SDR Panel - só mostra se tiver permissão */}
               {hasSdrIaPermission() && showSdrPanel && selectedConversation && (
-                <div className="border-b border-gray-100">
+                <div className="border-b border-[var(--border-muted)]">
                   <SdrPanel
                     conversationId={selectedConversation.id}
                     leadId={selectedConversation.clienteId}
@@ -636,7 +641,7 @@ export default function Conversas() {
               )}
 
               {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="whatsapp-messages flex-1 overflow-y-auto p-4 space-y-4">
                 {loadingMensagens ? (
                   <LoadingState />
                 ) : mensagens.length === 0 ? (
@@ -652,19 +657,19 @@ export default function Conversas() {
                       <div
                         className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                           msg.direction === 'outbound'
-                            ? 'bg-[#000dff] text-white rounded-br-md'
-                            : 'bg-gray-100 text-white rounded-bl-md'
+                            ? 'whatsapp-bubble-out rounded-br-md'
+                            : 'whatsapp-bubble-in rounded-bl-md'
                         }`}
                       >
                         {/* Indicador de direção */}
                         <div className={`text-xs mb-1 ${
-                          msg.direction === 'outbound' ? 'text-blue-200' : 'text-green-600'
+                          msg.direction === 'outbound' ? 'text-emerald-100' : 'text-[#128c7e]'
                         }`}>
-                          {msg.direction === 'outbound' ? '📤 Você' : '📥 Cliente'}
+                          {msg.direction === 'outbound' ? 'Você' : 'Cliente'}
                         </div>
                         <p className="text-sm">{msg.content}</p>
                         <div className={`flex items-center gap-1 mt-1 text-xs ${
-                          msg.direction === 'outbound' ? 'text-blue-200' : 'text-slate-400'
+                          msg.direction === 'outbound' ? 'text-emerald-100' : 'text-slate-500'
                         }`}>
                           <span>{formatTime(msg.createdAt)}</span>
                           {msg.direction === 'outbound' && (
@@ -681,7 +686,7 @@ export default function Conversas() {
               </div>
 
               {/* Input de Mensagem */}
-              <div className="p-4 border-t border-gray-100">
+              <div className="whatsapp-composer p-4">
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -689,13 +694,13 @@ export default function Conversas() {
                     onChange={(e) => setNovaMensagem(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 px-4 py-2 border border-[#1f2937] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000dff]"
+                    className="whatsapp-control flex-1 px-4 py-2"
                     disabled={sendingMessage}
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={!novaMensagem.trim() || sendingMessage}
-                    className="px-4"
+                    className="whatsapp-primary-action px-4"
                   >
                     {sendingMessage ? (
                       <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

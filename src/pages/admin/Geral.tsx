@@ -5,9 +5,13 @@ import useAppStore from "../../store";
 import { Button, Input, Select } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
 
+const AVATAR_MAX_SIZE_BYTES = 2 * 1024 * 1024;
+const AVATAR_ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 export const GeralPage: React.FC = () => {
   const { theme, setTheme, toggleTheme, user, updateUserAvatar, updateUserProfile } = useAppStore();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   
@@ -23,25 +27,52 @@ export const GeralPage: React.FC = () => {
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    setAvatarError("");
+
+    if (!file) return;
+
+    if (!AVATAR_ALLOWED_TYPES.has(file.type)) {
+      setAvatarError("Use uma imagem JPG, PNG ou WebP.");
+      e.target.value = "";
+      return;
     }
+
+    if (file.size > AVATAR_MAX_SIZE_BYTES) {
+      setAvatarError("Use uma imagem de até 2 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        setAvatarPreview(result);
+      } else {
+        setAvatarError("Não foi possível carregar a imagem selecionada.");
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveAvatar = () => {
     setAvatarPreview(null);
+    setAvatarError("");
+    if (avatarInputRef.current) {
+      avatarInputRef.current.value = "";
+    }
     updateUserAvatar(null);
+  };
+
+  const handleOpenAvatarPicker = () => {
+    avatarInputRef.current?.click();
   };
 
   const handleSalvar = async () => {
     setSaving(true);
     // Simular salvamento
     await new Promise(resolve => setTimeout(resolve, 1000));
-    if (avatarPreview) {
+    if (avatarPreview !== null) {
       updateUserAvatar(avatarPreview);
     }
     setSaving(false);
@@ -51,7 +82,6 @@ export const GeralPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Geral"
-        subtitle="Gerencie as configurações gerais do sistema"
         onRefresh={() => {}}
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
@@ -69,15 +99,15 @@ export const GeralPage: React.FC = () => {
         exportFilename="configuracoes_gerais"
       />
       
-      <div className="bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-200 rounded-xl p-6">
+      <div className="finqz-card p-4 sm:p-5">
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-slate-900">Configurações Gerais</h3>
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">Configurações gerais</h3>
           
           {/* Avatar do Usuário */}
-          <div className="border-b border-gray-200 pb-6">
-            <label className="block text-sm font-medium text-slate-700 mb-3">Foto de Perfil</label>
+          <div className="border-b border-[var(--border-muted)] pb-6">
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">Foto de Perfil</label>
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gray-100 border-2 border-[#3388d9] flex items-center justify-center overflow-hidden">
+              <div className="w-20 h-20 rounded-full bg-[var(--bg-elevated)] border border-[var(--border-default)] flex items-center justify-center overflow-hidden">
                 {avatarPreview || user?.avatar ? (
                   <img 
                     src={avatarPreview || user?.avatar} 
@@ -85,7 +115,7 @@ export const GeralPage: React.FC = () => {
                     className="w-full h-full object-cover" 
                   />
                 ) : (
-                  <span className="text-2xl font-semibold text-slate-500">
+                  <span className="text-2xl font-semibold text-[var(--text-muted)]">
                     {user?.nome ? user.nome.charAt(0).toUpperCase() : "U"}
                   </span>
                 )}
@@ -94,20 +124,21 @@ export const GeralPage: React.FC = () => {
                 <input
                   ref={avatarInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={handleAvatarUpload}
                   className="hidden"
-                  id="avatar-upload"
                 />
-                <label
-                  htmlFor="avatar-upload"
+                <button
+                  type="button"
+                  onClick={handleOpenAvatarPicker}
                   className="cursor-pointer inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 bg-primary text-white hover:bg-primary/90 active:bg-primary/80 px-4 py-2 text-sm gap-2"
                 >
                   <Upload size={16} />
                   Alterar Foto
-                </label>
+                </button>
                 {(avatarPreview || user?.avatar) && (
                   <button
+                    type="button"
                     onClick={handleRemoveAvatar}
                     className="inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 bg-error text-white hover:bg-red-700 active:bg-red-800 px-4 py-2 text-sm gap-2"
                   >
@@ -117,7 +148,10 @@ export const GeralPage: React.FC = () => {
                 )}
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">Recomendado: imagem quadrada com no mínimo 200x200 pixels</p>
+            <p className="text-xs text-[var(--text-muted)] mt-2">JPG, PNG ou WebP até 2 MB.</p>
+            {avatarError && (
+              <p className="mt-2 text-xs font-medium text-red-500">{avatarError}</p>
+            )}
           </div>
 
           {/* Informações do Perfil */}
@@ -155,7 +189,7 @@ export const GeralPage: React.FC = () => {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Bio / Descrição</label>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Bio / Descrição</label>
               <textarea
                 value={user?.bio || ""}
                 onChange={(e) => updateUserProfile({ bio: e.target.value })}
@@ -177,7 +211,7 @@ export const GeralPage: React.FC = () => {
 
           {/* Tema */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">Tema</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-3">Tema</label>
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -187,10 +221,10 @@ export const GeralPage: React.FC = () => {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
                   settings.tema === "light" 
                     ? "border-primary bg-primary/5" 
-                    : "border-gray-200 hover:border-gray-300"
+                    : "border-[var(--border-default)] hover:border-[var(--border-strong)]"
                 }`}
               >
-                <div className="w-5 h-5 rounded-full bg-[#0F172A]/80 backdrop-blur-xl border border-white/10 border border-gray-300" />
+                <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-300" />
                 Claro
               </button>
               <button
@@ -201,7 +235,7 @@ export const GeralPage: React.FC = () => {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
                   settings.tema === "dark" 
                     ? "border-primary bg-primary/5" 
-                    : "border-gray-200 hover:border-gray-300"
+                    : "border-[var(--border-default)] hover:border-[var(--border-strong)]"
                 }`}
               >
                 <div className="w-5 h-5 rounded-full bg-gray-800 border border-gray-600" />
@@ -253,7 +287,7 @@ export const GeralPage: React.FC = () => {
           </div>
 
           {/* Botão Salvar */}
-          <div className="flex justify-end pt-4 border-t border-gray-200">
+          <div className="flex justify-end pt-4 border-t border-[var(--border-muted)]">
             <Button
               onClick={handleSalvar}
               disabled={saving}

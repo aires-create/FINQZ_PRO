@@ -1062,42 +1062,42 @@ export const ClientesPage: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-[#111827] border border-[#1f2937] rounded-2xl overflow-hidden shadow-sm mt-5">
+      <div className="table-container mt-5 overflow-hidden">
         {loading ? (
           <LoadingState text="Carregando clientes..." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px]">
               <thead>
-                <tr className="border-b border-[#1f2937] bg-gray-50">
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">ID/Código</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Cliente</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Tipo</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">CPF/CNPJ</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Contato</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Localização</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-slate-600">Criado em</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-slate-600">Ações</th>
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">ID/Código</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Cliente</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Tipo</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">CPF/CNPJ</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Contato</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Localização</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Criado em</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredClientes.map((cliente, index) => (
-                  <tr key={cliente.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 align-middle text-sm text-slate-300">
-                      <span className="text-sm font-medium text-white">
+                  <tr key={cliente.id} className="border-b border-[var(--border-muted)] hover:bg-[var(--bg-surface-hover)] transition-colors">
+                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">
                         {formatClientCode(cliente, index)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-slate-300">
+                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
                       <div className="flex items-center gap-3">
                         <EntityAvatar name={cliente.nome} type="cliente" size="sm" />
                         <div>
-                          <p className="text-sm font-semibold text-white">{cliente.nome}</p>
-                          <p className="text-xs text-slate-500">{cliente.email || "-"}</p>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{cliente.nome}</p>
+                          <p className="text-xs text-[var(--text-muted)]">{cliente.email || "-"}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-slate-300">
+                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
                       {isCNPJ(cliente.cpf_cnpj || "") ? (
                         <div className="w-9 h-9 flex items-center justify-center rounded-xl bg-green-900/20" title="Pessoa Jurídica">
                           <Building2 size={18} className="text-green-600" />
@@ -1108,10 +1108,10 @@ export const ClientesPage: React.FC = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm font-mono text-slate-300">
+                    <td className="px-4 py-3 align-middle text-sm font-mono text-[var(--text-secondary)]">
                       {formatDocument(cliente?.cpf_cnpj, cliente?.personType)}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-slate-300">
+                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
                       {(() => {
                         const { celular, telefone, email } = getClienteContato(cliente);
                         if (!celular && !telefone && !email) {
@@ -1119,7 +1119,7 @@ export const ClientesPage: React.FC = () => {
                         }
                         return (
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className="text-sm text-slate-300">
+                            <span className="text-sm text-[var(--text-secondary)]">
                               {formatPhone(celular || telefone)}
                             </span>
 
@@ -1158,15 +1158,15 @@ export const ClientesPage: React.FC = () => {
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-2 align-middle text-sm text-slate-300 max-w-[150px] truncate">
+                    <td className="px-4 py-2 align-middle text-sm text-[var(--text-secondary)] max-w-[150px] truncate">
                       {cliente.cidade && cliente.estado
                         ? `${cliente.cidade}/${cliente.estado}`
                         : "-"}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-slate-300">
+                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
                       {formatSafeDate(cliente?.created_at)}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-slate-300">
+                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleToggleStatus(cliente)}

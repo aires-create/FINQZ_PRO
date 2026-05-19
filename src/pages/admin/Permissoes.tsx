@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { Shield, Plus, Users, Key, ChevronRight, Search, MoreVertical, Edit, Trash2, Copy, X, Check, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { KpiCard } from "../../components/ui";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface Role {
   id: string;
@@ -371,7 +373,7 @@ const PermissoesPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="app-page">
       {/* Modal de Nova Função */}
       <NovaRoleModal
         isOpen={isModalOpen}
@@ -383,91 +385,23 @@ const PermissoesPage: React.FC = () => {
         editingRole={editingRole}
       />
 
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
-          <span>Administração</span>
-          <ChevronRight size={16} />
-          <span className="text-white">Permissões/Funções</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center">
-                <Shield className="text-white" size={20} />
-              </div>
-              Permissões/Funções
-            </h1>
-            <p className="text-slate-600 mt-1">
-              Gerenciamento de funções e permissões do sistema
-            </p>
-          </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Plus size={18} />
-            Nova Função
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Permissões/Funções"
+        icon={Shield}
+        onCreate={() => setIsModalOpen(true)}
+        createLabel="Nova Função"
+      />
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Total de Funções</p>
-              <p className="text-2xl font-bold text-white">{roles.length}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <Shield className="text-purple-600" size={24} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Funções do Sistema</p>
-              <p className="text-2xl font-bold text-white">
-                {roles.filter((r) => r.tipo === "sistema").length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-              <Key className="text-blue-600" size={24} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Funções Personalizadas</p>
-              <p className="text-2xl font-bold text-white">
-                {roles.filter((r) => r.tipo === "personalizada").length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <Users className="text-green-600" size={24} />
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-500">Total Usuários</p>
-              <p className="text-2xl font-bold text-white">
-                {roles.reduce((acc, r) => acc + r.usuarios, 0)}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-              <Users className="text-orange-600" size={24} />
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <KpiCard label="Total de Funções" value={roles.length} icon={<Shield size={18} />} variant="gray" />
+        <KpiCard label="Funções do Sistema" value={roles.filter((r) => r.tipo === "sistema").length} icon={<Key size={18} />} variant="blue" />
+        <KpiCard label="Personalizadas" value={roles.filter((r) => r.tipo === "personalizada").length} icon={<Users size={18} />} variant="green" />
+        <KpiCard label="Usuários" value={roles.reduce((acc, r) => acc + r.usuarios, 0)} icon={<Users size={18} />} variant="orange" />
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-[#111827] rounded-xl border border-[#1f2937] p-4 mb-6">
+      <div className="finqz-card p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -483,7 +417,7 @@ const PermissoesPage: React.FC = () => {
       </div>
 
       {/* Tabela de funções */}
-      <div className="bg-[#111827] rounded-xl border border-[#1f2937] overflow-hidden">
+      <div className="finqz-card overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-[#1f2937]">
             <tr>

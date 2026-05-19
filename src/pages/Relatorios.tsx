@@ -57,49 +57,43 @@ interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
+type ReportCsvRow = Record<string, string | number | undefined>;
+
 // ============================================
 // COMPONENTS
 // ============================================
 
-/**
- * Card de KPI Premium
- */
 const KPICard: React.FC<KPICardProps> = ({ label, value, icon, color, variation, onClick, variant = "blue" }) => {
   const variantStyles = {
     blue: {
-      gradient: "from-blue-500/20 via-blue-600/10 to-blue-700/5",
-      glow: "shadow-blue-500/25",
       border: "border-blue-500/20",
       iconBg: "bg-blue-500/20",
-      iconColor: "text-blue-300"
+      iconColor: "text-blue-600 dark:text-blue-300",
+      valueColor: "text-blue-700 dark:text-blue-300"
     },
     green: {
-      gradient: "from-emerald-500/20 via-emerald-600/10 to-emerald-700/5",
-      glow: "shadow-emerald-500/25",
       border: "border-emerald-500/20",
       iconBg: "bg-emerald-500/20",
-      iconColor: "text-emerald-300"
+      iconColor: "text-emerald-600 dark:text-emerald-300",
+      valueColor: "text-emerald-700 dark:text-emerald-300"
     },
     purple: {
-      gradient: "from-purple-500/20 via-purple-600/10 to-purple-700/5",
-      glow: "shadow-purple-500/25",
       border: "border-purple-500/20",
       iconBg: "bg-purple-500/20",
-      iconColor: "text-purple-300"
+      iconColor: "text-purple-600 dark:text-purple-300",
+      valueColor: "text-purple-700 dark:text-purple-300"
     },
     orange: {
-      gradient: "from-orange-500/20 via-orange-600/10 to-orange-700/5",
-      glow: "shadow-orange-500/25",
       border: "border-orange-500/20",
       iconBg: "bg-orange-500/20",
-      iconColor: "text-orange-300"
+      iconColor: "text-orange-600 dark:text-orange-300",
+      valueColor: "text-orange-700 dark:text-orange-300"
     },
     cyan: {
-      gradient: "from-cyan-500/20 via-cyan-600/10 to-cyan-700/5",
-      glow: "shadow-cyan-500/25",
       border: "border-cyan-500/20",
       iconBg: "bg-cyan-500/20",
-      iconColor: "text-cyan-300"
+      iconColor: "text-cyan-600 dark:text-cyan-300",
+      valueColor: "text-cyan-700 dark:text-cyan-300"
     }
   }
 
@@ -108,26 +102,17 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, icon, color, variation,
   return (
     <div
       className={`
-        group relative overflow-hidden rounded-2xl
-        bg-gradient-to-br ${styles.gradient}
+        financial-kpi-card group relative overflow-hidden rounded-lg
+        bg-[var(--bg-surface)]
         border ${styles.border}
-        backdrop-blur-xl
-        p-6
-        transition-all duration-500 ease-out
-        hover:scale-[1.02] hover:-translate-y-1
-        hover:shadow-2xl hover:${styles.glow}
-        hover:border-white/30
+        p-4
+        transition-all duration-200 ease-out
+        hover:border-[var(--border-strong)]
         cursor-pointer
-        min-h-[140px]
+        min-h-[112px]
       `}
       onClick={onClick}
     >
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent opacity-50" />
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/5 blur-2xl transition-all duration-500 group-hover:bg-white/10 group-hover:scale-110" />
-      <div className="absolute -left-4 -bottom-4 h-16 w-16 rounded-full bg-white/5 blur-xl transition-all duration-500 group-hover:bg-white/8" />
-
-      {/* Content */}
       <div className="relative flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-3">
@@ -135,33 +120,28 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, icon, color, variation,
               <div className={`
                 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg
                 ${styles.iconBg} ${styles.iconColor}
-                transition-all duration-300 group-hover:scale-110
+                border border-[var(--border-muted)]
               `}>
                 {icon}
               </div>
             )}
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-slate-300 transition-colors">
+            <p className="truncate text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
               {label}
             </p>
           </div>
 
-          <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-white mb-2 group-hover:scale-105 transition-transform duration-300">
+          <h2 className={`financial-value text-[1.45rem] font-semibold tracking-tight ${styles.valueColor}`}>
             {value}
           </h2>
 
           {variation && (
-            <div className="flex items-center gap-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <p className="text-sm font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">
+            <div className="mt-1 flex items-center gap-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <p className="text-sm font-medium text-emerald-600 dark:text-emerald-300">
                 {variation}
               </p>
             </div>
           )}
-        </div>
-
-        {/* Decorative Element */}
-        <div className="absolute top-4 right-4 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/10 to-transparent blur-sm" />
         </div>
       </div>
     </div>
@@ -174,17 +154,16 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, icon, color, variation,
 const EmptyState: React.FC<EmptyStateProps> = ({ title, message, icon, action }) => (
   <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
     <div className="relative mb-8">
-      <div className="w-24 h-24 bg-gradient-to-br from-slate-800/50 to-slate-900/30 rounded-3xl flex items-center justify-center backdrop-blur-xl border border-white/10 shadow-2xl">
+      <div className="w-20 h-20 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] flex items-center justify-center">
         {icon || <FileText className="w-12 h-12 text-slate-400" />}
       </div>
-      <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl -z-10" />
     </div>
 
-    <h3 className="text-xl font-bold text-white mb-3 tracking-tight">
+    <h3 className="text-xl font-bold text-[var(--text-primary)] mb-3 tracking-tight">
       {title}
     </h3>
 
-    <p className="text-slate-400 max-w-md leading-relaxed mb-6">
+    <p className="text-[var(--text-secondary)] max-w-md leading-relaxed mb-6">
       {message}
     </p>
 
@@ -202,17 +181,16 @@ const EmptyState: React.FC<EmptyStateProps> = ({ title, message, icon, action })
 const LoadingState: React.FC = () => (
   <div className="flex flex-col items-center justify-center py-20">
     <div className="relative mb-8">
-      <div className="w-16 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/10 shadow-2xl">
+      <div className="w-14 h-14 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
       </div>
-      <div className="absolute -inset-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl -z-10 animate-pulse" />
     </div>
 
     <div className="text-center">
-      <h3 className="text-lg font-semibold text-white mb-2 tracking-tight">
+      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2 tracking-tight">
         Carregando dados...
       </h3>
-      <p className="text-slate-400 text-sm">
+      <p className="text-[var(--text-secondary)] text-sm">
         Estamos processando suas informações
       </p>
     </div>
@@ -245,17 +223,17 @@ const ReportFilters: React.FC<{
   };
 
   return (
-    <div className="bg-gradient-to-br from-[#0F172A]/90 via-[#0F172A]/80 to-[#1E293B]/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-xl shadow-black/20 p-6 mb-6">
+    <div className="financial-panel p-5 mb-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Período */}
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+          <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
             Período
           </label>
           <select
             value={filters.periodo}
             onChange={(e) => handlePeriodChange(e.target.value as ReportPeriod)}
-            className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+            className="w-full px-4 py-3 text-sm"
           >
             {REPORT_CONFIG.PERIODS.map(period => (
               <option key={period.id} value={period.id}>{period.label}</option>
@@ -267,25 +245,25 @@ const ReportFilters: React.FC<{
         {filters.periodo === 'personalizado' && (
           <>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+              <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
                 Data Início
               </label>
               <input
                 type="date"
                 value={filters.dataInicio || ''}
                 onChange={(e) => handleDateChange('dataInicio', e.target.value)}
-                className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+                className="w-full px-4 py-3 text-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+              <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
                 Data Fim
               </label>
               <input
                 type="date"
                 value={filters.dataFim || ''}
                 onChange={(e) => handleDateChange('dataFim', e.target.value)}
-                className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+                className="w-full px-4 py-3 text-sm"
               />
             </div>
           </>
@@ -293,13 +271,13 @@ const ReportFilters: React.FC<{
 
         {/* Produto */}
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+          <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
             Produto
           </label>
           <select
             value={filters.produto || 'todos'}
             onChange={(e) => onChange({ ...filters, produto: e.target.value })}
-            className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+            className="w-full px-4 py-3 text-sm"
           >
             <option value="todos">Todos os Produtos</option>
             {produtos.map(prod => (
@@ -310,13 +288,13 @@ const ReportFilters: React.FC<{
 
         {/* Parceiro */}
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+          <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
             Parceiro
           </label>
           <select
             value={filters.parceiro || 'todos'}
             onChange={(e) => onChange({ ...filters, parceiro: e.target.value })}
-            className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+            className="w-full px-4 py-3 text-sm"
           >
             <option value="todos">Todos os Parceiros</option>
             {parceiros.map(partner => (
@@ -327,13 +305,16 @@ const ReportFilters: React.FC<{
 
         {/* Status */}
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+          <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
             Status
           </label>
           <select
             value={filters.status || 'todos'}
-            onChange={(e) => onChange({ ...filters, status: (e.target.value as any) })}
-            className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+            onChange={(e) => onChange({
+              ...filters,
+              status: e.target.value === "todos" ? undefined : e.target.value as ReportFilters["status"]
+            })}
+            className="w-full px-4 py-3 text-sm"
           >
             <option value="todos">Todos os Status</option>
             {REPORT_CONFIG.OPPORTUNITY_STATUS.map(status => (
@@ -344,7 +325,7 @@ const ReportFilters: React.FC<{
 
         {/* Busca */}
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-slate-300 tracking-wide">
+          <label className="block text-sm font-semibold text-[var(--text-secondary)] tracking-wide">
             Buscar
           </label>
           <input
@@ -352,7 +333,7 @@ const ReportFilters: React.FC<{
             placeholder="Buscar por nome..."
             value={filters.search || ''}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
-            className="w-full px-4 py-3 bg-[#0F172A] border border-[#1f2937] rounded-xl text-white placeholder-slate-500 focus:border-[#3388d9] focus:ring-1 focus:ring-[#3388d9] transition-all duration-200"
+            className="w-full px-4 py-3 text-sm"
           />
         </div>
       </div>
@@ -380,6 +361,13 @@ const RelatoriosPage: React.FC = () => {
 
   // Estado do FilterDrawer
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+
+  const filterDrawerValues = useMemo<Record<string, string>>(() => {
+    return Object.entries(filters).reduce<Record<string, string>>((acc, [key, value]) => {
+      acc[key] = value ?? "";
+      return acc;
+    }, {});
+  }, [filters]);
 
   // Computed data
   const data = useMemo(() => {
@@ -427,7 +415,7 @@ const RelatoriosPage: React.FC = () => {
 
   // Export handlers
   const handleExportCSV = useCallback(() => {
-    const exportData = reportType === 'analitico' 
+    const exportData: ReportCsvRow[] = reportType === 'analitico' 
       ? analyticalData 
       : consolidatedData.map(item => ({
           label: item.label,
@@ -442,7 +430,7 @@ const RelatoriosPage: React.FC = () => {
       return;
     }
 
-    reportUtils.exportToCSV(exportData as any[], `relatorio_${reportType}`);
+    reportUtils.exportToCSV(exportData, `relatorio_${reportType}`);
   }, [reportType, analyticalData, consolidatedData]);
 
   // Get report title
@@ -496,45 +484,45 @@ const RelatoriosPage: React.FC = () => {
       case 'consolidado':
         return (
           <div className="overflow-x-auto">
-            <div className="bg-gradient-to-br from-[#0F172A]/80 to-[#1E293B]/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl overflow-hidden">
-              <table className="w-full">
+            <div className="financial-panel overflow-hidden">
+              <table className="financial-table w-full">
                 <thead>
-                  <tr className="border-b border-white/10 bg-gradient-to-r from-[#0F172A] to-[#1E293B]">
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <tr>
+                    <th className="px-6 py-4 text-left">
                       Agrupamento
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-right">
                       Quantidade
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-right">
                       Valor Total
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-right">
                       Comissão
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-right">
                       Ticket Médio
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody>
                   {consolidatedData.map((row, index) => (
-                    <tr key={index} className="hover:bg-white/5 transition-colors duration-200">
-                      <td className="px-6 py-4 text-sm text-white font-medium">{row.label}</td>
-                      <td className="px-6 py-4 text-sm text-slate-300 text-right font-mono">{reportUtils.formatNumber(row.quantidade)}</td>
-                      <td className="px-6 py-4 text-sm text-white text-right font-semibold font-mono">{reportUtils.formatCurrency(row.valorTotal)}</td>
-                      <td className="px-6 py-4 text-sm text-emerald-400 text-right font-mono font-medium">{reportUtils.formatCurrency(row.comissaoTotal)}</td>
-                      <td className="px-6 py-4 text-sm text-slate-300 text-right font-mono">{reportUtils.formatCurrency(row.ticketMedio || 0)}</td>
+                    <tr key={index} className="transition-colors duration-200">
+                      <td className="px-6 py-4 text-sm text-[var(--text-primary)] font-medium">{row.label}</td>
+                      <td className="financial-metric px-6 py-4 text-sm text-[var(--text-secondary)] text-right font-mono">{reportUtils.formatNumber(row.quantidade)}</td>
+                      <td className="financial-value px-6 py-4 text-sm text-[var(--text-primary)] text-right font-semibold font-mono">{reportUtils.formatCurrency(row.valorTotal)}</td>
+                      <td className="financial-value px-6 py-4 text-sm text-emerald-600 dark:text-emerald-300 text-right font-mono font-medium">{reportUtils.formatCurrency(row.comissaoTotal)}</td>
+                      <td className="financial-value px-6 py-4 text-sm text-[var(--text-secondary)] text-right font-mono">{reportUtils.formatCurrency(row.ticketMedio || 0)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-white/20 bg-gradient-to-r from-[#0F172A]/50 to-[#1E293B]/50">
-                    <td className="px-6 py-4 text-sm text-white font-bold">Total</td>
-                    <td className="px-6 py-4 text-sm text-white text-right font-bold font-mono">{reportUtils.formatNumber(consolidatedData.reduce((sum, r) => sum + r.quantidade, 0))}</td>
-                    <td className="px-6 py-4 text-sm text-white text-right font-bold font-mono">{reportUtils.formatCurrency(consolidatedData.reduce((sum, r) => sum + r.valorTotal, 0))}</td>
-                    <td className="px-6 py-4 text-sm text-emerald-400 text-right font-bold font-mono">{reportUtils.formatCurrency(consolidatedData.reduce((sum, r) => sum + r.comissaoTotal, 0))}</td>
-                    <td className="px-6 py-4 text-sm text-slate-300 text-right font-mono">-</td>
+                  <tr className="border-t border-[var(--border-default)] bg-[var(--bg-surface-strong)]">
+                    <td className="px-6 py-4 text-sm text-[var(--text-primary)] font-bold">Total</td>
+                    <td className="financial-metric px-6 py-4 text-sm text-[var(--text-primary)] text-right font-bold font-mono">{reportUtils.formatNumber(consolidatedData.reduce((sum, r) => sum + r.quantidade, 0))}</td>
+                    <td className="financial-value px-6 py-4 text-sm text-[var(--text-primary)] text-right font-bold font-mono">{reportUtils.formatCurrency(consolidatedData.reduce((sum, r) => sum + r.valorTotal, 0))}</td>
+                    <td className="financial-value px-6 py-4 text-sm text-emerald-600 dark:text-emerald-300 text-right font-bold font-mono">{reportUtils.formatCurrency(consolidatedData.reduce((sum, r) => sum + r.comissaoTotal, 0))}</td>
+                    <td className="px-6 py-4 text-sm text-[var(--text-secondary)] text-right font-mono">-</td>
                   </tr>
                 </tfoot>
               </table>
@@ -545,43 +533,43 @@ const RelatoriosPage: React.FC = () => {
       case 'analitico':
         return (
           <div className="overflow-x-auto">
-            <div className="bg-gradient-to-br from-[#0F172A]/80 to-[#1E293B]/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl overflow-hidden">
-              <table className="w-full">
+            <div className="financial-panel overflow-hidden">
+              <table className="financial-table w-full">
                 <thead>
-                  <tr className="border-b border-white/10 bg-gradient-to-r from-[#0F172A] to-[#1E293B]">
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <tr>
+                    <th className="px-6 py-4 text-left">
                       Cliente
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-left">
                       CPF/CNPJ
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-left">
                       Produto
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-left">
                       Parceiro
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-left">
                       Etapa
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-right">
                       Valor
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-right">
                       Comissão
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-300">
+                    <th className="px-6 py-4 text-left">
                       Criação
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody>
                   {analyticalData.map((row) => (
-                    <tr key={row.id} className="hover:bg-white/5 transition-colors duration-200">
-                      <td className="px-6 py-4 text-sm text-white font-medium">{row.cliente}</td>
-                      <td className="px-6 py-4 text-sm text-slate-400 font-mono">{row.cpfCnpj}</td>
-                      <td className="px-6 py-4 text-sm text-slate-300">{row.produto}</td>
-                      <td className="px-6 py-4 text-sm text-slate-300">{row.parceiro}</td>
+                    <tr key={row.id} className="transition-colors duration-200">
+                      <td className="px-6 py-4 text-sm text-[var(--text-primary)] font-medium">{row.cliente}</td>
+                      <td className="px-6 py-4 text-sm text-[var(--text-muted)] font-mono whitespace-nowrap">{row.cpfCnpj}</td>
+                      <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">{row.produto}</td>
+                      <td className="px-6 py-4 text-sm text-[var(--text-secondary)]">{row.parceiro}</td>
                       <td className="px-6 py-4">
                         <span className={`
                           inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
@@ -593,9 +581,9 @@ const RelatoriosPage: React.FC = () => {
                           {row.etapa}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-white text-right font-semibold font-mono">{reportUtils.formatCurrency(row.valor)}</td>
-                      <td className="px-6 py-4 text-sm text-emerald-400 text-right font-mono font-medium">{reportUtils.formatCurrency(row.comissao)}</td>
-                      <td className="px-6 py-4 text-sm text-slate-400">{row.dataCriacao}</td>
+                      <td className="financial-value px-6 py-4 text-sm text-[var(--text-primary)] text-right font-semibold font-mono">{reportUtils.formatCurrency(row.valor)}</td>
+                      <td className="financial-value px-6 py-4 text-sm text-emerald-600 dark:text-emerald-300 text-right font-mono font-medium">{reportUtils.formatCurrency(row.comissao)}</td>
+                      <td className="financial-date px-6 py-4 text-sm text-[var(--text-muted)]">{row.dataCriacao}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -610,9 +598,9 @@ const RelatoriosPage: React.FC = () => {
 
         return (
           <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h3 className="text-xl font-bold text-white mb-2">Análise de Funil de Vendas</h3>
-              <p className="text-slate-400">Conversão por etapa do processo</p>
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-[var(--text-primary)] mb-1">Análise de Funil de Vendas</h3>
+              <p className="text-[var(--text-secondary)] text-sm">Conversão por etapa do processo</p>
             </div>
 
             {etapas.map((etapa, index) => {
@@ -625,45 +613,43 @@ const RelatoriosPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className={`
                         w-3 h-3 rounded-full transition-all duration-300
-                        ${index === etapas.length - 1 ? 'bg-emerald-400 shadow-lg shadow-emerald-400/50' :
-                          index >= 4 ? 'bg-blue-400 shadow-lg shadow-blue-400/50' :
-                          index >= 2 ? 'bg-amber-400 shadow-lg shadow-amber-400/50' :
-                          'bg-slate-400 shadow-lg shadow-slate-400/50'}
+                        ${index === etapas.length - 1 ? 'bg-emerald-500' :
+                          index >= 4 ? 'bg-blue-500' :
+                          index >= 2 ? 'bg-amber-500' :
+                          'bg-slate-500'}
                       `} />
-                      <span className="text-sm font-semibold text-white capitalize group-hover:text-blue-300 transition-colors">
+                      <span className="text-sm font-semibold text-[var(--text-primary)] capitalize">
                         {etapa}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="text-slate-400 font-mono">{count}</span>
-                      <span className="text-white font-bold font-mono">{taxa.toFixed(1)}%</span>
+                      <span className="financial-metric text-[var(--text-secondary)] font-mono">{count}</span>
+                      <span className="financial-metric text-[var(--text-primary)] font-bold font-mono">{taxa.toFixed(1)}%</span>
                     </div>
                   </div>
 
                   <div className="relative">
-                    <div className="h-4 bg-gradient-to-r from-slate-800/50 to-slate-700/30 rounded-full overflow-hidden border border-white/10">
+                    <div className="h-3 bg-[var(--bg-elevated)] rounded-full overflow-hidden border border-[var(--border-muted)]">
                       <div
                         className={`
                           h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden
-                          ${index === etapas.length - 1 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/30' :
-                            index >= 4 ? 'bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg shadow-blue-500/30' :
-                            index >= 2 ? 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-lg shadow-amber-500/30' :
-                            'bg-gradient-to-r from-slate-500 to-slate-600 shadow-lg shadow-slate-500/30'}
+                          ${index === etapas.length - 1 ? 'bg-emerald-500' :
+                            index >= 4 ? 'bg-blue-500' :
+                            index >= 2 ? 'bg-amber-500' :
+                            'bg-slate-500'}
                         `}
                         style={{ width: `${taxa}%` }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      </div>
+                      />
                     </div>
                   </div>
                 </div>
               );
             })}
 
-            <div className="mt-8 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-2xl border border-white/10">
+            <div className="mt-8 p-4 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)]">
               <div className="text-center">
-                <p className="text-sm text-slate-400 mb-1">Taxa de Conversão Total</p>
-                <p className="text-2xl font-bold text-white">
+                <p className="text-sm text-[var(--text-muted)] mb-1">Taxa de Conversão Total</p>
+                <p className="financial-metric text-2xl font-bold text-[var(--text-primary)]">
                   {total > 0 ? ((data.filter(d => d.coluna_id === 'encerrado').length / total) * 100).toFixed(1) : 0}%
                 </p>
               </div>
@@ -685,22 +671,7 @@ const RelatoriosPage: React.FC = () => {
     <div className="app-page">
       <div className="space-y-6">
 
-        {/* HEADER SECTION */}
-        <div className="finqz-card p-5 sm:p-6">
-          <div className="flex items-center gap-4">
-            <div className="finqz-icon-badge h-12 w-12">
-              <FileBarChart className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
-                Relatórios
-              </h1>
-              <p className="mt-1 text-sm text-[var(--text-secondary)] sm:text-base">
-                Análises detalhadas e insights do seu negócio
-              </p>
-            </div>
-          </div>
-        </div>
+        <PageHeader title="Relatórios" icon={FileBarChart} />
 
         {/* MAIN CONTENT CARD */}
         <div className="finqz-card overflow-hidden">
@@ -713,16 +684,16 @@ const RelatoriosPage: React.FC = () => {
                   key={type.id}
                   onClick={() => setReportType(type.id as ReportType)}
                   className={`
-                    group relative px-6 py-3 rounded-2xl text-sm font-semibold tracking-wide transition-all duration-300
+                    group relative px-4 py-2.5 rounded-lg text-sm font-semibold tracking-wide transition-all duration-200
                     ${reportType === type.id
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/25'
+                      ? 'bg-primary text-white shadow-sm'
                       : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-default)] hover:bg-[var(--bg-surface-hover)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
                     }
                   `}
                 >
                   <div className="flex items-center gap-2">
                     <div className={`
-                      p-1.5 rounded-lg transition-all duration-300
+                      p-1.5 rounded-md transition-all duration-200
                       ${reportType === type.id
                         ? 'bg-white/20'
                         : 'bg-[var(--color-primary-faint)] group-hover:bg-[var(--bg-surface-hover)]'
@@ -741,7 +712,7 @@ const RelatoriosPage: React.FC = () => {
                   </div>
 
                   {reportType === type.id && (
-                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-white rounded-full" />
+                    <div className="absolute -bottom-px left-4 right-4 h-0.5 bg-white/80 rounded-full" />
                   )}
                 </button>
               ))}
@@ -858,22 +829,10 @@ const RelatoriosPage: React.FC = () => {
               { label: 'Todos', value: 'todos' },
             ], placeholder: 'Todos os parceiros' },
           ]}
-          values={filters as any}
+          values={filterDrawerValues}
           onChange={(key, value) => setFilters(prev => ({ ...prev, [key]: value }))}
           onApply={() => setOpenFilterDrawer(false)}
-          onClear={() => setFilters({
-            periodo: 'mes',
-            dataInicio: undefined,
-            dataFim: undefined,
-            produto: undefined,
-            parceiro: undefined,
-            status: undefined,
-            etapa: undefined,
-            origem: undefined,
-            usuario: undefined,
-            equipe: undefined,
-            search: '',
-          } as any)}
+          onClear={() => setFilters({ periodo: 'mes', search: '' })}
         />
       </div>
     </div>
