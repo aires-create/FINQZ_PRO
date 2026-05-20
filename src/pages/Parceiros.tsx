@@ -767,12 +767,10 @@ export const ParceirosPage: React.FC = () => {
         }
       />
 
-      <h2 className="text-base font-semibold text-[var(--text-primary)]">Visão Geral</h2>
-
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3 lg:gap-4">
         <KpiCard
-          label="Total de Parceiros"
+          label="Total"
           value={parceiros.length}
           icon={<Store size={18} />}
           variant="blue"
