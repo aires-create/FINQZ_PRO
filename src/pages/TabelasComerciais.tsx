@@ -25,6 +25,51 @@ import {
   CommercialCondition
 } from "../data/commercialRepository";
 
+const calculateOperationalCommissionTotal = (
+  flatCommission: number,
+  bonusCommission: number,
+  advanceCommission: number,
+): number => {
+  return Number(
+    (flatCommission + bonusCommission + advanceCommission).toFixed(6),
+  );
+};
+
+const getConditionCommissionValues = (
+  condition: Partial<CommercialCondition>,
+) => {
+  const flatCommission = condition.flatCommission ?? condition.commissionRate ?? 0;
+  const bonusCommission = condition.bonusCommission ?? 0;
+  const advanceCommission = condition.advanceCommission ?? 0;
+
+  return {
+    flatCommission,
+    bonusCommission,
+    advanceCommission,
+    totalCommission: calculateOperationalCommissionTotal(
+      flatCommission,
+      bonusCommission,
+      advanceCommission,
+    ),
+  };
+};
+
+const withCalculatedCommissionFields = (
+  condition: Partial<CommercialCondition>,
+): Partial<CommercialCondition> => {
+  const commissionValues = getConditionCommissionValues(condition);
+  return {
+    ...condition,
+    ...commissionValues,
+    commissionRate: commissionValues.flatCommission,
+  };
+};
+
+const parseNumberInput = (value: string): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export const TabelasComerciaisPage: React.FC = () => {
   // State
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -71,6 +116,11 @@ export const TabelasComerciaisPage: React.FC = () => {
       monthlyRate: 0,
       cetRate: 0,
       commissionRate: 0,
+      coefficient: undefined,
+      flatCommission: 0,
+      bonusCommission: 0,
+      advanceCommission: 0,
+      totalCommission: 0,
       minAmount: 1000,
       maxAmount: 50000,
       minAge: 18,
@@ -254,6 +304,11 @@ export const TabelasComerciaisPage: React.FC = () => {
       monthlyRate: 0,
       cetRate: 0,
       commissionRate: 0,
+      coefficient: undefined,
+      flatCommission: 0,
+      bonusCommission: 0,
+      advanceCommission: 0,
+      totalCommission: 0,
       minAmount: 1000,
       maxAmount: 50000,
       minAge: 18,
@@ -320,6 +375,11 @@ export const TabelasComerciaisPage: React.FC = () => {
           monthlyRate: c.monthlyRate,
           cetRate: c.cetRate,
           commissionRate: c.commissionRate,
+          coefficient: c.coefficient,
+          flatCommission: c.flatCommission ?? c.commissionRate,
+          bonusCommission: c.bonusCommission ?? 0,
+          advanceCommission: c.advanceCommission ?? 0,
+          totalCommission: getConditionCommissionValues(c).totalCommission,
           minAmount: c.minAmount,
           maxAmount: c.maxAmount,
           minAge: c.minAge,
@@ -347,6 +407,11 @@ export const TabelasComerciaisPage: React.FC = () => {
           monthlyRate: 0,
           cetRate: 0,
           commissionRate: 0,
+          coefficient: undefined,
+          flatCommission: 0,
+          bonusCommission: 0,
+          advanceCommission: 0,
+          totalCommission: 0,
           minAmount: 1000,
           maxAmount: 50000,
           minAge: 18,
@@ -509,6 +574,7 @@ export const TabelasComerciaisPage: React.FC = () => {
     } else {
       const validConditions = conditionForms.filter(c => c.term && c.monthlyRate !== undefined);
       validConditions.forEach(condition => {
+        const commissionValues = getConditionCommissionValues(condition);
         commercialConditionRepository.createCondition({
           commercialTableId: tableId,
           minTerm: condition.term || 1,
@@ -516,7 +582,12 @@ export const TabelasComerciaisPage: React.FC = () => {
           term: condition.term || 1,
           monthlyRate: condition.monthlyRate || 0,
           cetRate: condition.cetRate || 0,
-          commissionRate: condition.commissionRate || 0,
+          commissionRate: commissionValues.flatCommission,
+          coefficient: condition.coefficient,
+          flatCommission: commissionValues.flatCommission,
+          bonusCommission: commissionValues.bonusCommission,
+          advanceCommission: commissionValues.advanceCommission,
+          totalCommission: commissionValues.totalCommission,
           minAmount: condition.minAmount || 0,
           maxAmount: condition.maxAmount || 0,
           minAge: condition.minAge || 18,
@@ -546,6 +617,11 @@ export const TabelasComerciaisPage: React.FC = () => {
       monthlyRate: 0,
       cetRate: 0,
       commissionRate: 0,
+      coefficient: undefined,
+      flatCommission: 0,
+      bonusCommission: 0,
+      advanceCommission: 0,
+      totalCommission: 0,
       minAmount: 1000,
       maxAmount: 50000,
       minAge: 18,
@@ -581,14 +657,34 @@ export const TabelasComerciaisPage: React.FC = () => {
   };
 
   // Update condition form
-  const updateCondition = (index: number, field: string, value: any) => {
-    setConditionForms(prev => prev.map((c, i) => 
-      i === index ? { ...c, [field]: value } : c
-    ));
+  const updateCondition = <K extends keyof CommercialCondition>(
+    index: number,
+    field: K,
+    value: CommercialCondition[K],
+  ) => {
+    setConditionForms(prev => prev.map((c, i) => {
+      if (i !== index) return c;
+
+      const nextCondition = { ...c, [field]: value };
+      if (
+        field === "flatCommission" ||
+        field === "bonusCommission" ||
+        field === "advanceCommission" ||
+        field === "commissionRate"
+      ) {
+        return withCalculatedCommissionFields(nextCondition);
+      }
+
+      return nextCondition;
+    }));
   };
 
   // Update energy condition form
-  const updateEnergyCondition = (index: number, field: string, value: any) => {
+  const updateEnergyCondition = <K extends keyof CommercialCondition>(
+    index: number,
+    field: K,
+    value: CommercialCondition[K],
+  ) => {
     setEnergyConditionForms(prev => prev.map((c, i) => 
       i === index ? { ...c, [field]: value } : c
     ));
@@ -1170,6 +1266,17 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-xs text-slate-500 mb-1">Coef.</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      value={condition.coefficient ?? ""}
+                      onChange={(e) => updateCondition(index, "coefficient", parseNumberInput(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="0.000000"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-xs text-slate-500 mb-1">Taxa Mensal % *</label>
                     <input
                       type="number"
@@ -1191,15 +1298,49 @@ export const TabelasComerciaisPage: React.FC = () => {
                       placeholder="1.95"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Comissão % *</label>
+                    <label className="block text-xs text-slate-500 mb-1">Flat % *</label>
                     <input
                       type="number"
                       step="0.01"
-                      value={condition.commissionRate}
-                      onChange={(e) => updateCondition(index, "commissionRate", parseFloat(e.target.value) || 0)}
+                      value={condition.flatCommission ?? condition.commissionRate ?? 0}
+                      onChange={(e) => updateCondition(index, "flatCommission", parseNumberInput(e.target.value))}
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                       placeholder="5.50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Bônus %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={condition.bonusCommission ?? 0}
+                      onChange={(e) => updateCondition(index, "bonusCommission", parseNumberInput(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Adiant. %</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={condition.advanceCommission ?? 0}
+                      onChange={(e) => updateCondition(index, "advanceCommission", parseNumberInput(e.target.value))}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-500 mb-1">Total %</label>
+                    <input
+                      type="number"
+                      value={getConditionCommissionValues(condition).totalCommission}
+                      readOnly
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100 text-slate-600"
                     />
                   </div>
                 </div>

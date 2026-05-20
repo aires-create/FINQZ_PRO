@@ -185,6 +185,78 @@ const getSafeCatalog = () => {
   return Array.isArray(creditPfCatalog) ? creditPfCatalog : [];
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null;
+};
+
+const calculateOperationalCommissionTotal = (
+  flatCommission: number,
+  bonusCommission: number,
+  advanceCommission: number,
+): number => {
+  return Number(
+    (flatCommission + bonusCommission + advanceCommission).toFixed(6),
+  );
+};
+
+const isEnergyCondition = (condition: Partial<CommercialCondition>): boolean => {
+  return (
+    condition.minConsumption !== undefined ||
+    condition.maxConsumption !== undefined ||
+    condition.tariffKwh !== undefined
+  );
+};
+
+const getOperationalCommissionValues = (
+  condition: Partial<CommercialCondition>,
+) => {
+  const flatCommission = condition.flatCommission ?? condition.commissionRate ?? 0;
+  const bonusCommission = condition.bonusCommission ?? 0;
+  const advanceCommission = condition.advanceCommission ?? 0;
+
+  return {
+    flatCommission,
+    bonusCommission,
+    advanceCommission,
+    totalCommission: calculateOperationalCommissionTotal(
+      flatCommission,
+      bonusCommission,
+      advanceCommission,
+    ),
+  };
+};
+
+type NewCommercialCondition = Omit<
+  CommercialCondition,
+  "id" | "createdAt" | "updatedAt"
+>;
+
+const normalizeNewCommercialCondition = (
+  condition: NewCommercialCondition,
+): NewCommercialCondition => {
+  if (isEnergyCondition(condition)) return condition;
+
+  const commissionValues = getOperationalCommissionValues(condition);
+  return {
+    ...condition,
+    ...commissionValues,
+    commissionRate: condition.commissionRate ?? commissionValues.flatCommission,
+  };
+};
+
+const normalizeStoredCommercialCondition = (
+  condition: CommercialCondition,
+): CommercialCondition => {
+  if (isEnergyCondition(condition)) return condition;
+
+  const commissionValues = getOperationalCommissionValues(condition);
+  return {
+    ...condition,
+    ...commissionValues,
+    commissionRate: condition.commissionRate ?? commissionValues.flatCommission,
+  };
+};
+
 // ============================================
 // Provider Repository
 // ============================================
@@ -197,12 +269,16 @@ export const providerRepository = {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Migrar providers antigos (sem type) para o novo formato
-          const needsMigration = parsed.some((p: any) => !p.type);
+          const needsMigration = parsed.some(
+            (p) => !isRecord(p) || typeof p.type !== "string",
+          );
           if (needsMigration) {
-            const migrated = parsed.map((p: any) => ({
-              ...p,
-              type: p.type || 'BANK' as ProviderType
-            }));
+            const migrated = parsed
+              .filter(isRecord)
+              .map((p) => ({
+                ...p,
+                type: (typeof p.type === "string" ? p.type : "BANK") as ProviderType,
+              })) as Provider[];
             this.saveProviders(migrated);
             return migrated;
           }
@@ -510,10 +586,11 @@ export const commercialConditionRepository = {
     }
   },
 
-  createCondition(condition: Omit<CommercialCondition, "id" | "createdAt" | "updatedAt">): CommercialCondition {
+  createCondition(condition: NewCommercialCondition): CommercialCondition {
     const conditions = this.getAllConditions();
+    const normalizedCondition = normalizeNewCommercialCondition(condition);
     const newCondition: CommercialCondition = {
-      ...condition,
+      ...normalizedCondition,
       id: Date.now().toString(),
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -528,11 +605,11 @@ export const commercialConditionRepository = {
     const index = conditions.findIndex(c => c.id === id);
     if (index === -1) return null;
     
-    conditions[index] = {
+    conditions[index] = normalizeStoredCommercialCondition({
       ...conditions[index],
       ...updates,
       updatedAt: Date.now()
-    };
+    });
     this.saveConditions(conditions);
     return conditions[index];
   },
@@ -557,7 +634,28 @@ export const commercialConditionRepository = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed;
+          const normalized = parsed
+            .filter(isRecord)
+            .map((condition) =>
+              normalizeStoredCommercialCondition(condition as CommercialCondition),
+            );
+          const shouldPersistNormalizedConditions =
+            normalized.length !== parsed.length ||
+            parsed.some((condition) => (
+              isRecord(condition) &&
+              condition.minConsumption === undefined &&
+              (
+                condition.flatCommission === undefined ||
+                condition.bonusCommission === undefined ||
+                condition.advanceCommission === undefined ||
+                condition.totalCommission === undefined
+              )
+            ));
+
+          if (shouldPersistNormalizedConditions) {
+            this.saveConditions(normalized);
+          }
+          return normalized;
         }
       }
     } catch (e) {

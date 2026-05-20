@@ -41,6 +41,8 @@ model Tenant {
   activities      Activity[]
   bankProposals   BankProposal[]
   commissions     Commission[]
+  commercialTables CommercialTable[]
+  commercialConditions CommercialCondition[]
   rolePermissions RolePermission[]
   userRoles       UserRole[]
   auditLogs       AuditLog[]
@@ -641,6 +643,95 @@ model Commission {
   @@index([opportunityId])
   @@index([deletedAt])
   @@map("commissions")
+}
+
+model CommercialTable {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId          String
+  providerCode        String
+  providerName        String
+  providerType        String
+  productId           String
+  productCode         String
+  productName         String
+  subproductId        String
+  subproductCode      String
+  subproductName      String
+  modality            String
+  modalityLabel       String
+  name                String
+  code                String
+  active              Boolean   @default(true)
+  startDate           DateTime?
+  endDate             DateTime?
+  energyType          String?
+  customerType        String?
+  distributionCompany String?
+  region              String?
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  conditions CommercialCondition[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([providerId])
+  @@index([providerType])
+  @@index([productId])
+  @@index([subproductId])
+  @@index([modality])
+  @@index([active])
+  @@index([deletedAt])
+  @@map("commercial_tables")
+}
+
+model CommercialCondition {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  minTerm             Int
+  maxTerm             Int
+  term                Int
+  monthlyRate         Float
+  cetRate             Float
+  coefficient         Float?
+  flatCommission      Float?
+  bonusCommission     Float?
+  advanceCommission   Float?
+  totalCommission     Float?
+  commissionRate      Float     @default(0)
+  minAmount           Float
+  maxAmount           Float
+  minAge              Int?
+  maxAge              Int?
+  minConsumption      Int?
+  maxConsumption      Int?
+  tariffKwh           Float?
+  savingsPercent      Float?
+  estimatedValue      Float?
+  contractTerm        Int?
+  earlyTerminationFee Float?
+  campaignName        String?
+  notes               String?
+  active              Boolean   @default(true)
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  commercialTableId String          @db.Uuid
+  commercialTable   CommercialTable @relation(fields: [commercialTableId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([commercialTableId])
+  @@index([term])
+  @@index([active])
+  @@index([deletedAt])
+  @@map("commercial_conditions")
 }
 
 // ============================================
