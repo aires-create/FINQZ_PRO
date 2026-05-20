@@ -963,7 +963,7 @@ export default function Dashboard() {
       <Modal
         isOpen={filtersOpen}
         onClose={() => setFiltersOpen(false)}
-        title="Filtros do Painel"
+        title="Filtros"
         size="lg"
       >
         <div className="space-y-5">
@@ -1049,7 +1049,7 @@ export default function Dashboard() {
               Limpar
             </Button>
             <Button onClick={() => setFiltersOpen(false)}>
-              Aplicar filtros
+              Aplicar
             </Button>
           </div>
         </div>
@@ -1061,21 +1061,21 @@ export default function Dashboard() {
         ) : (
           <>
             <StatsCard
-              title="Produção Total"
+              title="Produção"
               value={formatMoney(metrics.production)}
               change={getTrendText(metrics.production, previousMetrics.production)}
               icon={<CircleDollarSign className="h-5 w-5" />}
               variant="blue"
             />
             <StatsCard
-              title="Originação Total"
+              title="Originação"
               value={formatMoney(metrics.origination)}
               change={getTrendText(metrics.origination, previousMetrics.origination)}
               icon={<TrendingUp className="h-5 w-5" />}
               variant="cyan"
             />
             <StatsCard
-              title="Conversão Geral"
+              title="Conversão"
               value={formatPercent(metrics.conversion)}
               change={`${metrics.conversion >= previousMetrics.conversion ? "+" : ""}${formatPercent(metrics.conversion - previousMetrics.conversion)} p.p. vs período anterior`}
               icon={<UserRound className="h-5 w-5" />}
@@ -1102,8 +1102,7 @@ export default function Dashboard() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.45fr_0.95fr]">
         <div className="finqz-card p-3.5 sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Desempenho por Produto</h3>
-            <span className="text-xs font-semibold text-[#1f75ff]">Ver todos</span>
+            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Produtos</h3>
           </div>
 
           {loading ? (
@@ -1130,7 +1129,7 @@ export default function Dashboard() {
                     <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                       <div className="col-span-2">
                         <p className="truncate text-sm font-extrabold text-[#1f75ff]">{formatMoney(product.production)}</p>
-                        <p className="text-[11px] text-[var(--text-muted)]">Produção</p>
+                        <p className="text-[11px] text-[var(--text-muted)]">Valor</p>
                       </div>
                       <div>
                         <p className="text-sm font-extrabold text-[var(--text-primary)]">{formatPercent(product.conversion)}</p>
@@ -1155,7 +1154,7 @@ export default function Dashboard() {
         <div className="finqz-card p-3.5 sm:p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Funil Consolidado</h3>
+              <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Funil</h3>
             </div>
             <BarChart3 className="h-5 w-5 text-[var(--color-primary)]" />
           </div>
@@ -1173,15 +1172,14 @@ export default function Dashboard() {
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.35fr_0.9fr]">
         <div className="finqz-card p-3.5 sm:p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Produção ao Longo do Tempo</h3>
-            <span className="finqz-control h-9 px-3 text-xs">Diário</span>
+            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Produção</h3>
           </div>
           {loading ? <SkeletonBlock className="h-52 sm:h-56" /> : <RevenueChart series={chartSeries} previousSeries={previousChartSeries} />}
         </div>
 
         <div className="finqz-card p-3.5 sm:p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Receita por Canal</h3>
+            <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Canais</h3>
             <Users className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
           </div>
 
@@ -1195,7 +1193,7 @@ export default function Dashboard() {
 
       <section className="finqz-card p-3.5 sm:p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Alertas Inteligentes</h3>
+          <h3 className="text-sm font-extrabold uppercase text-[var(--text-primary)] sm:text-base">Alertas</h3>
           <AlertTriangle className="h-5 w-5 shrink-0 text-[var(--color-warning)]" />
         </div>
 
