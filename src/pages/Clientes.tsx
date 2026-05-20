@@ -1099,12 +1099,12 @@ export const ClientesPage: React.FC = () => {
                     </td>
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
                       {isCNPJ(cliente.cpf_cnpj || "") ? (
-                        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-900/20" title="Pessoa Jurídica">
-                          <Building2 size={16} className="text-green-600" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" title="Pessoa Jurídica">
+                          <Building2 size={18} />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-900/20" title="Pessoa Física">
-                          <User size={16} className="text-blue-600" />
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-300" title="Pessoa Física">
+                          <User size={18} />
                         </div>
                       )}
                     </td>
@@ -1170,40 +1170,41 @@ export const ClientesPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleToggleStatus(cliente)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                          className={`inline-flex h-8 min-w-[88px] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 text-xs font-medium transition-colors ${
                             cliente.status === "ativo" 
-                              ? "text-green-600 hover:bg-green-900/20" 
+                              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15" 
                               : cliente.status === "nao_perturbe"
-                              ? "text-yellow-600 hover:bg-yellow-900/20"
-                              : "text-red-600 hover:bg-red-900/20"
+                              ? "border-amber-500/25 bg-amber-500/10 text-amber-600 hover:bg-amber-500/15"
+                              : "border-red-500/25 bg-red-500/10 text-red-600 hover:bg-red-500/15"
                           }`}
                           title={cliente.status === "ativo" ? "Ativo - Clique para mudar" : cliente.status === "nao_perturbe" ? "Não Perturbe - Clique para mudar" : "Inativo - Clique para mudar"}
                         >
-                          <span className={`inline-block h-2.5 w-2.5 rounded-full ${
+                          <span className={`inline-block h-1.5 w-1.5 rounded-full ${
                             cliente.status === "ativo" 
-                              ? "bg-green-900/200" 
+                              ? "bg-emerald-500" 
                               : cliente.status === "nao_perturbe"
-                              ? "bg-yellow-900/200"
-                              : "bg-red-900/200"
+                              ? "bg-amber-500"
+                              : "bg-red-500"
                           }`}></span>
+                          <span>{cliente.status === "ativo" ? "Ativo" : cliente.status === "nao_perturbe" ? "Não perturbe" : "Inativo"}</span>
                         </button>
                         <button
                           onClick={() => handleViewHistory(cliente)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-[#000dff] hover:bg-gray-100 transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors"
                           title="Histórico"
                         >
                           <Clock size={16} />
                         </button>
                         <button
                           onClick={() => handleEdit(cliente)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#000dff] hover:text-[#000dff]/80 hover:bg-gray-100 transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#000dff]/80 hover:text-[#000dff] hover:bg-[#000dff]/10 transition-colors"
                           title="Editar"
                         >
                           <Edit size={16} />
                         </button>
                         <button
                           onClick={() => handleDelete(cliente.id)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#000dff] hover:text-red-500 hover:bg-gray-100 transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500/80 hover:text-red-600 hover:bg-red-500/10 transition-colors"
                           title="Excluir"
                         >
                           <Trash2 size={16} />
