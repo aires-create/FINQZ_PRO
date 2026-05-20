@@ -2447,7 +2447,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     <select
       value={selectedPipelineId}
       onChange={(e) => handleProductChange(e.target.value)}
-      className="border border-[#1f2937] px-3 py-2 rounded-lg text-sm w-[240px] focus:outline-none focus:ring-2 focus:ring-[#000dff]/20"
+      className="h-10 w-[300px] max-w-full rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-sm text-[var(--text-primary)] outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
     >
       <option value="" disabled>
         Pipeline - Selecionar
@@ -2495,15 +2495,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     <div className="space-y-5">
       {/* Header Padronizado - COM SELECT DE PIPELINE NA MESMA LINHA */}
       <PageHeader
-  title="Pipeline"
-  icon={<TrendingUp className="w-5 h-5 text-blue-400" />}
-  onSearch={setSearchQuery}
-  onRefresh={() => {}}
-  onCreate={() => setShowModal(true)}
-  createLabel="Nova Oportunidade"
-  onOpenFilters={() => setShowFilterDrawer(true)}
-  extraLeft={pipelineSelectControl}
-  filters={[
+        title="Pipeline"
+        icon={<TrendingUp className="w-5 h-5 text-blue-400" />}
+        onSearch={setSearchQuery}
+        onRefresh={() => {}}
+        onCreate={() => setShowModal(true)}
+        createLabel="Nova Oportunidade"
+        onOpenFilters={() => setShowFilterDrawer(true)}
+        extraLeft={pipelineSelectControl}
+        filters={[
           { label: 'Etapa', key: 'etapa_id', type: 'select', options: OFICIAL_ETAPAS.map(e => ({ label: e.label, value: e.key })), placeholder: 'Todas as etapas' },
           { label: 'Status', key: 'status', type: 'select', options: [
             { label: 'Ativo', value: 'ativo' },

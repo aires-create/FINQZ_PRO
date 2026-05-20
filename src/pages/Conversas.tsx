@@ -380,7 +380,7 @@ export default function Conversas() {
         {showQueue && (
           <div className="whatsapp-queue-panel mb-6 overflow-hidden">
             <div className="whatsapp-queue-header p-4 flex justify-between items-center">
-              <h3 className="font-semibold text-slate-200 flex items-center gap-2">
+              <h3 className="font-semibold text-[var(--text-primary)] flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-orange-500" />
                 Fila de Atendimento
               </h3>
@@ -432,7 +432,7 @@ export default function Conversas() {
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-slate-200">{conv.cliente?.nome || 'Cliente'}</p>
+                        <p className="font-medium text-[var(--text-primary)]">{conv.cliente?.nome || 'Cliente'}</p>
                         <p className="text-sm text-slate-500">{conv.cliente?.celular || conv.providerPhone}</p>
                       </div>
                     </div>
@@ -491,7 +491,7 @@ export default function Conversas() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-white truncate">
+                          <h3 className="font-semibold text-[var(--text-primary)] truncate">
                             {conv.cliente?.nome || 'Cliente'}
                           </h3>
                           {conv.direction === 'inbound' && (
@@ -549,7 +549,7 @@ export default function Conversas() {
                     </span>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">
+                    <h3 className="font-semibold text-[var(--text-primary)]">
                       {selectedConversation.cliente?.nome || 'Cliente'}
                     </h3>
                     <p className="text-sm text-slate-500">

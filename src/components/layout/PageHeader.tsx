@@ -350,10 +350,10 @@ export function PageHeader({
         </div>
       )}
 
-      <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         
-        {/* Left: Busca + Atualizar */}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {/* Left: Contexto + busca */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 xl:flex-nowrap">
           {/* Kanban / Lista Toggle */}
           {view && setView && (
             <div className="flex rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1">
@@ -397,7 +397,11 @@ export function PageHeader({
             </div>
           )}
 
-          {/* Atualizar - botão fantasma com ícone apenas */}
+        </div>
+
+        {/* Right: Ações */}
+        <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 xl:ml-auto xl:flex-nowrap">
+          {/* Atualizar */}
           {onRefresh && (
             <button 
               onClick={onRefresh} 
@@ -407,10 +411,7 @@ export function PageHeader({
               <RefreshCw size={18} />
             </button>
           )}
-        </div>
 
-        {/* Right: Ações */}
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 lg:ml-auto">
           {/* Filtros Dropdown - opcional */}
           {showFilter && (filters.length > 0 || onOpenFilters) && (
             <div className="relative">

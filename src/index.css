@@ -877,12 +877,34 @@ html:not(.dark) [class*="bg-[#2673c8]"] .text-white {
 }
 
 .financial-kpi-grid {
-  grid-template-columns: repeat(auto-fit, minmax(188px, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .financial-kpi-card {
   min-height: 108px !important;
   box-shadow: var(--shadow-panel) !important;
+}
+
+.financial-kpi-card .tabular-nums {
+  font-size: clamp(1.05rem, 1.2vw, 1.35rem) !important;
+}
+
+@media (max-width: 1279px) {
+  .financial-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .financial-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .financial-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .financial-value,
