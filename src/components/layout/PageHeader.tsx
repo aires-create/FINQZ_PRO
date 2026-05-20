@@ -423,7 +423,7 @@ export function PageHeader({
                     setShowFilterDropdown(!showFilterDropdown)
                   }
                 }}
-                className={`flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors ${
+                className={`flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors ${
                   computedActiveFiltersCount > 0 || showFilterDropdown
                     ? 'border-primary bg-primary/10 text-[var(--text-primary)]'
                     : 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)]'
@@ -570,7 +570,7 @@ export function PageHeader({
           {onCreate && (
             <button 
               onClick={onCreate} 
-              className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
+              className="flex h-9 items-center gap-1.5 rounded-lg bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
             >
               <Plus size={16} />
               {createLabel}
