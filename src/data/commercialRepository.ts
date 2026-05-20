@@ -79,27 +79,47 @@ export interface CommercialTable {
 export interface CommercialCondition {
   id: string;
   commercialTableId: string;
-  // Campos de crédito
+
+  // Prazo
   minTerm: number;
   maxTerm: number;
   term: number;
+
+  // Taxas
   monthlyRate: number;
   cetRate: number;
+
+  // Modelo comercial real
+  coefficient?: number;
+  flatCommission?: number;
+  bonusCommission?: number;
+  advanceCommission?: number;
+  totalCommission?: number;
+
+  // Compatibilidade legado
   commissionRate: number;
+
+  // Regras financeiras
   minAmount: number;
   maxAmount: number;
-  minAge: number;
-  maxAge: number;
-  // Campos de energia
-  minConsumption?: number; // kWh mínimo
-  maxConsumption?: number; // kWh máximo
-  tariffKwh?: number; // Tarifa por kWh
-  savingsPercent?: number; // Percentual de economia
-  estimatedValue?: number; // Valor estimado mensal
-  contractTerm?: number; // Prazo do contrato (meses)
-  earlyTerminationFee?: number; // Multa de rescisão
+
+  // Regras cliente
+  minAge?: number;
+  maxAge?: number;
+
+  // Energia
+  minConsumption?: number;
+  maxConsumption?: number;
+  tariffKwh?: number;
+  savingsPercent?: number;
+  contractTerm?: number;
+  earlyTerminationFee?: number;
+
+  // Operacional
+  campaignName?: string;
   notes?: string;
   active: boolean;
+
   createdAt: number;
   updatedAt: number;
 }

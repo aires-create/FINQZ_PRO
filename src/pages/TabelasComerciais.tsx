@@ -864,7 +864,33 @@ export const TabelasComerciaisPage: React.FC = () => {
                                     ) : (
                                       // Condições de crédito
                                       <>
-                                        {cond.term}x | {cond.monthlyRate}% | {cond.commissionRate}% comm
+                                        <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border-default)]">
+  <table className="w-full text-xs">
+    <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)]">
+      <tr>
+        <th className="px-2 py-1 text-left font-medium">Prazo</th>
+        <th className="px-2 py-1 text-left font-medium">Taxa</th>
+        <th className="px-2 py-1 text-left font-medium">Comissão</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr className="border-t border-[var(--border-default)]">
+        <td className="px-2 py-1 font-medium text-[var(--text-primary)]">
+          {cond.term}x
+        </td>
+
+        <td className="px-2 py-1 text-[var(--text-primary)]">
+          {cond.monthlyRate}%
+        </td>
+
+        <td className="px-2 py-1 text-emerald-600 font-medium">
+          {cond.commissionRate}%
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
                                       </>
                                     )}
                                   </span>
