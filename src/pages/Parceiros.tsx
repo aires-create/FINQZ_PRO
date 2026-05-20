@@ -838,7 +838,8 @@ export const ParceirosPage: React.FC = () => {
                         parceiro.status === 'ativo' ? 'success' :
                         parceiro.status === 'inativo' ? 'danger' : 'warning'
                       }
-                      className="text-xs uppercase"
+                      size="sm"
+                      className="min-w-[64px] justify-center px-2.5 py-1 text-xs"
                     >
                       {getStatusLabel(parceiro.status)}
                     </Badge>
@@ -857,13 +858,15 @@ export const ParceirosPage: React.FC = () => {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleEdit(parceiro as Parceiro)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-[#3388d9] hover:bg-white/10 transition-colors"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#000dff]/80 hover:text-[#000dff] hover:bg-[#000dff]/10 transition-colors"
+                        title="Editar"
                       >
                         <Edit size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete((parceiro as Parceiro).id)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/10 transition-colors"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500/80 hover:text-red-600 hover:bg-red-500/10 transition-colors"
+                        title="Excluir"
                       >
                         <Trash2 size={16} />
                       </button>
