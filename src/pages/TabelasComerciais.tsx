@@ -846,55 +846,53 @@ export const TabelasComerciaisPage: React.FC = () => {
                             <div className="text-sm text-slate-500 mt-1">
                               {table.productName} → {table.subproductName} → {table.modalityLabel}
                             </div>
-                            {tableConditions.length > 0 && (
+                            {tableConditions.length > 0 && table.providerType === 'ENERGY_PROVIDER' && (
                               <div className="mt-2 flex flex-wrap gap-2">
                                 {tableConditions.map(cond => (
-                                  <span key={cond.id} className={`text-xs border px-2 py-1 rounded ${
-                                    table.providerType === 'ENERGY_PROVIDER' 
-                                      ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-300' 
-                                      : 'bg-[var(--bg-elevated)] border-[var(--border-muted)] text-[var(--text-secondary)]'
-                                  }`}>
-                                    {table.providerType === 'ENERGY_PROVIDER' ? (
-                                      // Condições de energia
-                                      <>
-                                        {cond.minConsumption}-{cond.maxConsumption}kWh | 
-                                        R${cond.tariffKwh?.toFixed(2)}/kWh | 
-                                        {cond.savingsPercent}% economia
-                                      </>
-                                    ) : (
-                                      // Condições de crédito
-                                      <>
-                                        <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border-default)]">
-  <table className="w-full text-xs">
-    <thead className="bg-[var(--bg-muted)] text-[var(--text-secondary)]">
-      <tr>
-        <th className="px-2 py-1 text-left font-medium">Prazo</th>
-        <th className="px-2 py-1 text-left font-medium">Taxa</th>
-        <th className="px-2 py-1 text-left font-medium">Comissão</th>
-      </tr>
-    </thead>
-
-    <tbody>
-      <tr className="border-t border-[var(--border-default)]">
-        <td className="px-2 py-1 font-medium text-[var(--text-primary)]">
-          {cond.term}x
-        </td>
-
-        <td className="px-2 py-1 text-[var(--text-primary)]">
-          {cond.monthlyRate}%
-        </td>
-
-        <td className="px-2 py-1 text-emerald-600 font-medium">
-          {cond.commissionRate}%
-        </td>
-      </tr>
-    </tbody>
-  </table>
-</div>
-                                      </>
-                                    )}
+                                  <span key={cond.id} className="text-xs border px-2 py-1 rounded bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-300">
+                                    {cond.minConsumption}-{cond.maxConsumption}kWh |
+                                    R${cond.tariffKwh?.toFixed(2)}/kWh |
+                                    {cond.savingsPercent}% economia
                                   </span>
                                 ))}
+                              </div>
+                            )}
+                            {tableConditions.length > 0 && table.providerType !== 'ENERGY_PROVIDER' && (
+                              <div className="mt-2 overflow-hidden rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)]">
+                                <table className="w-full min-w-[720px] text-xs">
+                                  <thead>
+                                    <tr>
+                                      <th className="px-2.5 py-2 text-left font-medium">Prazo</th>
+                                      <th className="px-2.5 py-2 text-left font-medium">Coef.</th>
+                                      <th className="px-2.5 py-2 text-left font-medium">Taxa</th>
+                                      <th className="px-2.5 py-2 text-left font-medium">Flat</th>
+                                      <th className="px-2.5 py-2 text-left font-medium">Bônus</th>
+                                      <th className="px-2.5 py-2 text-left font-medium">Adiant.</th>
+                                      <th className="px-2.5 py-2 text-left font-medium">Total</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {tableConditions.map(cond => {
+                                      const coefficient = typeof cond.coefficient === "number" ? cond.coefficient.toFixed(6) : "-";
+                                      const flatCommission = cond.flatCommission ?? cond.commissionRate ?? 0;
+                                      const bonusCommission = cond.bonusCommission ?? 0;
+                                      const advanceCommission = cond.advanceCommission ?? 0;
+                                      const totalCommission = cond.totalCommission ?? cond.commissionRate ?? 0;
+
+                                      return (
+                                        <tr key={cond.id} className="border-t border-[var(--border-muted)]">
+                                          <td className="px-2.5 py-2 text-[var(--text-primary)]">{cond.term}x</td>
+                                          <td className="px-2.5 py-2 font-mono text-[var(--text-secondary)]">{coefficient}</td>
+                                          <td className="px-2.5 py-2 text-[var(--text-secondary)]">{cond.monthlyRate}%</td>
+                                          <td className="px-2.5 py-2 text-[var(--text-secondary)]">{flatCommission}%</td>
+                                          <td className="px-2.5 py-2 text-[var(--text-secondary)]">{bonusCommission}%</td>
+                                          <td className="px-2.5 py-2 text-[var(--text-secondary)]">{advanceCommission}%</td>
+                                          <td className="px-2.5 py-2 font-medium text-emerald-600 dark:text-emerald-300">{totalCommission}%</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
                               </div>
                             )}
                           </div>
