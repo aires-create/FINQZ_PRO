@@ -332,17 +332,17 @@ export function PageHeader({
   const trailingActions = actions ?? extra
 
   return (
-    <div className="finqz-page-header">
+    <div className="finqz-page-header gap-3 p-3">
       {(resolvedTitle || resolvedIcon) && (
         <div className="flex items-center gap-3">
           {resolvedIcon && (
-            <div className="finqz-icon-badge h-10 w-10 shrink-0">
+            <div className="finqz-icon-badge h-9 w-9 shrink-0">
               {headerIconNode}
             </div>
           )}
           <div className="min-w-0">
             {resolvedTitle && (
-              <h1 className="truncate text-xl font-semibold text-[var(--text-primary)] sm:text-2xl">
+              <h1 className="truncate text-lg font-semibold text-[var(--text-primary)] sm:text-xl">
                 {resolvedTitle}
               </h1>
             )}
@@ -391,7 +391,7 @@ export function PageHeader({
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 placeholder="Buscar..."
-                className="h-10 w-full min-w-[220px] max-w-[320px] rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--placeholder)] focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-9 w-full min-w-[220px] max-w-[320px] rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none placeholder:text-[var(--placeholder)] focus:border-primary focus:ring-2 focus:ring-primary/20"
                 onChange={(e) => onSearch?.(e.target.value)}
               />
             </div>
@@ -405,7 +405,7 @@ export function PageHeader({
           {onRefresh && (
             <button 
               onClick={onRefresh} 
-              className="finqz-control h-10 w-10"
+              className="finqz-control h-9 w-9"
               title="Atualizar"
             >
               <RefreshCw size={18} />
