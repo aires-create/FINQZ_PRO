@@ -801,67 +801,69 @@ export const ParceirosPage: React.FC = () => {
           <table className="w-full min-w-[1100px]">
             <thead>
             <tr>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">ID/Código</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Parceiro</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Tipo</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Responsável</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Contato</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Localização</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Ações</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">ID/Código</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Parceiro</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Tipo</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Status</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Responsável</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Contato</th>
+              <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Localização</th>
+              <th className="text-right px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Ações</th>
             </tr>
           </thead>
             <tbody className="divide-y divide-[var(--border-muted)]">
               {filteredParceiros.map((parceiro) => (
                 <tr key={parceiro.id} className="transition-colors duration-200 hover:bg-[var(--bg-surface-hover)]">
-                  <td className="px-4 py-3 text-[var(--text-primary)] font-semibold">{normalizeCodigoParceiro(parceiro.codigo)}</td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
+                  <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
+                    <span className="text-sm text-[var(--text-primary)]">{normalizeCodigoParceiro(parceiro.codigo)}</span>
+                  </td>
+                  <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
+                    <div className="flex items-center gap-2.5">
                       <EntityAvatar 
                         name={parceiro.nome} 
                         type={parceiro.tipo === 'franquia' ? 'empresa' : 'parceiro'} 
                         size="sm" 
                       />
-                      <span className="font-medium text-[var(--text-primary)]">{parceiro.nome}</span>
+                      <span className="text-sm text-[var(--text-primary)]">{parceiro.nome}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-default)]">
                       {getTipoLabel(parceiro.tipo)}
                     </span>
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
                     <Badge
                       variant={
                         parceiro.status === 'ativo' ? 'success' :
                         parceiro.status === 'inativo' ? 'danger' : 'warning'
                       }
-                      className="uppercase tracking-[0.04em]"
+                      className="text-xs uppercase"
                     >
                       {getStatusLabel(parceiro.status)}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">{parceiro.responsavel || '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="text-sm">
+                  <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">{parceiro.responsavel || '-'}</td>
+                  <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
+                    <div className="text-sm leading-tight">
                       {parceiro.telefone && <div className="text-[var(--text-secondary)]">{parceiro.telefone}</div>}
                       {parceiro.email && <div className="text-[var(--text-muted)] text-xs">{parceiro.email}</div>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">
+                  <td className="px-3 py-2 align-middle text-sm text-[var(--text-secondary)] max-w-[150px] truncate">
                     {parceiro.cidade || parceiro.estado ? `${parceiro.cidade || ''}${parceiro.cidade && parceiro.estado ? ', ' : ''}${parceiro.estado || ''}` : '-'}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-1">
+                  <td className="px-3 py-2.5 align-middle text-sm text-right">
+                    <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleEdit(parceiro as Parceiro)}
-                        className="p-2 text-slate-400 hover:text-[#3388d9] hover:bg-white/10 rounded-lg transition-colors"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-[#3388d9] hover:bg-white/10 transition-colors"
                       >
                         <Edit size={16} />
                       </button>
                       <button
                         onClick={() => handleDelete((parceiro as Parceiro).id)}
-                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-white/10 rounded-lg transition-colors"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-red-400 hover:bg-white/10 transition-colors"
                       >
                         <Trash2 size={16} />
                       </button>

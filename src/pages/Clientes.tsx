@@ -1070,48 +1070,48 @@ export const ClientesPage: React.FC = () => {
             <table className="w-full min-w-[1100px]">
               <thead>
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">ID/Código</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Cliente</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Tipo</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">CPF/CNPJ</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Contato</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Localização</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Criado em</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold uppercase text-[var(--text-secondary)]">Ações</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">ID/Código</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Cliente</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Tipo</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">CPF/CNPJ</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Contato</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Localização</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Criado em</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold uppercase text-[var(--text-secondary)]">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredClientes.map((cliente, index) => (
                   <tr key={cliente.id} className="border-b border-[var(--border-muted)] hover:bg-[var(--bg-surface-hover)] transition-colors">
-                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
-                      <span className="text-sm font-medium text-[var(--text-primary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
+                      <span className="text-sm text-[var(--text-primary)]">
                         {formatClientCode(cliente, index)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
-                      <div className="flex items-center gap-3">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
+                      <div className="flex items-center gap-2.5">
                         <EntityAvatar name={cliente.nome} type="cliente" size="sm" />
                         <div>
-                          <p className="text-sm font-semibold text-[var(--text-primary)]">{cliente.nome}</p>
+                          <p className="text-sm text-[var(--text-primary)]">{cliente.nome}</p>
                           <p className="text-xs text-[var(--text-muted)]">{cliente.email || "-"}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
                       {isCNPJ(cliente.cpf_cnpj || "") ? (
-                        <div className="w-9 h-9 flex items-center justify-center rounded-xl bg-green-900/20" title="Pessoa Jurídica">
-                          <Building2 size={18} className="text-green-600" />
+                        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-900/20" title="Pessoa Jurídica">
+                          <Building2 size={16} className="text-green-600" />
                         </div>
                       ) : (
-                        <div className="w-9 h-9 flex items-center justify-center rounded-xl bg-blue-900/20" title="Pessoa Física">
-                          <User size={18} className="text-blue-600" />
+                        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-900/20" title="Pessoa Física">
+                          <User size={16} className="text-blue-600" />
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm font-mono text-[var(--text-secondary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm font-mono text-[var(--text-secondary)]">
                       {formatDocument(cliente?.cpf_cnpj, cliente?.personType)}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
                       {(() => {
                         const { celular, telefone, email } = getClienteContato(cliente);
                         if (!celular && !telefone && !email) {
@@ -1119,14 +1119,14 @@ export const ClientesPage: React.FC = () => {
                         }
                         return (
                           <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className="text-sm text-[var(--text-secondary)]">
+                            <span className="text-sm leading-none text-[var(--text-secondary)]">
                               {formatPhone(celular || telefone)}
                             </span>
 
                             {celular || telefone ? (
                               <a
                                 href={`tel:${celular || telefone}`}
-                                className="inline-flex w-7 h-7 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-900/20 transition-colors"
+                                className="inline-flex w-7 h-7 items-center justify-center rounded-md text-blue-600 hover:bg-blue-900/20 transition-colors"
                                 title="Ligar"
                               >
                                 <Phone size={16} />
@@ -1138,7 +1138,7 @@ export const ClientesPage: React.FC = () => {
                                 href={`https://wa.me/55${celular}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex w-7 h-7 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-900/20 transition-colors"
+                                className="inline-flex w-7 h-7 items-center justify-center rounded-md text-blue-600 hover:bg-blue-900/20 transition-colors"
                                 title="WhatsApp"
                               >
                                 <MessageCircle size={16} />
@@ -1148,7 +1148,7 @@ export const ClientesPage: React.FC = () => {
                             {email ? (
                               <a
                                 href={`mailto:${email}`}
-                                className="inline-flex w-7 h-7 items-center justify-center rounded-lg text-blue-600 hover:bg-blue-900/20 transition-colors"
+                                className="inline-flex w-7 h-7 items-center justify-center rounded-md text-blue-600 hover:bg-blue-900/20 transition-colors"
                                 title={email}
                               >
                                 <Mail size={16} />
@@ -1158,19 +1158,19 @@ export const ClientesPage: React.FC = () => {
                         );
                       })()}
                     </td>
-                    <td className="px-4 py-2 align-middle text-sm text-[var(--text-secondary)] max-w-[150px] truncate">
+                    <td className="px-3 py-2 align-middle text-sm text-[var(--text-secondary)] max-w-[150px] truncate">
                       {cliente.cidade && cliente.estado
                         ? `${cliente.cidade}/${cliente.estado}`
                         : "-"}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
                       {formatSafeDate(cliente?.created_at)}
                     </td>
-                    <td className="px-4 py-3 align-middle text-sm text-[var(--text-secondary)]">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleToggleStatus(cliente)}
-                          className={`p-2 rounded-xl transition-colors ${
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
                             cliente.status === "ativo" 
                               ? "text-green-600 hover:bg-green-900/20" 
                               : cliente.status === "nao_perturbe"
@@ -1179,7 +1179,7 @@ export const ClientesPage: React.FC = () => {
                           }`}
                           title={cliente.status === "ativo" ? "Ativo - Clique para mudar" : cliente.status === "nao_perturbe" ? "Não Perturbe - Clique para mudar" : "Inativo - Clique para mudar"}
                         >
-                          <span className={`w-4 h-4 rounded-full inline-block ${
+                          <span className={`inline-block h-2.5 w-2.5 rounded-full ${
                             cliente.status === "ativo" 
                               ? "bg-green-900/200" 
                               : cliente.status === "nao_perturbe"
@@ -1189,24 +1189,24 @@ export const ClientesPage: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleViewHistory(cliente)}
-                          className="p-2 text-slate-500 hover:text-[#000dff] hover:bg-gray-100 rounded-xl transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-[#000dff] hover:bg-gray-100 transition-colors"
                           title="Histórico"
                         >
-                          <Clock size={18} />
+                          <Clock size={16} />
                         </button>
                         <button
                           onClick={() => handleEdit(cliente)}
-                          className="p-2 text-[#000dff] hover:text-[#000dff]/80 hover:bg-gray-100 rounded-xl transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#000dff] hover:text-[#000dff]/80 hover:bg-gray-100 transition-colors"
                           title="Editar"
                         >
-                          <Edit size={18} />
+                          <Edit size={16} />
                         </button>
                         <button
                           onClick={() => handleDelete(cliente.id)}
-                          className="p-2 text-[#000dff] hover:text-red-500 hover:bg-gray-100 rounded-xl transition-colors"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-[#000dff] hover:text-red-500 hover:bg-gray-100 transition-colors"
                           title="Excluir"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
