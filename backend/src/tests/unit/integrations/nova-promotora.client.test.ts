@@ -10,6 +10,78 @@ const createFetchResponse = (status: number) => {
 
 describe('NovaPromotora client', () => {
   it('returns a normalized success result without calling the real provider', async () => {
+    let requestedUrl: string | undefined;
+    const fetcher = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      requestedUrl = String(input);
+
+      return createFetchResponse(200);
+    }) as unknown as typeof fetch;
+
+    const result = await testNovaPromotoraConnection({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test',
+      fetcher,
+      healthPath: '/api',
+      timeoutMs: 100,
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(requestedUrl).toBe('https://nova-promotora.test/api');
+    expect(result).toMatchObject({
+      providerKey: 'nova-promotora',
+      success: true,
+      externalStatus: 'available',
+      statusCode: 200,
+    });
+    expect(result.durationMs).toEqual(expect.any(Number));
+  });
+
+  it('uses a custom health path when building the final URL', async () => {
+    let requestedUrl: string | undefined;
+    const fetcher = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      requestedUrl = String(input);
+
+      return createFetchResponse(204);
+    }) as unknown as typeof fetch;
+
+    const result = await testNovaPromotoraConnection({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test/backoffice',
+      fetcher,
+      healthPath: '/health/status',
+      timeoutMs: 100,
+    });
+
+    expect(requestedUrl).toBe(
+      'https://nova-promotora.test/backoffice/health/status',
+    );
+    expect(result).toMatchObject({
+      success: true,
+      statusCode: 204,
+    });
+  });
+
+  it('normalizes duplicate slashes between base URL and health path', async () => {
+    let requestedUrl: string | undefined;
+    const fetcher = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      requestedUrl = String(input);
+
+      return createFetchResponse(200);
+    }) as unknown as typeof fetch;
+
+    await testNovaPromotoraConnection({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test//base//',
+      fetcher,
+      healthPath: '//api//health//',
+      timeoutMs: 100,
+    });
+
+    expect(requestedUrl).toBe('https://nova-promotora.test/base/api/health');
+  });
+
+  it('returns a configuration error when health path is missing', async () => {
+    vi.stubEnv('NOVA_PROMOTORA_HEALTH_PATH', '');
     const fetcher = vi.fn(async () => createFetchResponse(200)) as unknown as typeof fetch;
 
     const result = await testNovaPromotoraConnection({
@@ -19,14 +91,16 @@ describe('NovaPromotora client', () => {
       timeoutMs: 100,
     });
 
-    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       providerKey: 'nova-promotora',
-      success: true,
-      externalStatus: 'available',
-      statusCode: 200,
+      success: false,
+      externalStatus: 'configuration_error',
+      error: {
+        code: 'NOVA_PROMOTORA_CONFIGURATION_ERROR',
+        message: 'Provider configuration is incomplete',
+      },
     });
-    expect(result.durationMs).toEqual(expect.any(Number));
   });
 
   it('returns a sanitized timeout result without leaking secrets', async () => {
@@ -51,6 +125,7 @@ describe('NovaPromotora client', () => {
       apiKey: 'test-api-key',
       baseUrl: 'https://nova-promotora.test',
       fetcher,
+      healthPath: '/api',
       timeoutMs: 1,
     });
     const serializedResult = JSON.stringify(result);
@@ -77,6 +152,7 @@ describe('NovaPromotora client', () => {
       apiKey: 'test-api-key',
       baseUrl: 'https://nova-promotora.test',
       fetcher,
+      healthPath: '/api',
       timeoutMs: 100,
     });
 

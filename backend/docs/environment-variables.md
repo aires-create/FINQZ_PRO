@@ -19,6 +19,15 @@ O backend valida envs com Zod em `src/config/env.ts` e falha rapidamente antes d
 | `JWT_REFRESH_SECRET` | Secret para refresh tokens. |
 | `CORS_ORIGIN` | Lista de origins permitidas, separadas por virgula. |
 
+## Integracoes
+
+| Variavel | Descricao |
+| --- | --- |
+| `NOVA_PROMOTORA_BASE_URL` | URL base da NOVA PROMOTORA. |
+| `NOVA_PROMOTORA_HEALTH_PATH` | Caminho relativo usado pelo health/test externo da NOVA PROMOTORA. Exemplo: `/api`. |
+| `NOVA_PROMOTORA_API_KEY` | Chave de API da NOVA PROMOTORA. Deve ser tratada como secret. |
+| `NOVA_PROMOTORA_TIMEOUT_MS` | Timeout em milissegundos para health/test externo da NOVA PROMOTORA. |
+
 ## Regras de Validacao
 
 * `NODE_ENV` deve ser `development`, `test` ou `production`.

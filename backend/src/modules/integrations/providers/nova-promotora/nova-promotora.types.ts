@@ -44,6 +44,7 @@ export type NovaPromotoraClientOptions = {
   apiKey?: string;
   baseUrl?: string;
   fetcher?: typeof fetch;
+  healthPath?: string;
   timeoutMs?: number;
 };
 

@@ -5,7 +5,6 @@ import {
   type NovaPromotoraRequestResult,
 } from './nova-promotora.types.js';
 
-const novaPromotoraHealthPath = '/api';
 const defaultTimeoutMs = 5_000;
 
 const getDurationMs = (startedAt: number) => Date.now() - startedAt;
@@ -22,8 +21,25 @@ const getConfiguredTimeoutMs = (timeoutMs?: number) => {
     : defaultTimeoutMs;
 };
 
-const buildHealthUrl = (baseUrl: string) =>
-  new URL(novaPromotoraHealthPath, baseUrl).toString();
+const normalizePath = (path: string) =>
+  path
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .join('/');
+
+const buildHealthUrl = (baseUrl: string, healthPath: string) => {
+  const parsedUrl = new URL(baseUrl);
+  const basePath = normalizePath(parsedUrl.pathname);
+  const normalizedHealthPath = normalizePath(healthPath);
+  const normalizedPath = [basePath, normalizedHealthPath]
+    .filter(Boolean)
+    .join('/');
+
+  parsedUrl.pathname = normalizedPath ? `/${normalizedPath}` : '/';
+
+  return parsedUrl.toString();
+};
 
 const isAbortError = (error: unknown) => {
   return (
@@ -59,8 +75,11 @@ export async function testNovaPromotoraConnection(
   const startedAt = Date.now();
   const baseUrl = (options.baseUrl ?? process.env.NOVA_PROMOTORA_BASE_URL)?.trim();
   const apiKey = (options.apiKey ?? process.env.NOVA_PROMOTORA_API_KEY)?.trim();
+  const healthPath = (
+    options.healthPath ?? process.env.NOVA_PROMOTORA_HEALTH_PATH
+  )?.trim();
 
-  if (!baseUrl || !apiKey) {
+  if (!baseUrl || !apiKey || !healthPath) {
     return buildFailureResult({
       code: 'NOVA_PROMOTORA_CONFIGURATION_ERROR',
       durationMs: getDurationMs(startedAt),
@@ -72,7 +91,7 @@ export async function testNovaPromotoraConnection(
   let url: string;
 
   try {
-    url = buildHealthUrl(baseUrl);
+    url = buildHealthUrl(baseUrl, healthPath);
   } catch {
     return buildFailureResult({
       code: 'NOVA_PROMOTORA_CONFIGURATION_ERROR',
