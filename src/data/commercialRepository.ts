@@ -2,6 +2,9 @@
 // Repository: Providers (Bancos/Providers)
 // Armazenamento local com localStorage
 // Preparado para futura integração com API
+// TODO tecnico FASE 2.19-B.3: manter este arquivo apenas como leitura legada/fallback.
+// A fonte oficial das Tabelas Comerciais passa a ser PostgreSQL via /api/v1/commercial.
+// Nao remover ainda: o Simulador e fluxos legados podem depender destes helpers.
 // ============================================
 
 import { creditPfCatalog } from "./creditPfCatalog";
@@ -377,6 +380,8 @@ export const providerRepository = {
 // Commercial Table Repository
 // ============================================
 
+// TODO tecnico: remover gravacoes de tabelas comerciais em localStorage quando
+// Simulador e fluxos legados estiverem migrados para a API real.
 export const commercialTableRepository = {
   listCommercialTables(): CommercialTable[] {
     try {
@@ -550,6 +555,8 @@ export const commercialTableRepository = {
 // Commercial Condition Repository
 // ============================================
 
+// TODO tecnico: remover gravacoes de condicoes comerciais em localStorage quando
+// Simulador e fluxos legados estiverem migrados para a API real.
 export const commercialConditionRepository = {
   listConditionsByTable(tableId: string): CommercialCondition[] {
     try {

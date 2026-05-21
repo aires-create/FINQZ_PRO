@@ -81,7 +81,9 @@ export interface CreateCommercialTablePayload extends CommercialTablePayload {
   conditions?: CommercialConditionPayload[];
 }
 
-export interface UpdateCommercialTablePayload extends Partial<CommercialTablePayload> {}
+export interface UpdateCommercialTablePayload extends Partial<CommercialTablePayload> {
+  conditions?: CommercialConditionPayload[];
+}
 
 export interface CommercialConditionResponseDto {
   id: string;

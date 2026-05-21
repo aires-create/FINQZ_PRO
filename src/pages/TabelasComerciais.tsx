@@ -212,32 +212,6 @@ const providerFromTable = (table: CommercialTable): Provider => ({
   updatedAt: table.updatedAt,
 });
 
-const stripTableMetadata = (
-  table: CommercialTable,
-): Omit<CommercialTable, "id" | "createdAt" | "updatedAt"> => ({
-  providerId: table.providerId,
-  providerCode: table.providerCode,
-  providerName: table.providerName,
-  providerType: table.providerType,
-  productId: table.productId,
-  productCode: table.productCode,
-  productName: table.productName,
-  subproductId: table.subproductId,
-  subproductCode: table.subproductCode,
-  subproductName: table.subproductName,
-  modality: table.modality,
-  modalityLabel: table.modalityLabel,
-  name: table.name,
-  code: table.code,
-  active: table.active,
-  startDate: table.startDate,
-  endDate: table.endDate,
-  energyType: table.energyType,
-  customerType: table.customerType,
-  distributionCompany: table.distributionCompany,
-  region: table.region,
-});
-
 const mergeProvidersFromTables = (
   baseProviders: Provider[],
   tableList: CommercialTable[],
@@ -256,9 +230,7 @@ const mergeProvidersFromTables = (
 const loadLocalCommercialData = (): LoadedCommercialData => {
   const loadedProviders = providerRepository.listProviders();
 
-  // TODO tecnico: remover este fallback em localStorage quando a migracao para /api/v1/commercial estiver concluida.
-  commercialTableRepository.initializeExamples();
-
+  // TODO tecnico: remover esta leitura emergencial em localStorage quando /api/v1/commercial cobrir todos os cenarios legados.
   const loadedTables = commercialTableRepository.listCommercialTables();
   const allConditions = commercialConditionRepository.getAllConditions();
 
@@ -272,56 +244,6 @@ const loadLocalCommercialData = (): LoadedCommercialData => {
 const getApiErrorMessage = (error: unknown): string => (
   error instanceof Error ? error.message : "Erro desconhecido ao acessar a API"
 );
-
-const upsertFallbackTable = (
-  tableId: string,
-  tableData: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">,
-): CommercialTable => {
-  const currentTables = commercialTableRepository.listCommercialTables();
-  const tableIndex = currentTables.findIndex((table) => table.id === tableId);
-  const now = Date.now();
-  const fallbackTable: CommercialTable = {
-    ...(tableIndex >= 0 ? currentTables[tableIndex] : {}),
-    ...tableData,
-    id: tableId,
-    createdAt: tableIndex >= 0 ? currentTables[tableIndex].createdAt : now,
-    updatedAt: now,
-  };
-
-  const nextTables = tableIndex >= 0
-    ? currentTables.map((table, index) => index === tableIndex ? fallbackTable : table)
-    : [...currentTables, fallbackTable];
-
-  commercialTableRepository.saveTables(nextTables);
-  return fallbackTable;
-};
-
-const replaceLocalFallbackConditions = (
-  tableId: string,
-  conditionPayloads: CommercialConditionPayload[],
-): void => {
-  commercialConditionRepository.deleteConditionsByTable(tableId);
-
-  conditionPayloads.forEach((condition) => {
-    commercialConditionRepository.createCondition({
-      ...condition,
-      commercialTableId: tableId,
-    });
-  });
-};
-
-const saveTableToLocalFallback = (
-  editingTable: CommercialTable | null,
-  tableData: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">,
-  conditionPayloads: CommercialConditionPayload[],
-): CommercialTable => {
-  const fallbackTable = editingTable
-    ? upsertFallbackTable(editingTable.id, tableData)
-    : commercialTableRepository.createTable(tableData);
-
-  replaceLocalFallbackConditions(fallbackTable.id, conditionPayloads);
-  return fallbackTable;
-};
 
 export const TabelasComerciaisPage: React.FC = () => {
   // State
@@ -430,7 +352,7 @@ export const TabelasComerciaisPage: React.FC = () => {
       setUsingFallback(true);
       setFeedback({
         type: "warning",
-        message: `API de tabelas comerciais indisponivel (${getApiErrorMessage(error)}). Usando dados locais temporarios.`,
+        message: `API de tabelas comerciais indisponivel (${getApiErrorMessage(error)}). Os dados locais podem estar desatualizados.`,
       });
     } finally {
       setIsLoading(false);
@@ -866,10 +788,10 @@ export const TabelasComerciaisPage: React.FC = () => {
 
     try {
       const savedTable = editingTable
-        ? await (async () => {
-            await commercialApi.updateTable(editingTable.id, tableData);
-            return commercialApi.replaceConditions(editingTable.id, conditionPayloads);
-          })()
+        ? await commercialApi.updateTable(editingTable.id, {
+            ...tableData,
+            conditions: conditionPayloads,
+          })
         : await commercialApi.createTable({
             ...tableData,
             conditions: conditionPayloads,
@@ -896,26 +818,10 @@ export const TabelasComerciaisPage: React.FC = () => {
       });
     } catch (error) {
       console.error("Error saving commercial table through API:", error);
-
-      try {
-        saveTableToLocalFallback(editingTable, tableData, conditionPayloads);
-        const fallbackData = loadLocalCommercialData();
-        setProviders(fallbackData.providers);
-        setTables(fallbackData.tables);
-        setConditions(fallbackData.conditions);
-        setUsingFallback(true);
-        setIsModalOpen(false);
-        setFeedback({
-          type: "warning",
-          message: `API nao confirmou o salvamento (${getApiErrorMessage(error)}). As alteracoes foram preservadas no localStorage temporario.`,
-        });
-      } catch (fallbackError) {
-        console.error("Error saving commercial table to local fallback:", fallbackError);
-        setFeedback({
-          type: "error",
-          message: `Nao foi possivel salvar na API nem no fallback local (${getApiErrorMessage(fallbackError)}). A modal permanece aberta para evitar perda dos dados digitados.`,
-        });
-      }
+      setFeedback({
+        type: "error",
+        message: `Não foi possível salvar no servidor. Os dados locais podem estar desatualizados. ${getApiErrorMessage(error)}`,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -937,31 +843,17 @@ export const TabelasComerciaisPage: React.FC = () => {
         delete next[tableId];
         return next;
       });
+      setUsingFallback(false);
       setFeedback({
         type: "success",
         message: "Tabela comercial excluida na API.",
       });
     } catch (error) {
       console.error("Error deleting commercial table through API:", error);
-
-      try {
-        commercialTableRepository.deleteTable(tableId);
-        const fallbackData = loadLocalCommercialData();
-        setProviders(fallbackData.providers);
-        setTables(fallbackData.tables);
-        setConditions(fallbackData.conditions);
-        setUsingFallback(true);
-        setFeedback({
-          type: "warning",
-          message: `API nao confirmou a exclusao (${getApiErrorMessage(error)}). A remocao foi aplicada apenas no localStorage temporario.`,
-        });
-      } catch (fallbackError) {
-        console.error("Error deleting commercial table from local fallback:", fallbackError);
-        setFeedback({
-          type: "error",
-          message: `Nao foi possivel excluir na API nem no fallback local (${getApiErrorMessage(fallbackError)}).`,
-        });
-      }
+      setFeedback({
+        type: "error",
+        message: `Não foi possível salvar no servidor. A exclusão não foi aplicada. Os dados locais podem estar desatualizados. ${getApiErrorMessage(error)}`,
+      });
     }
   };
 
@@ -1213,7 +1105,7 @@ export const TabelasComerciaisPage: React.FC = () => {
     }
 
     const apiCreatedTables: CommercialTable[] = [];
-    let fallbackCount = 0;
+    let failedCount = 0;
     let lastApiError: unknown = null;
 
     for (const tableData of tableDataList) {
@@ -1222,25 +1114,18 @@ export const TabelasComerciaisPage: React.FC = () => {
         apiCreatedTables.push(mapApiTableToLocal(apiTable));
       } catch (error) {
         lastApiError = error;
-        fallbackCount += 1;
-        commercialTableRepository.createTable(tableData);
+        failedCount += 1;
       }
     }
 
-    if (fallbackCount > 0) {
-      apiCreatedTables.forEach((table) => {
-        upsertFallbackTable(table.id, stripTableMetadata(table));
-        replaceLocalFallbackConditions(table.id, []);
-      });
+    if (failedCount > 0) {
+      if (apiCreatedTables.length > 0) {
+        await loadData();
+      }
 
-      const fallbackData = loadLocalCommercialData();
-      setProviders(fallbackData.providers);
-      setTables(fallbackData.tables);
-      setConditions(fallbackData.conditions);
-      setUsingFallback(true);
       setFeedback({
-        type: "warning",
-        message: `${fallbackCount} tabela(s) importada(s) no localStorage temporario porque a API falhou (${getApiErrorMessage(lastApiError)}). ${skippedRows} linha(s) ignorada(s).`,
+        type: "error",
+        message: `Não foi possível salvar no servidor. ${failedCount} tabela(s) não foram importada(s). Os dados locais podem estar desatualizados. ${getApiErrorMessage(lastApiError)}`,
       });
       return;
     }
@@ -1312,7 +1197,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               <span>
                 {isLoading
                   ? "Carregando tabelas comerciais..."
-                  : feedback?.message || "Operando com fallback local temporario."}
+                  : feedback?.message || "Os dados locais podem estar desatualizados."}
               </span>
             </div>
             {feedback && !isLoading && (
