@@ -1,7 +1,9 @@
 import type { CommercialCondition, Prisma } from '@prisma/client';
-import { prisma } from '../../../database/prisma.js';
+import { prisma } from '../../../core/prisma/client.js';
 import type {
+  CommercialConditionPayload,
   CreateCommercialConditionDto,
+  LegacyCommissionFallbackFields,
   OperationalCommissionFields,
   UpdateCommercialConditionDto,
 } from '../dto/commercial-condition.dto.js';
@@ -19,16 +21,23 @@ const hasEnergyFields = (data: CommercialConditionEnergyFields): boolean => {
   );
 };
 
+type OperationalCommissionInput = Partial<OperationalCommissionFields> &
+  LegacyCommissionFallbackFields;
+
+type CommercialConditionCreateInput = CommercialConditionPayload &
+  Pick<CreateCommercialConditionDto, 'tenantId' | 'commercialTableId'>;
+
+type CommercialPrismaClient = typeof prisma | Prisma.TransactionClient;
+
 const hasOperationalCommissionFields = (
-  data: OperationalCommissionFields,
+  data: Partial<OperationalCommissionFields>,
 ): boolean => {
   return (
     data.coefficient !== undefined ||
     data.flatCommission !== undefined ||
     data.bonusCommission !== undefined ||
     data.advanceCommission !== undefined ||
-    data.totalCommission !== undefined ||
-    data.commissionRate !== undefined
+    data.totalCommission !== undefined
   );
 };
 
@@ -43,18 +52,24 @@ export const calculateOperationalCommissionTotal = (
 };
 
 const normalizeOperationalCommissions = (
-  data: OperationalCommissionFields,
+  data: OperationalCommissionInput,
 ): Required<
   Pick<
     OperationalCommissionFields,
-    'flatCommission' | 'bonusCommission' | 'advanceCommission' | 'totalCommission'
+    | 'coefficient'
+    | 'flatCommission'
+    | 'bonusCommission'
+    | 'advanceCommission'
+    | 'totalCommission'
   >
 > => {
+  const coefficient = data.coefficient ?? 0;
   const flatCommission = data.flatCommission ?? data.commissionRate ?? 0;
   const bonusCommission = data.bonusCommission ?? 0;
   const advanceCommission = data.advanceCommission ?? 0;
 
   return {
+    coefficient,
     flatCommission,
     bonusCommission,
     advanceCommission,
@@ -68,9 +83,8 @@ const normalizeOperationalCommissions = (
 
 const applyOptionalCreateFields = (
   target: Prisma.CommercialConditionUncheckedCreateInput,
-  data: CreateCommercialConditionDto,
+  data: CommercialConditionCreateInput,
 ): void => {
-  if (data.coefficient !== undefined) target.coefficient = data.coefficient;
   if (data.minAge !== undefined) target.minAge = data.minAge;
   if (data.maxAge !== undefined) target.maxAge = data.maxAge;
   if (data.minConsumption !== undefined) target.minConsumption = data.minConsumption;
@@ -88,7 +102,7 @@ const applyOptionalCreateFields = (
 };
 
 const buildCreateData = (
-  data: CreateCommercialConditionDto,
+  data: CommercialConditionCreateInput,
 ): Prisma.CommercialConditionUncheckedCreateInput => {
   const createData: Prisma.CommercialConditionUncheckedCreateInput = {
     tenantId: data.tenantId,
@@ -124,7 +138,6 @@ const applyOptionalUpdateFields = (
   if (data.term !== undefined) target.term = data.term;
   if (data.monthlyRate !== undefined) target.monthlyRate = data.monthlyRate;
   if (data.cetRate !== undefined) target.cetRate = data.cetRate;
-  if (data.coefficient !== undefined) target.coefficient = data.coefficient;
   if (data.commissionRate !== undefined) target.commissionRate = data.commissionRate;
   if (data.minAmount !== undefined) target.minAmount = data.minAmount;
   if (data.maxAmount !== undefined) target.maxAmount = data.maxAmount;
@@ -147,52 +160,72 @@ const applyOptionalUpdateFields = (
 const mergeCommissionPatch = (
   current: CommercialCondition,
   patch: UpdateCommercialConditionDto,
-): OperationalCommissionFields => {
-  const merged: OperationalCommissionFields = {
+): OperationalCommissionInput => {
+  const merged: OperationalCommissionInput = {
     commissionRate: patch.commissionRate ?? current.commissionRate,
   };
 
-  const coefficient = patch.coefficient ?? current.coefficient;
+  const coefficient = patch.coefficient ?? current.coefficient ?? 0;
   const flatCommission =
-    patch.flatCommission ?? patch.commissionRate ?? current.flatCommission;
-  const bonusCommission = patch.bonusCommission ?? current.bonusCommission;
+    patch.flatCommission ??
+    current.flatCommission ??
+    patch.commissionRate ??
+    current.commissionRate ??
+    0;
+  const bonusCommission = patch.bonusCommission ?? current.bonusCommission ?? 0;
   const advanceCommission =
-    patch.advanceCommission ?? current.advanceCommission;
-  const totalCommission = patch.totalCommission ?? current.totalCommission;
+    patch.advanceCommission ?? current.advanceCommission ?? 0;
 
-  if (coefficient !== null && coefficient !== undefined) {
-    merged.coefficient = coefficient;
-  }
-  if (flatCommission !== null && flatCommission !== undefined) {
-    merged.flatCommission = flatCommission;
-  }
-  if (bonusCommission !== null && bonusCommission !== undefined) {
-    merged.bonusCommission = bonusCommission;
-  }
-  if (advanceCommission !== null && advanceCommission !== undefined) {
-    merged.advanceCommission = advanceCommission;
-  }
-  if (totalCommission !== null && totalCommission !== undefined) {
-    merged.totalCommission = totalCommission;
-  }
+  merged.coefficient = coefficient;
+  merged.flatCommission = flatCommission;
+  merged.bonusCommission = bonusCommission;
+  merged.advanceCommission = advanceCommission;
 
   return merged;
 };
 
 export const commercialConditionRepository = {
-  create(data: CreateCommercialConditionDto): Promise<CommercialCondition> {
-    return prisma.commercialCondition.create({
+  create(
+    data: CreateCommercialConditionDto,
+    client: CommercialPrismaClient = prisma,
+  ): Promise<CommercialCondition> {
+    return client.commercialCondition.create({
       data: buildCreateData(data),
+    });
+  },
+
+  async createManyForTable(
+    client: CommercialPrismaClient,
+    tenantId: string,
+    commercialTableId: string,
+    conditions: CommercialConditionPayload[],
+  ): Promise<void> {
+    if (conditions.length === 0) return;
+
+    await client.commercialCondition.createMany({
+      data: conditions.map((condition) =>
+        buildCreateData({
+          ...condition,
+          tenantId,
+          commercialTableId,
+        }),
+      ),
     });
   },
 
   async update(
     id: string,
     data: UpdateCommercialConditionDto,
+    tenantId?: string,
+    client: CommercialPrismaClient = prisma,
   ): Promise<CommercialCondition | null> {
-    const current = await prisma.commercialCondition.findUnique({
-      where: { id },
-    });
+    const current = tenantId
+      ? await client.commercialCondition.findFirst({
+          where: { id, tenantId, deletedAt: null },
+        })
+      : await client.commercialCondition.findUnique({
+          where: { id },
+        });
 
     if (!current) return null;
 
@@ -208,19 +241,52 @@ export const commercialConditionRepository = {
         data.commissionRate ?? normalizedCommissions.flatCommission;
     }
 
-    return prisma.commercialCondition.update({
+    return client.commercialCondition.update({
       where: { id },
       data: updateData,
     });
   },
 
-  listByTable(commercialTableId: string): Promise<CommercialCondition[]> {
-    return prisma.commercialCondition.findMany({
+  listByTable(
+    commercialTableId: string,
+    tenantId?: string,
+    client: CommercialPrismaClient = prisma,
+  ): Promise<CommercialCondition[]> {
+    return client.commercialCondition.findMany({
       where: {
         commercialTableId,
+        ...(tenantId ? { tenantId } : {}),
         deletedAt: null,
       },
       orderBy: [{ term: 'asc' }, { createdAt: 'asc' }],
+    });
+  },
+
+  async replaceByTable(
+    client: CommercialPrismaClient,
+    tenantId: string,
+    commercialTableId: string,
+    conditions: CommercialConditionPayload[],
+  ): Promise<void> {
+    await this.softDeleteByTable(client, tenantId, commercialTableId);
+    await this.createManyForTable(client, tenantId, commercialTableId, conditions);
+  },
+
+  async softDeleteByTable(
+    client: CommercialPrismaClient,
+    tenantId: string,
+    commercialTableId: string,
+  ): Promise<void> {
+    await client.commercialCondition.updateMany({
+      where: {
+        tenantId,
+        commercialTableId,
+        deletedAt: null,
+      },
+      data: {
+        active: false,
+        deletedAt: new Date(),
+      },
     });
   },
 };

@@ -28,6 +28,7 @@ import {
 
 import { crmRoutes } from '../../modules/crm/routes.js';
 import { auditRoutes } from '../../modules/audit/routes.js';
+import { commercialRoutes } from '../../modules/commercial/index.js';
 import {
   applyRequestSanitization,
   baselineSecurityHeaders,
@@ -535,6 +536,7 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   // Protected module routes
   await app.register(crmRoutes, { prefix: '/api/v1/crm' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
+  await app.register(commercialRoutes, { prefix: '/api/v1/commercial' });
 
   // Error handler
   app.setErrorHandler(sendErrorResponse);

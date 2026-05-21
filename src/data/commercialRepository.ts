@@ -239,6 +239,7 @@ const normalizeNewCommercialCondition = (
   const commissionValues = getOperationalCommissionValues(condition);
   return {
     ...condition,
+    coefficient: condition.coefficient ?? 0,
     ...commissionValues,
     commissionRate: condition.commissionRate ?? commissionValues.flatCommission,
   };
@@ -252,6 +253,7 @@ const normalizeStoredCommercialCondition = (
   const commissionValues = getOperationalCommissionValues(condition);
   return {
     ...condition,
+    coefficient: condition.coefficient ?? 0,
     ...commissionValues,
     commissionRate: condition.commissionRate ?? commissionValues.flatCommission,
   };

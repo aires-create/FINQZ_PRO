@@ -1,13 +1,18 @@
 export interface OperationalCommissionFields {
-  coefficient?: number;
-  flatCommission?: number;
-  bonusCommission?: number;
-  advanceCommission?: number;
-  totalCommission?: number;
+  coefficient: number;
+  flatCommission: number;
+  bonusCommission: number;
+  advanceCommission: number;
+  totalCommission: number;
+}
+
+export interface LegacyCommissionFallbackFields {
   commissionRate?: number;
 }
 
-export interface CreateCommercialConditionDto extends OperationalCommissionFields {
+export interface CreateCommercialConditionDto
+  extends OperationalCommissionFields,
+    LegacyCommissionFallbackFields {
   tenantId: string;
   commercialTableId: string;
   minTerm: number;
@@ -31,7 +36,9 @@ export interface CreateCommercialConditionDto extends OperationalCommissionField
   active?: boolean;
 }
 
-export interface UpdateCommercialConditionDto extends OperationalCommissionFields {
+export interface UpdateCommercialConditionDto
+  extends Partial<OperationalCommissionFields>,
+    LegacyCommissionFallbackFields {
   minTerm?: number;
   maxTerm?: number;
   term?: number;
@@ -52,3 +59,9 @@ export interface UpdateCommercialConditionDto extends OperationalCommissionField
   notes?: string;
   active?: boolean;
 }
+
+export type CommercialConditionPayload = Omit<
+  CreateCommercialConditionDto,
+  'tenantId' | 'commercialTableId' | 'totalCommission'
+> &
+  Partial<Pick<OperationalCommissionFields, 'totalCommission'>>;

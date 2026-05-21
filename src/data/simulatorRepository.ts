@@ -3,7 +3,13 @@
 // Armazenamento local com localStorage
 // ============================================
 
-import { commercialTableRepository, commercialConditionRepository, providerRepository, ProviderType } from "./commercialRepository";
+import {
+  commercialTableRepository,
+  commercialConditionRepository,
+  providerRepository,
+  ProviderType,
+  CommercialCondition,
+} from "./commercialRepository";
 
 // Storage keys
 const STORAGE_KEY_SIMULATIONS = "finqz_simulations";
@@ -73,6 +79,22 @@ export interface CreditOffer {
   tableId: string;
   conditionId: string;
 }
+
+const getOperationalCommissionRate = (
+  condition: CommercialCondition,
+): number => {
+  if (condition.totalCommission !== undefined) {
+    return condition.totalCommission;
+  }
+
+  const flatCommission = condition.flatCommission ?? condition.commissionRate ?? 0;
+  const bonusCommission = condition.bonusCommission ?? 0;
+  const advanceCommission = condition.advanceCommission ?? 0;
+
+  return Number(
+    (flatCommission + bonusCommission + advanceCommission).toFixed(6),
+  );
+};
 
 // Oferta de energia
 export interface EnergyOffer {
@@ -388,12 +410,13 @@ export const simulationEngine = {
           creditParams,
           condition
         );
+        const operationalCommissionRate = getOperationalCommissionRate(condition);
         
         // Calcular score
         const score = calculateCreditScore(
           approvedAmount,
           condition.monthlyRate,
-          condition.commissionRate,
+          operationalCommissionRate,
           approvalProbability
         );
         
@@ -408,7 +431,7 @@ export const simulationEngine = {
           term: condition.term,
           monthlyRate: condition.monthlyRate,
           cetRate: condition.cetRate,
-          commissionRate: condition.commissionRate,
+          commissionRate: operationalCommissionRate,
           approvedAmount,
           approvalProbability,
           score,

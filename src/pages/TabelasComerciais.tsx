@@ -65,6 +65,18 @@ const withCalculatedCommissionFields = (
   };
 };
 
+const hasRequiredOperationalCommissionFields = (
+  condition: Partial<CommercialCondition>,
+): boolean => {
+  return (
+    condition.coefficient !== undefined &&
+    (condition.flatCommission !== undefined ||
+      condition.commissionRate !== undefined) &&
+    condition.bonusCommission !== undefined &&
+    condition.advanceCommission !== undefined
+  );
+};
+
 const parseNumberInput = (value: string): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -116,7 +128,7 @@ export const TabelasComerciaisPage: React.FC = () => {
       monthlyRate: 0,
       cetRate: 0,
       commissionRate: 0,
-      coefficient: undefined,
+      coefficient: 0,
       flatCommission: 0,
       bonusCommission: 0,
       advanceCommission: 0,
@@ -304,7 +316,7 @@ export const TabelasComerciaisPage: React.FC = () => {
       monthlyRate: 0,
       cetRate: 0,
       commissionRate: 0,
-      coefficient: undefined,
+      coefficient: 0,
       flatCommission: 0,
       bonusCommission: 0,
       advanceCommission: 0,
@@ -375,7 +387,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           monthlyRate: c.monthlyRate,
           cetRate: c.cetRate,
           commissionRate: c.commissionRate,
-          coefficient: c.coefficient,
+          coefficient: c.coefficient ?? 0,
           flatCommission: c.flatCommission ?? c.commissionRate,
           bonusCommission: c.bonusCommission ?? 0,
           advanceCommission: c.advanceCommission ?? 0,
@@ -407,7 +419,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           monthlyRate: 0,
           cetRate: 0,
           commissionRate: 0,
-          coefficient: undefined,
+          coefficient: 0,
           flatCommission: 0,
           bonusCommission: 0,
           advanceCommission: 0,
@@ -454,7 +466,11 @@ export const TabelasComerciaisPage: React.FC = () => {
         return;
       }
     } else {
-      const validConditions = conditionForms.filter(c => c.term && c.monthlyRate !== undefined);
+      const validConditions = conditionForms.filter(c =>
+        c.term &&
+        c.monthlyRate !== undefined &&
+        hasRequiredOperationalCommissionFields(c)
+      );
       if (validConditions.length === 0) {
         alert("Adicione pelo menos uma condição comercial");
         return;
@@ -572,7 +588,11 @@ export const TabelasComerciaisPage: React.FC = () => {
         });
       });
     } else {
-      const validConditions = conditionForms.filter(c => c.term && c.monthlyRate !== undefined);
+      const validConditions = conditionForms.filter(c =>
+        c.term &&
+        c.monthlyRate !== undefined &&
+        hasRequiredOperationalCommissionFields(c)
+      );
       validConditions.forEach(condition => {
         const commissionValues = getConditionCommissionValues(condition);
         commercialConditionRepository.createCondition({
@@ -583,7 +603,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           monthlyRate: condition.monthlyRate || 0,
           cetRate: condition.cetRate || 0,
           commissionRate: commissionValues.flatCommission,
-          coefficient: condition.coefficient,
+          coefficient: condition.coefficient ?? 0,
           flatCommission: commissionValues.flatCommission,
           bonusCommission: commissionValues.bonusCommission,
           advanceCommission: commissionValues.advanceCommission,
@@ -617,7 +637,7 @@ export const TabelasComerciaisPage: React.FC = () => {
       monthlyRate: 0,
       cetRate: 0,
       commissionRate: 0,
-      coefficient: undefined,
+      coefficient: 0,
       flatCommission: 0,
       bonusCommission: 0,
       advanceCommission: 0,
@@ -708,7 +728,7 @@ export const TabelasComerciaisPage: React.FC = () => {
               table.name,
               table.code,
               `${cond.monthlyRate}%`,
-              `${cond.commissionRate}%`,
+              `${getConditionCommissionValues(cond).totalCommission}%`,
               table.active ? "Ativo" : "Inativo"
             ]);
           });
@@ -973,7 +993,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                                       const flatCommission = cond.flatCommission ?? cond.commissionRate ?? 0;
                                       const bonusCommission = cond.bonusCommission ?? 0;
                                       const advanceCommission = cond.advanceCommission ?? 0;
-                                      const totalCommission = cond.totalCommission ?? cond.commissionRate ?? 0;
+                                      const totalCommission = getConditionCommissionValues(cond).totalCommission;
 
                                       return (
                                         <tr key={cond.id} className="border-t border-[var(--border-muted)]">
@@ -1266,10 +1286,11 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Coef.</label>
+                    <label className="block text-xs text-slate-500 mb-1">Coef. *</label>
                     <input
                       type="number"
                       step="0.000001"
+                      required
                       value={condition.coefficient ?? ""}
                       onChange={(e) => updateCondition(index, "coefficient", parseNumberInput(e.target.value))}
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
@@ -1306,6 +1327,7 @@ export const TabelasComerciaisPage: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
+                      required
                       value={condition.flatCommission ?? condition.commissionRate ?? 0}
                       onChange={(e) => updateCondition(index, "flatCommission", parseNumberInput(e.target.value))}
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
@@ -1313,10 +1335,11 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Bônus %</label>
+                    <label className="block text-xs text-slate-500 mb-1">Bônus % *</label>
                     <input
                       type="number"
                       step="0.01"
+                      required
                       value={condition.bonusCommission ?? 0}
                       onChange={(e) => updateCondition(index, "bonusCommission", parseNumberInput(e.target.value))}
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
@@ -1324,10 +1347,11 @@ export const TabelasComerciaisPage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Adiant. %</label>
+                    <label className="block text-xs text-slate-500 mb-1">Adiant. % *</label>
                     <input
                       type="number"
                       step="0.01"
+                      required
                       value={condition.advanceCommission ?? 0}
                       onChange={(e) => updateCondition(index, "advanceCommission", parseNumberInput(e.target.value))}
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"

@@ -696,11 +696,11 @@ model CommercialCondition {
   term                Int
   monthlyRate         Float
   cetRate             Float
-  coefficient         Float?
-  flatCommission      Float?
-  bonusCommission     Float?
-  advanceCommission   Float?
-  totalCommission     Float?
+  coefficient         Float     @default(0)
+  flatCommission      Float     @default(0)
+  bonusCommission     Float     @default(0)
+  advanceCommission   Float     @default(0)
+  totalCommission     Float     @default(0)
   commissionRate      Float     @default(0)
   minAmount           Float
   maxAmount           Float
