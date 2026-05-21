@@ -1,0 +1,14 @@
+import type { FastifyInstance } from 'fastify';
+
+import type { IntegrationsController } from './integrations.controller.js';
+
+export const createIntegrationsRoutes = (
+  integrationsController: IntegrationsController,
+) => {
+  return async function integrationsRoutes(app: FastifyInstance): Promise<void> {
+    app.get(
+      '/nova-promotora/test',
+      integrationsController.testNovaPromotoraConnection,
+    );
+  };
+};
