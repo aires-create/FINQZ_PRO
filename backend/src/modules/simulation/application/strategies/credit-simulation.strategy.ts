@@ -3,6 +3,7 @@ import type {
   SimulationRequest,
   SimulationResult,
 } from '../../domain/contracts/simulation.contract.js';
+import { PmtFormulaService } from '../../domain/services/pmt-formula.service.js';
 
 const roundCurrency = (value: number) => {
   return Number(value.toFixed(2));
@@ -11,17 +12,21 @@ const roundCurrency = (value: number) => {
 export class CreditSimulationStrategy implements SimulationStrategy {
   readonly simulationType = 'CREDIT' as const;
 
-  async simulate(request: SimulationRequest): Promise<SimulationResult> {
-    const coefficient = Number(
-      (
-        request.monthlyRate +
-        1 / Math.max(request.term, 1)
-      ).toFixed(6),
-    );
+  private readonly pmtFormulaService = new PmtFormulaService();
 
-    const installmentAmount = roundCurrency(
-      request.requestedAmount * coefficient,
-    );
+  async simulate(request: SimulationRequest): Promise<SimulationResult> {
+    const coefficient =
+      this.pmtFormulaService.calculateCoefficient({
+        monthlyRate: request.monthlyRate,
+        term: request.term,
+      });
+
+    const installmentAmount =
+      this.pmtFormulaService.calculateInstallment({
+        presentValue: request.requestedAmount,
+        monthlyRate: request.monthlyRate,
+        term: request.term,
+      });
 
     const totalAmount = roundCurrency(
       installmentAmount * request.term,
