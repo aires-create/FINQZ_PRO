@@ -7,8 +7,8 @@ export const createIntegrationsRoutes = (
 ) => {
   return async function integrationsRoutes(app: FastifyInstance): Promise<void> {
     app.get(
-      '/nova-promotora/test',
-      integrationsController.testNovaPromotoraConnection,
+      '/providers/:providerKey/test',
+      integrationsController.testProviderConnection,
     );
   };
 };
