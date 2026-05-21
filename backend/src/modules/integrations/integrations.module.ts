@@ -28,3 +28,6 @@ export type {
   IntegrationConnectionStatus,
   IntegrationProvider,
 } from './domain/contracts/provider.contract.js';
+export { IntegrationError } from './domain/errors/integration.error.js';
+export { ProviderConnectionError } from './domain/errors/provider-connection.error.js';
+export { ProviderNotFoundError } from './domain/errors/provider-not-found.error.js';

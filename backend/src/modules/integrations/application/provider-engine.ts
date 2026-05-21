@@ -1,4 +1,5 @@
 import type { IntegrationProvider } from '../domain/contracts/provider.contract.js';
+import { ProviderNotFoundError } from '../domain/errors/provider-not-found.error.js';
 
 export type IntegrationProviderRegistry = Readonly<Record<string, IntegrationProvider>>;
 
@@ -11,7 +12,7 @@ export class ProviderEngine {
     const provider = this.registry[providerName];
 
     if (!provider) {
-      throw new Error(`Integration provider not registered: ${providerName}`);
+      throw new ProviderNotFoundError(providerName);
     }
 
     return provider;
