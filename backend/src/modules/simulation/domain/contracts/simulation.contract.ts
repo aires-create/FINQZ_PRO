@@ -12,6 +12,20 @@ export type SimulationProductType =
   | 'insurance'
   | 'credit_card';
 
+export type SimulationVerticalType =
+  | 'credito'
+  | 'energia'
+  | 'veiculo';
+
+export type SimulationType =
+  | 'CREDIT'
+  | 'ENERGY'
+  | 'HYBRID';
+
+export type CustomerType =
+  | 'PF'
+  | 'PJ';
+
 export type SimulationRequest = {
   bankCode?: string;
   bankName?: string;
@@ -21,6 +35,9 @@ export type SimulationRequest = {
   agreementName?: string;
   operationType: SimulationOperationType;
   productType: SimulationProductType;
+  verticalType?: SimulationVerticalType;
+  simulationType?: SimulationType;
+  customerType?: CustomerType;
   requestedAmount: number;
   term: number;
   monthlyRate: number;
