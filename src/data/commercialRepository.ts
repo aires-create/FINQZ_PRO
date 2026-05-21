@@ -112,6 +112,7 @@ export interface CommercialCondition {
   maxConsumption?: number;
   tariffKwh?: number;
   savingsPercent?: number;
+  estimatedValue?: number;
   contractTerm?: number;
   earlyTerminationFee?: number;
 

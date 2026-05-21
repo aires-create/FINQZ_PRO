@@ -6,6 +6,12 @@ import {
 } from "lucide-react";
 import { Button, KpiCard, Modal } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
+import {
+  commercialApi,
+  CommercialConditionPayload,
+  CommercialConditionResponseDto,
+  CommercialTableResponseDto
+} from "../api/modules";
 import { 
   providerRepository, 
   commercialTableRepository, 
@@ -37,27 +43,31 @@ const calculateOperationalCommissionTotal = (
 
 const getConditionCommissionValues = (
   condition: Partial<CommercialCondition>,
+  preferStoredTotal = true,
 ) => {
   const flatCommission = condition.flatCommission ?? condition.commissionRate ?? 0;
   const bonusCommission = condition.bonusCommission ?? 0;
   const advanceCommission = condition.advanceCommission ?? 0;
+  const calculatedTotalCommission = calculateOperationalCommissionTotal(
+    flatCommission,
+    bonusCommission,
+    advanceCommission,
+  );
 
   return {
     flatCommission,
     bonusCommission,
     advanceCommission,
-    totalCommission: calculateOperationalCommissionTotal(
-      flatCommission,
-      bonusCommission,
-      advanceCommission,
-    ),
+    totalCommission: preferStoredTotal && condition.totalCommission !== undefined
+      ? condition.totalCommission
+      : calculatedTotalCommission,
   };
 };
 
 const withCalculatedCommissionFields = (
   condition: Partial<CommercialCondition>,
 ): Partial<CommercialCondition> => {
-  const commissionValues = getConditionCommissionValues(condition);
+  const commissionValues = getConditionCommissionValues(condition, false);
   return {
     ...condition,
     ...commissionValues,
@@ -82,11 +92,246 @@ const parseNumberInput = (value: string): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+type FeedbackState = {
+  type: "success" | "warning" | "error";
+  message: string;
+};
+
+type LoadedCommercialData = {
+  providers: Provider[];
+  tables: CommercialTable[];
+  conditions: Record<string, CommercialCondition[]>;
+};
+
+const toTimestamp = (value?: string | number | null): number | undefined => {
+  if (value === undefined || value === null || value === "") return undefined;
+
+  const timestamp = typeof value === "number" ? value : new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+};
+
+const toTimestampOrNow = (value?: string | number | null): number => (
+  toTimestamp(value) ?? Date.now()
+);
+
+const mapApiConditionToLocal = (
+  condition: CommercialConditionResponseDto,
+): CommercialCondition => ({
+  id: condition.id,
+  commercialTableId: condition.commercialTableId,
+  minTerm: condition.minTerm,
+  maxTerm: condition.maxTerm,
+  term: condition.term,
+  monthlyRate: condition.monthlyRate,
+  cetRate: condition.cetRate,
+  coefficient: condition.coefficient,
+  flatCommission: condition.flatCommission,
+  bonusCommission: condition.bonusCommission,
+  advanceCommission: condition.advanceCommission,
+  totalCommission: condition.totalCommission,
+  commissionRate: condition.commissionRate,
+  minAmount: condition.minAmount,
+  maxAmount: condition.maxAmount,
+  minAge: condition.minAge ?? undefined,
+  maxAge: condition.maxAge ?? undefined,
+  minConsumption: condition.minConsumption ?? undefined,
+  maxConsumption: condition.maxConsumption ?? undefined,
+  tariffKwh: condition.tariffKwh ?? undefined,
+  savingsPercent: condition.savingsPercent ?? undefined,
+  estimatedValue: condition.estimatedValue ?? undefined,
+  contractTerm: condition.contractTerm ?? undefined,
+  earlyTerminationFee: condition.earlyTerminationFee ?? undefined,
+  campaignName: condition.campaignName ?? undefined,
+  notes: condition.notes ?? "",
+  active: condition.active,
+  createdAt: toTimestampOrNow(condition.createdAt),
+  updatedAt: toTimestampOrNow(condition.updatedAt),
+});
+
+const mapApiTableToLocal = (table: CommercialTableResponseDto): CommercialTable => ({
+  id: table.id,
+  providerId: table.providerId,
+  providerCode: table.providerCode,
+  providerName: table.providerName,
+  providerType: table.providerType as ProviderType,
+  productId: table.productId,
+  productCode: table.productCode,
+  productName: table.productName,
+  subproductId: table.subproductId,
+  subproductCode: table.subproductCode,
+  subproductName: table.subproductName,
+  modality: table.modality,
+  modalityLabel: table.modalityLabel,
+  name: table.name,
+  code: table.code,
+  active: table.active,
+  startDate: toTimestamp(table.startDate),
+  endDate: toTimestamp(table.endDate),
+  createdAt: toTimestampOrNow(table.createdAt),
+  updatedAt: toTimestampOrNow(table.updatedAt),
+  energyType: table.energyType as "GD" | "ACL" | undefined,
+  customerType: table.customerType as "residencial" | "comercial" | "industrial" | undefined,
+  distributionCompany: table.distributionCompany ?? undefined,
+  region: table.region ?? undefined,
+});
+
+const groupApiConditionsByTable = (
+  apiTables: CommercialTableResponseDto[],
+): Record<string, CommercialCondition[]> => {
+  const conditionsByTable: Record<string, CommercialCondition[]> = {};
+
+  apiTables.forEach((table) => {
+    conditionsByTable[table.id] = table.conditions.map(mapApiConditionToLocal);
+  });
+
+  return conditionsByTable;
+};
+
+const groupLocalConditionsByTable = (
+  allConditions: CommercialCondition[],
+): Record<string, CommercialCondition[]> => {
+  const conditionsByTable: Record<string, CommercialCondition[]> = {};
+
+  allConditions.forEach((condition) => {
+    if (!conditionsByTable[condition.commercialTableId]) {
+      conditionsByTable[condition.commercialTableId] = [];
+    }
+    conditionsByTable[condition.commercialTableId].push(condition);
+  });
+
+  return conditionsByTable;
+};
+
+const providerFromTable = (table: CommercialTable): Provider => ({
+  id: table.providerId,
+  code: table.providerCode,
+  name: table.providerName,
+  type: table.providerType,
+  active: true,
+  createdAt: table.createdAt,
+  updatedAt: table.updatedAt,
+});
+
+const stripTableMetadata = (
+  table: CommercialTable,
+): Omit<CommercialTable, "id" | "createdAt" | "updatedAt"> => ({
+  providerId: table.providerId,
+  providerCode: table.providerCode,
+  providerName: table.providerName,
+  providerType: table.providerType,
+  productId: table.productId,
+  productCode: table.productCode,
+  productName: table.productName,
+  subproductId: table.subproductId,
+  subproductCode: table.subproductCode,
+  subproductName: table.subproductName,
+  modality: table.modality,
+  modalityLabel: table.modalityLabel,
+  name: table.name,
+  code: table.code,
+  active: table.active,
+  startDate: table.startDate,
+  endDate: table.endDate,
+  energyType: table.energyType,
+  customerType: table.customerType,
+  distributionCompany: table.distributionCompany,
+  region: table.region,
+});
+
+const mergeProvidersFromTables = (
+  baseProviders: Provider[],
+  tableList: CommercialTable[],
+): Provider[] => {
+  const providersById = new Map(baseProviders.map((provider) => [provider.id, provider]));
+
+  tableList.forEach((table) => {
+    if (!providersById.has(table.providerId)) {
+      providersById.set(table.providerId, providerFromTable(table));
+    }
+  });
+
+  return Array.from(providersById.values());
+};
+
+const loadLocalCommercialData = (): LoadedCommercialData => {
+  const loadedProviders = providerRepository.listProviders();
+
+  // TODO tecnico: remover este fallback em localStorage quando a migracao para /api/v1/commercial estiver concluida.
+  commercialTableRepository.initializeExamples();
+
+  const loadedTables = commercialTableRepository.listCommercialTables();
+  const allConditions = commercialConditionRepository.getAllConditions();
+
+  return {
+    providers: mergeProvidersFromTables(loadedProviders, loadedTables),
+    tables: loadedTables,
+    conditions: groupLocalConditionsByTable(allConditions),
+  };
+};
+
+const getApiErrorMessage = (error: unknown): string => (
+  error instanceof Error ? error.message : "Erro desconhecido ao acessar a API"
+);
+
+const upsertFallbackTable = (
+  tableId: string,
+  tableData: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">,
+): CommercialTable => {
+  const currentTables = commercialTableRepository.listCommercialTables();
+  const tableIndex = currentTables.findIndex((table) => table.id === tableId);
+  const now = Date.now();
+  const fallbackTable: CommercialTable = {
+    ...(tableIndex >= 0 ? currentTables[tableIndex] : {}),
+    ...tableData,
+    id: tableId,
+    createdAt: tableIndex >= 0 ? currentTables[tableIndex].createdAt : now,
+    updatedAt: now,
+  };
+
+  const nextTables = tableIndex >= 0
+    ? currentTables.map((table, index) => index === tableIndex ? fallbackTable : table)
+    : [...currentTables, fallbackTable];
+
+  commercialTableRepository.saveTables(nextTables);
+  return fallbackTable;
+};
+
+const replaceLocalFallbackConditions = (
+  tableId: string,
+  conditionPayloads: CommercialConditionPayload[],
+): void => {
+  commercialConditionRepository.deleteConditionsByTable(tableId);
+
+  conditionPayloads.forEach((condition) => {
+    commercialConditionRepository.createCondition({
+      ...condition,
+      commercialTableId: tableId,
+    });
+  });
+};
+
+const saveTableToLocalFallback = (
+  editingTable: CommercialTable | null,
+  tableData: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">,
+  conditionPayloads: CommercialConditionPayload[],
+): CommercialTable => {
+  const fallbackTable = editingTable
+    ? upsertFallbackTable(editingTable.id, tableData)
+    : commercialTableRepository.createTable(tableData);
+
+  replaceLocalFallbackConditions(fallbackTable.id, conditionPayloads);
+  return fallbackTable;
+};
+
 export const TabelasComerciaisPage: React.FC = () => {
   // State
   const [providers, setProviders] = useState<Provider[]>([]);
   const [tables, setTables] = useState<CommercialTable[]>([]);
   const [conditions, setConditions] = useState<Record<string, CommercialCondition[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -159,34 +404,36 @@ export const TabelasComerciaisPage: React.FC = () => {
 
   // Load data
   useEffect(() => {
-    loadData();
+    void loadData();
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
+    setIsLoading(true);
+
     try {
-      // Initialize providers if needed (already done in providerRepository)
       const loadedProviders = providerRepository.listProviders();
-      setProviders(loadedProviders);
-      
-      // Initialize tables with examples if empty
-      commercialTableRepository.initializeExamples();
-      
-      // Load tables
-      const loadedTables = commercialTableRepository.listCommercialTables();
+      const apiTables = await commercialApi.listTables();
+      const loadedTables = apiTables.map(mapApiTableToLocal);
+
+      setProviders(mergeProvidersFromTables(loadedProviders, loadedTables));
       setTables(loadedTables);
-      
-      // Load all conditions
-      const allConditions = commercialConditionRepository.getAllConditions();
-      const conditionsByTable: Record<string, CommercialCondition[]> = {};
-      allConditions.forEach(c => {
-        if (!conditionsByTable[c.commercialTableId]) {
-          conditionsByTable[c.commercialTableId] = [];
-        }
-        conditionsByTable[c.commercialTableId].push(c);
+      setConditions(groupApiConditionsByTable(apiTables));
+      setUsingFallback(false);
+      setFeedback(null);
+    } catch (error) {
+      console.error("Error loading commercial data from API:", error);
+
+      const fallbackData = loadLocalCommercialData();
+      setProviders(fallbackData.providers);
+      setTables(fallbackData.tables);
+      setConditions(fallbackData.conditions);
+      setUsingFallback(true);
+      setFeedback({
+        type: "warning",
+        message: `API de tabelas comerciais indisponivel (${getApiErrorMessage(error)}). Usando dados locais temporarios.`,
       });
-      setConditions(conditionsByTable);
-    } catch (e) {
-      console.error("Error loading data:", e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -242,7 +489,7 @@ export const TabelasComerciaisPage: React.FC = () => {
         t.providerName.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesProviderType = filtroProviderType === "" || 
-        (providers.find(p => p.id === t.providerId)?.type === filtroProviderType);
+        t.providerType === filtroProviderType;
       const matchesProvider = filtroProvider === "" || t.providerId === filtroProvider;
       const matchesProduct = filtroProduto === "" || t.productId === filtroProduto;
       const matchesSubproduct = filtroSubproduto === "" || t.subproductId === filtroSubproduto;
@@ -343,28 +590,45 @@ export const TabelasComerciaisPage: React.FC = () => {
   };
 
   // Open edit modal
-  const handleEdit = (table: CommercialTable) => {
-    setEditingTable(table);
-    setSelectedProvider(table.providerId);
-    setSelectedProduct(table.productId);
-    setSelectedSubproduct(table.subproductId);
-    setSelectedModality(table.modality);
+  const handleEdit = async (table: CommercialTable) => {
+    let currentTable = table;
+    let tableConditions = conditions[table.id] || [];
+
+    if (!usingFallback) {
+      try {
+        const apiTable = await commercialApi.getTableById(table.id);
+        currentTable = mapApiTableToLocal(apiTable);
+        tableConditions = apiTable.conditions.map(mapApiConditionToLocal);
+        setTables(prev => prev.map(item => item.id === currentTable.id ? currentTable : item));
+        setConditions(prev => ({ ...prev, [currentTable.id]: tableConditions }));
+      } catch (error) {
+        setFeedback({
+          type: "warning",
+          message: `Nao foi possivel atualizar os detalhes pela API (${getApiErrorMessage(error)}). Usando os dados ja carregados na tela.`,
+        });
+      }
+    }
+
+    setEditingTable(currentTable);
+    setSelectedProvider(currentTable.providerId);
+    setSelectedProduct(currentTable.productId);
+    setSelectedSubproduct(currentTable.subproductId);
+    setSelectedModality(currentTable.modality);
     setTableForm({
-      name: table.name,
-      code: table.code,
-      startDate: table.startDate ? new Date(table.startDate).toISOString().split('T')[0] : "",
-      endDate: table.endDate ? new Date(table.endDate).toISOString().split('T')[0] : "",
-      active: table.active,
+      name: currentTable.name,
+      code: currentTable.code,
+      startDate: currentTable.startDate ? new Date(currentTable.startDate).toISOString().split('T')[0] : "",
+      endDate: currentTable.endDate ? new Date(currentTable.endDate).toISOString().split('T')[0] : "",
+      active: currentTable.active,
       // Campos de energia
-      energyType: table.energyType || '',
-      customerType: table.customerType || '',
-      distributionCompany: table.distributionCompany || '',
-      region: table.region || ''
+      energyType: currentTable.energyType || '',
+      customerType: currentTable.customerType || '',
+      distributionCompany: currentTable.distributionCompany || '',
+      region: currentTable.region || ''
     });
     
     // Load conditions for this table
-    const tableConditions = conditions[table.id] || [];
-    const isEnergyTable = table.providerType === 'ENERGY_PROVIDER';
+    const isEnergyTable = currentTable.providerType === 'ENERGY_PROVIDER';
     
     if (tableConditions.length > 0) {
       if (isEnergyTable) {
@@ -438,7 +702,11 @@ export const TabelasComerciaisPage: React.FC = () => {
   };
 
   // Save table
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
+
+    setFeedback(null);
+
     // Validação para provider de energia
     if (isEnergyProvider) {
       if (!selectedProvider || !selectedProduct || !tableForm.energyType || !tableForm.customerType || !tableForm.region) {
@@ -459,18 +727,19 @@ export const TabelasComerciaisPage: React.FC = () => {
     }
     
     // Validação de condições
+    const validEnergyConditions = energyConditionForms.filter(c => c.minConsumption && c.maxConsumption && c.tariffKwh !== undefined);
+    const validConditions = conditionForms.filter(c =>
+      c.term &&
+      c.monthlyRate !== undefined &&
+      hasRequiredOperationalCommissionFields(c)
+    );
+
     if (isEnergyProvider) {
-      const validEnergyConditions = energyConditionForms.filter(c => c.minConsumption && c.maxConsumption && c.tariffKwh !== undefined);
       if (validEnergyConditions.length === 0) {
         alert("Adicione pelo menos uma condição de energia");
         return;
       }
     } else {
-      const validConditions = conditionForms.filter(c =>
-        c.term &&
-        c.monthlyRate !== undefined &&
-        hasRequiredOperationalCommissionFields(c)
-      );
       if (validConditions.length === 0) {
         alert("Adicione pelo menos uma condição comercial");
         return;
@@ -484,12 +753,10 @@ export const TabelasComerciaisPage: React.FC = () => {
     }
     
     let tableData: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">;
-    let tableId: string;
     
     if (isEnergyProvider) {
       // Dados para tabela de energia
       const product = energyProducts.find(p => p.id === selectedProduct);
-      const region = regions.find(r => r.id === tableForm.region);
       
       tableData = {
         providerId: selectedProvider,
@@ -546,31 +813,18 @@ export const TabelasComerciaisPage: React.FC = () => {
         endDate: tableForm.endDate ? new Date(tableForm.endDate).getTime() : undefined
       };
     }
-    
-    if (editingTable) {
-      // Update existing table
-      commercialTableRepository.updateTable(editingTable.id, tableData);
-      tableId = editingTable.id;
-      
-      // Delete old conditions and create new ones
-      commercialConditionRepository.deleteConditionsByTable(tableId);
-    } else {
-      // Create new table
-      const newTable = commercialTableRepository.createTable(tableData);
-      tableId = newTable.id;
-    }
-    
-    // Create conditions
-    if (isEnergyProvider) {
-      const validEnergyConditions = energyConditionForms.filter(c => c.minConsumption && c.maxConsumption && c.tariffKwh !== undefined);
-      validEnergyConditions.forEach(condition => {
-        commercialConditionRepository.createCondition({
-          commercialTableId: tableId,
+
+    const conditionPayloads: CommercialConditionPayload[] = isEnergyProvider
+      ? validEnergyConditions.map(condition => ({
           minTerm: 1,
           maxTerm: 1,
           term: 1,
           monthlyRate: 0,
           cetRate: 0,
+          coefficient: 0,
+          flatCommission: 0,
+          bonusCommission: 0,
+          advanceCommission: 0,
           commissionRate: 0,
           minAmount: 0,
           maxAmount: 0,
@@ -585,18 +839,10 @@ export const TabelasComerciaisPage: React.FC = () => {
           earlyTerminationFee: condition.earlyTerminationFee || 0,
           notes: condition.notes || "",
           active: condition.active !== false
-        });
-      });
-    } else {
-      const validConditions = conditionForms.filter(c =>
-        c.term &&
-        c.monthlyRate !== undefined &&
-        hasRequiredOperationalCommissionFields(c)
-      );
-      validConditions.forEach(condition => {
-        const commissionValues = getConditionCommissionValues(condition);
-        commercialConditionRepository.createCondition({
-          commercialTableId: tableId,
+        }))
+      : validConditions.map(condition => {
+        const commissionValues = getConditionCommissionValues(condition, false);
+        return {
           minTerm: condition.term || 1,
           maxTerm: condition.term || 1,
           term: condition.term || 1,
@@ -607,26 +853,115 @@ export const TabelasComerciaisPage: React.FC = () => {
           flatCommission: commissionValues.flatCommission,
           bonusCommission: commissionValues.bonusCommission,
           advanceCommission: commissionValues.advanceCommission,
-          totalCommission: commissionValues.totalCommission,
           minAmount: condition.minAmount || 0,
           maxAmount: condition.maxAmount || 0,
           minAge: condition.minAge || 18,
           maxAge: condition.maxAge || 75,
           notes: condition.notes || "",
           active: condition.active !== false
-        });
+        };
       });
+
+    setIsSaving(true);
+
+    try {
+      const savedTable = editingTable
+        ? await (async () => {
+            await commercialApi.updateTable(editingTable.id, tableData);
+            return commercialApi.replaceConditions(editingTable.id, conditionPayloads);
+          })()
+        : await commercialApi.createTable({
+            ...tableData,
+            conditions: conditionPayloads,
+          });
+
+      const localTable = mapApiTableToLocal(savedTable);
+      const localConditions = savedTable.conditions.map(mapApiConditionToLocal);
+
+      setTables(prev => {
+        const exists = prev.some(table => table.id === localTable.id);
+        return exists
+          ? prev.map(table => table.id === localTable.id ? localTable : table)
+          : [...prev, localTable];
+      });
+      setProviders(prev => mergeProvidersFromTables(prev, [localTable]));
+      setConditions(prev => ({ ...prev, [localTable.id]: localConditions }));
+      setUsingFallback(false);
+      setIsModalOpen(false);
+      setFeedback({
+        type: "success",
+        message: editingTable
+          ? "Tabela comercial atualizada na API."
+          : "Tabela comercial criada na API.",
+      });
+    } catch (error) {
+      console.error("Error saving commercial table through API:", error);
+
+      try {
+        saveTableToLocalFallback(editingTable, tableData, conditionPayloads);
+        const fallbackData = loadLocalCommercialData();
+        setProviders(fallbackData.providers);
+        setTables(fallbackData.tables);
+        setConditions(fallbackData.conditions);
+        setUsingFallback(true);
+        setIsModalOpen(false);
+        setFeedback({
+          type: "warning",
+          message: `API nao confirmou o salvamento (${getApiErrorMessage(error)}). As alteracoes foram preservadas no localStorage temporario.`,
+        });
+      } catch (fallbackError) {
+        console.error("Error saving commercial table to local fallback:", fallbackError);
+        setFeedback({
+          type: "error",
+          message: `Nao foi possivel salvar na API nem no fallback local (${getApiErrorMessage(fallbackError)}). A modal permanece aberta para evitar perda dos dados digitados.`,
+        });
+      }
+    } finally {
+      setIsSaving(false);
     }
-    
-    setIsModalOpen(false);
-    loadData();
   };
 
   // Delete table
-  const handleDelete = (tableId: string) => {
-    if (confirm("Tem certeza que deseja excluir esta tabela? Todas as condições associadas serão excluídas.")) {
-      commercialTableRepository.deleteTable(tableId);
-      loadData();
+  const handleDelete = async (tableId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta tabela? Todas as condições associadas serão excluídas.")) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      await commercialApi.deleteTable(tableId);
+      setTables(prev => prev.filter(table => table.id !== tableId));
+      setConditions(prev => {
+        const next = { ...prev };
+        delete next[tableId];
+        return next;
+      });
+      setFeedback({
+        type: "success",
+        message: "Tabela comercial excluida na API.",
+      });
+    } catch (error) {
+      console.error("Error deleting commercial table through API:", error);
+
+      try {
+        commercialTableRepository.deleteTable(tableId);
+        const fallbackData = loadLocalCommercialData();
+        setProviders(fallbackData.providers);
+        setTables(fallbackData.tables);
+        setConditions(fallbackData.conditions);
+        setUsingFallback(true);
+        setFeedback({
+          type: "warning",
+          message: `API nao confirmou a exclusao (${getApiErrorMessage(error)}). A remocao foi aplicada apenas no localStorage temporario.`,
+        });
+      } catch (fallbackError) {
+        console.error("Error deleting commercial table from local fallback:", fallbackError);
+        setFeedback({
+          type: "error",
+          message: `Nao foi possivel excluir na API nem no fallback local (${getApiErrorMessage(fallbackError)}).`,
+        });
+      }
     }
   };
 
@@ -766,7 +1101,10 @@ export const TabelasComerciaisPage: React.FC = () => {
     { key: "ativo", label: "Ativo", required: false },
   ];
 
-  const handleImportTables = (rows: Record<string, string>[]) => {
+  const handleImportTables = async (rows: Record<string, string>[]) => {
+    const tableDataList: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">[] = [];
+    let skippedRows = 0;
+
     rows.forEach((row) => {
       const providerRef = row.provider?.toLowerCase();
       const provider = providers.find((item) =>
@@ -775,7 +1113,10 @@ export const TabelasComerciaisPage: React.FC = () => {
         item.name.toLowerCase() === providerRef
       );
 
-      if (!provider) return;
+      if (!provider) {
+        skippedRows += 1;
+        return;
+      }
 
       const isEnergy = provider.type === "ENERGY_PROVIDER";
       const productOptions = isEnergy ? energyProducts : products;
@@ -786,7 +1127,10 @@ export const TabelasComerciaisPage: React.FC = () => {
         item.name.toLowerCase() === productRef
       ) || productOptions[0];
 
-      if (!product) return;
+      if (!product) {
+        skippedRows += 1;
+        return;
+      }
 
       if (isEnergy) {
         const energyType: "GD" | "ACL" = row.subproduto === "ACL" ? "ACL" : "GD";
@@ -794,7 +1138,7 @@ export const TabelasComerciaisPage: React.FC = () => {
           ? row.modalidade
           : "residencial";
 
-        commercialTableRepository.createTable({
+        tableDataList.push({
           providerId: provider.id,
           providerCode: provider.code,
           providerName: provider.name,
@@ -824,7 +1168,10 @@ export const TabelasComerciaisPage: React.FC = () => {
         item.name.toLowerCase() === subproductRef
       ) || subproductOptions[0];
 
-      if (!subproduct) return;
+      if (!subproduct) {
+        skippedRows += 1;
+        return;
+      }
 
       const modalityOptions = getModalitiesForSubproduct(subproduct.id, product.id);
       const modalityRef = row.modalidade?.toLowerCase();
@@ -833,9 +1180,12 @@ export const TabelasComerciaisPage: React.FC = () => {
         item.label.toLowerCase() === modalityRef
       ) || modalityOptions[0];
 
-      if (!modality) return;
+      if (!modality) {
+        skippedRows += 1;
+        return;
+      }
 
-      commercialTableRepository.createTable({
+      tableDataList.push({
         providerId: provider.id,
         providerCode: provider.code,
         providerName: provider.name,
@@ -854,7 +1204,52 @@ export const TabelasComerciaisPage: React.FC = () => {
       });
     });
 
-    loadData();
+    if (tableDataList.length === 0) {
+      setFeedback({
+        type: "warning",
+        message: "Nenhuma linha valida foi encontrada para importar.",
+      });
+      return;
+    }
+
+    const apiCreatedTables: CommercialTable[] = [];
+    let fallbackCount = 0;
+    let lastApiError: unknown = null;
+
+    for (const tableData of tableDataList) {
+      try {
+        const apiTable = await commercialApi.createTable(tableData);
+        apiCreatedTables.push(mapApiTableToLocal(apiTable));
+      } catch (error) {
+        lastApiError = error;
+        fallbackCount += 1;
+        commercialTableRepository.createTable(tableData);
+      }
+    }
+
+    if (fallbackCount > 0) {
+      apiCreatedTables.forEach((table) => {
+        upsertFallbackTable(table.id, stripTableMetadata(table));
+        replaceLocalFallbackConditions(table.id, []);
+      });
+
+      const fallbackData = loadLocalCommercialData();
+      setProviders(fallbackData.providers);
+      setTables(fallbackData.tables);
+      setConditions(fallbackData.conditions);
+      setUsingFallback(true);
+      setFeedback({
+        type: "warning",
+        message: `${fallbackCount} tabela(s) importada(s) no localStorage temporario porque a API falhou (${getApiErrorMessage(lastApiError)}). ${skippedRows} linha(s) ignorada(s).`,
+      });
+      return;
+    }
+
+    await loadData();
+    setFeedback({
+      type: "success",
+      message: `${apiCreatedTables.length} tabela(s) importada(s) pela API. ${skippedRows} linha(s) ignorada(s).`,
+    });
   };
 
   return (
@@ -902,6 +1297,37 @@ export const TabelasComerciaisPage: React.FC = () => {
           }
         }}
       />
+
+      {(feedback || isLoading || usingFallback) && (
+        <div className={`rounded-lg border px-4 py-3 text-sm ${
+          feedback?.type === "error"
+            ? "border-red-500/30 bg-red-500/10 text-red-200"
+            : feedback?.type === "success"
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+        }`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {isLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
+              <span>
+                {isLoading
+                  ? "Carregando tabelas comerciais..."
+                  : feedback?.message || "Operando com fallback local temporario."}
+              </span>
+            </div>
+            {feedback && !isLoading && (
+              <button
+                type="button"
+                onClick={() => setFeedback(null)}
+                className="rounded p-1 opacity-80 hover:bg-white/10 hover:opacity-100"
+                aria-label="Fechar aviso"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1558,11 +1984,11 @@ export const TabelasComerciaisPage: React.FC = () => {
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button variant="primary" onClick={handleSave}>
-              {editingTable ? "Salvar Alterações" : "Criar Tabela"}
+            <Button variant="primary" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Salvando..." : editingTable ? "Salvar Alterações" : "Criar Tabela"}
             </Button>
           </div>
         </div>
