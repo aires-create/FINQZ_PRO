@@ -7,13 +7,14 @@ describe('SimulateOperationUseCase', () => {
     const useCase = new SimulateOperationUseCase();
 
     const result = useCase.execute({
-      operationType: 'new_loan',
-      requestedAmount: 10_000,
-      term: 12,
-      monthlyRate: 0.02,
-      bankName: 'Banco Teste',
-      productName: 'Crédito Consignado',
-    });
+  productType: 'consigned_loan',
+  operationType: 'new_loan',
+  requestedAmount: 10_000,
+  term: 12,
+  monthlyRate: 0.02,
+  bankName: 'Banco Teste',
+  productName: 'Crédito Consignado',
+});
 
     expect(result.requestedAmount).toBe(10_000);
     expect(result.term).toBe(12);
