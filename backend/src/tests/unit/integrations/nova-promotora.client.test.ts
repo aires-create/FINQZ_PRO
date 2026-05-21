@@ -1,4 +1,5 @@
 import {
+  listNovaPromotoraProposals,
   testNovaPromotoraConnection,
 } from '../../../modules/integrations/providers/nova-promotora/nova-promotora.client.js';
 
@@ -166,5 +167,60 @@ describe('NovaPromotora client', () => {
       },
     });
     expect(JSON.stringify(result)).not.toContain('test-api-key');
+  });
+
+  it('uses proposals path when listing proposals', async () => {
+    let requestedUrl: string | undefined;
+    const fetcher = vi.fn(async (input: Parameters<typeof fetch>[0]) => {
+      requestedUrl = String(input);
+
+      return Response.json({
+        data: [],
+      });
+    }) as unknown as typeof fetch;
+
+    const result = await listNovaPromotoraProposals({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test/base/',
+      fetcher,
+      proposalsPath: '/proposals/search',
+      timeoutMs: 100,
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(requestedUrl).toBe(
+      'https://nova-promotora.test/base/proposals/search',
+    );
+    expect(result).toMatchObject({
+      providerKey: 'nova-promotora',
+      success: true,
+      statusCode: 200,
+      data: {
+        data: [],
+      },
+    });
+  });
+
+  it('returns a configuration error when proposals path is missing', async () => {
+    vi.stubEnv('NOVA_PROMOTORA_PROPOSALS_PATH', '');
+    const fetcher = vi.fn(async () => Response.json({ data: [] })) as unknown as typeof fetch;
+
+    const result = await listNovaPromotoraProposals({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test',
+      fetcher,
+      timeoutMs: 100,
+    });
+
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      providerKey: 'nova-promotora',
+      success: false,
+      externalStatus: 'configuration_error',
+      error: {
+        code: 'NOVA_PROMOTORA_CONFIGURATION_ERROR',
+        message: 'Provider configuration is incomplete',
+      },
+    });
   });
 });

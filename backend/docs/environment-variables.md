@@ -25,6 +25,7 @@ O backend valida envs com Zod em `src/config/env.ts` e falha rapidamente antes d
 | --- | --- |
 | `NOVA_PROMOTORA_BASE_URL` | URL base da NOVA PROMOTORA. |
 | `NOVA_PROMOTORA_HEALTH_PATH` | Caminho relativo usado pelo health/test externo da NOVA PROMOTORA. Exemplo: `/api`. |
+| `NOVA_PROMOTORA_PROPOSALS_PATH` | Caminho relativo read-only para descoberta de propostas da NOVA PROMOTORA. Deixe vazio ate confirmar o endpoint oficial. |
 | `NOVA_PROMOTORA_API_KEY` | Chave de API da NOVA PROMOTORA. Deve ser tratada como secret. |
 | `NOVA_PROMOTORA_TIMEOUT_MS` | Timeout em milissegundos para health/test externo da NOVA PROMOTORA. |
 

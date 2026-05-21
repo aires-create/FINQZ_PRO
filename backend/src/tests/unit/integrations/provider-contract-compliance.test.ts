@@ -7,6 +7,7 @@ describe('Provider contract compliance', () => {
 
     expect(provider).toBeInstanceOf(NovaPromotoraService);
     expect(provider.healthCheck).toBeInstanceOf(Function);
+    expect(provider.listProposals).toBeInstanceOf(Function);
     expect(provider.testConnection).toBeInstanceOf(Function);
   });
 });

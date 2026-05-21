@@ -15,6 +15,7 @@ export type NovaPromotoraExternalErrorCode =
   | 'NOVA_PROMOTORA_CONFIGURATION_ERROR'
   | 'NOVA_PROMOTORA_HTTP_ERROR'
   | 'NOVA_PROMOTORA_NETWORK_ERROR'
+  | 'NOVA_PROMOTORA_RESPONSE_ERROR'
   | 'NOVA_PROMOTORA_TIMEOUT';
 
 export type NovaPromotoraSanitizedExternalError = {
@@ -40,11 +41,30 @@ export type NovaPromotoraRequestResult =
       error: NovaPromotoraSanitizedExternalError;
     };
 
+export type NovaPromotoraProposalsRequestResult =
+  | {
+      providerKey: NovaPromotoraProviderKey;
+      success: true;
+      externalStatus: 'available';
+      statusCode: number;
+      durationMs: number;
+      data: unknown;
+    }
+  | {
+      providerKey: NovaPromotoraProviderKey;
+      success: false;
+      externalStatus: Exclude<NovaPromotoraExternalStatus, 'available'>;
+      statusCode?: number;
+      durationMs: number;
+      error: NovaPromotoraSanitizedExternalError;
+    };
+
 export type NovaPromotoraClientOptions = {
   apiKey?: string;
   baseUrl?: string;
   fetcher?: typeof fetch;
   healthPath?: string;
+  proposalsPath?: string;
   timeoutMs?: number;
 };
 

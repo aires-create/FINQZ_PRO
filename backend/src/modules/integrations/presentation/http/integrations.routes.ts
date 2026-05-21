@@ -10,5 +10,10 @@ export const createIntegrationsRoutes = (
       '/providers/:providerKey/test',
       integrationsController.testProviderConnection,
     );
+
+    app.get(
+      '/providers/:providerKey/proposals',
+      integrationsController.listProviderProposals,
+    );
   };
 };

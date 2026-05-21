@@ -1,3 +1,5 @@
+import type { IntegrationProposalReader } from './integration-proposal.contract.js';
+
 export type IntegrationConnectionStatus = {
   connected: boolean;
   status?: number;
@@ -8,4 +10,5 @@ export type IntegrationConnectionStatus = {
 export interface IntegrationProvider {
   healthCheck(): Promise<boolean>;
   testConnection(): Promise<IntegrationConnectionStatus>;
+  listProposals?: IntegrationProposalReader['listProposals'];
 }
