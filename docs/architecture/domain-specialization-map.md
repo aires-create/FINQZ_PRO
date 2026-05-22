@@ -1,62 +1,42 @@
-\# FINQZ PRO — Domain Specialization Map
+# FINQZ PRO — Domain Specialization Map
 
-
-
-\## Objetivo
-
-
+## Objetivo
 
 Documento oficial de especialização do domínio enterprise genérico
 
 para o domínio operacional/comercial FINQZ PRO.
 
+---
 
-
-\---
-
-
-
-\## Estruturas que serão mantidas
-
-
+## Estruturas que serão mantidas
 
 A arquitetura abaixo permanecerá oficialmente no projeto:
 
+- multi-tenant
 
+- organizations
 
-\- multi-tenant
+- memberships
 
-\- organizations
+- RBAC
 
-\- memberships
+- permissions
 
-\- RBAC
+- hierarchy
 
-\- permissions
+- parentId
 
-\- hierarchy
+- audit
 
-\- parentId
+- integrations
 
-\- audit
+- commercial engine
 
-\- integrations
+---
 
-\- commercial engine
-
-
-
-\---
-
-
-
-\## Estruturas genéricas identificadas
-
-
+## Estruturas genéricas identificadas
 
 A estrutura atual ainda utiliza nomenclaturas corporativas genéricas:
-
-
 
 ```txt
 
@@ -86,19 +66,11 @@ MOBILE
 
 ```
 
+---
 
-
-\---
-
-
-
-\## Especialização oficial FINQZ
-
-
+## Especialização oficial FINQZ
 
 A estrutura organizacional passará a representar:
-
-
 
 ```txt
 
@@ -116,51 +88,34 @@ Tenant
 
 ```
 
+---
 
-
-\---
-
-
-
-\## Estratégia oficial
-
-
+## Estratégia oficial
 
 A estratégia aprovada é:
 
+- NÃO recriar arquitetura
 
+- NÃO duplicar módulos
 
-\- NÃO recriar arquitetura
+- NÃO criar novo sistema de tenancy
 
-\- NÃO duplicar módulos
+- NÃO criar novo RBAC
 
-\- NÃO criar novo sistema de tenancy
+- reutilizar estrutura enterprise existente
 
-\- NÃO criar novo RBAC
+- especializar o domínio atual
 
-\- reutilizar estrutura enterprise existente
+- adaptar seeds progressivamente
 
-\- especializar o domínio atual
+- adaptar nomenclaturas progressivamente
 
-\- adaptar seeds progressivamente
+---
 
-\- adaptar nomenclaturas progressivamente
-
-
-
-\---
-
-
-
-\## Status
-
-
+## Status
 
 Fase atual:
 
 Mapeamento e planejamento arquitetural.
 
-
-
 Nenhuma migração destrutiva foi iniciada.
-
