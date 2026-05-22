@@ -1,56 +1,36 @@
-\# FINQZ PRO — Domain Refactoring Plan
+# FINQZ PRO — Domain Refactoring Plan
 
-
-
-\## Objetivo
-
-
+## Objetivo
 
 Documento oficial de planejamento da adaptação do domínio enterprise genérico
 
 para o domínio operacional/comercial real do FINQZ PRO.
 
+---
 
-
-\---
-
-
-
-\## Estado atual identificado
-
-
+## Estado atual identificado
 
 A arquitetura atual já possui:
 
+- multi-tenant
 
+- organizations hierárquicas
 
-\- multi-tenant
+- RBAC
 
-\- organizations hierárquicas
+- memberships
 
-\- RBAC
+- permissions
 
-\- memberships
+- role hierarchy
 
-\- permissions
-
-\- role hierarchy
-
-\- parentId organizacional
-
-
+- parentId organizacional
 
 Porém o domínio atual ainda está genérico/corporativo.
 
+---
 
-
-\---
-
-
-
-\## Estrutura atual
-
-
+## Estrutura atual
 
 ```txt
 
@@ -76,15 +56,9 @@ Tenant
 
 &#x20;   └── FINOPS
 
+---
 
-
-\---
-
-
-
-\## Estrutura alvo oficial FINQZ
-
-
+## Estrutura alvo oficial FINQZ
 
 ```txt
 
@@ -101,46 +75,31 @@ Tenant
 &#x20;               └── Usuários
 
 ```
-
-
-
-\## Estratégia aprovada
-
-
+## Estratégia aprovada
 
 A estratégia oficial será:
 
+- reutilizar a arquitetura enterprise existente
 
+- evitar recriação estrutural
 
-\- reutilizar a arquitetura enterprise existente
+- evitar duplicidade de domínio
 
-\- evitar recriação estrutural
+- adaptar organizations para o domínio FINQZ
 
-\- evitar duplicidade de domínio
+- manter RBAC multi-tenant
 
-\- adaptar organizations para o domínio FINQZ
+- manter memberships
 
-\- manter RBAC multi-tenant
+- manter hierarchy via parentId
 
-\- manter memberships
+---
 
-\- manter hierarchy via parentId
-
-
-
-\---
-
-
-
-\## Status
-
-
+## Status
 
 Fase atual:
 
 Planejamento arquitetural.
-
-
 
 Nenhuma alteração estrutural ainda foi executada.
 

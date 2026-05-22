@@ -1,14 +1,8 @@
-\# FINQZ PRO — Domain Hierarchy
+# FINQZ PRO — Domain Hierarchy
 
-
-
-\## Decisão oficial
-
-
+## Decisão oficial
 
 A hierarquia operacional e comercial base do FINQZ PRO será mantida como:
-
-
 
 ```txt
 
