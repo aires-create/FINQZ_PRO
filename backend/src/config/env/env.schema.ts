@@ -8,7 +8,6 @@ export const nodeEnvironments = [
 
 export const requiredEnvKeys = [
   'DATABASE_URL',
-  'REDIS_URL',
   'JWT_SECRET',
   'JWT_REFRESH_SECRET',
   'CORS_ORIGIN',
