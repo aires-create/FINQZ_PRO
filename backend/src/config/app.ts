@@ -34,6 +34,32 @@ export interface AppConfig {
     description: string;
     path: string;
   };
+  integrations: {
+    novaPromotora: {
+      baseUrl?: string;
+      apiKey?: string;
+      healthPath?: string;
+      proposalsPath?: string;
+      timeoutMs?: number;
+    };
+    sosBolso: {
+      enabled: boolean;
+      baseUrl?: string;
+      tokenPath?: string;
+      marginPath?: string;
+      clientId?: string;
+      clientSecret?: string;
+      timeoutMs?: number;
+      signedJwt?: string;
+    };
+    bluepay: {
+      enabled: boolean;
+      baseUrl?: string;
+      clientId?: string;
+      clientSecret?: string;
+      timeoutMs?: number;
+    };
+  };
 }
 
 export const config: AppConfig = {
@@ -69,5 +95,31 @@ export const config: AppConfig = {
     version: env.swaggerVersion,
     description: env.swaggerDescription,
     path: env.swaggerPath,
+  },
+  integrations: {
+    novaPromotora: {
+      ...(env.novaPromotoraBaseUrl ? { baseUrl: env.novaPromotoraBaseUrl } : {}),
+      ...(env.novaPromotoraApiKey ? { apiKey: env.novaPromotoraApiKey } : {}),
+      ...(env.novaPromotoraHealthPath ? { healthPath: env.novaPromotoraHealthPath } : {}),
+      ...(env.novaPromotoraProposalsPath ? { proposalsPath: env.novaPromotoraProposalsPath } : {}),
+      ...(env.novaPromotoraTimeoutMs ? { timeoutMs: env.novaPromotoraTimeoutMs } : {}),
+    },
+    sosBolso: {
+      enabled: env.sosBolsoEnabled,
+      ...(env.sosBolsoBaseUrl ? { baseUrl: env.sosBolsoBaseUrl } : {}),
+      ...(env.sosBolsoTokenPath ? { tokenPath: env.sosBolsoTokenPath } : {}),
+      ...(env.sosBolsoMarginPath ? { marginPath: env.sosBolsoMarginPath } : {}),
+      ...(env.sosBolsoClientId ? { clientId: env.sosBolsoClientId } : {}),
+      ...(env.sosBolsoClientSecret ? { clientSecret: env.sosBolsoClientSecret } : {}),
+      ...(env.sosBolsoTimeoutMs ? { timeoutMs: env.sosBolsoTimeoutMs } : {}),
+      ...(env.sosBolsoSignedJwt ? { signedJwt: env.sosBolsoSignedJwt } : {}),
+    },
+    bluepay: {
+      enabled: env.bluepayEnabled,
+      ...(env.bluepayBaseUrl ? { baseUrl: env.bluepayBaseUrl } : {}),
+      ...(env.bluepayClientId ? { clientId: env.bluepayClientId } : {}),
+      ...(env.bluepayClientSecret ? { clientSecret: env.bluepayClientSecret } : {}),
+      ...(env.bluepayTimeoutMs ? { timeoutMs: env.bluepayTimeoutMs } : {}),
+    },
   },
 };

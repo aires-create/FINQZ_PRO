@@ -13,6 +13,22 @@ import {
   parsePositiveInteger,
 } from './env.parsers.js';
 
+const parseOptionalBoolean = (value: string | undefined) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
+};
+
 export const addEnvIssue = (
   context: z.RefinementCtx,
   key: string,
@@ -92,6 +108,17 @@ export const validateUrls = (
   }
 
   if (
+    input.DIRECT_URL &&
+    !isValidUrlWithProtocol(input.DIRECT_URL, ['postgresql:', 'postgres:'])
+  ) {
+    addEnvIssue(
+      context,
+      'DIRECT_URL',
+      'DIRECT_URL must be a valid PostgreSQL URL.',
+    );
+  }
+
+  if (
     input.REDIS_URL &&
     !isValidUrlWithProtocol(input.REDIS_URL, ['redis:', 'rediss:'])
   ) {
@@ -99,6 +126,28 @@ export const validateUrls = (
       context,
       'REDIS_URL',
       'REDIS_URL must be a valid Redis URL.',
+    );
+  }
+
+  if (
+    input.NOVA_PROMOTORA_BASE_URL &&
+    !isValidUrlWithProtocol(input.NOVA_PROMOTORA_BASE_URL, ['http:', 'https:'])
+  ) {
+    addEnvIssue(
+      context,
+      'NOVA_PROMOTORA_BASE_URL',
+      'NOVA_PROMOTORA_BASE_URL must be a valid http(s) URL.',
+    );
+  }
+
+  if (
+    input.SOS_BOLSO_BASE_URL &&
+    !isValidUrlWithProtocol(input.SOS_BOLSO_BASE_URL, ['http:', 'https:'])
+  ) {
+    addEnvIssue(
+      context,
+      'SOS_BOLSO_BASE_URL',
+      'SOS_BOLSO_BASE_URL must be a valid http(s) URL.',
     );
   }
 };
@@ -226,6 +275,39 @@ export const validateNumbers = (
       'REDIS_DB must be a non-negative integer.',
     );
   }
+
+  if (
+    input.NOVA_PROMOTORA_TIMEOUT_MS !== undefined &&
+    parsePositiveInteger(input.NOVA_PROMOTORA_TIMEOUT_MS) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'NOVA_PROMOTORA_TIMEOUT_MS',
+      'NOVA_PROMOTORA_TIMEOUT_MS must be a positive integer.',
+    );
+  }
+
+  if (
+    input.SOS_BOLSO_TIMEOUT_MS !== undefined &&
+    parsePositiveInteger(input.SOS_BOLSO_TIMEOUT_MS) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'SOS_BOLSO_TIMEOUT_MS',
+      'SOS_BOLSO_TIMEOUT_MS must be a positive integer.',
+    );
+  }
+
+  if (
+    input.SOS_BOLSO_ENABLED !== undefined &&
+    parseOptionalBoolean(input.SOS_BOLSO_ENABLED) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'SOS_BOLSO_ENABLED',
+      'SOS_BOLSO_ENABLED must be a boolean (true/false).',
+    );
+  }
 };
 
 export const validateSwaggerPath = (
@@ -238,5 +320,131 @@ export const validateSwaggerPath = (
       'SWAGGER_PATH',
       'SWAGGER_PATH must start with "/".',
     );
+  }
+
+  if (
+    input.NOVA_PROMOTORA_HEALTH_PATH &&
+    !input.NOVA_PROMOTORA_HEALTH_PATH.startsWith('/')
+  ) {
+    addEnvIssue(
+      context,
+      'NOVA_PROMOTORA_HEALTH_PATH',
+      'NOVA_PROMOTORA_HEALTH_PATH must start with "/".',
+    );
+  }
+
+  if (
+    input.NOVA_PROMOTORA_PROPOSALS_PATH &&
+    !input.NOVA_PROMOTORA_PROPOSALS_PATH.startsWith('/')
+  ) {
+    addEnvIssue(
+      context,
+      'NOVA_PROMOTORA_PROPOSALS_PATH',
+      'NOVA_PROMOTORA_PROPOSALS_PATH must start with "/".',
+    );
+  }
+
+  if (input.SOS_BOLSO_TOKEN_PATH && !input.SOS_BOLSO_TOKEN_PATH.startsWith('/')) {
+    addEnvIssue(
+      context,
+      'SOS_BOLSO_TOKEN_PATH',
+      'SOS_BOLSO_TOKEN_PATH must start with "/".',
+    );
+  }
+
+  if (input.SOS_BOLSO_MARGIN_PATH && !input.SOS_BOLSO_MARGIN_PATH.startsWith('/')) {
+    addEnvIssue(
+      context,
+      'SOS_BOLSO_MARGIN_PATH',
+      'SOS_BOLSO_MARGIN_PATH must start with "/".',
+    );
+  }
+};
+
+export const validateSosBolsoConditionalConfig = (
+  input: z.infer<typeof rawEnvSchema>,
+  context: z.RefinementCtx,
+) => {
+  const enabled = parseOptionalBoolean(input.SOS_BOLSO_ENABLED) === true;
+  if (!enabled) {
+    return;
+  }
+
+  const requiredWhenEnabled: Array<keyof z.infer<typeof rawEnvSchema>> = [
+    'SOS_BOLSO_BASE_URL',
+    'SOS_BOLSO_TOKEN_PATH',
+    'SOS_BOLSO_MARGIN_PATH',
+    'SOS_BOLSO_CLIENT_ID',
+    'SOS_BOLSO_CLIENT_SECRET',
+  ];
+
+  for (const key of requiredWhenEnabled) {
+    if (!input[key]) {
+      addEnvIssue(
+        context,
+        key,
+        `${key} is required when SOS_BOLSO_ENABLED=true.`,
+      );
+    }
+  }
+};
+
+export const validateBluepayConditionalConfig = (
+  input: z.infer<typeof rawEnvSchema>,
+  context: z.RefinementCtx,
+) => {
+  const enabled = parseOptionalBoolean(input.BLUEPAY_ENABLED) === true;
+
+  if (
+    input.BLUEPAY_BASE_URL &&
+    !isValidUrlWithProtocol(input.BLUEPAY_BASE_URL, ['http:', 'https:'])
+  ) {
+    addEnvIssue(
+      context,
+      'BLUEPAY_BASE_URL',
+      'BLUEPAY_BASE_URL must be a valid http(s) URL.',
+    );
+  }
+
+  if (
+    input.BLUEPAY_TIMEOUT_MS !== undefined &&
+    parsePositiveInteger(input.BLUEPAY_TIMEOUT_MS) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'BLUEPAY_TIMEOUT_MS',
+      'BLUEPAY_TIMEOUT_MS must be a positive integer.',
+    );
+  }
+
+  if (
+    input.BLUEPAY_ENABLED !== undefined &&
+    parseOptionalBoolean(input.BLUEPAY_ENABLED) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'BLUEPAY_ENABLED',
+      'BLUEPAY_ENABLED must be a boolean (true/false).',
+    );
+  }
+
+  if (!enabled) {
+    return;
+  }
+
+  const requiredWhenEnabled: Array<keyof z.infer<typeof rawEnvSchema>> = [
+    'BLUEPAY_BASE_URL',
+    'BLUEPAY_CLIENT_ID',
+    'BLUEPAY_CLIENT_SECRET',
+  ];
+
+  for (const key of requiredWhenEnabled) {
+    if (!input[key]) {
+      addEnvIssue(
+        context,
+        key,
+        `${key} is required when BLUEPAY_ENABLED=true.`,
+      );
+    }
   }
 };

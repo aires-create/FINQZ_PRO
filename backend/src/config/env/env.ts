@@ -8,6 +8,8 @@ import {
   validateNumbers,
   validateProductionSecrets,
   validateRequiredEnv,
+  validateBluepayConditionalConfig,
+  validateSosBolsoConditionalConfig,
   validateSwaggerPath,
   validateUrls,
 } from './env.validation.js';
@@ -22,6 +24,8 @@ export const envSchema = rawEnvSchema
     validateProductionSecrets(input, context);
     validateNumbers(input, context);
     validateSwaggerPath(input, context);
+    validateSosBolsoConditionalConfig(input, context);
+    validateBluepayConditionalConfig(input, context);
   })
   .transform(transformEnv);
 

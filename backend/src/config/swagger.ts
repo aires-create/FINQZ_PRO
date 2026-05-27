@@ -21,6 +21,7 @@ const swaggerDefinition = {
     { name: 'Memberships', description: 'User membership management inside tenant organizations' },
     { name: 'Roles', description: 'Tenant-scoped role hierarchy' },
     { name: 'Permissions', description: 'Granular RBAC permission catalog' },
+    { name: 'Integrations', description: 'Provider engine operational and catalog endpoints' },
   ],
   components: {
     securitySchemes: {

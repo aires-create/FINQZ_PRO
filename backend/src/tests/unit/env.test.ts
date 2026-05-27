@@ -67,4 +67,23 @@ describe('parseEnv', () => {
       }),
     ).toThrow(/REDIS_DB must be a non-negative integer/);
   });
+
+  it('keeps BLUEPAY optional when disabled', () => {
+    const env = parseEnv({
+      ...validEnv,
+      BLUEPAY_ENABLED: 'false',
+    });
+
+    expect(env.bluepayEnabled).toBe(false);
+    expect(env.bluepayBaseUrl).toBeUndefined();
+  });
+
+  it('requires BLUEPAY config when enabled', () => {
+    expect(() =>
+      parseEnv({
+        ...validEnv,
+        BLUEPAY_ENABLED: 'true',
+      }),
+    ).toThrow(/BLUEPAY_BASE_URL is required when BLUEPAY_ENABLED=true/);
+  });
 });

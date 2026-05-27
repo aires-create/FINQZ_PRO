@@ -35,6 +35,22 @@ export const parseCorsOrigins = (value: string) => {
     .filter(Boolean);
 };
 
+const parseOptionalBoolean = (value: string | undefined) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['false', '0', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+
+  return undefined;
+};
+
 export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
   const port = parsePort(input.PORT) ?? 4000;
   const bcryptRounds = parsePositiveInteger(input.BCRYPT_ROUNDS) ?? 10;
@@ -44,6 +60,11 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
   const redisPort = parsePort(input.REDIS_PORT) ?? redisUrlParts.port ?? 6379;
   const redisDb = parseNonNegativeInteger(input.REDIS_DB) ?? redisUrlParts.db ?? 0;
   const redisPassword = input.REDIS_PASSWORD ?? redisUrlParts.password;
+  const novaPromotoraTimeoutMs = parsePositiveInteger(input.NOVA_PROMOTORA_TIMEOUT_MS);
+  const sosBolsoTimeoutMs = parsePositiveInteger(input.SOS_BOLSO_TIMEOUT_MS);
+  const sosBolsoEnabled = parseOptionalBoolean(input.SOS_BOLSO_ENABLED) ?? false;
+  const bluepayTimeoutMs = parsePositiveInteger(input.BLUEPAY_TIMEOUT_MS);
+  const bluepayEnabled = parseOptionalBoolean(input.BLUEPAY_ENABLED) ?? false;
 
   return {
     nodeEnv: input.NODE_ENV,
@@ -69,5 +90,23 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
     swaggerDescription:
       input.SWAGGER_DESCRIPTION ?? 'FINQZ PRO backend API documentation',
     swaggerPath,
+    novaPromotoraBaseUrl: input.NOVA_PROMOTORA_BASE_URL,
+    novaPromotoraApiKey: input.NOVA_PROMOTORA_API_KEY,
+    novaPromotoraHealthPath: input.NOVA_PROMOTORA_HEALTH_PATH,
+    novaPromotoraProposalsPath: input.NOVA_PROMOTORA_PROPOSALS_PATH,
+    novaPromotoraTimeoutMs,
+    sosBolsoEnabled,
+    sosBolsoBaseUrl: input.SOS_BOLSO_BASE_URL,
+    sosBolsoTokenPath: input.SOS_BOLSO_TOKEN_PATH,
+    sosBolsoMarginPath: input.SOS_BOLSO_MARGIN_PATH,
+    sosBolsoClientId: input.SOS_BOLSO_CLIENT_ID,
+    sosBolsoClientSecret: input.SOS_BOLSO_CLIENT_SECRET,
+    sosBolsoTimeoutMs,
+    sosBolsoSignedJwt: input.SOS_BOLSO_SIGNED_JWT,
+    bluepayEnabled,
+    bluepayBaseUrl: input.BLUEPAY_BASE_URL,
+    bluepayClientId: input.BLUEPAY_CLIENT_ID,
+    bluepayClientSecret: input.BLUEPAY_CLIENT_SECRET,
+    bluepayTimeoutMs,
   };
 };
