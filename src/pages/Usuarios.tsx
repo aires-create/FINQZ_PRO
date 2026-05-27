@@ -1,7 +1,14 @@
 // FINQZ PRO - Usuários Page
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { Plus, Search, Edit, Trash2, X, User, Shield, ToggleLeft, ToggleRight, UserCheck, UserX, Eye, Globe, Building2, Store, UserCircle, Lock, Unlock } from "lucide-react";
 import useAppStore from "../store";
+import { useEffect } from "react";
+import { usuariosApi } from "../api/modules/usuarios.api";
+import {
+  mapBackendUsersToLegacyUsuarios,
+  mapLegacyUsuarioFormToCreatePayload,
+  mapLegacyUsuarioFormToUpdatePayload,
+} from "../api/adapters/users.adapter";
 import { Role, ROLE_LABELS, ROLE_PERMISSIONS, ROLE_SCOPES, SCOPE_LABELS, Permission, PERMISSION_LABELS } from "../types";
 import { Button, Card as DSCard, Input, Modal, Select, Table } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -70,13 +77,37 @@ const ScopeIcon: React.FC<{ scope: string }> = ({ scope }) => {
 };
 
 export const UsuariosPage: React.FC = () => {
-  const { usuarios, addUsuario, updateUsuario, deleteUsuario, toggleUsuarioStatus, theme, parceiros } = useAppStore();
+ const {
+  updateUsuario,
+  deleteUsuario,
+  toggleUsuarioStatus,
+  theme,
+  parceiros
+} = useAppStore();
+  const [usuarios, setUsuarios] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [editingUsuario, setEditingUsuario] = useState<any>(null);
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+
+  const loadUsuarios = useCallback(async () => {
+    try {
+      const data = await usuariosApi.getAll();
+      const usersPayload = Array.isArray(data) ? data : data?.data;
+
+      if (Array.isArray(usersPayload)) {
+        setUsuarios(mapBackendUsersToLegacyUsuarios(usersPayload));
+      }
+    } catch (error) {
+      console.error("[USUARIOS] Failed to load users from API", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadUsuarios();
+  }, [loadUsuarios]);
   
   // Filtros
   const [filters, setFilters] = useState<UserFilters>({
@@ -240,18 +271,8 @@ export const UsuariosPage: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const now = Date.now();
-
-    // Obter permissões e scope baseados no role
-    const permissions = formData.role ? ROLE_PERMISSIONS[formData.role] : [];
-    
-    // Determinar scope baseado no tipo de usuário
-    let scope: "GLOBAL" | "COMPANY" | "FRANQUIA" | "FRANQUEADO" = "GLOBAL";
-    if (userType === "parceiro") {
-      scope = partnerType;
-    }
 
     if (editingUsuario) {
       // Verificar se está tentando bloquear o último admin
@@ -259,31 +280,25 @@ export const UsuariosPage: React.FC = () => {
         alert("Não é possível bloquear o último administrador ativo.");
         return;
       }
-      updateUsuario(editingUsuario.id, {
-        nome: formData.nome,
-        email: formData.email,
-        role: formData.role,
-        partner_id: formData.partner_id,
-        permissions,
-        scope,
-        status: formData.status,
-        updated_at: now,
-      });
+
+      try {
+        await usuariosApi.update(
+          editingUsuario.id,
+          mapLegacyUsuarioFormToUpdatePayload(formData),
+        );
+        await loadUsuarios();
+      } catch (error) {
+        console.error("[USUARIOS] Failed to update user", error);
+        return;
+      }
     } else {
-      const newUsuario = {
-        id: Date.now().toString(),
-        nome: formData.nome,
-        email: formData.email,
-        role: formData.role,
-        access_code: formData.access_code,
-        partner_id: formData.partner_id,
-        permissions,
-        scope,
-        status: formData.status,
-        created_at: now,
-        updated_at: now,
-      };
-      addUsuario(newUsuario);
+      try {
+        await usuariosApi.create(mapLegacyUsuarioFormToCreatePayload(formData));
+        await loadUsuarios();
+      } catch (error) {
+        console.error("[USUARIOS] Failed to create user", error);
+        return;
+      }
     }
 
     setShowModal(false);
@@ -726,7 +741,7 @@ export const UsuariosPage: React.FC = () => {
               label="Código de Acesso"
               type="text"
               value={formData.access_code}
-              readOnly={!!editingUsuario}
+              readOnly={true}
               placeholder={editingUsuario ? "" : "Gerado automaticamente"}
               helperText={editingUsuario ? "Código fixo após criação" : "Gerado automaticamente ao criar"}
             />

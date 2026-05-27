@@ -2,6 +2,7 @@
 // Endpoints para gerenciamento de usuários
 
 import { apiCall, buildQueryString, ApiResult } from './base';
+import { type BackendCreateUsuarioPayload } from '../adapters/users.adapter';
 
 // ============================================
 // TYPES
@@ -13,17 +14,16 @@ export interface UsuarioFilters {
   status?: string;
 }
 
-export interface CreateUsuarioPayload {
-  nome: string;
-  email: string;
+export interface CreateUsuarioPayload extends BackendCreateUsuarioPayload {}
+
+export interface UpdateUsuarioPayload {
+  nome?: string;
+  email?: string;
   login?: string;
   senha?: string;
-  role: string;
+  role?: string;
   /** ID do parceiro vinculado (obrigatório para usuários não-admin) */
   partner_id?: number;
-}
-
-export interface UpdateUsuarioPayload extends Partial<CreateUsuarioPayload> {
   status?: 'ativo' | 'inativo';
 }
 
@@ -71,14 +71,14 @@ export const usuariosApi = {
    */
   async getAll(filters?: UsuarioFilters): Promise<any[]> {
     const query = filters ? buildQueryString(filters) : '';
-    return apiCall<any[]>(`/api/usuarios${query}`);
+    return apiCall<any[]>(`/users${query}`);
   },
 
   /**
    * Get single usuário by ID
    */
   async getById(id: number): Promise<any> {
-    return apiCall<any>(`/api/usuarios/${id}`);
+    return apiCall<any>(`/users/${id}`);
   },
 
   /**
@@ -92,7 +92,7 @@ export const usuariosApi = {
       throw new Error('Para este perfil, é obrigatório vincular a um parceiro');
     }
     
-    return apiCall<any>('/api/usuarios', {
+    return apiCall<any>('/users', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -102,7 +102,7 @@ export const usuariosApi = {
    * Update existing usuário
    */
   async update(id: number, data: UpdateUsuarioPayload): Promise<any> {
-    return apiCall<any>(`/api/usuarios/${id}`, {
+    return apiCall<any>(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -112,7 +112,7 @@ export const usuariosApi = {
    * Delete usuário
    */
   async delete(id: number): Promise<void> {
-    return apiCall<void>(`/api/usuarios/${id}`, {
+    return apiCall<void>(`/users/${id}`, {
       method: 'DELETE',
     });
   },
@@ -121,7 +121,7 @@ export const usuariosApi = {
    * Toggle usuário status
    */
   async toggleStatus(id: number): Promise<any> {
-    return apiCall<any>(`/api/usuarios/${id}/toggle-status`, {
+    return apiCall<any>(`/users/${id}/toggle-status`, {
       method: 'POST',
     });
   },
@@ -135,7 +135,7 @@ export const usuariosApi = {
       partner_id: partnerId,
       include_children: includeChildren,
     });
-    return apiCall<any[]>(`/api/usuarios${query}`);
+    return apiCall<any[]>(`/users${query}`);
   },
 };
 
