@@ -300,6 +300,7 @@ export class AuthService {
         roleId: userRole.roleId,
         role: assignedRole.slug || assignedRole.name,
         email: user.email,
+        permissions,
       });
 
       // Store refresh token in database

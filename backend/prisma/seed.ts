@@ -1241,8 +1241,15 @@ async function createRolePermissions(
       permissionSlugs: Object.keys(permissions), // All permissions
     },
     {
+      roleSlug: 'ROLE_ADMIN_SISTEMA',
+      permissionSlugs: [
+        'tenant:read',
+      ],
+    },
+    {
       roleSlug: 'ROLE_CEO',
       permissionSlugs: [
+        'tenant:read',
         'DASHBOARD_VIEW',
         'REPORT_VIEW',
         'REPORT_EXPORT',
