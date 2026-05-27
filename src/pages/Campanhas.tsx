@@ -99,7 +99,8 @@ export default function Campanhas() {
 
   const loadClientes = async () => {
     try {
-      const response = await api.get("/api/clientes");
+      // TODO(operational-migration): manter consumo no namespace CRM oficial enquanto campanhas segue em legado.
+      const response = await api.get("/crm/clientes");
       setClientes(response.data.clientes || []);
     } catch (error) {
       console.error("Erro ao carregar clientes:", error);
