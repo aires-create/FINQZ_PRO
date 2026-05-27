@@ -3,6 +3,9 @@
  * 
  * Secure integration service for Storm CRM
  * Credentials are stored as environment variables and never exposed in logs/responses
+ * Legacy bridge note:
+ * - This module is a temporary bridge in backend/server runtime.
+ * - New integration flows should prioritize NOVA_PROMOTORA_* and the central provider under backend/src.
  */
 
 import type { Client } from "@sdk/server-types";

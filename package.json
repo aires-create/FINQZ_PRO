@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "arch:check": "node scripts/arch-check.mjs"
   },
   "dependencies": {
     "@edgespark/client": "^1.0.4",
