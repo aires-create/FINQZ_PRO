@@ -926,15 +926,27 @@ const useAppStore = create<AppState>()(
     }),
     {
       name: "finqz-pro-storage",
+      version: 2,
+      migrate: (persistedState: any, version: number) => {
+        // TODO(legacy-cleanup): manter somente estado de UI em persist para evitar stale de dados operacionais.
+        if (!persistedState || typeof persistedState !== "object") {
+          return persistedState;
+        }
+
+        const nextState = { ...persistedState };
+        delete nextState.clientes;
+        delete nextState.produtos;
+        delete nextState.parceiros;
+        delete nextState.usuarios;
+
+        return nextState;
+      },
       partialize: (state) => ({
         theme: state.theme,
         pipelines: state.pipelines,
         currentPipelineId: state.currentPipelineId,
         oportunidadesKanban: state.oportunidadesKanban,
-        clientes: state.clientes,
-        produtos: state.produtos,
-        parceiros: state.parceiros,
-        usuarios: state.usuarios,
+        // TODO(legacy-cleanup): listas operacionais nao devem ficar em cache local persistente.
       }),
     }
   )

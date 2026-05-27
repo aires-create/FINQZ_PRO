@@ -64,6 +64,7 @@ const getFallbackUser = (): AuthUser | null => {
 // ============================================
 // AUTH PROVIDER
 // ============================================
+// TODO(legacy-cleanup): provider legado/paralelo; App.tsx atualmente usa provider inline.
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);

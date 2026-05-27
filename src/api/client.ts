@@ -28,6 +28,7 @@ export const client = finqzClient;
 // ============================================
 // API ENDPOINTS (mantido para compatibilidade)
 // ============================================
+// TODO(legacy-cleanup): migrar telas restantes para src/api/modules/* com contratos oficiais /api/v1.
 
 export interface DashboardFilters {
   periodo?: string;
@@ -151,7 +152,8 @@ export const api = {
       body: JSON.stringify(data),
     }),
   deleteOportunidade: (id: number) =>
-    apiFetch<any>(`/api/oportenidades/${id}`, { method: "DELETE" }),
+    // TODO(legacy-cleanup): endpoint legado mantido no client de compatibilidade.
+    apiFetch<any>(`/api/oportunidades/${id}`, { method: "DELETE" }),
 
   // Automações
   getAutomacoes: () => apiFetch<any>("/api/automacoes"),

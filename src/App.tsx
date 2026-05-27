@@ -168,6 +168,7 @@ const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Auth Provider
+// TODO(legacy-cleanup): consolidar com src/auth/AuthProvider.tsx apos governanca completa de sessao/hydration.
 const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
