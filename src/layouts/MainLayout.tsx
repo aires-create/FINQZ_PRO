@@ -55,42 +55,42 @@ import finqzLogoBlue from "../assets/brand/finqz-logo-blue.png";
 // Mapeamento de permissões de rota para módulos (formato: module:action)
 const ROUTE_PERMISSIONS: Record<string, string> = {
   // Dashboard
-  "/app/dashboard": "dashboard:read",
+  "/app/dashboard": "dashboard:view",
   // FINQZ HUB
   "/app/hub/audiencias": "audiencias:read",
   "/app/hub/campanhas": "campanhas:read",
   "/app/hub/disparos": "disparos:read",
   "/app/hub/whatsapp": "whatsapp:read",
-  "/app/hub/sdr-ia": "sdr_ia:read",
+  "/app/hub/sdr-ia": "sdr_ia:view",
   "/app/hub/higienizacao": "higienizacao:read",
   "/app/hub/mailing": "mailing:read",
   // CRM
-  "/app/crm/clientes": "clientes:read",
-  "/app/crm/pipeline": "oportunidades:read",
+  "/app/crm/clientes": "customer:view",
+  "/app/crm/pipeline": "sales:view",
   // Operações
-  "/app/operacoes/parceiros": "parceiros:read",
-  "/app/operacoes/estrutura-comercial": "estrutura_comercial:read",
-  "/app/operacoes/tabelas-comerciais": "estrutura_comercial:read",
+  "/app/operacoes/parceiros": "customer:view",
+  "/app/operacoes/estrutura-comercial": "sales:view",
+  "/app/operacoes/tabelas-comerciais": "sales:view",
   "/app/operacoes/roteiros": "roteiros:read",
-  "/app/operacoes/financeiro": "financeiro:read",
-  "/app/operacoes/conta-corrente": "conta_corrente:read",
-  "/app/operacoes/relatorios": "relatorios:read",
+  "/app/operacoes/financeiro": "finance:view",
+  "/app/operacoes/conta-corrente": "finance:view",
+  "/app/operacoes/relatorios": "report:view",
   // Administração
-  "/app/admin/usuarios": "usuarios:read",
-  "/app/admin/permissoes": "permissoes:read",
-  "/app/admin/auditoria": "auditoria:read",
+  "/app/admin/usuarios": "system_users:manage",
+  "/app/admin/permissoes": "system_roles:manage",
+  "/app/admin/auditoria": "audit:view",
   "/app/admin/eventos": "admin:read",
-  "/app/admin/geral": "configuracoes:read",
-  "/app/admin/tags": "configuracoes:read",
-  "/app/admin/pipelines": "configuracoes:read",
-  "/app/admin/integracoes": "configuracoes:read",
-  "/app/admin/automacoes": "configuracoes:read",
-  "/app/admin/notificacoes": "configuracoes:read",
-  "/app/admin/seguranca": "configuracoes:read",
-  "/app/admin/bancos": "configuracoes:read",
+  "/app/admin/geral": "system:config",
+  "/app/admin/tags": "system:config",
+  "/app/admin/pipelines": "system:config",
+  "/app/admin/integracoes": "system:config",
+  "/app/admin/automacoes": "system:config",
+  "/app/admin/notificacoes": "system:config",
+  "/app/admin/seguranca": "system:config",
+  "/app/admin/bancos": "system:config",
   // Legado (redirects)
-  "/app/admin/configuracoes": "configuracoes:read",
-  "/app/configuracoes": "configuracoes:read",
+  "/app/admin/configuracoes": "system:config",
+  "/app/configuracoes": "system:config",
   "/app/produtos": "produtos:read",
   "/app/automacoes": "automacoes:read",
 };
@@ -102,6 +102,19 @@ const ACTION_ALIAS_MAP: Record<string, string[]> = {
   edit: ["EDIT", "UPDATE"],
   delete: ["DELETE"],
   export: ["EXPORT"],
+};
+
+const MODULE_ALIAS_MAP: Record<string, string[]> = {
+  customer: ["CUSTOMER", "CLIENTES", "PARCEIROS"],
+  sales: ["SALES", "OPORTUNIDADES", "ESTRUTURA_COMERCIAL", "TABELAS_COMERCIAIS"],
+  report: ["REPORT", "RELATORIOS"],
+  finance: ["FINANCE", "FINANCEIRO", "CONTA_CORRENTE"],
+  audit: ["AUDIT", "AUDITORIA"],
+  simulador: ["SIMULADOR"],
+  system: ["SYSTEM", "CONFIGURACOES", "GERAL", "TAGS", "PIPELINES", "INTEGRACOES", "AUTOMACOES", "NOTIFICACOES", "SEGURANCA", "BANCOS"],
+  system_users: ["SYSTEM_USERS", "USUARIOS"],
+  system_roles: ["SYSTEM_ROLES", "PERMISSOES"],
+  sdr_ia: ["SDR_IA"],
 };
 
 const buildPermissionVariants = (permission?: string): string[] => {
@@ -120,9 +133,12 @@ const buildPermissionVariants = (permission?: string): string[] => {
   if (permission.includes(':')) {
     const [moduleName, actionName = 'read'] = permission.split(':');
     const aliases = ACTION_ALIAS_MAP[actionName] || [actionName.toUpperCase()];
+    const moduleAliases = MODULE_ALIAS_MAP[moduleName] || [moduleName.toUpperCase()];
 
-    aliases.forEach((alias) => {
-      variants.add(`${moduleName.toUpperCase()}_${alias}`);
+    moduleAliases.forEach((moduleAlias) => {
+      aliases.forEach((alias) => {
+        variants.add(`${moduleAlias}_${alias}`);
+      });
     });
   }
 
@@ -250,10 +266,9 @@ const menuGroups: MenuGroup[] = [
     id: "crm",
     label: "CRM",
     icon: Target,
-    permission: "crm:read",
     items: [
-      { path: "/app/crm/clientes", label: "Clientes", icon: Users, permission: "clientes:read" },
-      { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "oportunidades:read" },
+      { path: "/app/crm/clientes", label: "Clientes", icon: Users, permission: "customer:view" },
+      { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "sales:view" },
       { path: "/app/crm/simulador", label: "Simulador", icon: Calculator, permission: "simulador:read" },
     ],
   },
@@ -261,25 +276,23 @@ const menuGroups: MenuGroup[] = [
     id: "operacoes",
     label: "Operações",
     icon: Building2,
-    permission: "operacoes:read",
     items: [
-      { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "parceiros:read" },
-      { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "estrutura_comercial:read" },
-      { path: "/app/operacoes/tabelas-comerciais", label: "Tabelas Comerciais", icon: Table2, permission: "estrutura_comercial:read" },
+      { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
+      { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
+      { path: "/app/operacoes/tabelas-comerciais", label: "Tabelas Comerciais", icon: Table2, permission: "sales:view" },
       { path: "/app/operacoes/roteiros", label: "Roteiros Operacionais", icon: ClipboardList, permission: "roteiros:read" },
-      { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "financeiro:read" },
-      { path: "/app/operacoes/conta-corrente", label: "Conta Corrente", icon: PiggyBank, permission: "conta_corrente:read" },
-      { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "relatorios:read" },
+      { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "finance:view" },
+      { path: "/app/operacoes/conta-corrente", label: "Conta Corrente", icon: PiggyBank, permission: "finance:view" },
+      { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "report:view" },
     ],
   },
   {
     id: "hub",
     label: "FINQZ HUB",
     icon: Zap,
-    permission: "hub:read",
     items: [
       { path: "/app/hub/whatsapp", label: "WhatsApp", icon: Phone, permission: "whatsapp:read" },
-      { path: "/app/hub/sdr-ia", label: "SDR IA", icon: Bot, permission: "sdr_ia:read" },
+      { path: "/app/hub/sdr-ia", label: "SDR IA", icon: Bot, permission: "sdr_ia:view" },
       { path: "/app/hub/higienizacao", label: "Higienização", icon: Database, permission: "higienizacao:read" },
       { path: "/app/hub/campanhas", label: "Campanhas", icon: Send, permission: "campanhas:read" },
       { path: "/app/hub/disparos", label: "Disparos", icon: Rocket, permission: "disparos:read" },
@@ -290,19 +303,18 @@ const menuGroups: MenuGroup[] = [
     id: "administracao",
     label: "Administração",
     icon: Settings,
-    permission: "admin:read",
     items: [
-      { path: "/app/admin/usuarios", label: "Usuários", icon: UserCog, permission: "usuarios:read" },
-      { path: "/app/admin/permissoes", label: "Permissões/Funções", icon: Lock, permission: "permissoes:read" },
-      { path: "/app/admin/auditoria", label: "Auditoria", icon: Shield, permission: "auditoria:read" },
+      { path: "/app/admin/usuarios", label: "Usuários", icon: UserCog, permission: "system_users:manage" },
+      { path: "/app/admin/permissoes", label: "Permissões/Funções", icon: Lock, permission: "system_roles:manage" },
+      { path: "/app/admin/auditoria", label: "Auditoria", icon: Shield, permission: "audit:view" },
       { path: "/app/admin/eventos", label: "Eventos", icon: Activity, permission: "admin:read" },
-      { path: "/app/admin/geral", label: "Geral", icon: Settings, permission: "configuracoes:read" },
-      { path: "/app/admin/tags", label: "Tags", icon: Zap, permission: "configuracoes:read" },
-      { path: "/app/admin/pipelines", label: "Pipelines", icon: TrendingUp, permission: "configuracoes:read" },
-      { path: "/app/admin/integracoes", label: "Integrações", icon: Key, permission: "configuracoes:read" },
-      { path: "/app/admin/automacoes", label: "Automações", icon: Zap, permission: "configuracoes:read" },
-      { path: "/app/admin/notificacoes", label: "Notificações", icon: Bell, permission: "configuracoes:read" },
-      { path: "/app/admin/seguranca", label: "Segurança", icon: Shield, permission: "configuracoes:read" },
+      { path: "/app/admin/geral", label: "Geral", icon: Settings, permission: "system:config" },
+      { path: "/app/admin/tags", label: "Tags", icon: Zap, permission: "system:config" },
+      { path: "/app/admin/pipelines", label: "Pipelines", icon: TrendingUp, permission: "system:config" },
+      { path: "/app/admin/integracoes", label: "Integrações", icon: Key, permission: "system:config" },
+      { path: "/app/admin/automacoes", label: "Automações", icon: Zap, permission: "system:config" },
+      { path: "/app/admin/notificacoes", label: "Notificações", icon: Bell, permission: "system:config" },
+      { path: "/app/admin/seguranca", label: "Segurança", icon: Shield, permission: "system:config" },
     ],
   },
 ];
@@ -314,18 +326,18 @@ const legacyMenuItems: MenuItem[] = [
 ];
 
 const dashboardSidebarItems: MenuItem[] = [
-  { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard:read" },
-  { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "clientes:read" },
-  { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "oportunidades:read" },
-  { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "estrutura_comercial:read" },
-  { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "parceiros:read" },
-  { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "relatorios:read" },
-  { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "financeiro:read" },
-  { path: "/app/admin/geral", label: "Configurações", icon: Settings, permission: "configuracoes:read" },
+  { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard:view" },
+  { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "customer:view" },
+  { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "sales:view" },
+  { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
+  { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
+  { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "report:view" },
+  { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "finance:view" },
+  { path: "/app/admin/geral", label: "Configurações", icon: Settings, permission: "system:config" },
 ];
 
 export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.ReactNode }> = ({ customMenuItems, children }) => {
-  const { sidebarOpen, setSidebarOpen, user, theme, toggleTheme, setAuth } = useAppStore();
+  const { sidebarOpen, setSidebarOpen, user, userPermissions: storeUserPermissions, theme, toggleTheme, setAuth } = useAppStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -333,29 +345,45 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
   const isDashboardPage = location.pathname === "/app/dashboard";
 
   // Obter permissões do usuário (do store ou do usuário logado)
-  const userPermissions = user?.permissions || [];
+  const effectiveUserPermissions = useMemo(() => {
+    if (Array.isArray(user?.permissions) && user.permissions.length > 0) {
+      return user.permissions;
+    }
+
+    if (storeUserPermissions && typeof storeUserPermissions === "object") {
+      if (storeUserPermissions["*"]?.includes("*")) {
+        return ["*"];
+      }
+
+      return Object.entries(storeUserPermissions).flatMap(([module, actions]) =>
+        (actions || []).map((action) => `${module}_${action}`.toUpperCase())
+      );
+    }
+
+    return [];
+  }, [storeUserPermissions, user?.permissions]);
   
   // Filtrar grupos de menu baseados nas permissões do usuário
   const filteredMenuGroups = useMemo(() => {
     return menuGroups
-      .filter(group => hasPermissionForGroup(userPermissions, group.permission))
+      .filter(group => hasPermissionForGroup(effectiveUserPermissions, group.permission))
       .map(group => ({
         ...group,
-        items: group.items.filter(item => hasPermissionForMenuItem(userPermissions, item.permission))
+        items: group.items.filter(item => hasPermissionForMenuItem(effectiveUserPermissions, item.permission))
       }))
       .filter(group => group.items.length > 0); // Remove grupos sem itens
-  }, [userPermissions]);
+  }, [effectiveUserPermissions]);
 
   // Filtrar itens legados baseados nas permissões
   const filteredLegacyItems = useMemo(() => {
-    return legacyMenuItems.filter(item => 
-      hasPermissionForRoute(userPermissions, item.path)
+    return legacyMenuItems.filter(item =>
+      hasPermissionForRoute(effectiveUserPermissions, item.path)
     );
-  }, [userPermissions]);
+  }, [effectiveUserPermissions]);
 
   const filteredDashboardItems = useMemo(() => {
-    return dashboardSidebarItems.filter((item) => hasPermissionForMenuItem(userPermissions, item.permission));
-  }, [userPermissions]);
+    return dashboardSidebarItems.filter((item) => hasPermissionForMenuItem(effectiveUserPermissions, item.permission));
+  }, [effectiveUserPermissions]);
 
   // Carregar estado expandido do localStorage ou usar padrão
   useEffect(() => {
@@ -395,7 +423,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     const newExpanded = [...expandedGroups];
     
     for (const group of filteredMenuGroups) {
-      const hasActiveItem = group.items.some((item) => item.path === currentPath);
+      const hasActiveItem = group.items.some((item) => currentPath.startsWith(item.path));
       if (hasActiveItem && !expandedGroups.includes(group.id)) {
         newExpanded.push(group.id);
         needsUpdate = true;
@@ -446,7 +474,20 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
   );
   const currentArea = currentGroup?.id === "dashboard" ? "Visão geral" : currentGroup?.label || "Workspace";
   const displayName = user?.nome || "Admin";
-  const displayRole = user?.perfil || "Administrador";
+  const formatDisplayRole = (role?: string) => {
+    if (!role) return "Administrador";
+    if (role === "ROLE_CEO") return "CEO";
+    if (role === "ROLE_ADMIN_SISTEMA") return "Admin Sistema";
+    if (role.startsWith("ROLE_")) {
+      return role
+        .replace(/^ROLE_/, "")
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(" ");
+    }
+    return role;
+  };
+  const displayRole = formatDisplayRole(user?.perfil);
   const sidebarWidthClass = sidebarOpen
     ? isDashboardPage
       ? "w-56 translate-x-0 lg:w-56"
@@ -522,7 +563,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
           {isDashboardPage ? (
             filteredDashboardItems.map((item) => {
               const ItemIcon = item.icon;
-              const isItemActive = location.pathname === item.path;
+              const isItemActive = location.pathname.startsWith(item.path);
 
               return (
                 <NavLink
@@ -543,7 +584,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
             filteredMenuGroups.map((group) => {
             const GroupIcon = group.icon;
             const isExpanded = expandedGroups.includes(group.id);
-            const isActive = group.items.some((item) => item.path === location.pathname);
+            const isActive = group.items.some((item) => location.pathname.startsWith(item.path));
             const primaryItem = group.items[0];
 
             if (!sidebarOpen && primaryItem) {
@@ -569,7 +610,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
                 {group.id === "dashboard" ? (
                   group.items.map((item) => {
                     const ItemIcon = item.icon;
-                    const isItemActive = location.pathname === item.path;
+                    const isItemActive = location.pathname.startsWith(item.path);
                     return (
                       <NavLink
                         key={item.path}
@@ -607,7 +648,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
                       <div className="space-y-1 pl-2">
                         {group.items.map((item) => {
                           const ItemIcon = item.icon;
-                          const isItemActive = location.pathname === item.path;
+                          const isItemActive = location.pathname.startsWith(item.path);
 
                           return (
                             <NavLink
@@ -672,7 +713,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
                   {displayName}
                 </p>
                 <p className="truncate text-xs text-[var(--sidebar-muted)]">
-                  {isDashboardPage ? displayRole : user?.email || "usuario@finqz.com"}
+                  {displayRole}
                 </p>
               </div>
             )}

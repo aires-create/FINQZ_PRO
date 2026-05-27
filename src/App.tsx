@@ -10,51 +10,23 @@ import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
 import { finqzAuth } from "./auth/finqzAuth";
 import { getCurrentUser, setSessionUser } from "./auth/session";
 import { mergeFrontendAdminPermissions } from "./config/permissions";
+import { ENABLE_LEGACY_AUTH_FALLBACK } from "./config/environment";
+import {
+  adminRoutes,
+  crmRoutes,
+  hubRoutes,
+  integrationsRoutes,
+  operacoesRoutes,
+} from "./routes";
 
-// Lazy loading for code splitting - improves initial load time
+// Route governance:
+// 1) App.tsx is orchestration only (auth + layout + route-domain composition).
+// 2) Pages in src/pages/** must be loaded via React.lazy to protect bundle budget.
+// 3) Domain files in src/routes/** own route declarations and redirects.
+// See docs/frontend-architecture-governance.md for full policy.
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
-const ClientesPage = lazy(() => import("./pages/Clientes"));
-const OportunidadesPage = lazy(() => import("./pages/Oportunidades"));
-const ParceirosPage = lazy(() => import("./pages/Parceiros"));
-const ProdutosPage = lazy(() => import("./pages/Produtos"));
-const EstruturaComercialPage = lazy(() => import("./pages/EstruturaComercial"));
-const RoteirosOperacionaisPage = lazy(() => import("./pages/RoteirosOperacionais"));
-const FinanceiroPage = lazy(() => import("./pages/Financeiro"));
-const ContaCorrentePage = lazy(() => import("./pages/ContaCorrente"));
-const AutomacoesPage = lazy(() => import("./pages/Automacoes"));
-const RelatoriosPage = lazy(() => import("./pages/Relatorios"));
-const AuditoriaPage = lazy(() => import("./pages/Auditoria"));
-const UsuariosPage = lazy(() => import("./pages/Usuarios"));
-const EventosPage = lazy(() => import("./pages/Eventos"));
-// ConfiguracoesPage foi substituído por páginas de administração individuais em src/pages/admin/
-const CampanhasPage = lazy(() => import("./pages/Campanhas"));
-const ConversasPage = lazy(() => import("./pages/Conversas"));
-const AudienciasPage = lazy(() => import("./pages/Audiencias"));
 const LoginParceiroPage = lazy(() => import("./pages/LoginParceiro"));
 const DashboardParceiroPage = lazy(() => import("./pages/DashboardParceiro"));
-
-// Novas páginas de administração (sem tabs internas)
-const GeralPage = lazy(() => import("./pages/admin/Geral"));
-const TagsPage = lazy(() => import("./pages/admin/Tags"));
-const PipelinesPage = lazy(() => import("./pages/admin/Pipelines"));
-const IntegracoesPage = lazy(() => import("./pages/admin/Integracoes"));
-const AdminAutomacoesPage = lazy(() => import("./pages/admin/Automacoes"));
-const NotificacoesPage = lazy(() => import("./pages/admin/Notificacoes"));
-const SegurancaPage = lazy(() => import("./pages/admin/Seguranca"));
-const PermissoesPage = lazy(() => import("./pages/admin/Permissoes"));
-const BancosPage = lazy(() => import("./pages/admin/Bancos"));
-const TabelasComerciaisPage = lazy(() => import("./pages/TabelasComerciais"));
-const SimuladorPage = lazy(() => import("./pages/Simulador"));
-
-// Placeholder pages - apenas módulos em preparação
-import {
-  HubDisparos,
-  HubAutomacao,
-  HubHigienizacao,
-  HubEmailMarketing
-} from "./pages/Placeholders";
-
-import { SdrIaHubPage } from "./pages/SdrIaHub";
 
 import { generateSecurePassword } from "./utils/auth";
 
@@ -312,7 +284,15 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    return runLegacyLogin();
+    if (ENABLE_LEGACY_AUTH_FALLBACK) {
+  console.warn('[AUTH] Using legacy auth fallback');
+  return runLegacyLogin();
+}
+
+return {
+  success: false,
+  error: 'Authentication failed',
+};
   }, [applyAuthenticatedUser]);
 
   const requestPasswordReset = useCallback(async (identifier: string) => {
@@ -382,274 +362,16 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="dashboard" replace />} />
 
         <Route path="dashboard" element={
-          <ProtectedRoute requiredModule="dashboard" requiredAction="view">
+          <ProtectedRoute requiredPermission="DASHBOARD_VIEW" requiredModule="dashboard" requiredAction="view">
             <DashboardPage />
           </ProtectedRoute>
         } />
-        <Route path="crm/clientes" element={
-          <ProtectedRoute requiredModule="clientes" requiredAction="view">
-            <ClientesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="crm/pipeline" element={
-          <ProtectedRoute requiredModule="oportunidades" requiredAction="view">
-            <OportunidadesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="crm/simulador" element={
-          <ProtectedRoute requiredModule="simulador" requiredAction="view">
-            <SimuladorPage />
-          </ProtectedRoute>
-        } />
-        <Route path="parceiros" element={
-          <ProtectedRoute requiredModule="parceiros" requiredAction="view">
-            <ParceirosPage />
-          </ProtectedRoute>
-        } />
-        <Route path="estrutura-comercial" element={
-          <ProtectedRoute requiredModule="estrutura_comercial" requiredAction="view">
-            <EstruturaComercialPage />
-          </ProtectedRoute>
-        } />
-        <Route path="roteiros-operacionais" element={
-          <ProtectedRoute requiredModule="roteiros_operacionais" requiredAction="view">
-            <RoteirosOperacionaisPage />
-          </ProtectedRoute>
-        } />
-        <Route path="financeiro" element={
-          <ProtectedRoute requiredModule="financeiro" requiredAction="view">
-            <FinanceiroPage />
-          </ProtectedRoute>
-        } />
-        <Route path="conta-corrente" element={
-          <ProtectedRoute requiredModule="conta_corrente" requiredAction="view">
-            <ContaCorrentePage />
-          </ProtectedRoute>
-        } />
-        <Route path="relatorios" element={
-          <ProtectedRoute requiredModule="relatorios" requiredAction="view">
-            <RelatoriosPage />
-          </ProtectedRoute>
-        } />
-        <Route path="auditoria" element={
-          <ProtectedRoute requiredModule="auditoria" requiredAction="view">
-            <AuditoriaPage />
-          </ProtectedRoute>
-        } />
-        <Route path="usuarios" element={
-          <ProtectedRoute requiredModule="usuarios" requiredAction="view">
-            <UsuariosPage />
-          </ProtectedRoute>
-        } />
-
-        <Route path="campanhas" element={
-          <ProtectedRoute requiredModule="campanhas" requiredAction="view">
-            <CampanhasPage />
-          </ProtectedRoute>
-        } />
-        <Route path="conversas" element={
-          <ProtectedRoute requiredModule="conversas" requiredAction="view">
-            <ConversasPage />
-          </ProtectedRoute>
-        } />
-        <Route path="audiencias" element={
-          <ProtectedRoute requiredModule="audiencias" requiredAction="view">
-            <AudienciasPage />
-          </ProtectedRoute>
-        } />
-
-        {/* ==================== NOVAS ROTAS - FINQZ HUB ==================== */}
-        <Route path="hub/audiencias" element={
-          <ProtectedRoute requiredModule="audiencias" requiredAction="view">
-            <AudienciasPage />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/campanhas" element={
-          <ProtectedRoute requiredModule="campanhas" requiredAction="view">
-            <CampanhasPage />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/disparos" element={
-          <ProtectedRoute requiredModule="hub" requiredAction="view">
-            <HubDisparos />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/whatsapp" element={
-          <ProtectedRoute requiredModule="conversas" requiredAction="view">
-            <ConversasPage />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/automacao" element={
-          <ProtectedRoute requiredModule="hub" requiredAction="view">
-            <HubAutomacao />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/sdr-ia" element={
-          <ProtectedRoute requiredModule="hub" requiredAction="view">
-            <SdrIaHubPage />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/higienizacao" element={
-          <ProtectedRoute requiredModule="hub" requiredAction="view">
-            <HubHigienizacao />
-          </ProtectedRoute>
-        } />
-        <Route path="hub/mailing" element={
-          <ProtectedRoute requiredModule="hub" requiredAction="view">
-            <HubEmailMarketing />
-          </ProtectedRoute>
-        } />
-
-
-        {/* ==================== NOVAS ROTAS - CRM ==================== */}
-        <Route path="crm/clientes" element={
-          <ProtectedRoute requiredModule="clientes" requiredAction="view">
-            <ClientesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="crm/oportunidades" element={
-          <ProtectedRoute requiredModule="oportunidades" requiredAction="view">
-            <OportunidadesPage />
-          </ProtectedRoute>
-        } />
-
-
-        {/* ==================== NOVAS ROTAS - OPERAÇÕES ==================== */}
-        <Route path="operacoes/parceiros" element={
-          <ProtectedRoute requiredModule="parceiros" requiredAction="view">
-            <ParceirosPage />
-          </ProtectedRoute>
-        } />
-        <Route path="operacoes/estrutura-comercial" element={
-          <ProtectedRoute requiredModule="estrutura_comercial" requiredAction="view">
-            <EstruturaComercialPage />
-          </ProtectedRoute>
-        } />
-        <Route path="operacoes/tabelas-comerciais" element={
-          <ProtectedRoute requiredModule="estrutura_comercial" requiredAction="view">
-            <TabelasComerciaisPage />
-          </ProtectedRoute>
-        } />
-        <Route path="operacoes/roteiros" element={
-          <ProtectedRoute requiredModule="roteiros_operacionais" requiredAction="view">
-            <RoteirosOperacionaisPage />
-          </ProtectedRoute>
-        } />
-        <Route path="operacoes/financeiro" element={
-          <ProtectedRoute requiredModule="financeiro" requiredAction="view">
-            <FinanceiroPage />
-          </ProtectedRoute>
-        } />
-        <Route path="operacoes/conta-corrente" element={
-          <ProtectedRoute requiredModule="conta_corrente" requiredAction="view">
-            <ContaCorrentePage />
-          </ProtectedRoute>
-        } />
-        <Route path="operacoes/relatorios" element={
-          <ProtectedRoute requiredModule="relatorios" requiredAction="view">
-            <RelatoriosPage />
-          </ProtectedRoute>
-        } />
-
-        {/* ==================== NOVAS ROTAS - ADMINISTRAÇÃO ==================== */}
-        <Route path="admin/usuarios" element={
-          <ProtectedRoute requiredModule="usuarios" requiredAction="view">
-            <UsuariosPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/auditoria" element={
-          <ProtectedRoute requiredModule="auditoria" requiredAction="view">
-            <AuditoriaPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/permissoes" element={
-          <ProtectedRoute requiredModule="admin" requiredAction="view">
-            <PermissoesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/eventos" element={
-          <ProtectedRoute requiredModule="admin" requiredAction="view">
-            <EventosPage />
-          </ProtectedRoute>
-        } />
-        {/* Novas rotas de administração - cada item é uma página independente */}
-        <Route path="admin/geral" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <GeralPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/tags" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <TagsPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/pipelines" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <PipelinesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/integracoes" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <IntegracoesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/automacoes" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <AdminAutomacoesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/notificacoes" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <NotificacoesPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/seguranca" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <SegurancaPage />
-          </ProtectedRoute>
-        } />
-        <Route path="admin/bancos" element={
-          <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
-            <BancosPage />
-          </ProtectedRoute>
-        } />
-        {/* Rota legada de configurações - redireciona para geral */}
-        <Route path="admin/configuracoes" element={<Navigate to="/app/admin/geral" replace />} />
-
-        {/* ==================== REDIRECTS - Rotas Antigas para Novas ==================== */}
-        <Route path="clientes" element={<Navigate to="/app/crm/clientes" replace />} />
-        <Route path="oportunidades" element={<Navigate to="/app/crm/pipeline" replace />} />
-        <Route path="crm/oportunidades" element={<Navigate to="/app/crm/pipeline" replace />} />
-        <Route path="parceiros" element={<Navigate to="/app/operacoes/parceiros" replace />} />
-        <Route path="estrutura-comercial" element={<Navigate to="/app/operacoes/estrutura-comercial" replace />} />
-        <Route path="roteiros-operacionais" element={<Navigate to="/app/operacoes/roteiros" replace />} />
-        <Route path="financeiro" element={<Navigate to="/app/operacoes/financeiro" replace />} />
-        <Route path="conta-corrente" element={<Navigate to="/app/operacoes/conta-corrente" replace />} />
-        <Route path="relatorios" element={<Navigate to="/app/operacoes/relatorios" replace />} />
-        <Route path="auditoria" element={<Navigate to="/app/admin/auditoria" replace />} />
-        <Route path="usuarios" element={<Navigate to="/app/admin/usuarios" replace />} />
-        <Route path="campanhas" element={<Navigate to="/app/hub/campanhas" replace />} />
-        <Route path="conversas" element={<Navigate to="/app/hub/whatsapp" replace />} />
-        <Route path="hub/conversas" element={<Navigate to="/app/hub/whatsapp" replace />} />
-        <Route path="crm/pipelines" element={<Navigate to="/app/admin/pipelines" replace />} />
-        {/* Redirects de automação */}
-        <Route path="hub/automacao" element={<Navigate to="/app/admin/automacoes" replace />} />
-        <Route path="automacao" element={<Navigate to="/app/admin/automacoes" replace />} />
-        <Route path="audiencias" element={<Navigate to="/app/hub/audiencias" replace />} />
-        {/* Redirects de configurações - para novas rotas de administração */}
-        <Route path="configuracoes" element={<Navigate to="/app/admin/geral" replace />} />
-        <Route path="configuracoes/geral" element={<Navigate to="/app/admin/geral" replace />} />
-        <Route path="configuracoes/tags" element={<Navigate to="/app/admin/tags" replace />} />
-        <Route path="configuracoes/pipelines" element={<Navigate to="/app/admin/pipelines" replace />} />
-        <Route path="configuracoes/integracoes" element={<Navigate to="/app/admin/integracoes" replace />} />
-        <Route path="configuracoes/integrations" element={<Navigate to="/app/admin/integracoes" replace />} />
-        <Route path="configuracoes/automacao" element={<Navigate to="/app/admin/automacoes" replace />} />
-        <Route path="configuracoes/automacoes" element={<Navigate to="/app/admin/automacoes" replace />} />
-        <Route path="configuracoes/notificacoes" element={<Navigate to="/app/admin/notificacoes" replace />} />
-        <Route path="configuracoes/notifications" element={<Navigate to="/app/admin/notificacoes" replace />} />
-        <Route path="configuracoes/seguranca" element={<Navigate to="/app/admin/seguranca" replace />} />
-        <Route path="configuracoes/security" element={<Navigate to="/app/admin/seguranca" replace />} />
-        <Route path="configuracoes/permissoes" element={<Navigate to="/app/admin/permissoes" replace />} />
+        {/* Domain route composition. Keep URLs/guards unchanged when evolving modules. */}
+        {crmRoutes}
+        {operacoesRoutes}
+        {adminRoutes}
+        {hubRoutes}
+        {integrationsRoutes}
       </Route>
 
       {/* fallback */}
@@ -663,7 +385,12 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <ThemeProvider>
           <AuthProvider>
           <AppRoutes />

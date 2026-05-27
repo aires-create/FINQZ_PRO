@@ -31,6 +31,10 @@ const getApiBaseUrl = (): string => {
 
 // Use mocks/data local when API is not available (APENAS em modo DEV explícito)
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true' && IS_DEV_MODE;
+// SECURITY: Legacy auth fallback is only allowed in explicit development mode.
+// This prevents frontend mock users/passwords from becoming an implicit auth source.
+export const ENABLE_LEGACY_AUTH_FALLBACK =
+  import.meta.env.VITE_ENABLE_LEGACY_AUTH_FALLBACK === 'true' && IS_DEV_MODE;
 
 // Base URL da API
 export const API_BASE_URL = getApiBaseUrl();
