@@ -49,7 +49,8 @@ export const clientesApi = {
    */
   async getAll(filters?: ClienteFilters): Promise<any[]> {
     const query = filters ? buildQueryString(filters) : '';
-    return apiCall<any[]>(`/api/clientes${query}`);
+    const response = await apiCall<any>(`/api/v1/crm/clientes${query}`);
+    return Array.isArray(response) ? response : response?.data ?? [];
   },
 
   /**

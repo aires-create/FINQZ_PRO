@@ -376,6 +376,18 @@ model Customer {
   birthDate       DateTime?
   monthlyIncome   Float?
   annualIncome    Float?
+  profession        String?
+  maritalStatus     String?
+  gender            String?
+  documentType      String?
+  address           Json?
+  bankData          Json?
+  notes             String?
+  rdStatus          String?   @default("nao_consultado")
+  rdConsultedAt     DateTime?
+  rdNotes           String?
+  doNotCallStatus   String?   @default("nao_consultado")
+  doNotCallConsultedAt DateTime?
   kycStatus       String    @default("pending")
   kycVerifiedAt   DateTime?
   riskLevel       String    @default("medium")

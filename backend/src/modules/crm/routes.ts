@@ -5,10 +5,19 @@ import {
   createLeadSchema,
   updateLeadSchema,
 } from './validators/leads.validator.js';
+import {
+  createCustomerSchema,
+  updateCustomerSchema,
+} from './validators/customers.validator.js';
 import { leadsService } from './services/leads.service.js';
+import { customersService } from './services/customers.service.js';
 import { getLeadTimeline } from './services/lead-timeline.service.js';
 import { logger } from '../../shared/logger.js';
 import type { CreateLeadBody, UpdateLeadBody } from './dto/leads.dto.js';
+import type {
+  CreateCustomerBody,
+  UpdateCustomerBody,
+} from './dto/customers.dto.js';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
 import { AppError } from '../../shared/errors/index.js';
 
@@ -125,6 +134,141 @@ export async function crmRoutes(app: FastifyInstance) {
       return reply.send({
         success: true,
         ...leads,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.get('/clientes/:id', async (request, reply) => {
+    try {
+      const tenantId = getTenantId(request);
+      const params = request.params as { id: string };
+
+      logger.info('Fetching customer by id', {
+        tenantId,
+        customerId: params.id,
+      });
+
+      const customer = await customersService.getCustomerById(
+        tenantId,
+        params.id,
+      );
+
+      if (!customer) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Customer not found',
+        });
+      }
+
+      return reply.send({
+        success: true,
+        data: customer,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.get('/clientes', async (request, reply) => {
+    try {
+      const tenantId = getTenantId(request);
+
+      const query = request.query as {
+        page?: string;
+        limit?: string;
+        search?: string;
+      };
+
+      logger.info('Fetching customers', {
+        tenantId,
+        query,
+      });
+
+      const listParams = {
+        ...(query.page ? { page: Number(query.page) } : {}),
+        ...(query.limit ? { limit: Number(query.limit) } : {}),
+        ...(query.search ? { search: query.search } : {}),
+      };
+
+      const customers = await customersService.getAllCustomers(tenantId, listParams);
+
+      return reply.send({
+        success: true,
+        ...customers,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.post<{ Body: CreateCustomerBody }>('/clientes', async (request, reply) => {
+    try {
+      const body = createCustomerSchema.parse(request.body) as CreateCustomerBody;
+
+      const tenantId = getTenantId(request);
+      const currentUserId = getCurrentUserId(request);
+
+      const customer = await customersService.createCustomer(
+        tenantId,
+        body,
+        currentUserId,
+      );
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Customer created successfully',
+        data: customer,
+      });
+    } catch (error) {
+      return handleRouteError(error, reply);
+    }
+  });
+
+  app.put<{ Params: { id: string }; Body: UpdateCustomerBody }>(
+    '/clientes/:id',
+    async (request, reply) => {
+      try {
+        const { id } = request.params;
+        const tenantId = getTenantId(request);
+        const currentUserId = getCurrentUserId(request);
+        const body = updateCustomerSchema.parse(request.body) as UpdateCustomerBody;
+
+        const customer = await customersService.updateCustomer(
+          tenantId,
+          id,
+          body,
+          currentUserId,
+        );
+
+        return reply.send({
+          success: true,
+          message: 'Customer updated successfully',
+          data: customer,
+        });
+      } catch (error) {
+        return handleRouteError(error, reply);
+      }
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>('/clientes/:id', async (request, reply) => {
+    try {
+      const { id } = request.params;
+      const tenantId = getTenantId(request);
+      const currentUserId = getCurrentUserId(request);
+
+      const result = await customersService.deleteCustomer(
+        tenantId,
+        id,
+        currentUserId,
+      );
+
+      return reply.send({
+        success: true,
+        message: 'Customer deleted successfully',
+        data: result,
       });
     } catch (error) {
       return handleRouteError(error, reply);

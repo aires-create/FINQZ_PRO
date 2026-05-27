@@ -6,20 +6,7 @@ import useAppStore from "../store";
 import type { Cliente } from "../types";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import { USE_MOCKS } from "../config/environment";
 import { useTenantFilter } from "../hooks/useTenantFilter";
-
-// Chave para persistência no localStorage
-const CLIENTS_STORAGE_KEY = 'finqz_pro_clients';
-
-// Seed inicial de clientes
-const initialClientesSeed: Cliente[] = [
-  { id: 1, nome: "João Silva", codigo: "CLI-001", cpf_cnpj: "12345678901", email: "joao@email.com", telefone: "11999999999", status: "ativo", created_at: Date.now(), updated_at: Date.now() },
-  { id: 2, nome: "Maria Santos", codigo: "CLI-002", cpf_cnpj: "23456789012", email: "maria@email.com", telefone: "11988888888", status: "nao_perturbe", created_at: Date.now(), updated_at: Date.now() },
-  { id: 3, nome: "Pedro Costa", cpf_cnpj: "34567890123", email: "pedro@email.com", telefone: "11977777777", status: "inativo", created_at: Date.now(), updated_at: Date.now() },
-  { id: 4, nome: "Ana Oliveira", code: "AOL-2024", cpf_cnpj: "45678901234", email: "ana@email.com", telefone: "11966666666", status: "ativo", created_at: Date.now(), updated_at: Date.now() },
-  { id: 5, nome: "Carlos Lima", cpf_cnpj: "56789012345", email: "carlos@email.com", telefone: "11955555555", status: "ativo", created_at: Date.now(), updated_at: Date.now() },
-];
 
 // Função utilitária para formatar código do cliente no padrão #C-0000
 const formatClientCode = (cliente: Cliente | undefined, index: number): string => {
@@ -42,22 +29,10 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
   return `#C-${String(fallback).padStart(4, '0')}`;
 };
 
-// Função para carregar clientes do localStorage
-const loadClientsFromStorage = (): Cliente[] => {
-  try {
-    const saved = localStorage.getItem(CLIENTS_STORAGE_KEY);
-    const parsed = saved ? JSON.parse(saved) : null;
-    return Array.isArray(parsed) ? parsed : initialClientesSeed;
-  } catch {
-    return initialClientesSeed;
-  }
-};
-
 export const ClientesPage: React.FC = () => {
   const { clientes: storeClientes, setClientes } = useAppStore();
   
-  // Inicializar clientes do localStorage
-  const [clientes, setClientesLocal] = useState<Cliente[]>(loadClientsFromStorage);
+  const [clientes, setClientesLocal] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   // Lista apenas - sem Kanban
@@ -131,51 +106,52 @@ export const ClientesPage: React.FC = () => {
     loadClientes();
   }, [search]);
 
-  // Persistir clientes no localStorage sempre que mudarem
-  useEffect(() => {
-    try {
-      localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clientes || []));
-    } catch (error) {
-      console.error('Erro ao persistir clientes:', error);
-    }
-  }, [clientes]);
-
   const loadClientes = async () => {
-    // Em modo de produção (USE_MOCKS=false), tenta API primeiro
-    if (!USE_MOCKS) {
-      try {
-        setLoading(true);
-        const data = await api.getClientes(search);
-        setClientesLocal(data.clientes);
-        setClientes(data.clientes);
-      } catch (error) {
-        console.error("Error loading clientes from API:", error);
-        // Fallback para localStorage apenas se API falhar
-        const savedClients = loadClientsFromStorage();
-        if (savedClients && savedClients.length > 0) {
-          setClientesLocal(savedClients);
-          setClientes(savedClients);
-        }
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-    
-    // Modo de desenvolvimento (USE_MOCKS=true): usa localStorage
-    const savedClients = loadClientsFromStorage();
-    if (savedClients && savedClients.length > 0) {
-      setClientesLocal(savedClients);
-      setClientes(savedClients);
-      setLoading(false);
-      return;
-    }
-    
     try {
       setLoading(true);
-      const data = await api.getClientes(search);
-      setClientesLocal(data.clientes);
-      setClientes(data.clientes);
+      const response = await api.getClientes(search);
+      const clientesData = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.clientes)
+          ? response.clientes
+          : [];
+
+      const normalizedClientes = clientesData.map((cliente: any) => {
+        let parsedAddress: any = null;
+        if (cliente?.address && typeof cliente.address === 'object') {
+          parsedAddress = cliente.address;
+        } else if (typeof cliente?.address === 'string') {
+          try {
+            parsedAddress = JSON.parse(cliente.address);
+          } catch {
+            parsedAddress = null;
+          }
+        }
+
+        return {
+          ...cliente,
+          nome:
+            cliente.nome ||
+            [cliente.firstName, cliente.lastName].filter(Boolean).join(' ') ||
+            'Cliente sem nome',
+          codigo: cliente.codigo || cliente.customerCode,
+          cpf_cnpj: cliente.cpf_cnpj || cliente.cpf,
+          telefone: cliente.telefone || cliente.phone,
+          cidade: cliente.cidade || parsedAddress?.cidade || parsedAddress?.city,
+          estado: cliente.estado || parsedAddress?.estado || parsedAddress?.state || parsedAddress?.uf,
+          created_at: cliente.created_at || cliente.createdAt,
+          updated_at: cliente.updated_at || cliente.updatedAt,
+          status:
+            cliente.isActive === false
+              ? "inativo"
+              : cliente.doNotCallStatus === "bloqueado"
+                ? "nao_perturbe"
+                : "ativo",
+        };
+      });
+
+      setClientesLocal(normalizedClientes);
+      setClientes(normalizedClientes);
     } catch (error) {
       console.error("Error loading clientes:", error);
     } finally {
@@ -300,7 +276,7 @@ export const ClientesPage: React.FC = () => {
   
   // Depois aplica os filtros de UI
   const filteredClientes = tenantFilteredClientes.filter((cliente, index) => {
-    const searchTerm = search.trim().toLowerCase();
+    const searchTerm = (search || '').trim().toLowerCase();
     if (searchTerm) {
       const digits = searchTerm.replace(/\D/g, "");
       const searchableText = [
@@ -537,15 +513,15 @@ export const ClientesPage: React.FC = () => {
     e.preventDefault();
     
     // Validações mínimas
-    if (!formData.nome?.trim()) {
+    if (!(formData?.nome || '').trim()) {
       alert("Nome é obrigatório");
       return;
     }
-    if (!formData.celular?.trim()) {
+    if (!(formData?.celular || '').trim()) {
       alert("Celular é obrigatório");
       return;
     }
-    if (!formData.cpf_cnpj?.trim()) {
+    if (!(formData?.cpf_cnpj || '').trim()) {
       alert("CPF ou CNPJ é obrigatório");
       return;
     }
@@ -561,7 +537,7 @@ export const ClientesPage: React.FC = () => {
     const now = Date.now();
     const newClient = {
       id: now,
-      nome: formData.nome?.trim() || '',
+      nome: (formData?.nome || '').trim(),
       cpf_cnpj: onlyNumbers(formData.cpf_cnpj || ''),
       tipoPessoa: tipoPessoa,
       email: formData.email || '',
@@ -606,41 +582,57 @@ export const ClientesPage: React.FC = () => {
       // Função para obter ID seguro do cliente
       const getClientId = (client: any) => client?.id || client?._id || client?.uuid || client?.clientId;
       
-      let updatedClientes;
-      
-      if (editingCliente) {
-        // Editando - atualizar cliente existente
-        const editingId = getClientId(editingCliente);
-        updatedClientes = safeClientes.map(client => {
-          const clientId = getClientId(client);
-          if (clientId === editingId) {
-            return {
-              ...client,
-              ...newClient,
-              id: clientId,
-              created_at: client?.created_at || newClient.created_at,
-              updated_at: Date.now(),
-            };
-          }
-          return client;
-        });
-      } else {
-        // Novo cliente - adicionar à lista
-        updatedClientes = [...safeClientes, newClient];
-      }
-      
-      setClientes(updatedClientes);
-      setClientesLocal(updatedClientes);
-      
-      // Tentar salvar na API em background
       try {
+        const apiPayload = {
+          firstName: newClient.nome?.split(' ')[0] || '',
+          lastName:
+            newClient.nome?.split(' ').slice(1).join(' ') || 'Não informado',
+          email: formData?.email || newClient.email || '',
+          cpf: onlyNumbers(formData?.cpf_cnpj || newClient.cpf_cnpj || ''),
+          phone: onlyNumbers(formData?.celular || formData?.telefone || newClient.celular || newClient.telefone || ''),
+          birthDate: formData?.data_nascimento || null,
+          profession: formData?.profissao || null,
+          maritalStatus: formData?.estado_civil || null,
+          gender: formData?.sexo || null,
+          documentType: tipoPessoa,
+          address: {
+            cep: formData?.cep || '',
+            rua: formData?.rua || '',
+            numero: formData?.numero || '',
+            complemento: formData?.complemento || '',
+            bairro: formData?.bairro || '',
+            cidade: formData?.cidade || '',
+            estado: formData?.estado || '',
+          },
+          bankData: {
+            banco: formData?.banco || '',
+            agencia: formData?.agencia || '',
+            conta: formData?.conta || '',
+            tipoConta: formData?.tipoConta || '',
+            titular: formData?.titular || '',
+            documentoTitular: onlyNumbers(formData?.documentoTitular || ''),
+            pixTipo: formData?.pixTipo || '',
+            pixChave: formData?.pixChave || '',
+          },
+          notes: formData?.observacao || null,
+          rdStatus: formData?.rdStatus || null,
+          rdConsultedAt: formData?.rdConsultedAt || null,
+          rdNotes: formData?.rdNotes || null,
+          doNotCallStatus: formData?.doNotCallStatus || null,
+          doNotCallConsultedAt: formData?.doNotCallConsultedAt || null,
+        };
+
         if (editingCliente) {
-          await api.updateCliente(editingCliente.id, newClient);
+          await api.updateCliente(editingCliente.id, apiPayload);
         } else {
-          await api.createCliente(newClient);
+          await api.createCliente(apiPayload);
         }
+
+        await loadClientes();
       } catch (apiError) {
-        console.error('API error (cliente salvo localmente):', apiError);
+        console.error('API error saving cliente:', apiError);
+        alert("Erro ao salvar cliente no servidor. Nenhuma alteração local foi aplicada.");
+        return;
       }
       
       // Fechar modal e limpar
@@ -685,14 +677,65 @@ export const ClientesPage: React.FC = () => {
   };
 
   // Função para abrir histórico do cliente
-  const handleViewHistory = (cliente: Cliente) => {
+  const handleViewHistory = async (cliente: Cliente) => {
+    const actionLabelMap: Record<string, string> = {
+      CUSTOMER_CREATED: "Cliente criado",
+      CUSTOMER_UPDATED: "Cliente atualizado",
+      CUSTOMER_DELETED: "Cliente excluído",
+    };
+
+    const changedFieldLabelMap: Record<string, string> = {
+      firstName: "Nome",
+      lastName: "Sobrenome",
+      email: "E-mail",
+      phone: "Telefone",
+      cpf: "CPF/CNPJ",
+      birthDate: "Data de nascimento",
+      isActive: "Status",
+      doNotCallStatus: "Não Perturbe",
+      address: "Endereço",
+      bankData: "Dados bancários",
+      notes: "Observações",
+    };
+
     setHistoryCliente(cliente);
-    // Simular histórico baseado nos dados do cliente (em produção, viria do backend)
-    const mockHistory = [
-      { data: cliente.created_at, campo: 'Criação', valorAnterior: '-', valorNovo: 'Cliente cadastrado' },
-    ];
-    setClienteHistory(mockHistory);
     setShowHistory(true);
+    try {
+      const response = await api.getAuditLogs({
+        entity: "Customer",
+        entityId: String(cliente.id),
+        limit: 20,
+      });
+
+      const logs = Array.isArray(response?.data) ? response.data : [];
+
+      const mappedHistory = logs.map((log: any) => {
+        const changedFields = Array.isArray(log?.metadata?.changedFields)
+          ? log.metadata.changedFields
+          : [];
+        const translatedAction = actionLabelMap[log?.action] || "Alteração";
+
+        let valorNovo = translatedAction;
+        if (changedFields.length > 0) {
+          const translatedFields = changedFields.map((field: string) => (
+            changedFieldLabelMap[field] || field
+          ));
+          valorNovo = `Campos alterados: ${translatedFields.join(", ")}`;
+        }
+
+        return {
+          data: log?.createdAt ? new Date(log.createdAt).getTime() : Date.now(),
+          campo: translatedAction,
+          valorAnterior: "-",
+          valorNovo,
+        };
+      });
+
+      setClienteHistory(mappedHistory);
+    } catch (error) {
+      console.error("Error loading customer audit history:", error);
+      setClienteHistory([]);
+    }
   };
 
   // Função para fechar histórico
@@ -702,53 +745,84 @@ export const ClientesPage: React.FC = () => {
     setClienteHistory([]);
   };
 
+  const formatHistoryDateTime = (timestamp: number) => {
+    if (!timestamp || Number.isNaN(timestamp)) return "-";
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    const datePart = date.toLocaleDateString("pt-BR");
+    const timePart = date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    return `${datePart} às ${timePart}`;
+  };
+
   // Helper: verifica se campo deve estar editável
   const isEditable = !editingCliente || isEditing;
 
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
+    const address = (cliente.address || {}) as any;
+    const bankData = (cliente.bankData || {}) as any;
+    const normalizedNome =
+      cliente.nome ||
+      [cliente.firstName, cliente.lastName].filter(Boolean).join(' ') ||
+      '';
+    const normalizedDoc = onlyNumbers(
+      cliente.cpf_cnpj || cliente.cpf || ''
+    );
+    const normalizedPhone = onlyNumbers(
+      cliente.celular || cliente.telefone || cliente.phone || ''
+    );
     // Detectar tipo de pessoa
-    const isCNPJ = cliente.cpf_cnpj && cliente.cpf_cnpj.length > 11;
+    const isCNPJ = normalizedDoc.length > 11;
     setTipoPessoa(isCNPJ ? "CNPJ" : "CPF");
     // Formatar CPF/CNPJ para exibição ao editar
     const formattedDoc = isCNPJ 
-      ? formatCNPJInput(cliente.cpf_cnpj || "")
-      : formatCPFInput(cliente.cpf_cnpj || "");
+      ? formatCNPJInput(normalizedDoc)
+      : formatCPFInput(normalizedDoc);
     setFormData({
-      nome: cliente.nome,
+      nome: normalizedNome,
       cpf_cnpj: formattedDoc,
       email: cliente.email || "",
       telefone: cliente.telefone || "",
-      celular: cliente.celular || "",
-      cep: cliente.cep || "",
-      rua: cliente.rua || "",
-      numero: cliente.numero || "",
-      complemento: cliente.complemento || "",
-      bairro: cliente.bairro || "",
-      cidade: cliente.cidade || "",
-      estado: cliente.estado || "",
+      celular: normalizedPhone,
+      cep: address.cep || cliente.cep || "",
+      rua: address.rua || cliente.rua || "",
+      numero: address.numero || cliente.numero || "",
+      complemento: address.complemento || cliente.complemento || "",
+      bairro: address.bairro || cliente.bairro || "",
+      cidade: address.cidade || cliente.cidade || "",
+      estado: address.estado || cliente.estado || "",
       status: cliente.status || "ativo",
-      observacao: cliente.observacao || "",
+      observacao: cliente.notes || cliente.observacao || "",
       // Novos campos
-      profissao: cliente.profissao || "",
-      estado_civil: cliente.estado_civil || "",
+      profissao: cliente.profession || cliente.profissao || "",
+      estado_civil: cliente.maritalStatus || cliente.estado_civil || "",
       responsavel_legal: cliente.responsavel_legal || "",
       cpf_responsavel: cliente.cpf_responsavel || "",
-      sexo: cliente.sexo || "",
-      data_nascimento: cliente.data_nascimento || "",
+      sexo: cliente.gender || cliente.sexo || "",
+      data_nascimento:
+        cliente.data_nascimento ||
+        (cliente.birthDate ? String(cliente.birthDate).slice(0, 10) : ""),
       // Dados Bancários - ler de bankData ou diretamente (compatibilidade com dados antigos)
-      banco: cliente.bankData?.banco ?? cliente.banco ?? "",
-      agencia: cliente.bankData?.agencia ?? cliente.agencia ?? "",
-      conta: cliente.bankData?.conta ?? cliente.conta ?? "",
-      tipoConta: cliente.bankData?.tipoConta ?? cliente.tipoConta ?? "",
-      titular: cliente.bankData?.titular ?? cliente.titular ?? "",
-      documentoTitular: cliente.bankData?.documentoTitular ?? cliente.documentoTitular ?? "",
-      pixTipo: cliente.bankData?.pixTipo ?? cliente.pixTipo ?? "",
-      pixChave: cliente.bankData?.pixChave ?? cliente.pixChave ?? "",
+      banco: bankData.banco ?? cliente.banco ?? "",
+      agencia: bankData.agencia ?? cliente.agencia ?? "",
+      conta: bankData.conta ?? cliente.conta ?? "",
+      tipoConta: bankData.tipoConta ?? cliente.tipoConta ?? "",
+      titular: bankData.titular ?? cliente.titular ?? "",
+      documentoTitular: bankData.documentoTitular ?? cliente.documentoTitular ?? "",
+      pixTipo: bankData.pixTipo ?? cliente.pixTipo ?? "",
+      pixChave: bankData.pixChave ?? cliente.pixChave ?? "",
       // Dados RD
       rdStatus: cliente.rdStatus ?? "nao_consultado",
       rdConsultedAt: cliente.rdConsultedAt ?? "",
       rdNotes: cliente.rdNotes ?? "",
+      doNotCallStatus: cliente.doNotCallStatus ?? "nao_consultado",
+      doNotCallConsultedAt: cliente.doNotCallConsultedAt ?? "",
     });
     setIsEditing(false); // Modo visualização
     setShowModal(true);
@@ -766,19 +840,12 @@ export const ClientesPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (confirm("Tem certeza que deseja excluir este cliente?")) {
       try {
-        // Excluir localmente primeiro
-        const updatedClientes = clientes.filter(c => c.id !== id);
-        setClientes(updatedClientes);
-        setClientesLocal(updatedClientes);
-        
-        // Tentar excluir na API em background
-        try {
-          await api.deleteCliente(id);
-        } catch (apiError) {
-          console.error('API error (cliente excluído localmente):', apiError);
-        }
-      } catch (error) {
-        console.error("Error deleting cliente:", error);
+        await api.deleteCliente(id);
+        await loadClientes();
+      } catch (apiError) {
+        console.error('API error deleting cliente:', apiError);
+        alert("Erro ao excluir cliente no servidor. Nenhuma alteração local foi aplicada.");
+        return;
       }
     }
   };
@@ -796,20 +863,29 @@ export const ClientesPage: React.FC = () => {
       } else {
         newStatus = "ativo";
       }
+
+      const statusPayload = {
+        isActive: newStatus !== "inativo",
+        doNotCallStatus: newStatus === "nao_perturbe" ? "bloqueado" : "liberado",
+      };
       
-      // Update locally first for immediate feedback
-      const updatedClientes = clientes.map(c => 
-        c.id === cliente.id ? { ...c, status: newStatus } : c
-      );
-      setClientes(updatedClientes);
-      setClientesLocal(updatedClientes);
-      // Then try to sync with API
       try {
-        await api.updateCliente(cliente.id, { ...cliente, status: newStatus });
+        await api.updateCliente(cliente.id, {
+          firstName: cliente.firstName || cliente.nome?.split(' ')[0] || '',
+          lastName:
+            cliente.lastName ||
+            cliente.nome?.split(' ').slice(1).join(' ') ||
+            'Não informado',
+          email: cliente.email || '',
+          cpf: onlyNumbers(cliente.cpf_cnpj || cliente.cpf || ''),
+          phone: onlyNumbers(cliente.celular || cliente.telefone || cliente.phone || ''),
+          ...statusPayload,
+        });
+        await loadClientes();
       } catch (apiError) {
-        // Revert if API fails
-        setClientes(clientes);
-        console.error("Error syncing with API:", apiError);
+        console.error("API error updating cliente status:", apiError);
+        alert("Erro ao atualizar status no servidor. Nenhuma alteração local foi aplicada.");
+        return;
       }
     } catch (error) {
       console.error("Error toggling cliente status:", error);
@@ -1083,17 +1159,17 @@ export const ClientesPage: React.FC = () => {
               <tbody>
                 {filteredClientes.map((cliente, index) => (
                   <tr key={cliente.id} className="border-b border-[var(--border-muted)] hover:bg-[var(--bg-surface-hover)] transition-colors">
-                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
-                      <span className="text-sm text-[var(--text-primary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)] whitespace-nowrap">
+                      <span className="text-sm font-medium font-mono tabular-nums text-[var(--text-primary)]">
                         {formatClientCode(cliente, index)}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <EntityAvatar name={cliente.nome} type="cliente" size="sm" />
-                        <div>
-                          <p className="text-sm text-[var(--text-primary)]">{cliente.nome}</p>
-                          <p className="text-xs text-[var(--text-muted)]">{cliente.email || "-"}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm text-[var(--text-primary)] truncate">{cliente.nome}</p>
+                          <p className="text-xs text-[var(--text-muted)] truncate">{cliente.email || "-"}</p>
                         </div>
                       </div>
                     </td>
@@ -1108,7 +1184,7 @@ export const ClientesPage: React.FC = () => {
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 align-middle text-sm font-mono text-[var(--text-secondary)]">
+                    <td className="px-3 py-2.5 align-middle text-sm font-mono text-[var(--text-secondary)] whitespace-nowrap">
                       {formatDocument(cliente?.cpf_cnpj, cliente?.personType)}
                     </td>
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
@@ -1861,7 +1937,7 @@ export const ClientesPage: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <h4 className="font-medium text-white">{item.campo}</h4>
-                          <span className="text-xs text-slate-500">{formatSafeDate(item.data)}</span>
+                          <span className="text-xs text-slate-500">{formatHistoryDateTime(item.data)}</span>
                         </div>
                         <div className="mt-2 text-sm">
                           <p className="text-slate-500">
