@@ -372,6 +372,7 @@ interface AppState {
   deleteParceiro: (id: number) => void;
   toggleParceiroStatus: (id: number) => void;
   usuarios: UsuarioMock[];
+  setUsuarios: (usuarios: UsuarioMock[]) => void;
   addUsuario: (usuario: UsuarioMock) => void;
   updateUsuario: (id: string, data: Partial<UsuarioMock>) => void;
   deleteUsuario: (id: string) => void;
@@ -461,11 +462,42 @@ const useAppStore = create<AppState>()(
         const hydratedUser = user
           ? { ...user, avatar: loadStoredUserAvatar(user) || user.avatar }
           : null;
-        // Inicializa permissões baseadas no perfil do usuário
-        let permissions: Record<string, string[]> = {};
-        if (hydratedUser?.perfil && PROFILE_PERMISSIONS[hydratedUser.perfil]) {
-          permissions = PROFILE_PERMISSIONS[hydratedUser.perfil];
-        }
+        const permissionsFromBackend = Array.isArray(hydratedUser?.permissions)
+          ? hydratedUser.permissions
+          : [];
+        const legacyFallbackPermissions =
+          hydratedUser?.perfil && PROFILE_PERMISSIONS[hydratedUser.perfil]
+            ? PROFILE_PERMISSIONS[hydratedUser.perfil]
+            : {};
+
+        const permissions = permissionsFromBackend.length > 0
+          ? permissionsFromBackend.reduce<Record<string, string[]>>((acc, permission) => {
+              if (typeof permission !== "string" || !permission) {
+                return acc;
+              }
+
+              const normalizedPermission = permission.toUpperCase();
+
+              if (normalizedPermission === "*") {
+                acc["*"] = ["*"];
+                return acc;
+              }
+
+              const lastSeparatorIndex = normalizedPermission.lastIndexOf("_");
+              if (lastSeparatorIndex <= 0 || lastSeparatorIndex >= normalizedPermission.length - 1) {
+                const fallbackKey = normalizedPermission.toLowerCase();
+                acc[fallbackKey] = acc[fallbackKey] || [];
+                acc[fallbackKey].push("*");
+                return acc;
+              }
+
+              const moduleKey = normalizedPermission.slice(0, lastSeparatorIndex).toLowerCase();
+              const actionKey = normalizedPermission.slice(lastSeparatorIndex + 1).toLowerCase();
+              acc[moduleKey] = acc[moduleKey] || [];
+              acc[moduleKey].push(actionKey);
+              return acc;
+            }, {})
+          : legacyFallbackPermissions;
         set({ 
           isAuthenticated: !!hydratedUser, 
           user: hydratedUser,
@@ -780,6 +812,7 @@ const useAppStore = create<AppState>()(
       })),
 
       usuarios: initialUsuarios,
+      setUsuarios: (usuarios) => set({ usuarios }),
       addUsuario: (usuario) => set((state) => ({ usuarios: [...state.usuarios, usuario] })),
       updateUsuario: (id, data) => set((state) => ({
         usuarios: state.usuarios.map((u) => u.id === id ? { ...u, ...data, updated_at: Date.now() } : u)
@@ -858,6 +891,8 @@ const useAppStore = create<AppState>()(
       setUserPermissions: (permissions) => set({ userPermissions: permissions }),
       hasPermission: (module, action) => {
         const state = useAppStore.getState();
+        const normalizedModule = String(module).toLowerCase();
+        const normalizedAction = String(action).toLowerCase();
         
         // Admin tem acesso total
         if (
@@ -867,11 +902,11 @@ const useAppStore = create<AppState>()(
         ) return true;
         
         // Se tem permissões customizadas, usa elas
-        const modulePerms = state.userPermissions[module];
+        const modulePerms = state.userPermissions[normalizedModule];
         if (modulePerms && modulePerms.length > 0) {
           // Admin no perfil tem todas as permissões
           if (modulePerms.includes('*')) return true;
-          return modulePerms.includes(action);
+          return modulePerms.includes(normalizedAction);
         }
         
         // Fallback: usa permissões baseadas no role do usuário

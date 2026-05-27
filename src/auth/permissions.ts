@@ -252,8 +252,8 @@ export const canAccess = (
   }
   
   // 7. Verifica permissão específica para módulo/ação
-  const requiredPermission = `${module}_${action}` as Permission;
-  const userPermissions = ROLE_PERMISSIONS[user.role] || [];
+  const requiredPermission = `${module}_${action}`.toUpperCase() as Permission;
+  const userPermissions = user.permissions;
   
   return userPermissions.includes(requiredPermission as Permission);
 };

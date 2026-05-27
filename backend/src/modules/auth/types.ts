@@ -25,11 +25,37 @@ export interface AuthResponse {
     role: string;
     tenantId: string;
     tenantName: string;
+    permissions?: string[];
   };
   tokens: {
     accessToken: string;
     refreshToken: string;
   };
+}
+
+export interface SessionRoleResponse {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+}
+
+export interface SessionUserResponse {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roleId: string;
+  role: string;
+  perfil: string;
+  tenantId: string;
+  tenantName: string;
+  roles: SessionRoleResponse[];
+  permissions: string[];
+}
+
+export interface SessionResponse {
+  user: SessionUserResponse;
 }
 
 export interface RefreshTokenRequest {

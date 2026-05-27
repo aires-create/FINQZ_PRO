@@ -14,6 +14,7 @@ import { AuthContext } from '../App';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   user?: AuthUser | null;
+  requiredPermission?: string;
   requiredModule?: Module;
   requiredAction?: Action;
   fallbackPath?: string;
@@ -24,6 +25,67 @@ interface PublicRouteProps {
   user: AuthUser | null;
   redirectTo?: string;
 }
+
+const ACTION_ALIAS_MAP: Record<string, string[]> = {
+  read: ["READ", "VIEW"],
+  view: ["VIEW", "READ"],
+  create: ["CREATE"],
+  edit: ["EDIT", "UPDATE"],
+  delete: ["DELETE"],
+  export: ["EXPORT"],
+};
+
+const MODULE_ALIAS_MAP: Record<string, string[]> = {
+  customer: ["CUSTOMER", "CLIENTES", "PARCEIROS"],
+  sales: ["SALES", "OPORTUNIDADES", "ESTRUTURA_COMERCIAL", "TABELAS_COMERCIAIS"],
+  report: ["REPORT", "RELATORIOS"],
+  finance: ["FINANCE", "FINANCEIRO", "CONTA_CORRENTE"],
+  audit: ["AUDIT", "AUDITORIA"],
+  system: ["SYSTEM", "CONFIGURACOES", "GERAL", "TAGS", "PIPELINES", "INTEGRACOES", "AUTOMACOES", "NOTIFICACOES", "SEGURANCA", "BANCOS"],
+  system_users: ["SYSTEM_USERS", "USUARIOS"],
+  system_roles: ["SYSTEM_ROLES", "PERMISSOES"],
+  sdr_ia: ["SDR_IA"],
+};
+
+const buildPermissionVariants = (permission?: string): string[] => {
+  if (!permission) return [];
+
+  const variants = new Set<string>([
+    permission,
+    permission.replace(':read', ''),
+    permission.replace(':read', ':*'),
+    permission.replace(':read', ':view'),
+    permission.replace(':view', ':read'),
+    permission.replace(':view', ''),
+    permission.replace(':view', ':*'),
+  ]);
+
+  if (permission.includes(':')) {
+    const [moduleName, actionName = 'read'] = permission.split(':');
+    const aliases = ACTION_ALIAS_MAP[actionName] || [actionName.toUpperCase()];
+    const moduleAliases = MODULE_ALIAS_MAP[moduleName] || [moduleName.toUpperCase()];
+
+    moduleAliases.forEach((moduleAlias) => {
+      aliases.forEach((alias) => {
+        variants.add(`${moduleAlias}_${alias}`);
+      });
+    });
+  }
+
+  return Array.from(variants);
+};
+
+const hasPermissionMatch = (userPermissions: string[], requiredPermission?: string): boolean => {
+  if (!requiredPermission || userPermissions.length === 0 || userPermissions.includes("*")) {
+    return true;
+  }
+
+  const variants = buildPermissionVariants(requiredPermission);
+  return userPermissions.some((permission) => {
+    const normalizedPermission = String(permission).toUpperCase();
+    return variants.some((variant) => variant.toUpperCase() === normalizedPermission);
+  });
+};
 
 // ============================================
 // LOADING COMPONENT
@@ -77,6 +139,7 @@ export const AccessDenied: React.FC = () => (
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   user: userProp,
+  requiredPermission,
   requiredModule,
   requiredAction = 'view',
   fallbackPath = '/',
@@ -97,10 +160,23 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
 
+  // Verifica permissão enterprise quando informada, com fallback legado temporário
+  if (requiredPermission) {
+    if (hasPermissionMatch(user.permissions || [], requiredPermission)) {
+      return <>{children}</>;
+    }
+
+    if (requiredModule && requiredAction && canAccess(user, requiredModule, requiredAction)) {
+      return <>{children}</>;
+    }
+
+    return <AccessDenied />;
+  }
+
   // Verifica permissão específica se requerida
   if (requiredModule && requiredAction) {
     const hasPermission = canAccess(user, requiredModule, requiredAction);
-    
+
     if (!hasPermission) {
       return <AccessDenied />;
     }

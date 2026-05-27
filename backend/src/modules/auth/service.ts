@@ -258,7 +258,15 @@ export class AuthService {
           tenantId: user.tenantId,
         },
         include: {
-          role: true,
+          role: {
+            include: {
+              rolePermissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           assignedAt: 'desc',
@@ -268,6 +276,11 @@ export class AuthService {
       if (!userRole) {
         throw new AuthenticationError('No role assigned to user', 401);
       }
+
+      const permissions =
+        userRole.role.rolePermissions
+          ?.map((rp) => rp.permission?.slug)
+          .filter((slug): slug is string => Boolean(slug)) ?? [];
 
       // Update last login
       await prisma.user.update({
@@ -321,6 +334,7 @@ export class AuthService {
           role: assignedRole.slug || assignedRole.name,
           tenantId: user.tenantId,
           tenantName: user.tenant.name,
+          permissions,
         },
         tokens,
       };

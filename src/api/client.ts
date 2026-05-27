@@ -72,20 +72,27 @@ export const api = {
 
   // Clientes
   getClientes: (search?: string) =>
-    apiFetch<any>(`/api/clientes${search ? `?search=${search}` : ""}`),
-  getCliente: (id: number) => apiFetch<any>(`/api/clientes/${id}`),
+    apiFetch<any>(`/crm/clientes${search ? `?search=${search}` : ""}`),
+  getCliente: (id: number) => apiFetch<any>(`/crm/clientes/${id}`),
   createCliente: (data: any) =>
-    apiFetch<any>("/api/clientes", {
+    apiFetch<any>("/crm/clientes", {
       method: "POST",
       body: JSON.stringify(data),
     }),
   updateCliente: (id: number, data: any) =>
-    apiFetch<any>(`/api/clientes/${id}`, {
+    apiFetch<any>(`/crm/clientes/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
   deleteCliente: (id: number) =>
-    apiFetch<any>(`/api/clientes/${id}`, { method: "DELETE" }),
+    apiFetch<any>(`/crm/clientes/${id}`, { method: "DELETE" }),
+  getAuditLogs: (params: { entity: string; entityId: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    query.set("entity", params.entity);
+    query.set("entityId", params.entityId);
+    query.set("limit", String(params.limit ?? 20));
+    return apiFetch<any>(`/audit/logs?${query.toString()}`);
+  },
 
   // Produtos
   getProdutos: () => apiFetch<any>("/api/produtos"),

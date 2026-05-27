@@ -20,6 +20,7 @@ export interface BackendAuthUser {
   role: string;
   tenantId: string;
   tenantName: string;
+  permissions?: string[];
 }
 
 export interface BackendAuthTokens {
@@ -100,7 +101,10 @@ const buildDisplayName = (user: BackendAuthUser): string => {
 
 export const mapBackendAuthUser = (user: BackendAuthUser): MappedFinqzUser => {
   const role = mapBackendRole(user.role);
-  const permissions = getFrontendPermissionsForRole(role);
+  const permissions =
+    Array.isArray(user.permissions) && user.permissions.length > 0
+      ? [...user.permissions]
+      : getFrontendPermissionsForRole(role);
   const now = Date.now();
 
   return {

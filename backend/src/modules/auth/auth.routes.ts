@@ -36,6 +36,8 @@ export default async function authRoutes(app: any): Promise<void> {
 
   app.post('/api/v1/auth/refresh', { preValidation: validateBody(refreshSchema) }, authController.refreshToken);
 
+  app.get('/api/v1/get-session', { preHandler: [authenticate, tenantContextMiddleware] }, authController.getSession);
+
   app.get('/api/v1/auth/profile', { preHandler: [authenticate, tenantContextMiddleware] }, authController.getProfile);
 
   app.post('/api/v1/auth/logout', { preHandler: [authenticate, tenantContextMiddleware] }, authController.logout);

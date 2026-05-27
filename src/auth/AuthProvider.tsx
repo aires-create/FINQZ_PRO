@@ -138,12 +138,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (isAdmin) {
         setUserPermissions({ '*': ['*'] });
       } else {
-        const profilePerms = PROFILE_PERMISSIONS[result.user.perfil];
-        if (profilePerms) {
-          setUserPermissions(profilePerms);
+        const backendPermissions = Array.isArray(result.user.permissions)
+          ? result.user.permissions
+          : [];
+
+        if (backendPermissions.length > 0) {
+          const convertedPermissions = backendPermissions.reduce<Record<string, string[]>>((acc, permission) => {
+            if (typeof permission !== "string" || !permission) {
+              return acc;
+            }
+
+            const normalizedPermission = permission.toUpperCase();
+
+            if (normalizedPermission === "*") {
+              acc["*"] = ["*"];
+              return acc;
+            }
+
+            const lastSeparatorIndex = normalizedPermission.lastIndexOf("_");
+            if (lastSeparatorIndex <= 0 || lastSeparatorIndex >= normalizedPermission.length - 1) {
+              const fallbackKey = normalizedPermission.toLowerCase();
+              acc[fallbackKey] = acc[fallbackKey] || [];
+              acc[fallbackKey].push("*");
+              return acc;
+            }
+
+            const moduleKey = normalizedPermission.slice(0, lastSeparatorIndex).toLowerCase();
+            const actionKey = normalizedPermission.slice(lastSeparatorIndex + 1).toLowerCase();
+            acc[moduleKey] = acc[moduleKey] || [];
+            acc[moduleKey].push(actionKey);
+            return acc;
+          }, {});
+
+          setUserPermissions(convertedPermissions);
         } else {
-          // Se não tem perfil definido, usa permissões vazias (acesso negado por padrão)
-          setUserPermissions({});
+          const profilePerms = PROFILE_PERMISSIONS[result.user.perfil];
+          if (profilePerms) {
+            setUserPermissions(profilePerms);
+          } else {
+            // Se não tem perfil definido, usa permissões vazias (acesso negado por padrão)
+            setUserPermissions({});
+          }
         }
       }
       

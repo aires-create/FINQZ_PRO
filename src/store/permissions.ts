@@ -1,6 +1,5 @@
 // FINQZ PRO - Permissions Hook
 import useAppStore from "./store";
-import { PROFILE_PERMISSIONS } from "../types";
 
 /**
  * Hook principal para verificações de permissão RBAC
@@ -17,16 +16,13 @@ export const useCan = () => {
 
   // Inicializa permissões baseado no perfil do usuário
   const initPermissions = (perfil: string) => {
-    // Admin tem acesso total
-    if (perfil === 'admin') {
-      setUserPermissions({ '*': ['*'] });
+    if (Object.keys(userPermissions || {}).length > 0) {
       return;
     }
 
-    // Usa permissões padrão do perfil
-    const profilePerms = PROFILE_PERMISSIONS[perfil];
-    if (profilePerms) {
-      setUserPermissions(profilePerms);
+    // Admin tem acesso total
+    if (perfil === 'admin' || user?.role === "ROLE_ADMIN_SISTEMA" || user?.perfil === "Admin Sistema") {
+      setUserPermissions({ '*': ['*'] });
     }
   };
 
@@ -58,7 +54,7 @@ export const useCan = () => {
     initPermissions,
     updatePermission,
     userPermissions,
-    isAdmin: user?.perfil === 'admin',
+    isAdmin: user?.role === "ROLE_ADMIN_SISTEMA" || user?.perfil === "Admin Sistema" || user?.perfil === 'admin',
   };
 };
 

@@ -157,6 +157,11 @@ const stripLeadingApiPrefix = (value: string): string => {
   return value.replace(/^\/api(?=\/|$)/i, "");
 };
 
+const extractTrailingApiPrefix = (value: string): string | null => {
+  const match = value.match(/(\/api(?:\/v\d+)?)$/i);
+  return match ? match[1] : null;
+};
+
 export const buildApiUrl = (endpoint: string, options: { preserveApiPrefix?: boolean } = {}): string => {
   if (/^https?:\/\//i.test(endpoint)) {
     return endpoint;
@@ -173,6 +178,11 @@ export const buildApiUrl = (endpoint: string, options: { preserveApiPrefix?: boo
 
   if (/\/api$/i.test(baseUrl) && /^\/api(\/|$)/i.test(apiEndpoint)) {
     return `${baseUrl}${stripLeadingApiPrefix(apiEndpoint)}`;
+  }
+
+  const trailingApiPrefix = extractTrailingApiPrefix(baseUrl);
+  if (trailingApiPrefix && apiEndpoint.toLowerCase().startsWith(trailingApiPrefix.toLowerCase())) {
+    return `${baseUrl}${apiEndpoint.slice(trailingApiPrefix.length)}`;
   }
 
   return `${baseUrl}${apiEndpoint}`;
