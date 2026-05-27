@@ -5,6 +5,8 @@ import {
   type NovaPromotoraProposalsRequestResult,
   type NovaPromotoraRequestResult,
 } from './nova-promotora.types.js';
+import { config } from '../../../../config/app.js';
+import { ProviderHttpClient } from '../../application/provider-http-client.js';
 
 const defaultTimeoutMs = 5_000;
 
@@ -13,6 +15,16 @@ const getDurationMs = (startedAt: number) => Date.now() - startedAt;
 const getConfiguredTimeoutMs = (timeoutMs?: number) => {
   if (typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs > 0) {
     return timeoutMs;
+  }
+
+  const configTimeoutMs = config.integrations.novaPromotora.timeoutMs;
+
+  if (
+    typeof configTimeoutMs === 'number' &&
+    Number.isFinite(configTimeoutMs) &&
+    configTimeoutMs > 0
+  ) {
+    return configTimeoutMs;
   }
 
   const envTimeoutMs = Number(process.env.NOVA_PROMOTORA_TIMEOUT_MS);
@@ -41,14 +53,8 @@ const buildProviderUrl = (baseUrl: string, path: string) => {
   return parsedUrl.toString();
 };
 
-const isAbortError = (error: unknown) => {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'name' in error &&
-    error.name === 'AbortError'
-  );
-};
+const isAbortError = (error: unknown) =>
+  typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError';
 
 type NovaPromotoraFailureResult = Extract<
   NovaPromotoraRequestResult,
@@ -74,17 +80,51 @@ const buildFailureResult = (params: {
   },
 });
 
+const createHttpClient = (options: NovaPromotoraClientOptions): ProviderHttpClient =>
+  new ProviderHttpClient({
+    timeoutMs: getConfiguredTimeoutMs(options.timeoutMs),
+    retryPolicy: {
+      maxAttempts: 2,
+      baseDelayMs: 150,
+      maxDelayMs: 750,
+    },
+    ...(options.fetcher ? { fetcher: options.fetcher } : {}),
+    ...(options.context ? { context: options.context } : {}),
+    ...(options.healthTracker ? { healthTracker: options.healthTracker } : {}),
+    ...(options.providerRetryPolicy ? { providerRetryPolicy: options.providerRetryPolicy } : {}),
+  });
+
 export async function testNovaPromotoraConnection(
   options: NovaPromotoraClientOptions = {},
 ): Promise<NovaPromotoraRequestResult> {
   const startedAt = Date.now();
-  const baseUrl = (options.baseUrl ?? process.env.NOVA_PROMOTORA_BASE_URL)?.trim();
-  const apiKey = (options.apiKey ?? process.env.NOVA_PROMOTORA_API_KEY)?.trim();
-  const healthPath = (
-    options.healthPath ?? process.env.NOVA_PROMOTORA_HEALTH_PATH
-  )?.trim();
+  const healthPathSource =
+    options.healthPath ??
+    process.env.NOVA_PROMOTORA_HEALTH_PATH ??
+    config.integrations.novaPromotora.healthPath;
+  const healthPath = healthPathSource?.trim();
+  const normalizedHealthPath = healthPath ? normalizePath(healthPath) : '';
 
-  if (!baseUrl || !apiKey || !healthPath) {
+  if (!healthPath || !normalizedHealthPath) {
+    return buildFailureResult({
+      code: 'NOVA_PROMOTORA_CONFIGURATION_ERROR',
+      durationMs: getDurationMs(startedAt),
+      externalStatus: 'configuration_error',
+      message: 'Provider configuration is incomplete',
+    });
+  }
+
+  const baseUrl = (
+    options.baseUrl ??
+    config.integrations.novaPromotora.baseUrl ??
+    process.env.NOVA_PROMOTORA_BASE_URL
+  )?.trim();
+  const apiKey = (
+    options.apiKey ??
+    config.integrations.novaPromotora.apiKey ??
+    process.env.NOVA_PROMOTORA_API_KEY
+  )?.trim();
+  if (!baseUrl || !apiKey) {
     return buildFailureResult({
       code: 'NOVA_PROMOTORA_CONFIGURATION_ERROR',
       durationMs: getDurationMs(startedAt),
@@ -106,22 +146,19 @@ export async function testNovaPromotoraConnection(
     });
   }
 
-  const timeoutMs = getConfiguredTimeoutMs(options.timeoutMs);
-  const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => {
-    controller.abort();
-  }, timeoutMs);
+  const httpClient = createHttpClient(options);
 
   try {
-    const fetcher = options.fetcher ?? fetch;
-    const response = await fetcher(url, {
+    const response = await httpClient.request(url, {
       method: 'GET',
+      providerKey: NOVA_PROMOTORA_PROVIDER_KEY,
+      capability: 'healthCheck',
+      ...(options.context ? { context: options.context } : {}),
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -157,8 +194,6 @@ export async function testNovaPromotoraConnection(
       externalStatus: 'network_error',
       message: 'Provider health check request failed',
     });
-  } finally {
-    clearTimeout(timeoutHandle);
   }
 }
 
@@ -166,10 +201,20 @@ export async function listNovaPromotoraProposals(
   options: NovaPromotoraClientOptions = {},
 ): Promise<NovaPromotoraProposalsRequestResult> {
   const startedAt = Date.now();
-  const baseUrl = (options.baseUrl ?? process.env.NOVA_PROMOTORA_BASE_URL)?.trim();
-  const apiKey = (options.apiKey ?? process.env.NOVA_PROMOTORA_API_KEY)?.trim();
+  const baseUrl = (
+    options.baseUrl ??
+    config.integrations.novaPromotora.baseUrl ??
+    process.env.NOVA_PROMOTORA_BASE_URL
+  )?.trim();
+  const apiKey = (
+    options.apiKey ??
+    config.integrations.novaPromotora.apiKey ??
+    process.env.NOVA_PROMOTORA_API_KEY
+  )?.trim();
   const proposalsPath = (
-    options.proposalsPath ?? process.env.NOVA_PROMOTORA_PROPOSALS_PATH
+    options.proposalsPath ??
+    config.integrations.novaPromotora.proposalsPath ??
+    process.env.NOVA_PROMOTORA_PROPOSALS_PATH
   )?.trim();
 
   if (!baseUrl || !apiKey || !proposalsPath) {
@@ -194,22 +239,19 @@ export async function listNovaPromotoraProposals(
     });
   }
 
-  const timeoutMs = getConfiguredTimeoutMs(options.timeoutMs);
-  const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => {
-    controller.abort();
-  }, timeoutMs);
+  const httpClient = createHttpClient(options);
 
   try {
-    const fetcher = options.fetcher ?? fetch;
-    const response = await fetcher(url, {
+    const response = await httpClient.request(url, {
       method: 'GET',
+      providerKey: NOVA_PROMOTORA_PROVIDER_KEY,
+      capability: 'proposalDiscovery',
+      ...(options.context ? { context: options.context } : {}),
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -260,7 +302,5 @@ export async function listNovaPromotoraProposals(
       externalStatus: 'network_error',
       message: 'Provider proposals request failed',
     });
-  } finally {
-    clearTimeout(timeoutHandle);
   }
 }

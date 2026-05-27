@@ -1,4 +1,7 @@
 import type { IntegrationConnectionStatus } from '../../domain/contracts/provider.contract.js';
+import type { ProviderExecutionContext } from '../../application/provider-execution-context.js';
+import type { ProviderHealthTracker } from '../../application/provider-health-tracker.js';
+import type { ProviderRetryPolicy } from '../../application/provider-retry-policy.js';
 
 export const NOVA_PROMOTORA_PROVIDER_KEY = 'nova-promotora' as const;
 
@@ -66,6 +69,9 @@ export type NovaPromotoraClientOptions = {
   healthPath?: string;
   proposalsPath?: string;
   timeoutMs?: number;
+  context?: ProviderExecutionContext;
+  healthTracker?: ProviderHealthTracker;
+  providerRetryPolicy?: ProviderRetryPolicy;
 };
 
 export type NovaPromotoraConnectionStatus = IntegrationConnectionStatus;

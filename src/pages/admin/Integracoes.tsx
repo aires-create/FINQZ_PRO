@@ -1,89 +1,104 @@
 // FINQZ PRO - Integrações Page
-import React, { useState } from "react";
-import { Key, ExternalLink, Check, X, RefreshCw, Loader2 } from "lucide-react";
-import { Button, Input } from "../../components/ui";
+import React, { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import { Button } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { finqzClient } from "../../api/finqzClient";
+import {
+  getProviderPayloadDiagnostics,
+  type ProviderPayloadDiagnostics,
+} from "../../api/modules/integrations.api";
 
-interface Integracao {
-  id: string;
-  nome: string;
-  descricao: string;
-  status: 'conectado' | 'desconectado' | 'erro';
-  logo?: string;
-}
+type CapabilitySupport = boolean | "planned";
 
-interface StormTestResult {
-  success: boolean;
-  provider: string;
-  message: string;
-  checkedAt: string;
-}
+type ProviderCapabilities = {
+  marginInquiry: CapabilitySupport;
+  rateTables: CapabilitySupport;
+  proposalPipeline: CapabilitySupport;
+  commissions: CapabilitySupport;
+  commissionPayout: CapabilitySupport;
+  dataEnrichment: CapabilitySupport;
+  messageSender: CapabilitySupport;
+  bulkMessaging: CapabilitySupport;
+  webhooks: CapabilitySupport;
+};
 
-interface Integracao {
-  id: string;
-  nome: string;
-  descricao: string;
-  status: 'conectado' | 'desconectado' | 'erro';
-  logo?: string;
-}
+type ProviderCapabilityItem = {
+  providerKey: string;
+  displayName: string;
+  category: string;
+  status: "active" | "planned" | "legacy";
+  capabilities: ProviderCapabilities;
+};
 
 export const IntegracoesPage: React.FC = () => {
-  const [integracoes, setIntegracoes] = useState<Integracao[]>([
-    { id: 'whatsapp', nome: 'WhatsApp Business', descricao: 'Conecte seu número do WhatsApp Business para enviar mensagens automáticas', status: 'conectado' },
-    { id: 'email', nome: 'E-mail SMTP', descricao: 'Configure servidor de e-mail para envio de mensagens', status: 'desconectado' },
-    { id: 'zapier', nome: 'Zapier', descricao: 'Conecte com mais de 5000 aplicativos', status: 'desconectado' },
-    { id: 'webhook', nome: 'Webhooks', descricao: 'Configure webhooks para receber notificações em tempo real', status: 'conectado' },
-    { id: 'api', nome: 'API REST', descricao: 'Acesse nossa API para integrações personalizadas', status: 'conectado' },
-    { id: 's3', nome: 'Amazon S3', descricao: 'Armazenamento de arquivos na nuvem', status: 'desconectado' },
-    { id: 'storm', nome: 'NOVA PROMOTORA / Storm', descricao: 'Integração com sistema Storm para envio de propostas e sync de comissões', status: 'desconectado' },
-  ]);
+  const [providers, setProviders] = useState<ProviderCapabilityItem[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  const [diagnosticsByProvider, setDiagnosticsByProvider] = useState<Record<string, ProviderPayloadDiagnostics>>({});
+  const [diagnosticsLoadingByProvider, setDiagnosticsLoadingByProvider] = useState<Record<string, boolean>>({});
+  const [diagnosticsErrorByProvider, setDiagnosticsErrorByProvider] = useState<Record<string, string | null>>({});
 
-  const [apiKey, setApiKey] = useState('');
-  const [stormTesting, setStormTesting] = useState(false);
-  const [stormResult, setStormResult] = useState<StormTestResult | null>(null);
-
-  // Testar conexão com Storm
-  const testStormConnection = async () => {
-    setStormTesting(true);
-    setStormResult(null);
-    
+  const loadCapabilities = async () => {
+    setLoadingProviders(true);
+    setProvidersError(null);
     try {
-      const response = await finqzClient.post<StormTestResult>('/api/integrations/storm/test-connection', {});
-      const data = response.data;
-      setStormResult(data);
-      
-      // Atualizar status na lista
-      setIntegracoes(integracoes.map(i => 
-        i.id === 'storm' ? { ...i, status: data.success ? 'conectado' : 'erro' } : i
-      ));
+      const response = await finqzClient.get<ProviderCapabilityItem[]>('/api/v1/integrations/providers/capabilities');
+      const data = Array.isArray(response?.data) ? response.data : [];
+      setProviders(data);
     } catch (error) {
-      setStormResult({
-        success: false,
-        provider: 'storm',
-        message: 'Erro ao conectar com o servidor',
-        checkedAt: new Date().toISOString(),
-      });
-      setIntegracoes(integracoes.map(i => 
-        i.id === 'storm' ? { ...i, status: 'erro' } : i
-      ));
+      setProvidersError('Erro ao carregar capabilities de integrações.');
+      setProviders([]);
     } finally {
-      setStormTesting(false);
+      setLoadingProviders(false);
     }
   };
 
-  const toggleIntegracao = (id: string) => {
-    setIntegracoes(integracoes.map(i => 
-      i.id === id ? { ...i, status: i.status === 'conectado' ? 'desconectado' : 'conectado' } : i
-    ));
+  useEffect(() => {
+    loadCapabilities();
+  }, []);
+
+  const loadPayloadDiagnostics = async (providerKey: string) => {
+    setDiagnosticsLoadingByProvider((prev) => ({ ...prev, [providerKey]: true }));
+    setDiagnosticsErrorByProvider((prev) => ({ ...prev, [providerKey]: null }));
+
+    try {
+      const diagnostics = await getProviderPayloadDiagnostics(providerKey);
+      setDiagnosticsByProvider((prev) => ({ ...prev, [providerKey]: diagnostics }));
+    } catch {
+      setDiagnosticsErrorByProvider((prev) => ({
+        ...prev,
+        [providerKey]: "Não foi possível carregar o diagnóstico de payload.",
+      }));
+    } finally {
+      setDiagnosticsLoadingByProvider((prev) => ({ ...prev, [providerKey]: false }));
+    }
   };
 
   const handleExport = () => {
-    const blob = new Blob([JSON.stringify(integracoes, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(providers, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `integracoes_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
+  };
+
+  const renderCapabilityBadge = (key: string, value: CapabilitySupport) => {
+    const label = value === true ? 'Suportado' : value === 'planned' ? 'Planejado' : 'Não suportado';
+    const colorClass = value === true
+      ? 'bg-green-100 text-green-700'
+      : value === 'planned'
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-gray-100 text-slate-600';
+
+    return (
+      <span
+        key={key}
+        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${colorClass}`}
+      >
+        {key}: {label}
+      </span>
+    );
   };
 
   return (
@@ -91,113 +106,144 @@ export const IntegracoesPage: React.FC = () => {
       <PageHeader
         title="Integrações"
         subtitle="Gerencie integrações com serviços externos"
-        onRefresh={() => {}}
+        onRefresh={loadCapabilities}
         onImport={() => alert('Funcionalidade de importação em desenvolvimento')}
         importLabel="Importar"
         onExport={handleExport}
         exportLabel="Exportar"
-        exportData={integracoes}
-        exportColumns={[{ key: 'nome', label: 'Nome' }, { key: 'status', label: 'Status' }]}
+        exportData={providers}
+        exportColumns={[{ key: 'displayName', label: 'Nome' }, { key: 'status', label: 'Status' }]}
         exportFilename="integracoes"
       />
       
       <div className="bg-[#111827] border border-[#1f2937] rounded-xl p-6">
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-white">Configurações de Integrações</h3>
-          
-          {/* API Key */}
-          <div className="bg-gray-50 rounded-xl p-4">
-            <label className="block text-sm font-medium text-slate-300 mb-2">Chave API</label>
-            <div className="flex gap-2">
-              <Input
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Cole sua chave API aqui..."
-                className="flex-1"
-              />
-              <Button>Salvar</Button>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Sua chave API é usada para autenticar requisições externas. Mantenha em segurança.
-            </p>
-          </div>
 
           {/* Lista de Integrações */}
           <div className="grid gap-4">
-            {integracoes.map((integracao) => (
-              <div key={integracao.id} className="border border-[#1f2937] rounded-xl p-4">
+            {loadingProviders && (
+              <div className="border border-[#1f2937] rounded-xl p-4 text-slate-500 text-sm">
+                Carregando providers e capabilities...
+              </div>
+            )}
+
+            {!loadingProviders && providersError && (
+              <div className="border border-red-500/30 bg-red-500/5 rounded-xl p-4 text-red-500 text-sm">
+                {providersError}
+              </div>
+            )}
+
+            {!loadingProviders && !providersError && providers.length === 0 && (
+              <div className="border border-[#1f2937] rounded-xl p-4 text-slate-500 text-sm">
+                Nenhum provider encontrado.
+              </div>
+            )}
+
+            {!loadingProviders && !providersError && providers.map((provider) => (
+              <div key={provider.providerKey} className="border border-[#1f2937] rounded-xl p-4">
+                {(() => {
+                  const diagnostics = diagnosticsByProvider[provider.providerKey];
+                  const diagnosticsLoading = diagnosticsLoadingByProvider[provider.providerKey] === true;
+                  const diagnosticsError = diagnosticsErrorByProvider[provider.providerKey];
+                  const issuesBySeverity = diagnostics?.issues?.reduce<Record<string, number>>((acc, issue) => {
+                    acc[issue.severity] = (acc[issue.severity] ?? 0) + 1;
+                    return acc;
+                  }, {}) ?? {};
+
+                  return (
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-white">{integracao.nome}</h4>
+                      <h4 className="font-semibold text-white">{provider.displayName}</h4>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        integracao.status === 'conectado' ? 'bg-green-100 text-green-700' : 
-                        integracao.status === 'erro' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-slate-500'
+                        provider.status === 'active' ? 'bg-green-100 text-green-700' :
+                        provider.status === 'legacy' ? 'bg-orange-100 text-orange-700' :
+                        'bg-blue-100 text-blue-700'
                       }`}>
-                        {integracao.status === 'conectado' ? 'Conectado' : 
-                         integracao.status === 'erro' ? 'Erro' : 'Desconectado'}
+                        {provider.status}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-500 mt-1">{integracao.descricao}</p>
-                    
-                    {/* Storm Test Result */}
-                    {integracao.id === 'storm' && stormResult && (
-                      <div className={`mt-3 p-3 rounded-lg ${
-                        stormResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {stormResult.success ? (
-                            <Check size={16} className="text-green-600" />
-                          ) : (
-                            <X size={16} className="text-red-600" />
-                          )}
-                          <span className={`text-sm font-medium ${
-                            stormResult.success ? 'text-green-700' : 'text-red-700'
-                          }`}>
-                            {stormResult.message}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Última verificação: {new Date(stormResult.checkedAt).toLocaleString('pt-BR')}
-                        </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      <span className="font-mono">{provider.providerKey}</span> • {provider.category}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {Object.entries(provider.capabilities).map(([key, value]) =>
+                        renderCapabilityBadge(key, value),
+                      )}
+                    </div>
+
+                    {provider.providerKey === "nova-promotora" && (
+                      <div className="mt-4 space-y-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => loadPayloadDiagnostics(provider.providerKey)}
+                          disabled={diagnosticsLoading}
+                        >
+                          {diagnosticsLoading ? "Carregando diagnóstico..." : "Ver diagnóstico do payload"}
+                        </Button>
+
+                        {diagnosticsError && (
+                          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">
+                            {diagnosticsError}
+                          </div>
+                        )}
+
+                        {diagnostics && (
+                          <div className="rounded-lg border border-[#374151] bg-[#0f172a] p-3 text-xs text-slate-200 space-y-2">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div>Total: <span className="font-semibold">{diagnostics.totalRecords}</span></div>
+                              <div>Válidos: <span className="font-semibold">{diagnostics.validRecords}</span></div>
+                              <div>Inválidos: <span className="font-semibold">{diagnostics.invalidRecords}</span></div>
+                              <div>Status desconhecidos: <span className="font-semibold">{diagnostics.unknownStatuses.length}</span></div>
+                            </div>
+
+                            {diagnostics.unknownStatuses.length > 0 && (
+                              <div>
+                                <span className="text-slate-400">Unknown statuses:</span>{" "}
+                                {diagnostics.unknownStatuses.join(", ")}
+                              </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2">
+                              <span className="rounded-full bg-slate-700 px-2 py-0.5">
+                                info: {issuesBySeverity.info ?? 0}
+                              </span>
+                              <span className="rounded-full bg-amber-700/40 px-2 py-0.5">
+                                warning: {issuesBySeverity.warning ?? 0}
+                              </span>
+                              <span className="rounded-full bg-red-700/40 px-2 py-0.5">
+                                error: {issuesBySeverity.error ?? 0}
+                              </span>
+                            </div>
+
+                            {diagnostics.issues.length > 0 && (
+                              <ul className="space-y-1 text-slate-300">
+                                {diagnostics.issues.map((issue, index) => (
+                                  <li key={`${issue.code}-${index}`}>
+                                    [{issue.severity}] {issue.code}: {issue.message}
+                                    {issue.path ? ` (${issue.path})` : ""}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    {/* Botão especial para Storm */}
-                    {integracao.id === 'storm' ? (
-                      <Button 
-                        variant={stormResult?.success ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={testStormConnection}
-                        disabled={stormTesting}
-                      >
-                        {stormTesting ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin mr-2" />
-                            Testando...
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw size={16} className="mr-2" />
-                            Testar Conexão
-                          </>
-                        )}
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant={integracao.status === 'conectado' ? 'ghost' : 'primary'}
-                        size="sm"
-                        onClick={() => toggleIntegracao(integracao.id)}
-                      >
-                        {integracao.status === 'conectado' ? 'Desconectar' : 'Conectar'}
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="sm" disabled>
+                      Catálogo
+                    </Button>
                     <Button variant="ghost" size="sm">
                       <ExternalLink size={16} />
                     </Button>
                   </div>
                 </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

@@ -1,3 +1,5 @@
+import type { FinancialProposal } from '../../domain/contracts/financial-proposal/financial-proposal.contract.js';
+import { NovaPromotoraProposalMapper } from './nova-promotora.proposal-mapper.js';
 import type { IntegrationProposal } from '../../domain/contracts/integration-proposal.contract.js';
 import { NOVA_PROMOTORA_PROVIDER_KEY } from './nova-promotora.types.js';
 
@@ -141,4 +143,11 @@ export function mapNovaPromotoraProposalsPayload(
       rawStatus: status,
     };
   });
+}
+export function mapNovaPromotoraFinancialProposalsPayload(
+  payload: unknown,
+): FinancialProposal[] {
+  const mapper = new NovaPromotoraProposalMapper();
+
+  return getProposalRecords(payload).map((proposal) => mapper.map(proposal));
 }

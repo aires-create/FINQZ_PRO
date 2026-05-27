@@ -1,5 +1,8 @@
 import type { IntegrationProvider } from '../../domain/contracts/provider.contract.js';
+import type { FinancialProposal } from '../../domain/contracts/financial-proposal/financial-proposal.contract.js';
+import type { FinancialProposalReader } from '../../domain/contracts/financial-proposal/financial-proposal-reader.contract.js';
 import type { IntegrationProposal } from '../../domain/contracts/integration-proposal.contract.js';
+import type { ProviderRuntimeOptions } from '../../application/provider-engine.js';
 import { ProviderConfigurationError } from '../../domain/errors/provider-configuration.error.js';
 import { ProviderConnectionError } from '../../domain/errors/provider-connection.error.js';
 import { createModuleLogger } from '../../../../shared/logger.js';
@@ -7,7 +10,11 @@ import {
   listNovaPromotoraProposals,
   testNovaPromotoraConnection,
 } from './nova-promotora.client.js';
-import { mapNovaPromotoraProposalsPayload } from './nova-promotora.mapper.js';
+import {
+  mapNovaPromotoraFinancialProposalsPayload,
+  mapNovaPromotoraProposalsPayload,
+} from './nova-promotora.mapper.js';
+import { analyzeNovaPromotoraPayload } from './nova-promotora.payload-diagnostics.js';
 import {
   NOVA_PROMOTORA_PROVIDER_KEY,
   type NovaPromotoraConnectionStatus,
@@ -49,7 +56,15 @@ const logProposalsResult = (result: NovaPromotoraProposalsRequestResult) => {
   logger.warn('Provider proposals discovery failed', meta);
 };
 
-export class NovaPromotoraService implements IntegrationProvider {
+export class NovaPromotoraService
+  implements IntegrationProvider, FinancialProposalReader
+{
+  constructor(private readonly runtime?: ProviderRuntimeOptions) {}
+
+  bindRuntime(runtime: ProviderRuntimeOptions): IntegrationProvider {
+    return new NovaPromotoraService(runtime);
+  }
+
   async healthCheck(): Promise<boolean> {
     try {
       await this.testConnection();
@@ -61,7 +76,13 @@ export class NovaPromotoraService implements IntegrationProvider {
   }
 
   async testConnection(): Promise<NovaPromotoraConnectionStatus> {
-    const result = await testNovaPromotoraConnection();
+    const result = await testNovaPromotoraConnection({
+      ...(this.runtime?.context ? { context: this.runtime.context } : {}),
+      ...(this.runtime?.healthTracker ? { healthTracker: this.runtime.healthTracker } : {}),
+      ...(this.runtime?.providerRetryPolicy
+        ? { providerRetryPolicy: this.runtime.providerRetryPolicy }
+        : {}),
+    });
 
     logConnectionResult(result);
 
@@ -76,7 +97,28 @@ export class NovaPromotoraService implements IntegrationProvider {
   }
 
   async listProposals(): Promise<IntegrationProposal[]> {
-    const result = await listNovaPromotoraProposals();
+    const result = await this.loadProposalsResult();
+    return mapNovaPromotoraProposalsPayload(result.data);
+  }
+
+  async listFinancialProposals(): Promise<FinancialProposal[]> {
+    const result = await this.loadProposalsResult();
+    return mapNovaPromotoraFinancialProposalsPayload(result.data);
+  }
+
+  async getPayloadDiagnostics(): Promise<ReturnType<typeof analyzeNovaPromotoraPayload>> {
+    const result = await this.loadProposalsResult();
+    return analyzeNovaPromotoraPayload(result.data);
+  }
+
+  private async loadProposalsResult(): Promise<Extract<NovaPromotoraProposalsRequestResult, { success: true }>> {
+    const result = await listNovaPromotoraProposals({
+      ...(this.runtime?.context ? { context: this.runtime.context } : {}),
+      ...(this.runtime?.healthTracker ? { healthTracker: this.runtime.healthTracker } : {}),
+      ...(this.runtime?.providerRetryPolicy
+        ? { providerRetryPolicy: this.runtime.providerRetryPolicy }
+        : {}),
+    });
 
     logProposalsResult(result);
 
@@ -88,6 +130,6 @@ export class NovaPromotoraService implements IntegrationProvider {
       throw new ProviderConnectionError(NOVA_PROMOTORA_PROVIDER_KEY);
     }
 
-    return mapNovaPromotoraProposalsPayload(result.data);
+    return result;
   }
 }

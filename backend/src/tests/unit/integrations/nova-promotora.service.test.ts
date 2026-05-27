@@ -19,6 +19,8 @@ vi.mock(
 import { ProviderConfigurationError } from '../../../modules/integrations/domain/errors/provider-configuration.error.js';
 import { ProviderConnectionError } from '../../../modules/integrations/domain/errors/provider-connection.error.js';
 import { NovaPromotoraService } from '../../../modules/integrations/providers/nova-promotora/nova-promotora.service.js';
+import { ProviderHealthTracker } from '../../../modules/integrations/application/provider-health-tracker.js';
+import { ProviderRetryPolicy } from '../../../modules/integrations/application/provider-retry-policy.js';
 
 const successResult = (): NovaPromotoraRequestResult => ({
   providerKey: 'nova-promotora',
@@ -167,5 +169,38 @@ describe('NovaPromotoraService', () => {
         'sensitive',
       );
     }
+  });
+
+  it('supports optional provider runtime via bindRuntime', async () => {
+    clientMock.testNovaPromotoraConnection.mockResolvedValue(successResult());
+    const service = new NovaPromotoraService();
+    const runtimeService = service.bindRuntime({
+      context: {
+        requestId: 'req-runtime-1',
+        tenantId: 'integration-test',
+        providerKey: 'nova-promotora',
+        capability: 'healthCheck',
+        operation: 'test_connection',
+        startedAt: new Date(),
+        attempt: 1,
+      },
+      healthTracker: new ProviderHealthTracker(),
+      providerRetryPolicy: new ProviderRetryPolicy({
+        baseDelayMs: 1,
+        maxDelayMs: 1,
+        jitterRatio: 0,
+      }),
+    });
+
+    await expect(runtimeService.testConnection()).resolves.toEqual({
+      connected: true,
+      status: 200,
+    });
+    expect(clientMock.testNovaPromotoraConnection).toHaveBeenCalledTimes(1);
+    expect(clientMock.testNovaPromotoraConnection.mock.calls[0][0]).toMatchObject({
+      context: {
+        requestId: 'req-runtime-1',
+      },
+    });
   });
 });

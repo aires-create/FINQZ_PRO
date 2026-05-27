@@ -2,6 +2,8 @@ import {
   listNovaPromotoraProposals,
   testNovaPromotoraConnection,
 } from '../../../modules/integrations/providers/nova-promotora/nova-promotora.client.js';
+import { ProviderHealthTracker } from '../../../modules/integrations/application/provider-health-tracker.js';
+import { ProviderRetryPolicy } from '../../../modules/integrations/application/provider-retry-policy.js';
 
 const createFetchResponse = (status: number) => {
   return new Response(null, {
@@ -35,6 +37,27 @@ describe('NovaPromotora client', () => {
       statusCode: 200,
     });
     expect(result.durationMs).toEqual(expect.any(Number));
+  });
+
+  it('applies retry on transient 5xx and succeeds', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(createFetchResponse(500))
+      .mockResolvedValueOnce(createFetchResponse(200)) as unknown as typeof fetch;
+
+    const result = await testNovaPromotoraConnection({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test',
+      fetcher,
+      healthPath: '/api',
+      timeoutMs: 50,
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      success: true,
+      statusCode: 200,
+    });
   });
 
   it('uses a custom health path when building the final URL', async () => {
@@ -222,5 +245,39 @@ describe('NovaPromotora client', () => {
         message: 'Provider configuration is incomplete',
       },
     });
+  });
+
+  it('updates health tracker when runtime governance is provided', async () => {
+    const fetcher = vi.fn(async () =>
+      Response.json({
+        data: [],
+      })) as unknown as typeof fetch;
+    const healthTracker = new ProviderHealthTracker();
+
+    const result = await listNovaPromotoraProposals({
+      apiKey: 'test-api-key',
+      baseUrl: 'https://nova-promotora.test/base/',
+      fetcher,
+      proposalsPath: '/proposals/search',
+      timeoutMs: 100,
+      context: {
+        requestId: 'req-np-1',
+        tenantId: 'integration-test',
+        providerKey: 'nova-promotora',
+        capability: 'proposalDiscovery',
+        operation: 'list_proposals',
+        startedAt: new Date(),
+        attempt: 1,
+      },
+      healthTracker,
+      providerRetryPolicy: new ProviderRetryPolicy({
+        baseDelayMs: 1,
+        maxDelayMs: 1,
+        jitterRatio: 0,
+      }),
+    });
+
+    expect(result.success).toBe(true);
+    expect(healthTracker.get('nova-promotora', 'proposalDiscovery')?.status).toBe('ok');
   });
 });

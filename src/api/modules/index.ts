@@ -14,3 +14,4 @@ export * from './financeiro.api';
 export * from './automacoes.api';
 export * from './dashboard.api';
 export * from './commercial.api';
+export * from './integrations.api';
