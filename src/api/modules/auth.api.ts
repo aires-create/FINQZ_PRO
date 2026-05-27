@@ -36,6 +36,9 @@ export interface ResetPasswordPayload {
   send_email?: boolean;
 }
 
+// TODO(legacy-cleanup): manter relativo ao prefixo /api/v1 do API_BASE_URL para evitar /api/v1/api/*.
+const AUTH_BASE_PATH = '/auth';
+
 // ============================================
 // API FUNCTIONS
 // ============================================
@@ -56,7 +59,7 @@ export const authApi = {
       : { email: normalizedInput, senha: credentials.senha };
 
     try {
-      const result = await apiCall<LoginResult>('/api/auth/login', {
+      const result = await apiCall<LoginResult>(`${AUTH_BASE_PATH}/login`, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -74,7 +77,7 @@ export const authApi = {
    * Logout
    */
   async logout(): Promise<void> {
-    return apiCall<void>('/api/auth/logout', {
+    return apiCall<void>(`${AUTH_BASE_PATH}/logout`, {
       method: 'POST',
     });
   },
@@ -83,7 +86,7 @@ export const authApi = {
    * Refresh token
    */
   async refreshToken(): Promise<AuthUser> {
-    return apiCall<AuthUser>('/api/auth/refresh', {
+    return apiCall<AuthUser>(`${AUTH_BASE_PATH}/refresh`, {
       method: 'POST',
     });
   },

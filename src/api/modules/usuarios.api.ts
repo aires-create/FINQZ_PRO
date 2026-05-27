@@ -27,6 +27,9 @@ export interface UpdateUsuarioPayload {
   status?: 'ativo' | 'inativo';
 }
 
+// TODO(legacy-cleanup): manter path relativo para compatibilidade com API_BASE_URL=/api/v1 sem gerar /api/v1/api/v1/*.
+const USERS_BASE_PATH = '/users';
+
 // ============================================
 // SCOPE HELPER FUNCTIONS
 // ============================================
@@ -71,14 +74,14 @@ export const usuariosApi = {
    */
   async getAll(filters?: UsuarioFilters): Promise<any[]> {
     const query = filters ? buildQueryString(filters) : '';
-    return apiCall<any[]>(`/users${query}`);
+    return apiCall<any[]>(`${USERS_BASE_PATH}${query}`);
   },
 
   /**
    * Get single usuário by ID
    */
   async getById(id: number): Promise<any> {
-    return apiCall<any>(`/users/${id}`);
+    return apiCall<any>(`${USERS_BASE_PATH}/${id}`);
   },
 
   /**
@@ -92,7 +95,7 @@ export const usuariosApi = {
       throw new Error('Para este perfil, é obrigatório vincular a um parceiro');
     }
     
-    return apiCall<any>('/users', {
+    return apiCall<any>(USERS_BASE_PATH, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -102,7 +105,7 @@ export const usuariosApi = {
    * Update existing usuário
    */
   async update(id: number, data: UpdateUsuarioPayload): Promise<any> {
-    return apiCall<any>(`/users/${id}`, {
+    return apiCall<any>(`${USERS_BASE_PATH}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -112,7 +115,7 @@ export const usuariosApi = {
    * Delete usuário
    */
   async delete(id: number): Promise<void> {
-    return apiCall<void>(`/users/${id}`, {
+    return apiCall<void>(`${USERS_BASE_PATH}/${id}`, {
       method: 'DELETE',
     });
   },
@@ -121,7 +124,7 @@ export const usuariosApi = {
    * Toggle usuário status
    */
   async toggleStatus(id: number): Promise<any> {
-    return apiCall<any>(`/users/${id}/toggle-status`, {
+    return apiCall<any>(`${USERS_BASE_PATH}/${id}/toggle-status`, {
       method: 'POST',
     });
   },
@@ -135,7 +138,7 @@ export const usuariosApi = {
       partner_id: partnerId,
       include_children: includeChildren,
     });
-    return apiCall<any[]>(`/users${query}`);
+    return apiCall<any[]>(`${USERS_BASE_PATH}${query}`);
   },
 };
 

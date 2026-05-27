@@ -36,6 +36,9 @@ export interface CreateClientePayload {
 
 export interface UpdateClientePayload extends Partial<CreateClientePayload> {}
 
+// TODO(legacy-cleanup): remover aliases antigos de clientes e manter somente /api/v1/crm/clientes.
+const CRM_CLIENTES_BASE_PATH = '/api/v1/crm/clientes';
+
 // ============================================
 // API FUNCTIONS
 // ============================================
@@ -49,7 +52,7 @@ export const clientesApi = {
    */
   async getAll(filters?: ClienteFilters): Promise<any[]> {
     const query = filters ? buildQueryString(filters) : '';
-    const response = await apiCall<any>(`/api/v1/crm/clientes${query}`);
+    const response = await apiCall<any>(`${CRM_CLIENTES_BASE_PATH}${query}`);
     return Array.isArray(response) ? response : response?.data ?? [];
   },
 
@@ -57,14 +60,14 @@ export const clientesApi = {
    * Get single cliente by ID
    */
   async getById(id: number): Promise<any> {
-    return apiCall<any>(`/api/clientes/${id}`);
+    return apiCall<any>(`${CRM_CLIENTES_BASE_PATH}/${id}`);
   },
 
   /**
    * Create new cliente
    */
   async create(data: CreateClientePayload): Promise<any> {
-    return apiCall<any>('/api/clientes', {
+    return apiCall<any>(CRM_CLIENTES_BASE_PATH, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -74,7 +77,7 @@ export const clientesApi = {
    * Update existing cliente
    */
   async update(id: number, data: UpdateClientePayload): Promise<any> {
-    return apiCall<any>(`/api/clientes/${id}`, {
+    return apiCall<any>(`${CRM_CLIENTES_BASE_PATH}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -84,7 +87,7 @@ export const clientesApi = {
    * Delete cliente
    */
   async delete(id: number): Promise<void> {
-    return apiCall<void>(`/api/clientes/${id}`, {
+    return apiCall<void>(`${CRM_CLIENTES_BASE_PATH}/${id}`, {
       method: 'DELETE',
     });
   },

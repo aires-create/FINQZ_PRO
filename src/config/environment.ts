@@ -76,10 +76,11 @@ const getEndpoint = (base: string, id: number) => `${base}/${id}`;
 export const ENDPOINTS = {
   // Autenticação
   AUTH: {
-    LOGIN: '/api/auth/login',
-    LOGOUT: '/api/auth/logout',
-    REFRESH: '/api/auth/refresh',
-    ME: '/api/auth/me',
+    // TODO(legacy-cleanup): manter catálogo legado mínimo sincronizado com o runtime Fastify oficial.
+    LOGIN: '/api/v1/auth/login',
+    LOGOUT: '/api/v1/auth/logout',
+    REFRESH: '/api/v1/auth/refresh',
+    ME: '/api/v1/auth/profile',
   },
   
   // Dashboard
@@ -92,12 +93,13 @@ export const ENDPOINTS = {
   
   // Clientes
   CLIENTES: {
-    LIST: '/api/clientes',
-    GET: (id: number) => getEndpoint('/api/clientes', id),
-    CREATE: '/api/clientes',
-    UPDATE: (id: number) => getEndpoint('/api/clientes', id),
-    DELETE: (id: number) => getEndpoint('/api/clientes', id),
-    SEARCH: '/api/clientes/search',
+    // TODO(legacy-cleanup): padronizar todos os consumidores no namespace crm oficial.
+    LIST: '/api/v1/crm/clientes',
+    GET: (id: number) => getEndpoint('/api/v1/crm/clientes', id),
+    CREATE: '/api/v1/crm/clientes',
+    UPDATE: (id: number) => getEndpoint('/api/v1/crm/clientes', id),
+    DELETE: (id: number) => getEndpoint('/api/v1/crm/clientes', id),
+    SEARCH: '/api/v1/crm/clientes',
   },
   
   // Oportunidades
@@ -125,12 +127,13 @@ export const ENDPOINTS = {
   
   // Usuários
   USUARIOS: {
-    LIST: '/api/usuarios',
-    GET: (id: number) => getEndpoint('/api/usuarios', id),
-    CREATE: '/api/usuarios',
-    UPDATE: (id: number) => getEndpoint('/api/usuarios', id),
-    DELETE: (id: number) => getEndpoint('/api/usuarios', id),
-    TOGGLE_STATUS: (id: number) => `${getEndpoint('/api/usuarios', id)}/toggle-status`,
+    // TODO(legacy-cleanup): manter alinhado ao endpoint oficial Fastify.
+    LIST: '/api/v1/users',
+    GET: (id: number) => getEndpoint('/api/v1/users', id),
+    CREATE: '/api/v1/users',
+    UPDATE: (id: number) => getEndpoint('/api/v1/users', id),
+    DELETE: (id: number) => getEndpoint('/api/v1/users', id),
+    TOGGLE_STATUS: (id: number) => `${getEndpoint('/api/v1/users', id)}/toggle-status`,
   },
   
   // Produtos
