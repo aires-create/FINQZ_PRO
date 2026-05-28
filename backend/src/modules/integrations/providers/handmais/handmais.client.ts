@@ -123,12 +123,13 @@ const updateHealth = (
   options: HandmaisClientOptions,
   status: ProviderHealthStatus,
   errorCode?: string,
+  capability: 'healthCheck' | 'initialSimulation' = 'healthCheck',
 ) => {
   if (!options.healthTracker) {
     return;
   }
 
-  options.healthTracker.set(HANDMAIS_PROVIDER_KEY, 'healthCheck', {
+  options.healthTracker.set(HANDMAIS_PROVIDER_KEY, capability, {
     status,
     updatedAt: new Date(),
     ...(errorCode ? { sanitizedErrorCode: errorCode } : {}),
@@ -158,7 +159,7 @@ export const testHandmaisConnection = async (
   };
 
   if (!baseUrl) {
-    updateHealth(options, 'down', 'HANDMAIS_CONFIGURATION_ERROR');
+    updateHealth(options, 'down', 'HANDMAIS_CONFIGURATION_ERROR', 'initialSimulation');
     return {
       success: false,
       providerKey: HANDMAIS_PROVIDER_KEY,
@@ -435,7 +436,7 @@ export const runHandmaisInitialSimulation = async (
     const latencyMs = Date.now() - startedAt;
 
     if (response.status === 401 || response.status === 403) {
-      updateHealth(options, 'down', 'PROVIDER_AUTHENTICATION_ERROR');
+      updateHealth(options, 'down', 'PROVIDER_AUTHENTICATION_ERROR', 'initialSimulation');
       return {
         success: false,
         providerKey: HANDMAIS_PROVIDER_KEY,
@@ -456,7 +457,7 @@ export const runHandmaisInitialSimulation = async (
     }
 
     if (response.status >= 500) {
-      updateHealth(options, 'degraded', 'PROVIDER_CONNECTION_ERROR');
+      updateHealth(options, 'degraded', 'PROVIDER_CONNECTION_ERROR', 'initialSimulation');
       return {
         success: false,
         providerKey: HANDMAIS_PROVIDER_KEY,
@@ -484,7 +485,7 @@ export const runHandmaisInitialSimulation = async (
     }
 
     if (!payload || typeof payload !== 'object') {
-      updateHealth(options, 'down', 'PROVIDER_UNKNOWN_ERROR');
+      updateHealth(options, 'down', 'PROVIDER_UNKNOWN_ERROR', 'initialSimulation');
       return {
         success: false,
         providerKey: HANDMAIS_PROVIDER_KEY,
@@ -520,7 +521,7 @@ export const runHandmaisInitialSimulation = async (
       (typeof objectPayload.requestId === 'string' ? objectPayload.requestId : undefined) ??
       requestId;
 
-    updateHealth(options, 'ok');
+    updateHealth(options, 'ok', undefined, 'initialSimulation');
     return {
       success: true,
       providerKey: HANDMAIS_PROVIDER_KEY,
@@ -555,6 +556,7 @@ export const runHandmaisInitialSimulation = async (
       options,
       isTimeoutError(error) || isNetwork ? 'degraded' : 'down',
       normalizedProviderError,
+      'initialSimulation',
     );
 
     return {
