@@ -12,6 +12,7 @@ import {
 type CapabilitySupport = boolean | "planned";
 
 type ProviderCapabilities = {
+  initialSimulation: CapabilitySupport;
   marginInquiry: CapabilitySupport;
   rateTables: CapabilitySupport;
   proposalPipeline: CapabilitySupport;
@@ -27,7 +28,7 @@ type ProviderCapabilityItem = {
   providerKey: string;
   displayName: string;
   category: string;
-  status: "active" | "planned" | "legacy";
+  status: "active" | "planned" | "legacy" | "experimental";
   capabilities: ProviderCapabilities;
 };
 
@@ -159,6 +160,7 @@ export const IntegracoesPage: React.FC = () => {
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         provider.status === 'active' ? 'bg-green-100 text-green-700' :
                         provider.status === 'legacy' ? 'bg-orange-100 text-orange-700' :
+                        provider.status === 'experimental' ? 'bg-purple-100 text-purple-700' :
                         'bg-blue-100 text-blue-700'
                       }`}>
                         {provider.status}
