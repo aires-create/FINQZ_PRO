@@ -5,15 +5,26 @@ export type HandmaisProviderKey = typeof HANDMAIS_PROVIDER_KEY;
 export type HandmaisConnectionErrorCode =
   | 'HANDMAIS_CONFIGURATION_ERROR'
   | 'HANDMAIS_TIMEOUT_INVALID'
-  | 'HANDMAIS_AUTH_INVALID';
+  | 'HANDMAIS_AUTH_INVALID'
+  | 'HANDMAIS_TIMEOUT_ERROR'
+  | 'HANDMAIS_NETWORK_ERROR'
+  | 'HANDMAIS_INVALID_RESPONSE'
+  | 'HANDMAIS_PROVIDER_UNAVAILABLE';
 
 export type HandmaisConnectionDiagnostics = {
   providerKey: HandmaisProviderKey;
   requestId?: string;
   authConfigured: boolean;
+  authValidated: boolean;
+  connectivityStatus: 'ok' | 'degraded' | 'down';
+  timeoutStatus: 'ok' | 'invalid' | 'timeout';
   timeoutMs: number;
+  latencyMs?: number;
+  endpoint: string;
+  httpStatus?: number;
+  normalizedProviderError?: string;
   environment: string;
-  externalCall: false;
+  externalCall: boolean;
 };
 
 export type HandmaisConnectionResult =
@@ -32,4 +43,3 @@ export type HandmaisConnectionResult =
         code: HandmaisConnectionErrorCode;
       };
     };
-
