@@ -43,3 +43,57 @@ export type HandmaisConnectionResult =
         code: HandmaisConnectionErrorCode;
       };
     };
+
+export type HandmaisInitialSimulationRequest = {
+  cpf: string;
+  matricula: string;
+};
+
+export type HandmaisNormalizedInitialSimulationResult = {
+  cpfMasked: string;
+  matricula: string;
+  cnpj?: string;
+  availableMargin?: number;
+  providerStatusCode: number;
+  providerMessage?: string;
+  requestId?: string;
+  consultedAt: string;
+};
+
+export type HandmaisInitialSimulationDiagnostics = {
+  providerKey: HandmaisProviderKey;
+  requestId?: string;
+  endpoint: string;
+  externalCall: true;
+  latencyMs?: number;
+  authValidated: boolean;
+  connectivityStatus: 'ok' | 'degraded' | 'down';
+  timeoutStatus: 'ok' | 'timeout';
+  providerStatusCode?: number;
+  normalizedProviderError?: string;
+};
+
+export type HandmaisInitialSimulationErrorCode =
+  | 'HANDMAIS_INVALID_CPF'
+  | 'HANDMAIS_INVALID_MATRICULA'
+  | 'HANDMAIS_TIMEOUT_ERROR'
+  | 'HANDMAIS_AUTH_INVALID'
+  | 'HANDMAIS_NETWORK_ERROR'
+  | 'HANDMAIS_PROVIDER_UNAVAILABLE'
+  | 'HANDMAIS_INVALID_RESPONSE';
+
+export type HandmaisInitialSimulationResult =
+  | {
+      success: true;
+      providerKey: HandmaisProviderKey;
+      data: HandmaisNormalizedInitialSimulationResult;
+      diagnostics: HandmaisInitialSimulationDiagnostics;
+    }
+  | {
+      success: false;
+      providerKey: HandmaisProviderKey;
+      diagnostics: HandmaisInitialSimulationDiagnostics;
+      error: {
+        code: HandmaisInitialSimulationErrorCode;
+      };
+    };

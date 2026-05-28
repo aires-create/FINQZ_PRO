@@ -11,6 +11,7 @@ import { GetProviderRuntimeIssuesUseCase } from './application/get-provider-runt
 import { GetProviderRuntimeSummaryUseCase } from './application/get-provider-runtime-summary.use-case.js';
 import { TestIntegrationProviderConnectionUseCase } from './application/test-integration-provider-connection.use-case.js';
 import { TestIntegrationProviderMarginInquiryUseCase } from './application/test-integration-provider-margin-inquiry.use-case.js';
+import { TestIntegrationProviderInitialSimulationUseCase } from './application/test-integration-provider-initial-simulation.use-case.js';
 import { ProviderHealthTracker } from './application/provider-health-tracker.js';
 import { ProviderRuntimeDiagnosticsService } from './application/provider-runtime-diagnostics.service.js';
 import { IntegrationsController } from './presentation/http/integrations.controller.js';
@@ -44,6 +45,9 @@ const listProviderCapabilitiesUseCase = new ListProviderCapabilitiesUseCase();
 const testProviderMarginInquiryUseCase = new TestIntegrationProviderMarginInquiryUseCase(
   providerEngine,
 );
+const testProviderInitialSimulationUseCase = new TestIntegrationProviderInitialSimulationUseCase(
+  providerEngine,
+);
 const providerHealthTracker = new ProviderHealthTracker();
 const providerRuntimeDiagnosticsService = new ProviderRuntimeDiagnosticsService(
   providerHealthTracker,
@@ -64,6 +68,7 @@ const integrationsController = new IntegrationsController(
   getProviderPayloadDiagnosticsUseCase,
   listProviderCapabilitiesUseCase,
   testProviderMarginInquiryUseCase,
+  testProviderInitialSimulationUseCase,
   getProviderRuntimeSummaryUseCase,
   getProviderRuntimeIssuesUseCase,
   getProviderRuntimeDiagnosticsUseCase,
@@ -96,6 +101,7 @@ export { ListFinancialProviderProposalsUseCase } from './application/list-financ
 export { GetProviderPayloadDiagnosticsUseCase } from './application/get-provider-payload-diagnostics.use-case.js';
 export { TestIntegrationProviderConnectionUseCase } from './application/test-integration-provider-connection.use-case.js';
 export { TestIntegrationProviderMarginInquiryUseCase } from './application/test-integration-provider-margin-inquiry.use-case.js';
+export { TestIntegrationProviderInitialSimulationUseCase } from './application/test-integration-provider-initial-simulation.use-case.js';
 export type {
   IntegrationProposal,
   IntegrationProposalReader,

@@ -3,8 +3,15 @@ import type { ProviderRuntimeOptions } from '../../application/provider-engine.j
 import { ProviderConfigurationError } from '../../domain/errors/provider-configuration.error.js';
 import { ProviderConnectionError } from '../../domain/errors/provider-connection.error.js';
 import { createModuleLogger } from '../../../../shared/logger.js';
-import { testHandmaisConnection } from './handmais.client.js';
+import {
+  runHandmaisInitialSimulation,
+  testHandmaisConnection,
+} from './handmais.client.js';
 import { HANDMAIS_PROVIDER_KEY } from './handmais.types.js';
+import type {
+  HandmaisInitialSimulationRequest,
+  HandmaisNormalizedInitialSimulationResult,
+} from './handmais.types.js';
 
 const logger = createModuleLogger('integrations.handmais');
 
@@ -63,5 +70,46 @@ export class HandmaisService implements IntegrationProvider {
       message: result.message,
     };
   }
-}
 
+  async runInitialSimulation(
+    input: HandmaisInitialSimulationRequest,
+  ): Promise<HandmaisNormalizedInitialSimulationResult> {
+    const result = await runHandmaisInitialSimulation(input, {
+      ...(this.runtime?.context ? { context: this.runtime.context } : {}),
+      ...(this.runtime?.healthTracker ? { healthTracker: this.runtime.healthTracker } : {}),
+    });
+
+    if (!result.success) {
+      logger.warn('Provider initial simulation failed', {
+        providerKey: result.providerKey,
+        requestId: result.diagnostics.requestId,
+        endpoint: result.diagnostics.endpoint,
+        latencyMs: result.diagnostics.latencyMs,
+        errorCode: result.error.code,
+        normalizedProviderError: result.diagnostics.normalizedProviderError,
+      });
+
+      if (
+        result.error.code === 'HANDMAIS_INVALID_CPF' ||
+        result.error.code === 'HANDMAIS_INVALID_MATRICULA' ||
+        result.error.code === 'HANDMAIS_AUTH_INVALID'
+      ) {
+        throw new ProviderConfigurationError(HANDMAIS_PROVIDER_KEY);
+      }
+
+      throw new ProviderConnectionError(HANDMAIS_PROVIDER_KEY);
+    }
+
+    logger.info('Provider initial simulation completed', {
+      providerKey: result.providerKey,
+      requestId: result.diagnostics.requestId,
+      endpoint: result.diagnostics.endpoint,
+      latencyMs: result.diagnostics.latencyMs,
+      providerStatusCode: result.diagnostics.providerStatusCode,
+      connectivityStatus: result.diagnostics.connectivityStatus,
+      cpfMasked: result.data.cpfMasked,
+    });
+
+    return result.data;
+  }
+}

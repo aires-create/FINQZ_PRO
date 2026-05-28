@@ -17,6 +17,11 @@ const marginInquiryBodySchema = z.object({
   message: 'document or cpf is required',
 });
 
+const initialSimulationBodySchema = z.object({
+  cpf: z.string().trim().min(11),
+  matricula: z.string().trim().min(1),
+});
+
 const validateBody = (schema: z.ZodTypeAny) => async (request: any, reply: any) => {
   const result = schema.safeParse(request.body);
 
@@ -88,6 +93,19 @@ export const createIntegrationsRoutes = (
         ],
       },
       integrationsController.testProviderMarginInquiry,
+    );
+
+    app.post(
+      '/providers/:providerKey/initial-simulation/test',
+      {
+        preHandler: [
+          authenticate,
+          tenantContextMiddleware,
+          requirePermissions('tenant:read'),
+          validateBody(initialSimulationBodySchema),
+        ],
+      },
+      integrationsController.testProviderInitialSimulation,
     );
 
     app.get(

@@ -2,7 +2,12 @@ import type { ProviderExecutionContext } from '../../application/provider-execut
 import type { ProviderHealthTracker, ProviderHealthStatus } from '../../application/provider-health-tracker.js';
 import { mapProviderError } from '../../application/provider-error-mapper.js';
 import { sanitizeProviderError } from '../../application/provider-sanitizer.js';
-import { HANDMAIS_PROVIDER_KEY, type HandmaisConnectionResult } from './handmais.types.js';
+import {
+  HANDMAIS_PROVIDER_KEY,
+  type HandmaisConnectionResult,
+  type HandmaisInitialSimulationRequest,
+  type HandmaisInitialSimulationResult,
+} from './handmais.types.js';
 
 type HandmaisClientOptions = {
   context?: ProviderExecutionContext;
@@ -12,6 +17,7 @@ type HandmaisClientOptions = {
 const DEFAULT_TIMEOUT_MS = 15000;
 const SAFE_CONNECTIVITY_TIMEOUT_MS = 7000;
 const HEALTH_PATH = '/health';
+const INITIAL_SIMULATION_PATH = '/uy3/simulacao_clt';
 
 const toPositiveTimeout = (rawValue: string | undefined): number => {
   const value = Number(rawValue);
@@ -44,6 +50,37 @@ const isTimeoutError = (error: unknown): boolean =>
   error !== null &&
   'name' in error &&
   error.name === 'AbortError';
+
+const cpfDigits = (cpf: string): string => cpf.replace(/\D+/g, '');
+const maskCpf = (cpf: string): string => {
+  const digits = cpfDigits(cpf);
+  if (digits.length < 4) {
+    return '***';
+  }
+  return `***${digits.slice(-4)}`;
+};
+
+const parseOptionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.').replace(/[^\d.-]/g, '');
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+};
+
+const resolveInitialSimulationUrl = (baseUrl: string): string => {
+  const trimmed = baseUrl.trim();
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `${trimmed.replace(/\/+$/g, '')}${INITIAL_SIMULATION_PATH}`;
+};
 
 const normalizeHandmaisError = (
   error: unknown,
@@ -305,4 +342,244 @@ export const testHandmaisConnection = async (
     },
     error: { code: errorCode },
   };
+};
+
+export const runHandmaisInitialSimulation = async (
+  input: HandmaisInitialSimulationRequest,
+  options: HandmaisClientOptions = {},
+): Promise<HandmaisInitialSimulationResult> => {
+  const baseUrl = process.env.HANDMAIS_BASE_URL?.trim();
+  const apiKey = process.env.HANDMAIS_API_KEY?.trim();
+  const timeoutRaw = process.env.HANDMAIS_TIMEOUT?.trim();
+  const timeoutMs = clampConnectivityTimeout(toPositiveTimeout(timeoutRaw));
+  const requestId = options.context?.requestId;
+
+  const invalidCpf = cpfDigits(input.cpf).length !== 11;
+  if (invalidCpf) {
+    return {
+      success: false,
+      providerKey: HANDMAIS_PROVIDER_KEY,
+      diagnostics: {
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        ...(requestId ? { requestId } : {}),
+        endpoint: '',
+        externalCall: true,
+        authValidated: false,
+        connectivityStatus: 'down',
+        timeoutStatus: 'ok',
+        normalizedProviderError: 'PROVIDER_UNKNOWN_ERROR',
+      },
+      error: { code: 'HANDMAIS_INVALID_CPF' },
+    };
+  }
+
+  if (!input.matricula || !input.matricula.trim()) {
+    return {
+      success: false,
+      providerKey: HANDMAIS_PROVIDER_KEY,
+      diagnostics: {
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        ...(requestId ? { requestId } : {}),
+        endpoint: '',
+        externalCall: true,
+        authValidated: false,
+        connectivityStatus: 'down',
+        timeoutStatus: 'ok',
+        normalizedProviderError: 'PROVIDER_UNKNOWN_ERROR',
+      },
+      error: { code: 'HANDMAIS_INVALID_MATRICULA' },
+    };
+  }
+
+  if (!baseUrl || !apiKey) {
+    updateHealth(options, 'down', 'HANDMAIS_CONFIGURATION_ERROR');
+    return {
+      success: false,
+      providerKey: HANDMAIS_PROVIDER_KEY,
+      diagnostics: {
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        ...(requestId ? { requestId } : {}),
+        endpoint: baseUrl ?? '',
+        externalCall: true,
+        authValidated: false,
+        connectivityStatus: 'down',
+        timeoutStatus: 'ok',
+        normalizedProviderError: 'PROVIDER_CONFIGURATION_ERROR',
+      },
+      error: { code: 'HANDMAIS_AUTH_INVALID' },
+    };
+  }
+
+  const endpoint = resolveInitialSimulationUrl(baseUrl);
+  const startedAt = Date.now();
+  const body = {
+    cpf: cpfDigits(input.cpf),
+    matricula: input.matricula.trim(),
+  };
+
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json',
+        ...(requestId ? { 'X-Request-ID': requestId, 'X-Correlation-ID': requestId } : {}),
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const latencyMs = Date.now() - startedAt;
+
+    if (response.status === 401 || response.status === 403) {
+      updateHealth(options, 'down', 'PROVIDER_AUTHENTICATION_ERROR');
+      return {
+        success: false,
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        diagnostics: {
+          providerKey: HANDMAIS_PROVIDER_KEY,
+          ...(requestId ? { requestId } : {}),
+          endpoint,
+          externalCall: true,
+          latencyMs,
+          authValidated: false,
+          connectivityStatus: 'down',
+          timeoutStatus: 'ok',
+          providerStatusCode: response.status,
+          normalizedProviderError: 'PROVIDER_AUTHENTICATION_ERROR',
+        },
+        error: { code: 'HANDMAIS_AUTH_INVALID' },
+      };
+    }
+
+    if (response.status >= 500) {
+      updateHealth(options, 'degraded', 'PROVIDER_CONNECTION_ERROR');
+      return {
+        success: false,
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        diagnostics: {
+          providerKey: HANDMAIS_PROVIDER_KEY,
+          ...(requestId ? { requestId } : {}),
+          endpoint,
+          externalCall: true,
+          latencyMs,
+          authValidated: true,
+          connectivityStatus: 'degraded',
+          timeoutStatus: 'ok',
+          providerStatusCode: response.status,
+          normalizedProviderError: 'PROVIDER_CONNECTION_ERROR',
+        },
+        error: { code: 'HANDMAIS_PROVIDER_UNAVAILABLE' },
+      };
+    }
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = undefined;
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      updateHealth(options, 'down', 'PROVIDER_UNKNOWN_ERROR');
+      return {
+        success: false,
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        diagnostics: {
+          providerKey: HANDMAIS_PROVIDER_KEY,
+          ...(requestId ? { requestId } : {}),
+          endpoint,
+          externalCall: true,
+          latencyMs,
+          authValidated: response.ok,
+          connectivityStatus: 'down',
+          timeoutStatus: 'ok',
+          providerStatusCode: response.status,
+          normalizedProviderError: 'PROVIDER_UNKNOWN_ERROR',
+        },
+        error: { code: 'HANDMAIS_INVALID_RESPONSE' },
+      };
+    }
+
+    const objectPayload = payload as Record<string, unknown>;
+    const availableMargin =
+      parseOptionalNumber(objectPayload.valor_margem) ??
+      parseOptionalNumber(objectPayload.availableMargin) ??
+      parseOptionalNumber(objectPayload.margem);
+    const providerMessage =
+      (typeof objectPayload.mensagem === 'string' ? objectPayload.mensagem : undefined) ??
+      (typeof objectPayload.message === 'string' ? objectPayload.message : undefined);
+    const cnpj = typeof objectPayload.cnpj === 'string' ? objectPayload.cnpj : undefined;
+    const responseMatricula =
+      (typeof objectPayload.matricula === 'string' ? objectPayload.matricula : undefined) ??
+      body.matricula;
+    const responseRequestId =
+      (typeof objectPayload.requestId === 'string' ? objectPayload.requestId : undefined) ??
+      requestId;
+
+    updateHealth(options, 'ok');
+    return {
+      success: true,
+      providerKey: HANDMAIS_PROVIDER_KEY,
+      data: {
+        cpfMasked: maskCpf(body.cpf),
+        matricula: responseMatricula,
+        ...(cnpj ? { cnpj } : {}),
+        ...(availableMargin !== undefined ? { availableMargin } : {}),
+        providerStatusCode: response.status,
+        ...(providerMessage ? { providerMessage } : {}),
+        ...(responseRequestId ? { requestId: responseRequestId } : {}),
+        consultedAt: new Date().toISOString(),
+      },
+      diagnostics: {
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        ...(requestId ? { requestId } : {}),
+        endpoint,
+        externalCall: true,
+        latencyMs,
+        authValidated: true,
+        connectivityStatus: 'ok',
+        timeoutStatus: 'ok',
+        providerStatusCode: response.status,
+      },
+    };
+  } catch (error) {
+    const timeoutStatus = isTimeoutError(error) ? 'timeout' : 'ok';
+    const normalizedProviderError = sanitizeProviderError(error).code ?? mapProviderError(error);
+    const isNetwork = error instanceof Error && !isTimeoutError(error);
+
+    updateHealth(
+      options,
+      isTimeoutError(error) || isNetwork ? 'degraded' : 'down',
+      normalizedProviderError,
+    );
+
+    return {
+      success: false,
+      providerKey: HANDMAIS_PROVIDER_KEY,
+      diagnostics: {
+        providerKey: HANDMAIS_PROVIDER_KEY,
+        ...(requestId ? { requestId } : {}),
+        endpoint,
+        externalCall: true,
+        latencyMs: Date.now() - startedAt,
+        authValidated: false,
+        connectivityStatus: isTimeoutError(error) || isNetwork ? 'degraded' : 'down',
+        timeoutStatus,
+        normalizedProviderError,
+      },
+      error: {
+        code: isTimeoutError(error)
+          ? 'HANDMAIS_TIMEOUT_ERROR'
+          : isNetwork
+            ? 'HANDMAIS_NETWORK_ERROR'
+            : 'HANDMAIS_INVALID_RESPONSE',
+      },
+    };
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 };

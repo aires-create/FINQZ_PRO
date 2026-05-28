@@ -11,6 +11,7 @@ export type IntegrationProviderKey =
 export type CapabilitySupport = boolean | 'planned';
 
 export type ProviderCapabilities = {
+  initialSimulation: CapabilitySupport;
   marginInquiry: CapabilitySupport;
   rateTables: CapabilitySupport;
   proposalPipeline: CapabilitySupport;
@@ -28,6 +29,7 @@ export type ProviderCapabilityRegistryMap = Readonly<
 
 export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
   'nova-promotora': {
+    initialSimulation: false,
     marginInquiry: 'planned',
     rateTables: true,
     proposalPipeline: true,
@@ -39,6 +41,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   'sos-bolso': {
+    initialSimulation: false,
     marginInquiry: 'planned',
     rateTables: 'planned',
     proposalPipeline: 'planned',
@@ -50,6 +53,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   handmais: {
+    initialSimulation: true,
     marginInquiry: 'planned',
     rateTables: 'planned',
     proposalPipeline: 'planned',
@@ -61,6 +65,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   'hand-plus': {
+    initialSimulation: 'planned',
     marginInquiry: 'planned',
     rateTables: 'planned',
     proposalPipeline: 'planned',
@@ -72,6 +77,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   'nova-vida-ti': {
+    initialSimulation: false,
     marginInquiry: 'planned',
     rateTables: 'planned',
     proposalPipeline: 'planned',
@@ -83,6 +89,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   'whatsapp-business': {
+    initialSimulation: false,
     marginInquiry: false,
     rateTables: false,
     proposalPipeline: false,
@@ -94,6 +101,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   'bluepay': {
+    initialSimulation: false,
     marginInquiry: false,
     rateTables: false,
     proposalPipeline: false,
@@ -105,6 +113,7 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     webhooks: 'planned',
   },
   'bulk-messaging': {
+    initialSimulation: false,
     marginInquiry: false,
     rateTables: false,
     proposalPipeline: false,

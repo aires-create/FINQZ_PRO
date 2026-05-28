@@ -10,6 +10,7 @@ import type { GetProviderRuntimeIssuesUseCase } from '../../application/get-prov
 import type { GetProviderRuntimeSummaryUseCase } from '../../application/get-provider-runtime-summary.use-case.js';
 import type { TestIntegrationProviderConnectionUseCase } from '../../application/test-integration-provider-connection.use-case.js';
 import type { TestIntegrationProviderMarginInquiryUseCase } from '../../application/test-integration-provider-margin-inquiry.use-case.js';
+import type { TestIntegrationProviderInitialSimulationUseCase } from '../../application/test-integration-provider-initial-simulation.use-case.js';
 import { IntegrationError } from '../../domain/errors/integration.error.js';
 import { ProviderCapabilityNotSupportedError } from '../../domain/errors/provider-capability-not-supported.error.js';
 import { ProviderAuthenticationError } from '../../domain/errors/provider-authentication.error.js';
@@ -97,6 +98,7 @@ export class IntegrationsController {
     private readonly getProviderPayloadDiagnosticsUseCase: GetProviderPayloadDiagnosticsUseCase,
     private readonly listProviderCapabilitiesUseCase: ListProviderCapabilitiesUseCase,
     private readonly testProviderMarginInquiryUseCase: TestIntegrationProviderMarginInquiryUseCase,
+    private readonly testProviderInitialSimulationUseCase: TestIntegrationProviderInitialSimulationUseCase,
     private readonly getProviderRuntimeSummaryUseCase: GetProviderRuntimeSummaryUseCase,
     private readonly getProviderRuntimeIssuesUseCase: GetProviderRuntimeIssuesUseCase,
     private readonly getProviderRuntimeDiagnosticsUseCase: GetProviderRuntimeDiagnosticsUseCase,
@@ -239,6 +241,49 @@ export class IntegrationsController {
       );
 
       reply.send(result);
+    } catch (error) {
+      if (error instanceof IntegrationError) {
+        sendIntegrationError(reply, error);
+        return;
+      }
+
+      sendUnexpectedIntegrationError(reply);
+    }
+  };
+
+  testProviderInitialSimulation = async (
+    request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    try {
+      const params = request.params as { providerKey?: string };
+      const body = (request.body as { cpf?: string; matricula?: string } | undefined) ?? {};
+      const cpf = String(body.cpf ?? '').replace(/\D+/g, '');
+      const matricula = String(body.matricula ?? '').trim();
+
+      if (cpf.length !== 11 || !matricula) {
+        reply.status(400).send({
+          success: false,
+          error: {
+            code: 'INTEGRATION_VALIDATION_ERROR',
+            message: 'Invalid initial simulation payload',
+          },
+        });
+        return;
+      }
+
+      const result = await this.testProviderInitialSimulationUseCase.execute(
+        String(params.providerKey ?? ''),
+        {
+          cpf,
+          matricula,
+        },
+      );
+
+      reply.send({
+        success: true,
+        data: result,
+      });
     } catch (error) {
       if (error instanceof IntegrationError) {
         sendIntegrationError(reply, error);
