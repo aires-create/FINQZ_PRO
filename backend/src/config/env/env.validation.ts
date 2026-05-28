@@ -150,6 +150,17 @@ export const validateUrls = (
       'SOS_BOLSO_BASE_URL must be a valid http(s) URL.',
     );
   }
+
+  if (
+    input.HANDMAIS_BASE_URL &&
+    !isValidUrlWithProtocol(input.HANDMAIS_BASE_URL, ['http:', 'https:'])
+  ) {
+    addEnvIssue(
+      context,
+      'HANDMAIS_BASE_URL',
+      'HANDMAIS_BASE_URL must be a valid http(s) URL.',
+    );
+  }
 };
 
 export const validateCors = (
@@ -306,6 +317,17 @@ export const validateNumbers = (
       context,
       'SOS_BOLSO_ENABLED',
       'SOS_BOLSO_ENABLED must be a boolean (true/false).',
+    );
+  }
+
+  if (
+    input.HANDMAIS_TIMEOUT !== undefined &&
+    parsePositiveInteger(input.HANDMAIS_TIMEOUT) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'HANDMAIS_TIMEOUT',
+      'HANDMAIS_TIMEOUT must be a positive integer.',
     );
   }
 };

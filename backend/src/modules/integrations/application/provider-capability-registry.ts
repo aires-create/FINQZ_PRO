@@ -1,6 +1,7 @@
 export type IntegrationProviderKey =
   | 'nova-promotora'
   | 'sos-bolso'
+  | 'handmais'
   | 'hand-plus'
   | 'nova-vida-ti'
   | 'whatsapp-business'
@@ -44,6 +45,17 @@ export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
     commissions: 'planned',
     commissionPayout: false,
     dataEnrichment: 'planned',
+    messageSender: false,
+    bulkMessaging: false,
+    webhooks: 'planned',
+  },
+  handmais: {
+    marginInquiry: 'planned',
+    rateTables: 'planned',
+    proposalPipeline: 'planned',
+    commissions: false,
+    commissionPayout: false,
+    dataEnrichment: false,
     messageSender: false,
     bulkMessaging: false,
     webhooks: 'planned',
@@ -121,4 +133,3 @@ export class ProviderCapabilityRegistry {
     return this.registry[providerKey][capability];
   }
 }
-

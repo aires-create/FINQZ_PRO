@@ -105,4 +105,8 @@ export const rawEnvSchema = z.object({
   BLUEPAY_CLIENT_ID: optionalEnvString,
   BLUEPAY_CLIENT_SECRET: optionalEnvString,
   BLUEPAY_TIMEOUT_MS: optionalEnvString,
+  HANDMAIS_BASE_URL: optionalEnvString,
+  HANDMAIS_API_KEY: optionalEnvString,
+  HANDMAIS_TIMEOUT: optionalEnvString,
+  HANDMAIS_ENV: optionalEnvString,
 });

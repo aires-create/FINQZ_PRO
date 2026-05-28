@@ -59,6 +59,12 @@ export interface AppConfig {
       clientSecret?: string;
       timeoutMs?: number;
     };
+    handmais: {
+      baseUrl?: string;
+      apiKey?: string;
+      timeoutMs?: number;
+      environment?: string;
+    };
   };
 }
 
@@ -120,6 +126,12 @@ export const config: AppConfig = {
       ...(env.bluepayClientId ? { clientId: env.bluepayClientId } : {}),
       ...(env.bluepayClientSecret ? { clientSecret: env.bluepayClientSecret } : {}),
       ...(env.bluepayTimeoutMs ? { timeoutMs: env.bluepayTimeoutMs } : {}),
+    },
+    handmais: {
+      ...(env.handmaisBaseUrl ? { baseUrl: env.handmaisBaseUrl } : {}),
+      ...(env.handmaisApiKey ? { apiKey: env.handmaisApiKey } : {}),
+      ...(env.handmaisTimeoutMs ? { timeoutMs: env.handmaisTimeoutMs } : {}),
+      ...(env.handmaisEnv ? { environment: env.handmaisEnv } : {}),
     },
   },
 };

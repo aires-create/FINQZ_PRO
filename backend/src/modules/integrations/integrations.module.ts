@@ -16,12 +16,14 @@ import { ProviderRuntimeDiagnosticsService } from './application/provider-runtim
 import { IntegrationsController } from './presentation/http/integrations.controller.js';
 import { createIntegrationsRoutes } from './presentation/http/integrations.routes.js';
 import { BluepayService } from './providers/bluepay/bluepay.service.js';
+import { HandmaisService } from './providers/handmais/handmais.service.js';
 import { NovaPromotoraService } from './providers/nova-promotora/nova-promotora.service.js';
 import { SosBolsoService } from './providers/sos-bolso/sos-bolso.service.js';
 
 const providerRegistry = {
   'nova-promotora': new NovaPromotoraService(),
   'sos-bolso': new SosBolsoService(),
+  handmais: new HandmaisService(),
   bluepay: new BluepayService(),
 } satisfies IntegrationProviderRegistry;
 const providerEngine = new ProviderEngine(providerRegistry);

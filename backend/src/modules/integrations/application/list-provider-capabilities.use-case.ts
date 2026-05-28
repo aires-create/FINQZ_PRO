@@ -4,7 +4,7 @@ import {
   type IntegrationProviderKey,
 } from './provider-capability-registry.js';
 
-export type ProviderCatalogStatus = 'active' | 'planned' | 'legacy';
+export type ProviderCatalogStatus = 'active' | 'planned' | 'legacy' | 'experimental';
 
 export type ProviderCatalogItem = {
   providerKey: string;
@@ -31,6 +31,11 @@ const providerCatalogMeta: Record<
     displayName: 'SOS BOLSO',
     category: 'credito',
     status: 'planned',
+  },
+  handmais: {
+    displayName: 'HANDMAIS',
+    category: 'credito',
+    status: 'experimental',
   },
   'hand-plus': {
     displayName: 'HAND+',
