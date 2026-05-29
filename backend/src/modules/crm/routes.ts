@@ -20,6 +20,7 @@ import type {
 } from './dto/customers.dto.js';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
 import { AppError } from '../../shared/errors/index.js';
+import { requirePermissions } from '../rbac/rbac.guard.js';
 
 type LeadParams = {
   id: string;
@@ -140,7 +141,9 @@ export async function crmRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get('/clientes/:id', async (request, reply) => {
+  app.get('/clientes/:id', {
+    preHandler: [requirePermissions('customer:read')],
+  }, async (request, reply) => {
     try {
       const tenantId = getTenantId(request);
       const params = request.params as { id: string };
@@ -171,7 +174,9 @@ export async function crmRoutes(app: FastifyInstance) {
     }
   });
 
-  app.get('/clientes', async (request, reply) => {
+  app.get('/clientes', {
+    preHandler: [requirePermissions('customer:read')],
+  }, async (request, reply) => {
     try {
       const tenantId = getTenantId(request);
 
@@ -203,7 +208,9 @@ export async function crmRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post<{ Body: CreateCustomerBody }>('/clientes', async (request, reply) => {
+  app.post<{ Body: CreateCustomerBody }>('/clientes', {
+    preHandler: [requirePermissions('customer:create')],
+  }, async (request, reply) => {
     try {
       const body = createCustomerSchema.parse(request.body) as CreateCustomerBody;
 
@@ -228,6 +235,9 @@ export async function crmRoutes(app: FastifyInstance) {
 
   app.put<{ Params: { id: string }; Body: UpdateCustomerBody }>(
     '/clientes/:id',
+    {
+      preHandler: [requirePermissions('customer:update')],
+    },
     async (request, reply) => {
       try {
         const { id } = request.params;
@@ -253,7 +263,9 @@ export async function crmRoutes(app: FastifyInstance) {
     },
   );
 
-  app.delete<{ Params: { id: string } }>('/clientes/:id', async (request, reply) => {
+  app.delete<{ Params: { id: string } }>('/clientes/:id', {
+    preHandler: [requirePermissions('customer:delete')],
+  }, async (request, reply) => {
     try {
       const { id } = request.params;
       const tenantId = getTenantId(request);

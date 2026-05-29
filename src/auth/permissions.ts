@@ -4,6 +4,7 @@
 // Nota: Validação final deve ocorrer no backend
 
 import { ROLE_PERMISSIONS, ROLE_SCOPES, Role, Permission, Scope } from '../types';
+import { hasPermissionMatch } from './permissionMatcher';
 
 // ============================================
 // TYPES
@@ -251,11 +252,16 @@ export const canAccess = (
     return true;
   }
   
-  // 7. Verifica permissão específica para módulo/ação
-  const requiredPermission = `${module}_${action}`.toUpperCase() as Permission;
+  // 7. Prioriza padrão canônico resource:action e mantém fallback legado MODULE_ACTION.
   const userPermissions = user.permissions;
-  
-  return userPermissions.includes(requiredPermission as Permission);
+  const canonicalPermission = `${module}:${action}`;
+  if (hasPermissionMatch(userPermissions, canonicalPermission)) {
+    return true;
+  }
+
+  // Fallback legado (mantido por compatibilidade)
+  const requiredPermission = `${module}_${action}`.toUpperCase() as Permission;
+  return hasPermissionMatch(userPermissions, requiredPermission);
 };
 
 /**

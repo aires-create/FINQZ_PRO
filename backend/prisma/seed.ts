@@ -1244,6 +1244,11 @@ async function createRolePermissions(
       roleSlug: 'ROLE_ADMIN_SISTEMA',
       permissionSlugs: [
         'tenant:read',
+        'customer:create',
+        'customer:read',
+        'customer:update',
+        'customer:delete',
+        'customer:export',
       ],
     },
     {
@@ -1258,6 +1263,11 @@ async function createRolePermissions(
         'FINANCE_VIEW',
         'SALES_VIEW',
         'CUSTOMER_VIEW',
+        'customer:create',
+        'customer:read',
+        'customer:update',
+        'customer:delete',
+        'customer:export',
       ],
     },
     {

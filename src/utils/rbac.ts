@@ -1,5 +1,13 @@
 // FINQZ PRO - RBAC & Multi-tenant Helpers
 // Funções auxiliares para controle de acesso e multi-tenancy
+//
+// DEPRECATED (MICROFASE 7I):
+// Arquivo legado mantido somente por compatibilidade temporária.
+// Nao usar em novos modulos. A governanca de permissoes ativa esta em:
+// - src/auth/permissionMatcher.ts
+// - src/auth/permissions.ts
+// - src/auth/guards.tsx
+// Remocao futura planejada apos auditoria completa de usos.
 
 import { AuthUser, Role, Permission, isAdminRole, getScopeByRole } from './permissions';
 
