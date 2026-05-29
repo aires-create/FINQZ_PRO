@@ -45,6 +45,7 @@ import {
   Sun,
 } from "lucide-react";
 import useAppStore from "../store";
+import { hasPermissionMatch } from "../auth/permissionMatcher";
 import { finqzAuth } from "../auth/finqzAuth";
 import finqzLogoBlue from "../assets/brand/finqz-logo-blue.png";
 
@@ -84,6 +85,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   "/app/admin/tags": "system:config",
   "/app/admin/pipelines": "system:config",
   "/app/admin/integracoes": "system:config",
+  "/app/admin/provider-operations": "tenant:read",
   "/app/admin/automacoes": "system:config",
   "/app/admin/notificacoes": "system:config",
   "/app/admin/seguranca": "system:config",
@@ -93,68 +95,6 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   "/app/configuracoes": "system:config",
   "/app/produtos": "produtos:read",
   "/app/automacoes": "automacoes:read",
-};
-
-const ACTION_ALIAS_MAP: Record<string, string[]> = {
-  read: ["READ", "VIEW"],
-  view: ["VIEW", "READ"],
-  create: ["CREATE"],
-  edit: ["EDIT", "UPDATE"],
-  delete: ["DELETE"],
-  export: ["EXPORT"],
-};
-
-const MODULE_ALIAS_MAP: Record<string, string[]> = {
-  customer: ["CUSTOMER", "CLIENTES", "PARCEIROS"],
-  sales: ["SALES", "OPORTUNIDADES", "ESTRUTURA_COMERCIAL", "TABELAS_COMERCIAIS"],
-  report: ["REPORT", "RELATORIOS"],
-  finance: ["FINANCE", "FINANCEIRO", "CONTA_CORRENTE"],
-  audit: ["AUDIT", "AUDITORIA"],
-  simulador: ["SIMULADOR"],
-  system: ["SYSTEM", "CONFIGURACOES", "GERAL", "TAGS", "PIPELINES", "INTEGRACOES", "AUTOMACOES", "NOTIFICACOES", "SEGURANCA", "BANCOS"],
-  system_users: ["SYSTEM_USERS", "USUARIOS"],
-  system_roles: ["SYSTEM_ROLES", "PERMISSOES"],
-  sdr_ia: ["SDR_IA"],
-};
-
-const buildPermissionVariants = (permission?: string): string[] => {
-  if (!permission) return [];
-
-  const variants = new Set<string>([
-    permission,
-    permission.replace(':read', ''),
-    permission.replace(':read', ':*'),
-    permission.replace(':read', ':view'),
-    permission.replace(':view', ':read'),
-    permission.replace(':view', ''),
-    permission.replace(':view', ':*'),
-  ]);
-
-  if (permission.includes(':')) {
-    const [moduleName, actionName = 'read'] = permission.split(':');
-    const aliases = ACTION_ALIAS_MAP[actionName] || [actionName.toUpperCase()];
-    const moduleAliases = MODULE_ALIAS_MAP[moduleName] || [moduleName.toUpperCase()];
-
-    moduleAliases.forEach((moduleAlias) => {
-      aliases.forEach((alias) => {
-        variants.add(`${moduleAlias}_${alias}`);
-      });
-    });
-  }
-
-  return Array.from(variants);
-};
-
-const hasPermissionMatch = (userPermissions: string[], requiredPermission?: string): boolean => {
-  if (!requiredPermission || userPermissions.length === 0 || userPermissions.includes("*")) {
-    return true;
-  }
-
-  const variants = buildPermissionVariants(requiredPermission);
-  return userPermissions.some((permission) => {
-    const normalizedPermission = String(permission).toUpperCase();
-    return variants.some((variant) => variant.toUpperCase() === normalizedPermission);
-  });
 };
 
 // Função para verificar se usuário tem permissão para uma rota
@@ -227,6 +167,7 @@ const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   "/app/admin/tags": { title: "Tags", icon: Zap },
   "/app/admin/pipelines": { title: "Pipelines", icon: TrendingUp },
   "/app/admin/integracoes": { title: "Integrações", icon: Key },
+  "/app/admin/provider-operations": { title: "Provider Operations", icon: Gauge },
   "/app/admin/automacoes": { title: "Automações", icon: Zap },
   "/app/admin/notificacoes": { title: "Notificações", icon: Bell },
   "/app/admin/seguranca": { title: "Segurança", icon: Shield },
@@ -267,7 +208,7 @@ const menuGroups: MenuGroup[] = [
     label: "CRM",
     icon: Target,
     items: [
-      { path: "/app/crm/clientes", label: "Clientes", icon: Users, permission: "customer:view" },
+      { path: "/app/crm/clientes", label: "Clientes", icon: Users, permission: "customer:read" },
       { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "sales:view" },
       { path: "/app/crm/simulador", label: "Simulador", icon: Calculator, permission: "simulador:read" },
     ],
@@ -312,6 +253,7 @@ const menuGroups: MenuGroup[] = [
       { path: "/app/admin/tags", label: "Tags", icon: Zap, permission: "system:config" },
       { path: "/app/admin/pipelines", label: "Pipelines", icon: TrendingUp, permission: "system:config" },
       { path: "/app/admin/integracoes", label: "Integrações", icon: Key, permission: "system:config" },
+      { path: "/app/admin/provider-operations", label: "Provider Operations", icon: Gauge, permission: "tenant:read" },
       { path: "/app/admin/automacoes", label: "Automações", icon: Zap, permission: "system:config" },
       { path: "/app/admin/notificacoes", label: "Notificações", icon: Bell, permission: "system:config" },
       { path: "/app/admin/seguranca", label: "Segurança", icon: Shield, permission: "system:config" },
@@ -327,7 +269,7 @@ const legacyMenuItems: MenuItem[] = [
 
 const dashboardSidebarItems: MenuItem[] = [
   { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard:view" },
-  { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "customer:view" },
+  { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "customer:read" },
   { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "sales:view" },
   { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
   { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },

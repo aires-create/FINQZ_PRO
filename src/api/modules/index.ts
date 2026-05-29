@@ -15,3 +15,4 @@ export * from './automacoes.api';
 export * from './dashboard.api';
 export * from './commercial.api';
 export * from './integrations.api';
+export * from './provider-operations.api';

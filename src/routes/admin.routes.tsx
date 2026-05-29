@@ -10,6 +10,7 @@ const GeralPage = lazy(() => import("../pages/admin/Geral"));
 const TagsPage = lazy(() => import("../pages/admin/Tags"));
 const PipelinesPage = lazy(() => import("../pages/admin/Pipelines"));
 const IntegracoesPage = lazy(() => import("../pages/admin/Integracoes"));
+const ProviderOperationsConsolePage = lazy(() => import("../pages/admin/ProviderOperationsConsole"));
 const AdminAutomacoesPage = lazy(() => import("../pages/admin/Automacoes"));
 const NotificacoesPage = lazy(() => import("../pages/admin/Notificacoes"));
 const SegurancaPage = lazy(() => import("../pages/admin/Seguranca"));
@@ -102,6 +103,14 @@ export const adminRoutes = (
       element={
         <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
           <IntegracoesPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="admin/provider-operations"
+      element={
+        <ProtectedRoute requiredPermission="tenant:read">
+          <ProviderOperationsConsolePage />
         </ProtectedRoute>
       }
     />
