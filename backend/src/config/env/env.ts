@@ -6,6 +6,7 @@ import { transformEnv } from './env.transform.js';
 import {
   validateCors,
   validateNumbers,
+  validateExternalEffectsGovernance,
   validateProductionSecrets,
   validateRequiredEnv,
   validateBluepayConditionalConfig,
@@ -23,6 +24,7 @@ export const envSchema = rawEnvSchema
     validateCors(input, context);
     validateProductionSecrets(input, context);
     validateNumbers(input, context);
+    validateExternalEffectsGovernance(input, context);
     validateSwaggerPath(input, context);
     validateSosBolsoConditionalConfig(input, context);
     validateBluepayConditionalConfig(input, context);

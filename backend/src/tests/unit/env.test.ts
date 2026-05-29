@@ -4,6 +4,7 @@ import { parseEnv } from '../../config/env.js';
 
 const validEnv = {
   NODE_ENV: 'test',
+  APP_ENV: 'local',
   DATABASE_URL:
     'postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_test?schema=public',
   REDIS_URL: 'redis://localhost:6379/2',
@@ -20,6 +21,8 @@ describe('parseEnv', () => {
     const env = parseEnv(validEnv);
 
     expect(env.nodeEnv).toBe('test');
+    expect(env.appEnv).toBe('local');
+    expect(env.externalEffectsEnabled).toBe(false);
     expect(env.port).toBe(4000);
     expect(env.host).toBe('0.0.0.0');
     expect(env.databaseUrl).toBe(validEnv.DATABASE_URL);
@@ -85,5 +88,57 @@ describe('parseEnv', () => {
         BLUEPAY_ENABLED: 'true',
       }),
     ).toThrow(/BLUEPAY_BASE_URL is required when BLUEPAY_ENABLED=true/);
+  });
+
+  it('accepts EXTERNAL_EFFECTS_ENABLED boolean aliases', () => {
+    const env = parseEnv({
+      ...validEnv,
+      APP_ENV: 'production',
+      NODE_ENV: 'production',
+      JWT_SECRET: 'prod-secure-alpha-abcdefghijklmnopqrstuvwxyz123456',
+      JWT_REFRESH_SECRET: 'prod-secure-beta-abcdefghijklmnopqrstuvwxyz654321',
+      EXTERNAL_EFFECTS_ENABLED: 'yes',
+      PORT: '4000',
+      HOST: '0.0.0.0',
+    });
+
+    expect(env.externalEffectsEnabled).toBe(true);
+  });
+
+  it('rejects EXTERNAL_EFFECTS_ENABLED=true when APP_ENV=local', () => {
+    expect(() =>
+      parseEnv({
+        ...validEnv,
+        APP_ENV: 'local',
+        EXTERNAL_EFFECTS_ENABLED: 'true',
+      }),
+    ).toThrow(/EXTERNAL_EFFECTS_ENABLED must be false when APP_ENV=local/);
+  });
+
+  it('rejects EXTERNAL_EFFECTS_ENABLED=true when APP_ENV=homologation', () => {
+    expect(() =>
+      parseEnv({
+        ...validEnv,
+        APP_ENV: 'homologation',
+        EXTERNAL_EFFECTS_ENABLED: '1',
+      }),
+    ).toThrow(/EXTERNAL_EFFECTS_ENABLED must be false when APP_ENV=homologation/);
+  });
+
+  it('allows EXTERNAL_EFFECTS_ENABLED=true only in production app env', () => {
+    const env = parseEnv({
+      ...validEnv,
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+      JWT_SECRET: 'prod-secure-alpha-abcdefghijklmnopqrstuvwxyz123456',
+      JWT_REFRESH_SECRET: 'prod-secure-beta-abcdefghijklmnopqrstuvwxyz654321',
+      EXTERNAL_EFFECTS_ENABLED: 'on',
+      PORT: '4000',
+      HOST: '0.0.0.0',
+    });
+
+    expect(env.nodeEnv).toBe('production');
+    expect(env.appEnv).toBe('production');
+    expect(env.externalEffectsEnabled).toBe(true);
   });
 });

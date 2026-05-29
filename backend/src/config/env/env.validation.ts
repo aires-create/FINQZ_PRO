@@ -249,6 +249,17 @@ export const validateNumbers = (
   input: z.infer<typeof rawEnvSchema>,
   context: z.RefinementCtx,
 ) => {
+  if (
+    input.EXTERNAL_EFFECTS_ENABLED !== undefined &&
+    parseOptionalBoolean(input.EXTERNAL_EFFECTS_ENABLED) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'EXTERNAL_EFFECTS_ENABLED',
+      'EXTERNAL_EFFECTS_ENABLED must be a boolean (true/false).',
+    );
+  }
+
   if (input.PORT !== undefined && parsePort(input.PORT) === undefined) {
     addEnvIssue(
       context,
@@ -328,6 +339,30 @@ export const validateNumbers = (
       context,
       'HANDMAIS_TIMEOUT',
       'HANDMAIS_TIMEOUT must be a positive integer.',
+    );
+  }
+};
+
+export const validateExternalEffectsGovernance = (
+  input: z.infer<typeof rawEnvSchema>,
+  context: z.RefinementCtx,
+) => {
+  const externalEffectsEnabled =
+    parseOptionalBoolean(input.EXTERNAL_EFFECTS_ENABLED) ?? false;
+
+  if (input.APP_ENV === 'local' && externalEffectsEnabled) {
+    addEnvIssue(
+      context,
+      'EXTERNAL_EFFECTS_ENABLED',
+      'EXTERNAL_EFFECTS_ENABLED must be false when APP_ENV=local.',
+    );
+  }
+
+  if (input.APP_ENV === 'homologation' && externalEffectsEnabled) {
+    addEnvIssue(
+      context,
+      'EXTERNAL_EFFECTS_ENABLED',
+      'EXTERNAL_EFFECTS_ENABLED must be false when APP_ENV=homologation.',
     );
   }
 };

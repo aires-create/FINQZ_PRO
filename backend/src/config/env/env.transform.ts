@@ -66,9 +66,13 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
   const bluepayTimeoutMs = parsePositiveInteger(input.BLUEPAY_TIMEOUT_MS);
   const bluepayEnabled = parseOptionalBoolean(input.BLUEPAY_ENABLED) ?? false;
   const handmaisTimeoutMs = parsePositiveInteger(input.HANDMAIS_TIMEOUT);
+  const externalEffectsEnabled =
+    parseOptionalBoolean(input.EXTERNAL_EFFECTS_ENABLED) ?? false;
 
   return {
     nodeEnv: input.NODE_ENV,
+    appEnv: input.APP_ENV,
+    externalEffectsEnabled,
     host: input.HOST ?? '0.0.0.0',
     port,
     databaseUrl: input.DATABASE_URL ?? '',
@@ -113,5 +117,7 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
     handmaisApiKey: input.HANDMAIS_API_KEY,
     handmaisTimeoutMs,
     handmaisEnv: input.HANDMAIS_ENV,
+    handmaisLogin: input.HANDMAIS_LOGIN,
+    handmaisPassword: input.HANDMAIS_PASSWORD,
   };
 };

@@ -20,6 +20,8 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      APP_ENV: ${APP_ENV:-local}
+      EXTERNAL_EFFECTS_ENABLED: ${EXTERNAL_EFFECTS_ENABLED:-false}
       PORT: 4000
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
