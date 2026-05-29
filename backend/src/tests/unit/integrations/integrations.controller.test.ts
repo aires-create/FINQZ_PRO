@@ -78,16 +78,18 @@ const createApp = async (
     execute: runtimeDiagnostics,
   } as unknown as GetProviderRuntimeDiagnosticsUseCase;
   const controller = new IntegrationsController(
-    useCase,
-    listProposalsUseCase,
-    listFinancialProposalsUseCase,
-    payloadDiagnosticsUseCase,
-    { execute: () => [] } as any,
-    marginInquiryUseCase,
-    runtimeSummaryUseCase,
-    runtimeIssuesUseCase,
-    runtimeDiagnosticsUseCase,
-  );
+  useCase,
+  listProposalsUseCase,
+  listFinancialProposalsUseCase,
+  payloadDiagnosticsUseCase,
+  { execute: () => [] } as any,
+  marginInquiryUseCase,
+  { execute: async () => ({}) } as any,
+  runtimeSummaryUseCase,
+  runtimeIssuesUseCase,
+  runtimeDiagnosticsUseCase,
+  { execute: () => ({}) } as any,
+);
 
   await app.register(createIntegrationsRoutes(controller), {
     prefix: '/api/v1/integrations',
@@ -566,18 +568,18 @@ describe('IntegrationsController', () => {
 
   it('returns runtime summary payload', async () => {
     const app = await createApp(
-      async () => ({ connected: true, status: 200 }),
-      async () => [],
-      async () => ({ providerKey: 'sos-bolso', availableMargin: 0 }),
-      () => ({
-        generatedAt: new Date('2026-05-27T00:00:00.000Z'),
-        totalProviders: 3,
-        healthy: 2,
-        degraded: 1,
-        down: 0,
-        disabled: 0,
-      }),
-    );
+  async () => ({ connected: true, status: 200 }),
+  async () => [],
+  async () => ({ providerKey: 'sos-bolso', availableMargin: 0 }),
+  () => ({
+    generatedAt: new Date('2026-05-27T00:00:00.000Z'),
+    totalProviders: 3,
+    healthy: 2,
+    degraded: 1,
+    down: 0,
+    disabled: 0,
+  }),
+);
 
     const response = await app.inject({
       method: 'GET',
