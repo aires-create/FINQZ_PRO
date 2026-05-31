@@ -25,7 +25,7 @@ export class GetProviderPayloadDiagnosticsUseCase {
     try {
       const provider = this.providerEngine.resolve(providerName);
 
-      if (providerName !== 'nova-promotora' || !hasPayloadDiagnosticsReader(provider)) {
+      if (!hasPayloadDiagnosticsReader(provider)) {
         throw new ProviderCapabilityNotSupportedError(
           providerName,
           'getPayloadDiagnostics',

@@ -20,14 +20,7 @@ const providerCatalogMeta: Record<
   IntegrationProviderKey,
   Pick<ProviderCatalogItem, 'displayName' | 'category' | 'status' | 'technicalPlatform' | 'systemUrl'>
 > = {
-  'nova-promotora': {
-    displayName: 'NOVA PROMOTORA',
-    category: 'credito',
-    status: 'active',
-    technicalPlatform: 'STORM Tecnologia',
-    systemUrl: 'sistema.novafinanceira.com',
-  },
-  'sos-bolso': {
+    'sos-bolso': {
     displayName: 'SOS BOLSO',
     category: 'credito',
     status: 'planned',

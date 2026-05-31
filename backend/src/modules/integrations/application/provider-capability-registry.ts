@@ -1,5 +1,4 @@
 export type IntegrationProviderKey =
-  | 'nova-promotora'
   | 'sos-bolso'
   | 'handmais'
   | 'hand-plus'
@@ -28,19 +27,7 @@ export type ProviderCapabilityRegistryMap = Readonly<
 >;
 
 export const providerCapabilityRegistry: ProviderCapabilityRegistryMap = {
-  'nova-promotora': {
-    initialSimulation: false,
-    marginInquiry: 'planned',
-    rateTables: true,
-    proposalPipeline: true,
-    commissions: true,
-    commissionPayout: 'planned',
-    dataEnrichment: 'planned',
-    messageSender: false,
-    bulkMessaging: false,
-    webhooks: 'planned',
-  },
-  'sos-bolso': {
+    'sos-bolso': {
     initialSimulation: false,
     marginInquiry: 'planned',
     rateTables: 'planned',
