@@ -548,6 +548,43 @@ async function createPermissions() {
       action: PermissionAction.DELETE,
     },
 
+    // Commercial Governance permissions
+    {
+      name: 'Create Commercial Request',
+      slug: 'commercial-request:create',
+      description: 'Create commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Read Commercial Request',
+      slug: 'commercial-request:read',
+      description: 'View commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.READ,
+    },
+    {
+      name: 'Submit Commercial Request',
+      slug: 'commercial-request:submit',
+      description: 'Submit commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.UPDATE,
+    },
+    {
+      name: 'Approve Commercial Request',
+      slug: 'commercial-request:approve',
+      description: 'Approve commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.APPROVE,
+    },
+    {
+      name: 'Reject Commercial Request',
+      slug: 'commercial-request:reject',
+      description: 'Reject commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.UPDATE,
+    },
+
     // Report permissions
     {
       name: 'Read Report',
@@ -1249,6 +1286,11 @@ async function createRolePermissions(
         'customer:update',
         'customer:delete',
         'customer:export',
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
       ],
     },
     {
@@ -1268,6 +1310,9 @@ async function createRolePermissions(
         'customer:update',
         'customer:delete',
         'customer:export',
+        'commercial-request:read',
+        'commercial-request:approve',
+        'commercial-request:reject',
       ],
     },
     {
@@ -1305,6 +1350,7 @@ async function createRolePermissions(
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:create', 'partner:read', 'partner:update', 'partner:delete', 'partner:assign',
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        'commercial-request:create', 'commercial-request:read', 'commercial-request:submit', 'commercial-request:approve', 'commercial-request:reject',
         'report:read', 'report:export',
         'audit:read',
       ],
@@ -1322,6 +1368,7 @@ async function createRolePermissions(
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:read', 'partner:update', 'partner:assign',
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        'commercial-request:create', 'commercial-request:read', 'commercial-request:submit', 'commercial-request:approve', 'commercial-request:reject',
         'report:read', 'report:export',
       ],
     },
@@ -1337,6 +1384,7 @@ async function createRolePermissions(
         'commission:read',
         'partner:read',
         'pipeline:read',
+        'commercial-request:create', 'commercial-request:read', 'commercial-request:submit',
         'report:read',
       ],
     },
@@ -1356,6 +1404,8 @@ async function createRolePermissions(
         'commission:read',
         'partner:read',
         'pipeline:read',
+        'commercial-request:read',
+        'commercial-request:reject',
         'report:read',
         'audit:read',
       ],
@@ -1373,8 +1423,102 @@ async function createRolePermissions(
         'commission:read', 'commission:update',
         'partner:read', 'partner:update',
         'pipeline:read',
+        'commercial-request:read',
         'report:read',
         'audit:read',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_DIRETOR_AUDITORIA',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_AUDITORIA',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_AUDITOR',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_DIRETOR_COMERCIAL_B2C',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_DIRETOR_COMERCIAL_B2B',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_COMERCIAL_B2C',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_COMERCIAL_B2B',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_REGIONAL_B2C',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_REGIONAL_B2B',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_CONSULTOR_COMERCIAL_B2C',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_CONSULTOR_COMERCIAL_B2B',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
       ],
     },
   ];

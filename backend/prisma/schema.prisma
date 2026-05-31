@@ -180,6 +180,14 @@ enum PermissionAction {
   REVOKE
 }
 
+enum CommercialRequestStatus {
+  Draft
+  Submitted
+  Approved
+  Rejected
+  Closed
+}
+
 model Role {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
@@ -656,6 +664,29 @@ model Commission {
   @@index([opportunityId])
   @@index([deletedAt])
   @@map("commissions")
+}
+
+model CommercialRequest {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String                  @db.Uuid
+  requestNumber     String
+  year              Int
+  sequence          Int
+  status            CommercialRequestStatus
+  requestedByUserId String                  @db.Uuid
+  requestedAt       DateTime
+  reason            String
+  justification     String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, requestedByUserId])
+  @@index([tenantId, requestedAt])
+  @@unique([tenantId, requestNumber])
+  @@unique([tenantId, year, sequence])
+  @@map("commercial_requests")
 }
 
 model CommercialTable {
