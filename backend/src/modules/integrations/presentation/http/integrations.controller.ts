@@ -12,6 +12,7 @@ import type { GetProviderOperationsConsoleUseCase } from '../../application/get-
 import type { TestIntegrationProviderConnectionUseCase } from '../../application/test-integration-provider-connection.use-case.js';
 import type { TestIntegrationProviderMarginInquiryUseCase } from '../../application/test-integration-provider-margin-inquiry.use-case.js';
 import type { TestIntegrationProviderInitialSimulationUseCase } from '../../application/test-integration-provider-initial-simulation.use-case.js';
+import type { ProviderCatalogScope } from '../../application/list-provider-capabilities.use-case.js';
 import { IntegrationError } from '../../domain/errors/integration.error.js';
 import { ProviderCapabilityNotSupportedError } from '../../domain/errors/provider-capability-not-supported.error.js';
 import { ProviderAuthenticationError } from '../../domain/errors/provider-authentication.error.js';
@@ -107,10 +108,16 @@ export class IntegrationsController {
   ) {}
 
   listProviderCapabilities = async (
-    _request: FastifyRequest,
+    request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
-    const result = this.listProviderCapabilitiesUseCase.execute();
+    const query = request.query as { scope?: string };
+    const requestedScope = query.scope;
+    const scope: ProviderCatalogScope =
+      requestedScope === 'runtime' || requestedScope === 'planned'
+        ? requestedScope
+        : 'all';
+    const result = this.listProviderCapabilitiesUseCase.execute(scope);
     reply.send(result);
   };
 

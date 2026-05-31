@@ -17,15 +17,9 @@ import { ProviderHealthTracker } from './application/provider-health-tracker.js'
 import { ProviderRuntimeDiagnosticsService } from './application/provider-runtime-diagnostics.service.js';
 import { IntegrationsController } from './presentation/http/integrations.controller.js';
 import { createIntegrationsRoutes } from './presentation/http/integrations.routes.js';
-import { BluepayService } from './providers/bluepay/bluepay.service.js';
-import { HandmaisService } from './providers/handmais/handmais.service.js';
-import { SosBolsoService } from './providers/sos-bolso/sos-bolso.service.js';
+import { buildProviderRuntimeRegistry } from './provider-runtime-registry.js';
 
-const providerRegistry = {
-  'sos-bolso': new SosBolsoService(),
-  handmais: new HandmaisService(),
-  bluepay: new BluepayService(),
-} satisfies IntegrationProviderRegistry;
+const providerRegistry = buildProviderRuntimeRegistry() satisfies IntegrationProviderRegistry;
 const providerEngine = new ProviderEngine(providerRegistry);
 
 const listProposalsUseCase = new ListIntegrationProviderProposalsUseCase(

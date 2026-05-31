@@ -41,6 +41,7 @@ const createApp = async (
   runtimeDiagnostics: (providerKey?: string) => any = (_providerKey?: string) => [],
   listFinancialProposals: ListFinancialProposalsHandler = async () => [],
   payloadDiagnostics: (providerKey: string) => Promise<unknown> = async () => ({}),
+  listCapabilities: (scope?: 'all' | 'runtime' | 'planned') => any[] = () => [],
 ) => {
   const app = Fastify({
     logger: false,
@@ -82,7 +83,7 @@ const createApp = async (
   listProposalsUseCase,
   listFinancialProposalsUseCase,
   payloadDiagnosticsUseCase,
-  { execute: () => [] } as any,
+  { execute: listCapabilities } as any,
   marginInquiryUseCase,
   { execute: async () => ({}) } as any,
   runtimeSummaryUseCase,
@@ -99,6 +100,61 @@ const createApp = async (
 };
 
 describe('IntegrationsController', () => {
+  it('returns catalog with optional runtime scope', async () => {
+    const listCapabilitiesSpy = vi.fn((scope?: 'all' | 'runtime' | 'planned') => {
+      expect(scope).toBe('runtime');
+      return [
+        {
+          providerKey: 'sos-bolso',
+          displayName: 'SOS BOLSO',
+          category: 'credito',
+          status: 'active',
+          capabilities: {
+            initialSimulation: false,
+            marginInquiry: 'planned',
+            rateTables: 'planned',
+            proposalPipeline: 'planned',
+            commissions: 'planned',
+            commissionPayout: false,
+            dataEnrichment: 'planned',
+            messageSender: false,
+            bulkMessaging: false,
+            webhooks: 'planned',
+          },
+        },
+      ];
+    });
+    const app = await createApp(
+      async () => ({ connected: true, status: 200 }),
+      async () => [],
+      async () => ({ providerKey: 'sos-bolso', availableMargin: 0 }),
+      () => ({
+        generatedAt: new Date('2026-05-27T00:00:00.000Z'),
+        totalProviders: 0,
+        healthy: 0,
+        degraded: 0,
+        down: 0,
+        disabled: 0,
+      }),
+      () => [],
+      () => [],
+      async () => [],
+      async () => ({}),
+      listCapabilitiesSpy,
+    );
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/integrations/providers/capabilities?scope=runtime',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.json())).toBe(true);
+    expect(listCapabilitiesSpy).toHaveBeenCalledWith('runtime');
+
+    await app.close();
+  });
+
   it('returns a consistent success payload', async () => {
     const app = await createApp(async (providerName) => {
       expect(providerName).toBe('sos-bolso');

@@ -1,10 +1,12 @@
 import {
-  providerCapabilityRegistry,
+  getProviderCatalogByScope,
+  type ProviderCatalogEntry,
+  type ProviderCatalogStatus,
   type ProviderCapabilities,
-  type IntegrationProviderKey,
-} from './provider-capability-registry.js';
+} from './provider-catalog.js';
 
-export type ProviderCatalogStatus = 'active' | 'planned' | 'legacy' | 'experimental';
+export type ProviderCatalogScope = 'all' | 'runtime' | 'planned';
+export type { ProviderCatalogStatus };
 
 export type ProviderCatalogItem = {
   providerKey: string;
@@ -16,64 +18,28 @@ export type ProviderCatalogItem = {
   systemUrl?: string;
 };
 
-const providerCatalogMeta: Record<
-  IntegrationProviderKey,
-  Pick<ProviderCatalogItem, 'displayName' | 'category' | 'status' | 'technicalPlatform' | 'systemUrl'>
-> = {
-    'sos-bolso': {
-    displayName: 'SOS BOLSO',
-    category: 'credito',
-    status: 'planned',
-  },
-  handmais: {
-    displayName: 'HANDMAIS',
-    category: 'credito',
-    status: 'experimental',
-  },
-  'hand-plus': {
-    displayName: 'HAND+',
-    category: 'credito',
-    status: 'planned',
-  },
-  'nova-vida-ti': {
-    displayName: 'NOVA VIDA TI',
-    category: 'higienizacao',
-    status: 'planned',
-  },
-  'whatsapp-business': {
-    displayName: 'WhatsApp Business',
-    category: 'mensageria',
-    status: 'planned',
-  },
-  bluepay: {
-    displayName: 'BLUEPAY',
-    category: 'pagamentos',
-    status: 'planned',
-  },
-  'bulk-messaging': {
-    displayName: 'SMS/WhatsApp em Massa',
-    category: 'mensageria',
-    status: 'planned',
-  },
-};
-
 export class ListProviderCapabilitiesUseCase {
-  execute(): ProviderCatalogItem[] {
-    const providers = (Object.keys(providerCapabilityRegistry) as IntegrationProviderKey[]).map(
-      (providerKey) => {
-        const meta = providerCatalogMeta[providerKey];
-        const capabilities = providerCapabilityRegistry[providerKey];
+  execute(scope: ProviderCatalogScope = 'all'): ProviderCatalogItem[] {
+    const catalogEntries = getProviderCatalogByScope(scope) as readonly ProviderCatalogEntry[];
 
-        return {
-          providerKey,
-          displayName: meta.displayName,
-          category: meta.category,
-          status: meta.status,
-          capabilities,
-        };
-      },
-    );
+    return catalogEntries.map((provider) => {
+      const item: ProviderCatalogItem = {
+        providerKey: provider.providerKey,
+        displayName: provider.displayName,
+        category: provider.category,
+        status: provider.status,
+        capabilities: provider.capabilities,
+      };
 
-    return providers;
+      if (provider.technicalPlatform !== undefined) {
+        item.technicalPlatform = provider.technicalPlatform;
+      }
+
+      if (provider.systemUrl !== undefined) {
+        item.systemUrl = provider.systemUrl;
+      }
+
+      return item;
+    });
   }
 }
