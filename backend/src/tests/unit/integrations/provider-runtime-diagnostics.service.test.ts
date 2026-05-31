@@ -95,7 +95,7 @@ describe('ProviderRuntimeDiagnosticsService', () => {
     const tracker = new ProviderHealthTracker();
     tracker.set('sos-bolso', 'marginInquiry', { status: 'ok' });
     tracker.set('sos-bolso', 'authentication', { status: 'degraded' });
-    tracker.set('nova-promotora', 'healthCheck', { status: 'ok' });
+    tracker.set('sos-bolso', 'healthCheck', { status: 'ok' });
     const service = new ProviderRuntimeDiagnosticsService(tracker);
 
     const diagnostics = service.getProviderDiagnostics('sos-bolso');

@@ -6,7 +6,7 @@ import { TestIntegrationProviderConnectionUseCase } from '../../../modules/integ
 const createUseCase = (provider: IntegrationProvider) => {
   return new TestIntegrationProviderConnectionUseCase(
     new ProviderEngine({
-      'nova-promotora': provider,
+      'sos-bolso': provider,
     }),
   );
 };
@@ -21,7 +21,7 @@ describe('TestIntegrationProviderConnectionUseCase', () => {
       }),
     });
 
-    await expect(useCase.execute('nova-promotora')).resolves.toEqual({
+    await expect(useCase.execute('sos-bolso')).resolves.toEqual({
       connected: true,
       status: 200,
     });
@@ -37,7 +37,7 @@ describe('TestIntegrationProviderConnectionUseCase', () => {
       }),
     });
 
-    await expect(useCase.execute('nova-promotora')).rejects.toThrow(
+    await expect(useCase.execute('sos-bolso')).rejects.toThrow(
       ProviderConnectionError,
     );
   });
@@ -50,7 +50,7 @@ describe('TestIntegrationProviderConnectionUseCase', () => {
       },
     });
 
-    await expect(useCase.execute('nova-promotora')).rejects.toThrow(
+    await expect(useCase.execute('sos-bolso')).rejects.toThrow(
       ProviderConnectionError,
     );
   });

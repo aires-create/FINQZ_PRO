@@ -13,7 +13,6 @@ import { MessagingEngine, WhatsAppProvider, SMSProvider, EmailProvider } from ".
 import { CampaignService } from "./campaignService";
 import { emitEvent, queryEvents, getEventStats, getCampaignTimeline, getCampaignEventStats, type EventType, type EventSource } from "./events/emitter";
 import { checkAndCreateAlerts, getActiveAlerts, resolveAlert } from "./events/alerts";
-import { testStormConnection, sendProposal, getProposalStatus, syncTables, syncCommissions } from "./stormProvider";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -5246,131 +5245,7 @@ app.get("/api/get-session", (c) => {
   });
 
   // ============================================
-  // STORM INTEGRATION - Rotas da Nova Promotora / Storm
-  // ============================================
-
-  // Testar conexão com Storm (protegido - apenas ADMIN_SISTEMA ou ADMIN_FRANQUIA)
-  app.post("/api/integrations/storm/test-connection", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const role = user.role || user.perfil;
-    const allowedRoles = ['ROLE_ADMIN_SISTEMA', 'ADMIN_SISTEMA', 'ROLE_ADMIN_FRANQUIA', 'ADMIN_FRANQUIA', 'ROLE_CEO'];
-    
-    if (!allowedRoles.includes(role)) {
-      return c.json({ error: "Forbidden - Acesso negado" }, 403);
-    }
-
-    const result = await testStormConnection(edgespark);
-    
-    // Retornar resultado sanitizado - nunca expõe credenciais
-    return c.json({
-      success: result.success,
-      provider: result.provider,
-      message: result.message,
-      checkedAt: result.checkedAt,
-    });
-  });
-
-  // Enviar proposta para Storm
-  app.post("/api/integrations/storm/send-proposal", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const role = user.role || user.perfil;
-    const allowedRoles = ['ROLE_ADMIN_SISTEMA', 'ADMIN_SISTEMA', 'ROLE_ADMIN_FRANQUIA', 'ADMIN_FRANQUIA', 'ROLE_CEO', 'ROLE_SDR', 'SDR'];
-    
-    if (!allowedRoles.includes(role)) {
-      return c.json({ error: "Forbidden - Acesso negado" }, 403);
-    }
-
-    const body = await c.req.json() as {
-      customerName: string;
-      customerDocument: string;
-      customerEmail: string;
-      customerPhone: string;
-      productCode: string;
-      productName: string;
-      premium: number;
-      paymentMethod: string;
-      beneficiaryName?: string;
-      beneficiaryDocument?: string;
-    };
-
-    const result = await sendProposal(edgespark, {
-      customerName: body.customerName,
-      customerDocument: body.customerDocument,
-      customerEmail: body.customerEmail,
-      customerPhone: body.customerPhone,
-      productCode: body.productCode,
-      productName: body.productName,
-      premium: body.premium,
-      paymentMethod: body.paymentMethod,
-      beneficiaryName: body.beneficiaryName,
-      beneficiaryDocument: body.beneficiaryDocument,
-    });
-
-    return c.json(result);
-  });
-
-  // Consultar status da proposta
-  app.get("/api/integrations/storm/proposal/:proposalId/status", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const role = user.role || user.perfil;
-    const allowedRoles = ['ROLE_ADMIN_SISTEMA', 'ADMIN_SISTEMA', 'ROLE_ADMIN_FRANQUIA', 'ADMIN_FRANQUIA', 'ROLE_CEO', 'ROLE_SDR', 'SDR', 'ROLE_OPERACIONAL', 'OPERACIONAL'];
-    
-    if (!allowedRoles.includes(role)) {
-      return c.json({ error: "Forbidden - Acesso negado" }, 403);
-    }
-
-    const proposalId = c.req.param("proposalId");
-    const result = await getProposalStatus(edgespark, proposalId);
-
-    return c.json(result);
-  });
-
-  // Sincronizar tabelas do Storm
-  app.post("/api/integrations/storm/sync/:tableName", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const role = user.role || user.perfil;
-    const allowedRoles = ['ROLE_ADMIN_SISTEMA', 'ADMIN_SISTEMA', 'ROLE_ADMIN_FRANQUIA', 'ADMIN_FRANQUIA', 'ROLE_CEO'];
-    
-    if (!allowedRoles.includes(role)) {
-      return c.json({ error: "Forbidden - Acesso negado" }, 403);
-    }
-
-    const tableName = c.req.param("tableName");
-    const result = await syncTables(edgespark, tableName);
-
-    return c.json(result);
-  });
-
-  // Sincronizar comissões do Storm
-  app.post("/api/integrations/storm/sync-commissions", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const role = user.role || user.perfil;
-    const allowedRoles = ['ROLE_ADMIN_SISTEMA', 'ADMIN_SISTEMA', 'ROLE_ADMIN_FRANQUIA', 'ADMIN_FRANQUIA', 'ROLE_CEO', 'ROLE_FINANCEIRO', 'FINANCEIRO'];
-    
-    if (!allowedRoles.includes(role)) {
-      return c.json({ error: "Forbidden - Acesso negado" }, 403);
-    }
-
-    const body = await c.req.json().catch(() => ({})) as { start?: string; end?: string };
-    const period = body.start && body.end ? { start: body.start, end: body.end } : undefined;
-    
-    const result = await syncCommissions(edgespark, period);
-
-    return c.json(result);
-  });
-
-  // ============================================
-  // SDR IA - Análise de Mensagem
+      // SDR IA - Análise de Mensagem
   // POST /api/sdr/analyze
   // ============================================
   app.post('/api/sdr/analyze', async (c) => {

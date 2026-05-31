@@ -43,7 +43,7 @@ describe('ProviderHealthTracker', () => {
     const tracker = new ProviderHealthTracker();
 
     tracker.set('sos-bolso', 'margin_inquiry', { status: 'ok' });
-    tracker.set('nova-promotora', 'healthCheck', { status: 'degraded' });
+    tracker.set('sos-bolso', 'healthCheck', { status: 'degraded' });
     tracker.set('bluepay', 'commission_payout', { status: 'down' });
 
     const runtime = tracker.snapshot();

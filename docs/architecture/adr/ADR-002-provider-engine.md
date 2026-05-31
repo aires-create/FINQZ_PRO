@@ -4,7 +4,7 @@
 Accepted
 
 ## Context
-O FINQZ PRO precisa integrar múltiplos fornecedores externos, incluindo NOVA PROMOTORA / Storm, webhooks, SMTP, WhatsApp, Zapier e storage.
+O FINQZ PRO precisa integrar múltiplos fornecedores externos, incluindo SOS BOLSO / Sos Bolso, webhooks, SMTP, WhatsApp, Zapier e storage.
 
 Cada fornecedor pode ter autenticação, payload, regras e disponibilidade diferentes.
 
@@ -36,4 +36,4 @@ O frontend nunca deve consumir APIs externas diretamente.
 
 ## Related
 - ADR-001 — Commercial API as Source of Truth
-- FASE 2.20 — Integração NOVA PROMOTORA
+- FASE 2.20 — Integração SOS BOLSO

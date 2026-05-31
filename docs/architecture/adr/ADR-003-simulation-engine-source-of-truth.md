@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-O FINQZ PRO possui integração com providers externos financeiros, incluindo a NOVA Promotora/Storm.
+O FINQZ PRO possui integração com providers externos financeiros, incluindo SOS BOLSO.
 
 Durante a fase de descoberta operacional da integração, foi identificado que:
 

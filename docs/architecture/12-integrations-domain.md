@@ -4,7 +4,7 @@
 Centralizar integrações externas do FINQZ PRO.
 
 ## Providers suportados
-- NOVA PROMOTORA / Storm
+- SOS BOLSO / Sos Bolso
 - Webhooks
 - SMTP
 - Zapier
@@ -30,11 +30,6 @@ Frontend
 ## Estrutura futura
 backend/src/integrations/
   providers/
-    novaPromotora/
-      novaPromotora.client.ts
-      novaPromotora.mapper.ts
-      novaPromotora.service.ts
-      novaPromotora.types.ts
 
 ## Benefícios
 - desacoplamento

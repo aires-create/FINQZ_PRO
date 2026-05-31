@@ -130,17 +130,6 @@ export const validateUrls = (
   }
 
   if (
-    input.NOVA_PROMOTORA_BASE_URL &&
-    !isValidUrlWithProtocol(input.NOVA_PROMOTORA_BASE_URL, ['http:', 'https:'])
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_BASE_URL',
-      'NOVA_PROMOTORA_BASE_URL must be a valid http(s) URL.',
-    );
-  }
-
-  if (
     input.SOS_BOLSO_BASE_URL &&
     !isValidUrlWithProtocol(input.SOS_BOLSO_BASE_URL, ['http:', 'https:'])
   ) {
@@ -299,17 +288,6 @@ export const validateNumbers = (
   }
 
   if (
-    input.NOVA_PROMOTORA_TIMEOUT_MS !== undefined &&
-    parsePositiveInteger(input.NOVA_PROMOTORA_TIMEOUT_MS) === undefined
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_TIMEOUT_MS',
-      'NOVA_PROMOTORA_TIMEOUT_MS must be a positive integer.',
-    );
-  }
-
-  if (
     input.SOS_BOLSO_TIMEOUT_MS !== undefined &&
     parsePositiveInteger(input.SOS_BOLSO_TIMEOUT_MS) === undefined
   ) {
@@ -376,28 +354,6 @@ export const validateSwaggerPath = (
       context,
       'SWAGGER_PATH',
       'SWAGGER_PATH must start with "/".',
-    );
-  }
-
-  if (
-    input.NOVA_PROMOTORA_HEALTH_PATH &&
-    !input.NOVA_PROMOTORA_HEALTH_PATH.startsWith('/')
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_HEALTH_PATH',
-      'NOVA_PROMOTORA_HEALTH_PATH must start with "/".',
-    );
-  }
-
-  if (
-    input.NOVA_PROMOTORA_PROPOSALS_PATH &&
-    !input.NOVA_PROMOTORA_PROPOSALS_PATH.startsWith('/')
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_PROPOSALS_PATH',
-      'NOVA_PROMOTORA_PROPOSALS_PATH must start with "/".',
     );
   }
 
