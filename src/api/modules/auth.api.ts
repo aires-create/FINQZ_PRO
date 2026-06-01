@@ -96,7 +96,7 @@ export const authApi = {
    */
   async verifyAuth(): Promise<AuthUser | null> {
     try {
-      return await apiCall<AuthUser>('/api/v1/auth/verify');
+      return await apiCall<AuthUser>('/api/v1/auth/profile');
     } catch {
       return null;
     }
@@ -108,7 +108,7 @@ export const authApi = {
   async changePassword(data: ChangePasswordPayload): Promise<ApiResult<void>> {
     try {
       await apiCall<void>('/api/v1/auth/change-password', {
-        method: 'POST',
+        method: 'PATCH',
         body: JSON.stringify(data),
       });
       return { success: true };
