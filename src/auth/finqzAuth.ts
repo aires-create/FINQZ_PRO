@@ -74,7 +74,7 @@ const buildLogoutPayload = (): { refreshToken: string } | undefined => {
 
 const executeNativeLogout = async (): Promise<boolean> => {
   const response = await finqzClient.post<NativeLogoutResponse>(
-    "/auth/logout",
+    "/api/v1/auth/logout",
     buildLogoutPayload(),
     {
       credentials: "include",
@@ -98,7 +98,7 @@ export const finqzAuth = {
 
     try {
       const response = await finqzClient.post<BackendLoginResponse>(
-        "/auth/login",
+        "/api/v1/auth/login",
         {
           email,
           password: input.senha,
