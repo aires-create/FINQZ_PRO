@@ -19,6 +19,7 @@ import {
   setSessionUser,
   type FinqzSession,
 } from "../auth/session";
+import { ENABLE_LEGACY_AUTH_FALLBACK, IS_DEV } from "../config/environment";
 
 type EdgeSparkSession = Awaited<ReturnType<EdgeSparkClient["auth"]["getSession"]>>;
 
@@ -33,6 +34,8 @@ type FinqzSignOutResult = {
 const edgeSparkClient = createEdgeSpark({
   baseUrl: getResolvedApiBaseUrl(),
 });
+
+const shouldUseLegacyEdgeSparkFallback = IS_DEV && ENABLE_LEGACY_AUTH_FALLBACK;
 
 const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestInit = {}): Promise<Response> => {
   const { requestId, ...requestOptions } = options;
@@ -69,6 +72,10 @@ const fetchWithEdgeSparkFallback = async (endpoint: string, options: FinqzReques
   try {
     return await fetchWithStandardHeaders(endpoint, options);
   } catch {
+    if (!shouldUseLegacyEdgeSparkFallback) {
+      throw new Error("Official API request failed and EdgeSpark fallback is disabled.");
+    }
+
     const { requestId, preserveApiPrefix, ...requestOptions } = options;
     const prepared = buildRequestHeaders(requestOptions.headers, {
       body: requestOptions.body,
@@ -83,6 +90,10 @@ const fetchWithEdgeSparkFallback = async (endpoint: string, options: FinqzReques
 };
 
 const getFallbackSession = async (): Promise<EdgeSparkSession> => {
+  if (!shouldUseLegacyEdgeSparkFallback) {
+    return { data: null, error: null };
+  }
+
   const session = await edgeSparkClient.auth.getSession();
   const fallbackUser = session.data?.user;
 
@@ -99,6 +110,10 @@ const getSession = async (): Promise<FinqzAuthSession> => {
     return nativeSession;
   }
 
+  if (!shouldUseLegacyEdgeSparkFallback) {
+    return { data: null, error: null };
+  }
+
   return getFallbackSession();
 };
 
@@ -106,6 +121,10 @@ const signOut = async (): Promise<FinqzSignOutResult> => {
   clearSession();
 
   try {
+    if (!shouldUseLegacyEdgeSparkFallback) {
+      return { data: null, error: null };
+    }
+
     await edgeSparkClient.auth.signOut();
     return { data: null, error: null };
   } catch (error) {
