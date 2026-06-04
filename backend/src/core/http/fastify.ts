@@ -33,6 +33,8 @@ import { commercialGovernanceRoutes } from '../../modules/commercial-governance/
 import { integrationsRoutes } from '../../modules/integrations/integrations.module.js';
 import { organizationRoutes } from '../../modules/organization/organization.routes.js';
 import usersRoutes from '../../modules/users/users.routes.js';
+import { opportunitiesRoutes } from '../../modules/opportunities/routes.js';
+import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
 import {
   applyRequestSanitization,
   baselineSecurityHeaders,
@@ -547,6 +549,8 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   await app.register(integrationsRoutes, { prefix: '/api/v1/integrations' });
   await app.register(organizationRoutes, { prefix: '/api/v1/organizations' });
   await app.register(usersRoutes, { prefix: '/api/v1/users' });
+  await app.register(pipelinesRoutes, { prefix: '/api/v1/pipelines' });
+  await app.register(opportunitiesRoutes, { prefix: '/api/v1/opportunities' });
 
   // Error handler
   app.setErrorHandler(sendErrorResponse);
