@@ -1,4 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
+
+const prismaMock = vi.hoisted(() => ({
+  user: {
+    findFirst: vi.fn(),
+  },
+}));
+
+vi.mock('../../../core/prisma/client.js', () => ({
+  prisma: prismaMock,
+}));
 
 import type { IntegrationConnectionStatus } from '../../../modules/integrations/domain/contracts/provider.contract.js';
 import type { IntegrationProposal } from '../../../modules/integrations/domain/contracts/integration-proposal.contract.js';
@@ -43,6 +54,14 @@ const createApp = async (
   payloadDiagnostics: (providerKey: string) => Promise<unknown> = async () => ({}),
   listCapabilities: (scope?: 'all' | 'runtime' | 'planned') => any[] = () => [],
 ) => {
+  prismaMock.user.findFirst.mockResolvedValue({
+    id: 'user-1',
+    tenantId: 'tenant-1',
+    organizationId: 'org-1',
+    partnerId: null,
+    userRoles: [],
+  });
+
   const app = Fastify({
     logger: false,
   });
