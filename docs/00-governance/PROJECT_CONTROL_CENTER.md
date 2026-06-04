@@ -219,6 +219,136 @@ Special note:
   - `Products Decommission`
   - `Frontend Review`
 
+### AUDIT_2026-06-04_OPORTUNIDADES_FRONTEND_SPLIT
+Resultado: `ISSUES FOUND`
+
+Decisão:
+- `src/pages/Oportunidades.tsx` permanece `MIXED` / `BLOCKED`.
+
+COMMIT-04A concluído:
+- `backend/server/src/index.ts`
+- `backend/server/src/middleware/auth.ts`
+
+COMMIT-06A concluído:
+- `src/api/modules/opportunities.api.ts`
+- `src/pages/Clientes.tsx`
+
+Pendentes:
+- `src/pages/Oportunidades.tsx`
+- `src/types/index.ts`
+- `src/store/index.ts`
+- `src/api/client.ts`
+- `src/api/dataService.ts`
+- `src/api/adapters.ts`
+- `src/components/pipeline/pipelineUtils.ts`
+
+Próxima ação:
+- Planejar extraction/refactor pequeno e controlado para separar:
+  1. Products/catalog/pipeline compatibility
+  2. Opportunity CRUD/UI oficial
+  3. Fallback legado temporário
+
+### AUD-010 — OPPORTUNITIES_FRONTEND_EXTRACTION_PLAN
+Status: `SAFE EXTRACTION PLAN`
+
+Arquivo em foco:
+- `src/pages/Oportunidades.tsx`
+
+Classificação atual:
+- `MIXED`
+
+Operação planejada:
+
+#### COMMIT-06B — Opportunity Frontend Official CRUD
+Status: `PLANNED`
+
+Escopo:
+- `src/api/modules/opportunities.api.ts`
+- blocos official `Opportunity` CRUD
+- modal e ações CRUD oficiais
+- `pipelineId`, `stageId`, `customerId`, `leadId` oficiais
+
+Não incluir:
+- `produto_id`
+- `selectedProductId`
+- `catalogProductOptions`
+- `mapearProdutoLegadoParaPipeline`
+- fallback de `dataService` / `adapters` / `client`
+
+#### COMMIT-04B — Product/Catalog/Pipeline Compatibility
+Status: `PLANNED`
+
+Escopo:
+- `selectedProductId`
+- `selectedSubproductId`
+- `selectedModality`
+- `getProductOptions`
+- `getPipelineOptions`
+- `getPipelineByProductId`
+- UI de `Produto` / `Subproduto` / `Modalidade`
+- compatibilidade entre catálogo e pipeline
+
+Não incluir:
+- remoção do fallback legado ainda
+
+#### COMMIT-04C — Legacy Fallback Cleanup
+Status: `FUTURE / BLOCKED`
+
+Escopo futuro:
+- `mapearProdutoLegadoParaPipeline`
+- fallback `produto_id` / `produtoId`
+- `api/client` legado
+- `dataService` / `adapters` fallback
+- tipo `Produto` legado
+
+Só liberar quando:
+- todas as opportunities tiverem `pipelineId` / `stageId` canônicos
+- o backend não depender de `produto` para resolver pipeline
+- os testes provarem cards, filtros e detalhes sem fallback
+
+Regras:
+- Não alterar código.
+- Não commitar.
+- Apenas documentar o plano.
+- `src/pages/Oportunidades.tsx` permanece `MIXED` até a execução de `COMMIT-06B` e `COMMIT-04B`.
+
+### AUD-011 — OPPORTUNITY_OFFICIAL_CRUD_EXTRACTION_AUDIT
+Status: `ISSUES FOUND`
+
+Decisão:
+- `COMMIT-06B` pode avançar somente com split cirúrgico.
+- `src/pages/Oportunidades.tsx` permanece `MIXED` / `BLOCKED` até separação controlada.
+
+Blocos `COMMIT-06B`:
+- `opportunitiesApi` oficial
+- loader via `opportunitiesApi.getAll`
+- campos oficiais `title`, `pipelineId`, `stageId`, `ownerId`, `customerId`, `leadId`
+- CRUD oficial `create` / `update` / `moveStage` apenas após separar fallback
+
+Blocos excluídos do `COMMIT-06B`:
+- `produto`
+- `produto_id`
+- `selectedProductId`
+- `selectedSubproductId`
+- `selectedModality`
+- `catalogProductOptions`
+- `getProductOptions`
+- `getPipelineByProductId`
+- `mapearProdutoLegadoParaPipeline`
+- `api/client` legacy
+- `dataService` / `adapters` fallback
+- `deleteOportunidade` legacy
+
+Risco:
+- Alto risco de misturar `Product` / `Catalog` / `Pipeline` com `Opportunity CRUD` se `Oportunidades.tsx` for commitado inteiro.
+
+Ordem segura futura:
+1. Isolar loader oficial.
+2. Separar modal / handlers oficiais.
+3. Manter fallback legado temporariamente.
+4. Mover `Product` / `Catalog` / `Pipeline` para `COMMIT-04B`.
+5. Remover fallback apenas no `COMMIT-04C` futuro.
+
 ### REVIEW_REQUIRED — Separate Test Artifact
 Status: `REVIEW_REQUIRED`
 
