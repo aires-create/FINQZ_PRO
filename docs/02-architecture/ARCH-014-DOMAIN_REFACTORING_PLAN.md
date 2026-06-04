@@ -1,3 +1,7 @@
+Status: ACTIVE
+Version: 1.0
+Last Updated: 2026-06-03
+
 # FINQZ PRO — Domain Refactoring Plan
 
 ## Objetivo

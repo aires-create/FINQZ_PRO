@@ -1,0 +1,2104 @@
+diff --git a/src/pages/Oportunidades.tsx b/src/pages/Oportunidades.tsx
+index 2db6f25..8978292 100644
+--- a/src/pages/Oportunidades.tsx
++++ b/src/pages/Oportunidades.tsx
+@@ -1,7 +1,8 @@
+-import React, { useState, useMemo } from "react";
++import React, { useState, useMemo, useEffect } from "react";
+ import { createPortal } from "react-dom";
+ import useAppStore from "../store";
+ import api from "../api/client";
++import { opportunitiesApi } from "../api/modules/opportunities.api";
+ import { useTenantFilter } from "../hooks/useTenantFilter";
+ import { Plus, X, Edit2, Trash2, MoreVertical, MoreHorizontal, Search, RefreshCw, Calendar, Filter, LayoutGrid, List, ChevronDown, MessageCircle, Phone, Mail, Clock, User, Timer, ArrowUpDown, ArrowUp, ArrowDown, ArrowUpDown as SortIcon, FileText, Package, ArrowLeft, ArrowRight, AlertCircle, CheckCircle, XCircle, Tag, Paperclip, History, File, Upload, Send, Check, Circle, FileCheck, FileX, FilePlus, GripVertical, Calculator, DollarSign, Percent, CalendarDays, Wallet, Save, TrendingUp, MapPin, Target, FileSignature, Shield } from "lucide-react";
+ import { Button, Card as DSCard, Input, Select, PageActions, FilterButton, ExportButtons, PrimaryButton, RefreshButton, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard } from "../components/ui";
+@@ -102,6 +103,29 @@ const inferPipelineTipo = (pipelineId: string): PipelineTipo => {
+   return "credito";
+ };
+ 
++const mapBackendPipelineNameToSemanticId = (
++  pipelineName: string | undefined,
++  backendPipelineId: string | undefined,
++): string => {
++  const normalizedName = normalizeKey(pipelineName || "");
++
++  if (normalizedName.includes("consignado")) return "pipeline-consignado";
++  if (normalizedName.includes("credito_pessoal") || normalizedName.includes("cdc")) {
++    return "pipeline-credito-pessoal-cdc";
++  }
++  if (normalizedName.includes("garantia")) return "pipeline-emprestimo-com-garantia";
++  if (normalizedName.includes("financiamento")) return "pipeline-financiamento";
++  if (normalizedName.includes("energia")) return "pipeline-energia";
++  if (normalizedName.includes("cartao")) return "pipeline-cartao";
++  if (normalizedName.includes("antecipacao") || normalizedName.includes("fgts")) {
++    return "pipeline-antecipacao";
++  }
++  if (normalizedName.includes("seguro")) return "pipeline-seguro";
++  if (normalizedName.includes("consorcio")) return "pipeline-consorcio";
++
++  return String(backendPipelineId || "");
++};
++
+ 
+ // MOTIVOS DE PENDÊNCIA
+ export const MOTIVOS_PENDENCIA = [
+@@ -251,6 +275,147 @@ const OverlayPortal = ({ children }: { children: React.ReactNode }) => {
+   return createPortal(children, document.body);
+ };
+ 
++const getShortUuid = (value: unknown): string => {
++  const normalized = String(value ?? "").trim();
++  if (!normalized) return "";
++
++  const compact = normalized.replace(/-/g, "");
++  if (compact.length >= 8) return compact.slice(0, 8).toUpperCase();
++  return normalized.toUpperCase();
++};
++
++const getVisualOpportunityId = (opportunity: any): string => {
++  const explicitDisplayId = String(
++    opportunity?.code ??
++      opportunity?.displayId ??
++      opportunity?.externalCode ??
++      "",
++  ).trim();
++
++  if (explicitDisplayId) return explicitDisplayId;
++
++  const shortUuid = getShortUuid(opportunity?.id);
++  return shortUuid || "SEM-ID-VISUAL";
++};
++
++const mapApiOpportunityToKanbanShape = (opportunity: any) => {
++  const backendPipelineId = String(opportunity?.pipelineId ?? "");
++  const backendStageId = String(opportunity?.stageId ?? "");
++  const stageName = String(opportunity?.stage?.name ?? "");
++  const pipelineName = String(opportunity?.pipeline?.name ?? "");
++  const semanticStageId = normalizeKey(stageName) || "novo_lead";
++  const semanticPipelineId = mapBackendPipelineNameToSemanticId(
++    pipelineName,
++    backendPipelineId,
++  );
++
++  return {
++    id: String(opportunity?.id ?? ""),
++    displayId: getVisualOpportunityId(opportunity),
++    nome: String(opportunity?.title ?? "Sem nome"),
++    valor: Number(opportunity?.amount ?? 0),
++    status: String(opportunity?.status ?? "ativo"),
++    pipeline_id: semanticPipelineId,
++    etapa_id: semanticStageId,
++    etapa: semanticStageId,
++    backendPipelineId,
++    backendPipelineName: pipelineName,
++    backendStageId,
++    backendStageName: stageName,
++    backendStageOrder: opportunity?.stage?.order,
++    backendStageIsWon: Boolean(opportunity?.stage?.isWon),
++    backendStageIsLost: Boolean(opportunity?.stage?.isLost),
++    cliente_id: opportunity?.customerId ?? null,
++    responsavel_id: opportunity?.ownerId ?? null,
++    observacoes: String(opportunity?.description ?? ""),
++    createdAt: opportunity?.createdAt ?? new Date().toISOString(),
++    updatedAt: opportunity?.updatedAt ?? opportunity?.createdAt ?? new Date().toISOString(),
++    __officialApiSource: true,
++  };
++};
++
++const UUID_V4_LIKE_REGEX =
++  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
++
++const getCanonicalOpportunityId = (opportunity: any): string | null => {
++  const rawId = opportunity?.id;
++  if (rawId === null || rawId === undefined) return null;
++
++  const id = String(rawId).trim();
++  if (!id) return null;
++  if (/^L-\d+$/i.test(id)) return null;
++  if (!UUID_V4_LIKE_REGEX.test(id)) return null;
++
++  return id;
++};
++
++const LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE =
++  "Esta oportunidade não possui identificador interno oficial. Recarregue os dados da API antes de editar.";
++
++const isOfficialApiOpportunity = (opportunity: any): boolean =>
++  Boolean(opportunity?.__officialApiSource === true);
++
++const hasCanonicalOpportunityId = (opportunity: any): boolean =>
++  Boolean(getCanonicalOpportunityId(opportunity));
++
++const buildConservativeOpportunityFingerprint = (opportunity: any): string | null => {
++  const nome = String(opportunity?.cliente_nome ?? opportunity?.nome ?? "").trim().toLowerCase();
++  const email = String(opportunity?.email ?? "").trim().toLowerCase();
++  const telefone = String(opportunity?.telefone ?? opportunity?.celular ?? "").replace(/\D/g, "");
++  const produto = String(opportunity?.produto ?? "").trim().toLowerCase();
++  const valor = Number(opportunity?.valor ?? 0);
++  const createdAt = String(opportunity?.createdAt ?? opportunity?.created_at ?? "").trim().toLowerCase();
++
++  const populatedParts =
++    [nome, email, telefone, produto, createdAt].filter(Boolean).length +
++    (Number.isFinite(valor) && valor > 0 ? 1 : 0);
++
++  if (populatedParts < 4) return null;
++
++  return ["fallback", nome, email, telefone, produto, String(valor), createdAt].join("|");
++};
++
++const dedupeOportunidades = (items: any[]): any[] => {
++  const deduped = new Map<string, any>();
++
++  for (const item of items) {
++    if (!item || typeof item !== "object") continue;
++
++    const canonicalId = getCanonicalOpportunityId(item);
++    const key = canonicalId ? `id:${canonicalId}` : buildConservativeOpportunityFingerprint(item);
++
++    if (!key) {
++      deduped.set(`unique:${deduped.size}:${String(item?.id ?? "")}`, item);
++      continue;
++    }
++
++    const existing = deduped.get(key);
++    if (!existing) {
++      deduped.set(key, item);
++      continue;
++    }
++
++    const itemIsPreferred =
++      isOfficialApiOpportunity(item) &&
++      hasCanonicalOpportunityId(item) &&
++      (!isOfficialApiOpportunity(existing) || !hasCanonicalOpportunityId(existing));
++
++    if (itemIsPreferred) {
++      deduped.set(key, item);
++      continue;
++    }
++
++    const existingTimestamp = new Date(existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
++    const itemTimestamp = new Date(item?.updatedAt ?? item?.createdAt ?? 0).getTime();
++
++    if (itemTimestamp > existingTimestamp) {
++      deduped.set(key, item);
++    }
++  }
++
++  return Array.from(deduped.values());
++};
++
+ const OportunidadesPageInner = () => {
+   const { 
+     pipelines, 
+@@ -267,7 +432,6 @@ const OportunidadesPageInner = () => {
+     addColumn,
+     updateColumn,
+     deleteColumn,
+-    produtos,
+     usuarios,
+     user,
+     theme,
+@@ -277,8 +441,47 @@ const OportunidadesPageInner = () => {
+   // PROTEÇÃO COMPLETA DO STORE - Safe fallbacks para todos os dados
+   const safePipelinesStore = Array.isArray(pipelines) ? pipelines : [];
+   const safeOportunidadesKanban = Array.isArray(oportunidadesKanban) ? oportunidadesKanban : [];
+-  const safeProdutos = Array.isArray(produtos) ? produtos : [];
+   const safeUsuarios = Array.isArray(usuarios) ? usuarios : [];
++  const [apiOportunidadesReadOnly, setApiOportunidadesReadOnly] = useState<any[] | null>(null);
++  const [apiReadError, setApiReadError] = useState<string | null>(null);
++  const [apiReadReloadKey, setApiReadReloadKey] = useState(0);
++
++  useEffect(() => {
++    let cancelled = false;
++
++    const loadOportunitiesReadOnly = async () => {
++      try {
++        setApiReadError(null);
++        const response = await opportunitiesApi.getAll();
++        const rawData = Array.isArray(response?.data) ? response.data : [];
++        const mappedData = rawData.map(mapApiOpportunityToKanbanShape);
++
++        if (!cancelled) {
++          setApiOportunidadesReadOnly(mappedData);
++        }
++      } catch (error) {
++        const message = error instanceof Error ? error.message : "Erro ao carregar oportunidades";
++        console.error("[Oportunidades] Falha no carregamento read-only da API oficial:", message);
++
++        if (!cancelled) {
++          setApiReadError(message);
++          setApiOportunidadesReadOnly(null);
++        }
++      }
++    };
++
++    void loadOportunitiesReadOnly();
++
++    return () => {
++      cancelled = true;
++    };
++  }, [apiReadReloadKey]);
++
++  useEffect(() => {
++    if (apiReadError) {
++      console.warn("[Oportunidades] Usando fallback do store após erro da API oficial:", apiReadError);
++    }
++  }, [apiReadError]);
+ 
+   // Safe currentPipelineId sem pipeline default operacional
+   const safeCurrentPipelineId =
+@@ -321,6 +524,10 @@ const OportunidadesPageInner = () => {
+   
+   // Função helper para verificar se pode editar (por permissão OU por etapa)
+   const canEditOportunidade = (oportunidade: any): boolean => {
++    if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
++      return false;
++    }
++
+     // Se tem permissão, pode editar
+     if (can('oportunidades', 'edit')) return true;
+     
+@@ -389,7 +596,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+     if (!lead) return;
+     setSelectedLead(lead);
+     setOpenLeadDrawer(false);
+-    setShowEditDrawerModal(false);
+     setShowOpportunityForm(false);
+     setShowFullscreenModal(true);
+   }
+@@ -397,7 +603,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   const handleCloseNegotiation = () => {
+     setShowFullscreenModal(false);
+     setOpenLeadDrawer(false);
+-    setShowEditDrawerModal(false);
+     setShowOpportunityForm(false);
+   };
+   
+@@ -452,7 +657,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   const [showModal, setShowModal] = useState(false);
+   const [showPipelineModal, setShowPipelineModal] = useState(false);
+   const [showColumnModal, setShowColumnModal] = useState(false);
+-  const [showEditDrawerModal, setShowEditDrawerModal] = useState(false);
+   const [showFullscreenModal, setShowFullscreenModal] = useState(false);
+   const [editingColumn, setEditingColumn] = useState<any>(null);
+   const [editingPipeline, setEditingPipeline] = useState<any>(null);
+@@ -574,7 +778,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   const [simulationStatus, setSimulationStatus] = useState<'simulada' | 'aceita' | 'recusada' | null>(null);
+   const [simulationAcceptedAt, setSimulationAcceptedAt] = useState<number | null>(null);
+   const [simulationResult, setSimulationResult] = useState<any>(null);
+-  const [novaFaseAposAceite, setNovaFaseAposAceite] = useState<string>('aguardando_assinatura');
++  const [novaFaseAposAceite, setNovaFaseAposAceite] = useState<string>('novo_lead');
+   const [showFaseSelector, setShowFaseSelector] = useState(false);
+   
+   // Reset simulação quando o tipo muda
+@@ -893,6 +1097,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   // Função para aceitar a simulação
+   const aceitarSimulacao = async () => {
+     if (!selectedLead || !simuladorResultado) return;
++    if (!isOfficialApiOpportunity(selectedLead) || !hasCanonicalOpportunityId(selectedLead)) {
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      return;
++    }
+     
+     const now = Date.now();
+     const novoValor = Number(simuladorResultado.valorLiberado || 0);
+@@ -920,13 +1128,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       simulationResult: simuladorResultado
+     }) : null);
+     
+-    // Persistir no backend
++    // Persistir no backend oficial (apenas valor da oportunidade)
+     try {
+-      await api.updateOportunidade(Number(selectedLead.id), { 
+-        valor: novoValor, 
+-        simulationStatus: 'aceita',
+-        simulationAcceptedAt: now,
+-        simulationResult: simuladorResultado
++      const opportunityId = String(getCanonicalOpportunityId(selectedLead) ?? "");
++      if (!opportunityId) {
++        throw new Error("Oportunidade sem identificador para persistência oficial.");
++      }
++
++      await opportunitiesApi.update(opportunityId, {
++        amount: novoValor,
+       });
+     } catch (error) {
+       console.error('Erro ao atualizar valor da oportunidade:', error);
+@@ -942,13 +1152,79 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   };
+   
+   // Função para confirmar a mudança de fase
+-  const confirmarMudancaFase = () => {
++  const confirmarMudancaFase = async () => {
+     if (!selectedLead) return;
++    if (!isOfficialApiOpportunity(selectedLead) || !hasCanonicalOpportunityId(selectedLead)) {
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      return;
++    }
+     
+     const novoStatus = novaFaseAposAceite === 'perdido' ? 'perdido' : 'ativo';
+-    
+-    // Atualizar localmente no store
+-    moveOportunidade(selectedLead.id, { 
++
++    const selectedLeadId = String(getCanonicalOpportunityId(selectedLead) ?? "");
++    if (!selectedLeadId) {
++      alert("Não foi possível mover: oportunidade sem identificador.");
++      return;
++    }
++
++    const targetEtapaKey = normalizeKey(novaFaseAposAceite);
++    const origemPipelineSemantico = String(
++      selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? safeCurrentPipelineId ?? "",
++    );
++    const resolvedBackendPipelineId = String(
++      selectedLead?.backendPipelineId ||
++      oportunidadesBase.find((op: any) =>
++        String(op?.pipeline_id ?? "") === origemPipelineSemantico && String(op?.backendPipelineId ?? "").length > 0,
++      )?.backendPipelineId ||
++      "",
++    );
++
++    const resolvedBackendStageId = String(
++      oportunidadesBase.find((op: any) => {
++        if (!op?.backendStageId) return false;
++        const sameBackendPipeline = resolvedBackendPipelineId
++          ? String(op?.backendPipelineId ?? "") === resolvedBackendPipelineId
++          : String(op?.pipeline_id ?? "") === origemPipelineSemantico;
++        if (!sameBackendPipeline) return false;
++        return normalizeKey(op?.backendStageName ?? "") === targetEtapaKey;
++      })?.backendStageId ||
++      (normalizeKey(selectedLead?.backendStageName ?? "") === targetEtapaKey
++        ? String(selectedLead?.backendStageId ?? "")
++        : ""),
++    );
++
++    if (!resolvedBackendStageId) {
++      console.error("[Oportunidades] Confirmação de fase cancelada: stageId UUID não resolvido.", {
++        selectedLeadId,
++        novaFaseAposAceite,
++        origemPipelineSemantico,
++        resolvedBackendPipelineId,
++      });
++      alert("Não foi possível confirmar fase: estágio de destino não mapeado no backend.");
++      return;
++    }
++
++    try {
++      await opportunitiesApi.moveStage(selectedLeadId, {
++        stageId: resolvedBackendStageId,
++        pipelineId: resolvedBackendPipelineId || undefined,
++        status: novoStatus,
++        reason: "simulation-phase-confirmation",
++      });
++    } catch (error) {
++      const message = error instanceof Error ? error.message : "Erro ao confirmar mudança de fase";
++      console.error("[Oportunidades] Falha ao confirmar mudança de fase via API oficial:", {
++        selectedLeadId,
++        resolvedBackendStageId,
++        resolvedBackendPipelineId,
++        message,
++      });
++      alert(`Erro ao confirmar mudança de fase: ${message}`);
++      return;
++    }
++
++    // Atualizar localmente no store apenas após sucesso da API
++    moveOportunidade(selectedLeadId, { 
+       etapa_id: novaFaseAposAceite, 
+       status: novoStatus 
+     });
+@@ -960,72 +1236,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       etapa: novaFaseAposAceite,
+       status: novoStatus
+     }) : null);
+-    
+-    // Persistir no backend
+-    api.updateOportunidade(Number(selectedLead.id), { 
+-      etapa_id: novaFaseAposAceite, 
+-      status: novoStatus 
+-    }).catch(error => {
+-      console.error('Erro ao mover oportunidade:', error);
+-    });
+-    
++
++    setApiReadReloadKey((prev) => prev + 1);
+     setShowFaseSelector(false);
+   };
+   
+-  // Dados para edição do drawer
+-  const [editDrawerData, setEditDrawerData] = useState({
+-    // Dados Pessoais / Cliente
+-    nome: "",
+-    tipoPessoa: "CPF" as "CPF" | "CNPJ",
+-    cpf_cnpj: "",
+-    profissao: "",
+-    estado_civil: "",
+-    sexo: "" as "" | "masculino" | "feminino" | "outro" | "nao_informar",
+-    data_nascimento: "",
+-    data_abertura: "",
+-    // Contato
+-    celular: "",
+-    telefone: "",
+-    email: "",
+-    cep: "",
+-    rua: "",
+-    numero: "",
+-    complemento: "",
+-    bairro: "",
+-    cidade: "",
+-    estado: "",
+-    // Dados da Oportunidade
+-    produto: "",
+-    valor: 0,
+-    etapa_id: "novo_lead" as string,
+-    responsavel_id: null as string | null,
+-    responsavel_nome: "",
+-    observacoes: "",
+-    tags: [] as string[],
+-    // Dados Bancários
+-    banco: "",
+-    agencia: "",
+-    conta: "",
+-    tipoConta: "" as "" | "corrente" | "poupanca",
+-    titular: "",
+-    documentoTitular: "",
+-    pixTipo: "" as "" | "cpf" | "cnpj" | "email" | "telefone" | "aleatoria",
+-    pixChave: "",
+-    // RD / Consulta Restrição
+-    rdStatus: "nao_consultado" as "nao_consultado" | "sem_restricao" | "restricao",
+-    rdConsultedAt: "",
+-    rdNotes: "",
+-    // Não Perturbe
+-    doNotCallStatus: "nao_consultado" as "nao_consultado" | "liberado" | "bloqueado",
+-    doNotCallConsultedAt: "",
+-    // Hierarquia Comercial
+-    racionalCompany_id: null as number | null,
+-    franquia_id: null as number | null,
+-    franqueado_id: null as number | null,
+-    // Motivo de pendência
+-    pendenciaMotivo: ""
+-  });
+-  
+   // Form state
+   const [formData, setFormData] = useState({
+     // Dados Pessoais / Cliente
+@@ -1373,11 +1588,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   // Get pipeline for selected product
+   const getPipelineForProduct = (produtoId: string) => {
+     if (!produtoId) return null;
+-    const produto = safeProdutos.find(p => p.id.toString() === produtoId || p.id === parseInt(produtoId));
+-    if (produto?.pipeline) {
+-      return pipelines.find(p => p.id === produto.pipeline);
+-    }
+-    return null;
++    return getPipelineByProductId(produtoId) ?? null;
+   };
+   
+   // Handle product/pipeline selection - switch pipeline
+@@ -1447,6 +1658,20 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       })
+     : [];
+   const etapasAtivas = Array.isArray(etapasAtivasRaw) ? etapasAtivasRaw : [];
++  const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
++  const fasePosAceiteFallbackId = String(etapasPosSimulacao[0]?.id || "novo_lead");
++  const fasePosAceiteSelecionada =
++    etapasPosSimulacao.find((etapa) => String(etapa.id) === String(novaFaseAposAceite)) || null;
++
++  React.useEffect(() => {
++    const faseAtualValida = etapasPosSimulacao.some(
++      (etapa) => String(etapa.id) === String(novaFaseAposAceite),
++    );
++
++    if (!faseAtualValida) {
++      setNovaFaseAposAceite(fasePosAceiteFallbackId);
++    }
++  }, [etapasPosSimulacao, novaFaseAposAceite, fasePosAceiteFallbackId]);
+   
+   // Protection: Check if pipeline is valid
+   const isPipelineValid = currentPipelineConfig && etapasAtivas.length > 0;
+@@ -1464,7 +1689,28 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   const pipelineTipoLabel = currentPipelineConfig ? getPipelineTipoLabel(currentPipelineConfig.tipo) : '';
+   
+   // BLINDAGEM DE ARRAY - Filter oportunidades - based on current pipeline (novo sistema PIPELINES)
+-  const oportunidadesBase = Array.isArray(safeOportunidadesKanban) ? safeOportunidadesKanban : [];
++  // O store local nao deve mascarar falha da API oficial de oportunidades.
++  const oportunidadesReadSource = Array.isArray(apiOportunidadesReadOnly)
++    ? apiOportunidadesReadOnly
++    : [];
++  const oportunidadesBaseRaw = Array.isArray(oportunidadesReadSource) ? oportunidadesReadSource : [];
++  const etapasReferencia = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
++  const etapaFallbackId = String(etapasReferencia[0]?.id || "novo_lead");
++  const etapaIdsValidas = new Set(etapasReferencia.map((etapa) => String(etapa.id)));
++  const oportunidadesBase = oportunidadesBaseRaw.map((op: any) => {
++    if (!op || typeof op !== "object") return op;
++
++    const etapaAtual = String(op.etapa_id ?? op.etapa ?? "");
++    if (etapaAtual && etapaIdsValidas.has(etapaAtual)) {
++      return op;
++    }
++
++    return {
++      ...op,
++      etapa_id: etapaFallbackId,
++      etapa: etapaFallbackId,
++    };
++  });
+   const equivalentPipelineIds = currentPipelineConfig
+     ? getEquivalentPipelineIds(currentPipelineConfig.id)
+     : [];
+@@ -1594,14 +1840,19 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+     
+     return true;
+   }), [filteredOportunidadesBase, searchQuery, filters]);
++
++  const dedupedFilteredOportunidades = useMemo(
++    () => dedupeOportunidades(filteredOportunidades),
++    [filteredOportunidades],
++  );
+   
+   // OTIMIZAÇÃO: Agrupar oportunidades por etapa uma única vez com ordenação
+   const oportunidadesPorEtapa = useMemo(() => {
+     const etapas = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
+-    const resultado: Record<string, typeof filteredOportunidades> = {};
++    const resultado: Record<string, typeof dedupedFilteredOportunidades> = {};
+     
+     for (const etapa of etapas) {
+-      const etapaOpportunities = filteredOportunidades.filter((o) => o.etapa_id === etapa.id);
++      const etapaOpportunities = dedupedFilteredOportunidades.filter((o) => o.etapa_id === etapa.id);
+       const sortOption = columnSort[etapa.id] || 'data_desc';
+       
+       resultado[etapa.id] = etapaOpportunities.sort((a, b) => {
+@@ -1625,7 +1876,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+     }
+     
+     return resultado;
+-  }, [filteredOportunidades, columnSort, etapasAtivas]);
++  }, [dedupedFilteredOportunidades, columnSort, etapasAtivas]);
+ 
+   // OTIMIZAÇÃO: Calcular totais por etapa uma única vez
+   const totaisPorEtapa = useMemo(() => {
+@@ -1640,6 +1891,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   // Drag handlers
+   const handleDragStart = (e: React.DragEvent, cardId: string) => {
+     if (!can('oportunidades', 'move')) return;
++    const oportunidade = oportunidadesBase.find((o: any) => String(o?.id ?? "") === String(cardId));
++    if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
++      e.preventDefault();
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      return;
++    }
+     setDraggedCard(cardId);
+     e.dataTransfer.effectAllowed = "move";
+     e.dataTransfer.setData("text/plain", cardId);
+@@ -1661,7 +1918,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+     setDragOverColumn(null);
+   };
+ 
+-  const handleDrop = (e: React.DragEvent, etapaId: string) => {
++  const handleDrop = async (e: React.DragEvent, etapaId: string) => {
+     if (!can('oportunidades', 'move')) return;
+ 
+     e.preventDefault();
+@@ -1671,7 +1928,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+     if (!cardId) return;
+ 
+     // VALIDAÇÃO DE AVANÇO: Verifica campos obrigatórios por etapa
+-    const oportunidade = safeOportunidadesKanban.find(o => o.id.toString() === cardId);
++    const oportunidade = oportunidadesBase.find(o => o.id.toString() === cardId);
++    if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      setDraggedCard(null);
++      setDragOverColumn(null);
++      return;
++    }
+     if (oportunidade && etapaId !== 'perdido') {
+       const validacao = validarEtapa(oportunidade, etapaId as EtapaKey);
+       if (!validacao.valido) {
+@@ -1682,12 +1945,76 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       }
+     }
+ 
++    const statusDestino = etapaId === "integrado" ? "ganho" :
++      etapaId === "perdido" ? "perdido" :
++      "ativo";
++
++    const targetEtapaKey = normalizeKey(etapaId);
++    const origemPipelineSemantico = String(
++      oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? safeCurrentPipelineId ?? "",
++    );
++    const resolvedBackendPipelineId = String(
++      oportunidade?.backendPipelineId ||
++      oportunidadesBase.find((op: any) =>
++        String(op?.pipeline_id ?? "") === origemPipelineSemantico && String(op?.backendPipelineId ?? "").length > 0,
++      )?.backendPipelineId ||
++      "",
++    );
++
++    const resolvedBackendStageId = String(
++      oportunidadesBase.find((op: any) => {
++        if (!op?.backendStageId) return false;
++        const sameBackendPipeline = resolvedBackendPipelineId
++          ? String(op?.backendPipelineId ?? "") === resolvedBackendPipelineId
++          : String(op?.pipeline_id ?? "") === origemPipelineSemantico;
++        if (!sameBackendPipeline) return false;
++        return normalizeKey(op?.backendStageName ?? "") === targetEtapaKey;
++      })?.backendStageId ||
++      (normalizeKey(oportunidade?.backendStageName ?? "") === targetEtapaKey
++        ? String(oportunidade?.backendStageId ?? "")
++        : ""),
++    );
++
++    if (!resolvedBackendStageId) {
++      console.error("[Oportunidades] MoveStage cancelado: stageId UUID não resolvido.", {
++        cardId,
++        etapaId,
++        origemPipelineSemantico,
++        resolvedBackendPipelineId,
++      });
++      alert("Não foi possível mover: estágio de destino não mapeado no backend.");
++      setDraggedCard(null);
++      setDragOverColumn(null);
++      return;
++    }
++
++    try {
++      await opportunitiesApi.moveStage(String(getCanonicalOpportunityId(oportunidade) ?? ""), {
++        stageId: resolvedBackendStageId,
++        pipelineId: resolvedBackendPipelineId || undefined,
++        status: statusDestino,
++        reason: "kanban-drag-drop",
++      });
++    } catch (error) {
++      const message = error instanceof Error ? error.message : "Erro ao mover oportunidade";
++      console.error("[Oportunidades] Falha ao mover oportunidade via API oficial:", {
++        cardId,
++        etapaId,
++        resolvedBackendStageId,
++        resolvedBackendPipelineId,
++        message,
++      });
++      alert(`Erro ao mover oportunidade: ${message}`);
++      setDraggedCard(null);
++      setDragOverColumn(null);
++      return;
++    }
++
+     moveOportunidade(cardId, {
+       etapa_id: etapaId,
+-      status: etapaId === "integrado" ? "ganho" : 
+-              etapaId === "perdido" ? "perdido" : 
+-              "ativo"
++      status: statusDestino
+     });
++    setApiReadReloadKey((prev) => prev + 1);
+ 
+     setDraggedCard(null);
+     setDragOverColumn(null);
+@@ -1738,11 +2065,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       // Encontrar produto
+       let produto_id: number | null = null
+       if (item.produto) {
+-        const produto = safeProdutos.find(p => 
+-          p.nome?.toLowerCase().includes(item.produto.toLowerCase())
+-        )
++        const produtoNormalizado = normalizeKey(item.produto);
++        const produto = catalogProductOptions.find((p) => {
++          const nomeNormalizado = normalizeKey(p.name);
++          return (
++            nomeNormalizado === produtoNormalizado ||
++            nomeNormalizado.includes(produtoNormalizado) ||
++            produtoNormalizado.includes(nomeNormalizado)
++          );
++        });
+         if (produto) {
+-          produto_id = produto.id
++          const parsedId = Number.parseInt(String(produto.id).replace(/\D/g, ""), 10);
++          produto_id = Number.isFinite(parsedId) ? parsedId : null;
+         }
+       }
+       
+@@ -1838,7 +2172,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+     );
+   };
+ 
+-  const handleSubmit = (e: React.FormEvent) => {
++  const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+ 
+     // Validar pendência
+@@ -1958,7 +2292,44 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       createdAt: new Date().toISOString()
+     };
+ 
+-    addOportunidade(newOportunidade);
++    const payloadBackend = {
++      title: newOportunidade.nome || "",
++      amount: Number(newOportunidade.valor || 0),
++      pipelineId: String(newOportunidade.pipeline_id || ""),
++      stageId: String(newOportunidade.etapa_id || ""),
++      customerId: newOportunidade.cliente_id ? String(newOportunidade.cliente_id) : undefined,
++      ownerId: newOportunidade.responsavel_id ? String(newOportunidade.responsavel_id) : undefined,
++      description: newOportunidade.observacoes || undefined,
++    };
++
++    const missingRequiredFields: string[] = [];
++    if (!payloadBackend.title) missingRequiredFields.push("title");
++    if (!Number.isFinite(payloadBackend.amount) || payloadBackend.amount <= 0) {
++      missingRequiredFields.push("amount");
++    }
++    if (!payloadBackend.pipelineId) missingRequiredFields.push("pipelineId");
++    if (!payloadBackend.stageId) missingRequiredFields.push("stageId");
++
++    if (missingRequiredFields.length > 0) {
++      const message = `Não foi possível criar oportunidade: campos obrigatórios ausentes para API oficial (${missingRequiredFields.join(", ")}).`;
++      console.error("[Oportunidades] Create bloqueado:", {
++        missingRequiredFields,
++        payloadBackend,
++      });
++      alert(message);
++      return;
++    }
++
++    try {
++      const created = await opportunitiesApi.create(payloadBackend);
++      void created;
++      setApiReadReloadKey((prev) => prev + 1);
++    } catch (error) {
++      const message = error instanceof Error ? error.message : "Erro ao criar oportunidade";
++      console.error("[Oportunidades] Falha ao criar oportunidade na API oficial:", message);
++      alert(`Erro ao criar oportunidade: ${message}`);
++      return;
++    }
+ 
+     // Reset form
+     setShowModal(false);
+@@ -1983,14 +2354,25 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   };
+ 
+   // Handle para editar oportunidade existente
+-  const handleSubmitEdit = (e: React.FormEvent) => {
++  const handleSubmitEdit = async (e: React.FormEvent) => {
+     e.preventDefault();
+ 
+     const lead = editingOportunidade || selectedLead;
+     if (!lead) return;
++    if (!isOfficialApiOpportunity(lead) || !hasCanonicalOpportunityId(lead)) {
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      return;
++    }
+ 
+-    const idToUpdate = lead.id ?? lead.displayId;
+-    if (!idToUpdate) return;
++    const idToUpdate = getCanonicalOpportunityId(lead);
++    if (!idToUpdate) {
++      console.error("[Oportunidades] Update bloqueado: oportunidade sem ID canônico válido.", {
++        leadId: lead?.id,
++        leadDisplayId: lead?.displayId,
++      });
++      alert("Não foi possível salvar esta oportunidade: identificador interno inválido.");
++      return;
++    }
+ 
+     const etapaId = formData.etapa_id || lead.etapa_id || lead.etapa || "novo_lead";
+ 
+@@ -2001,86 +2383,70 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+ 
+     const payload = {
+       nome: formData.nome || "Sem nome",
+-      cliente_nome: formData.nome || "Sem nome",
+-      telefone: formData.telefone?.replace(/\D/g, "") || "",
+-      celular: formData.celular?.replace(/\D/g, "") || "",
+-      email: formData.email || "",
+-      cpf_cnpj: formData.cpf_cnpj || "",
+-      tipoPessoa: formData.tipoPessoa || "CPF",
+-
+-      profissao: formData.profissao || "",
+-      estado_civil: formData.estado_civil || "",
+-      sexo: formData.sexo || "",
+-      data_nascimento: formData.data_nascimento || "",
+-      data_abertura: formData.data_abertura || "",
+-
+-      cep: formData.cep || "",
+-      rua: formData.rua || "",
+-      numero: formData.numero || "",
+-      complemento: formData.complemento || "",
+-      bairro: formData.bairro || "",
+-      cidade: formData.cidade || "",
+-      estado: formData.estado || "",
+-
+-      produto: formData.produto || "",
+       valor: Number(formData.valor || 0),
++      pipeline_id: String(formData.pipelineId || lead.pipeline_id || safeCurrentPipelineId || ""),
+       etapa_id: etapaId,
+-      etapa: etapaId,
+       status: novoStatus,
+-
+       cliente_id: formData.cliente_id || null,
+       responsavel_id: formData.responsavel_id || null,
+       responsavel_nome: formData.responsavel_nome || "",
+       observacoes: formData.observacoes || "",
+-      tags: Array.isArray(formData.tags) ? formData.tags : [],
++    };
+ 
+-      banco: formData.banco || "",
+-      agencia: formData.agencia || "",
+-      conta: formData.conta || "",
+-      tipoConta: formData.tipoConta || "",
+-      titular: formData.titular || "",
+-      documentoTitular: formData.documentoTitular || "",
+-      pixTipo: formData.pixTipo || "",
+-      pixChave: formData.pixChave || "",
++    const payloadBackend = {
++      title: payload.nome,
++      amount: Number(payload.valor || 0),
++      pipelineId: String(
++        formData.pipelineId || lead.pipeline_id || safeCurrentPipelineId || "",
++      ),
++      stageId: String(payload.etapa_id || ""),
++      customerId: payload.cliente_id ?? undefined,
++      ownerId: payload.responsavel_id ?? undefined,
++      status: novoStatus,
++      description: String(payload.observacoes || ""),
++    };
+ 
+-      rdStatus: formData.rdStatus || "nao_consultado",
+-      rdConsultedAt: formData.rdConsultedAt || "",
+-      rdNotes: formData.rdNotes || "",
++    const missingRequiredFields: string[] = [];
++    if (!payloadBackend.title) missingRequiredFields.push("title");
++    if (!Number.isFinite(payloadBackend.amount) || payloadBackend.amount <= 0) {
++      missingRequiredFields.push("amount");
++    }
+ 
+-      racionalCompany_id: formData.racionalCompany_id,
+-      franquia_id: formData.franquia_id,
+-      franqueado_id: formData.franqueado_id,
++    if (missingRequiredFields.length > 0) {
++      console.error("[Oportunidades] Update bloqueado: campos obrigatórios ausentes/inválidos.", {
++        idToUpdate,
++        missingRequiredFields,
++        payloadBackend,
++      });
++      alert(`Não foi possível salvar. Campos obrigatórios inválidos: ${missingRequiredFields.join(", ")}`);
++      return;
++    }
+ 
+-      pendenciaMotivo: etapaId === "pendencia" ? formData.pendenciaMotivo : "",
+-      
+-      // Dados Onboarding Parceiro Comercial
+-      parceiroTipo: formData.parceiroTipo || "",
+-      razaoSocial: formData.razaoSocial || "",
+-      cnpj: formData.cnpj || "",
+-      telefoneComercial: formData.telefoneComercial || "",
+-      emailCorporativo: formData.emailCorporativo || "",
+-      responsavelLegal: formData.responsavelLegal || "",
+-      cpfResponsavel: formData.cpfResponsavel || "",
+-      cargoResponsavel: formData.cargoResponsavel || "",
+-      documentosEnviados: formData.documentosEnviados || [],
+-      
+-      // Dados Onboarding Colaborador FINQZ
+-      vinculoTipo: formData.vinculoTipo || "",
+-      cargo: formData.cargo || "",
+-      departamento: formData.departamento || "",
+-      salario: formData.salario || "",
+-      formacao: formData.formacao || "",
+-      experienciaProfissional: formData.experienciaProfissional || "",
+-      disponibilidade: formData.disponibilidade || []
+-    };
+-
+-    updateOportunidade(String(idToUpdate), payload);
++    try {
++      const updatedResponse = await opportunitiesApi.update(idToUpdate, payloadBackend);
++      const updatedFromApi = updatedResponse?.data && "title" in updatedResponse.data
++        ? mapApiOpportunityToKanbanShape(updatedResponse.data)
++        : null;
+ 
+-    setSelectedLead({
+-      ...lead,
+-      ...payload
+-    });
++      if (updatedFromApi) {
++        setSelectedLead((prev: any) => (prev ? { ...prev, ...updatedFromApi } : updatedFromApi));
++      } else {
++        setSelectedLead({
++          ...lead,
++          ...payload,
++        });
++      }
++    } catch (error) {
++      const message = error instanceof Error ? error.message : "Erro ao atualizar oportunidade";
++      console.error("[Oportunidades] Falha ao atualizar oportunidade na API oficial:", {
++        idToUpdate,
++        message,
++      });
++      alert(`Erro ao atualizar oportunidade: ${message}`);
++      return;
++    }
+ 
++    setApiReadReloadKey((prev) => prev + 1);
+     setShowOpportunityForm(false);
+     setShowModal(false);
+     setEditingOportunidade(null);
+@@ -2160,111 +2526,87 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+   };
+ 
+   // Oportunidade handlers
+-  const handleEditClick = (card: any) => {
+-    if (!canEditOportunidade(card)) return;
++  const openEditOpportunity = (opportunity: any) => {
++    if (!opportunity) return;
++    if (!isOfficialApiOpportunity(opportunity) || !hasCanonicalOpportunityId(opportunity)) {
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      return;
++    }
++    if (!canEditOportunidade(opportunity)) return;
+ 
+     const lead = {
+-      ...card,
+-      nome: card.cliente_nome ?? card.nome ?? '',
+-      etapa_id: card.etapa_id ?? card.etapa ?? 'negociacao',
++      ...opportunity,
++      nome: opportunity.cliente_nome ?? opportunity.nome ?? "",
++      etapa_id: opportunity.etapa_id ?? opportunity.etapa ?? "negociacao",
+     };
+ 
+-    setSelectedLead(lead);
+-    setEditingOportunidade(lead);
++    const canonicalId = getCanonicalOpportunityId(lead);
++    if (!canonicalId) {
++      console.error("[Oportunidades] Edição bloqueada: oportunidade sem ID canônico válido.", {
++        leadId: lead?.id,
++        leadDisplayId: lead?.displayId,
++      });
++      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
++      return;
++    }
++
++    const etapaAtual = lead.etapa_id ?? lead.etapa ?? "novo_lead";
+ 
+     // Preencher dados para o formulário principal (modal)
+     setFormData({
+       nome: lead.cliente_nome ?? lead.nome ?? "",
+-      tipoPessoa: lead.tipoPessoa ?? "CPF",
+-      cpf_cnpj: lead.cpf_cnpj ?? lead.documentos ?? "",
+-      profissao: lead.profissao ?? "",
+-      estado_civil: lead.estado_civil ?? "",
+-      sexo: lead.sexo ?? "",
+-      data_nascimento: lead.data_nascimento ?? "",
+-      data_abertura: lead.data_abertura ?? "",
+-      celular: lead.celular ?? lead.telefone ?? "",
+-      telefone: lead.telefone ?? "",
+-      email: lead.email ?? "",
+-      cep: lead.cep ?? "",
+-      rua: lead.rua ?? "",
+-      numero: lead.numero ?? "",
+-      complemento: lead.complemento ?? "",
+-      bairro: lead.bairro ?? "",
+-      cidade: lead.cidade ?? "",
+-      estado: lead.estado ?? "",
+-      produto: lead.produto ?? "",
++      tipoPessoa: formData.tipoPessoa ?? "CPF",
++      cpf_cnpj: formData.cpf_cnpj ?? "",
++      profissao: formData.profissao ?? "",
++      estado_civil: formData.estado_civil ?? "",
++      sexo: formData.sexo ?? "",
++      data_nascimento: formData.data_nascimento ?? "",
++      data_abertura: formData.data_abertura ?? "",
++      celular: formData.celular ?? "",
++      telefone: formData.telefone ?? "",
++      email: formData.email ?? "",
++      cep: formData.cep ?? "",
++      rua: formData.rua ?? "",
++      numero: formData.numero ?? "",
++      complemento: formData.complemento ?? "",
++      bairro: formData.bairro ?? "",
++      cidade: formData.cidade ?? "",
++      estado: formData.estado ?? "",
++      produto: formData.produto ?? "",
++      pipelineId: lead.pipeline_id ?? safeCurrentPipelineId ?? "",
+       valor: Number(lead.valor ?? 0),
+-      etapa_id: lead.etapa_id,
+-      tags: Array.isArray(lead.tags) ? lead.tags : [],
++      etapa_id: etapaAtual,
++      tags: Array.isArray(formData.tags) ? formData.tags : [],
+       cliente_id: lead.cliente_id ?? null,
+       responsavel_id: lead.responsavel_id ?? null,
+       responsavel_nome: lead.responsavel_nome ?? "",
+       observacoes: lead.observacoes ?? "",
+-      banco: lead.banco ?? "",
+-      agencia: lead.agencia ?? "",
+-      conta: lead.conta ?? "",
+-      tipoConta: lead.tipoConta ?? "",
+-      titular: lead.titular ?? "",
+-      documentoTitular: lead.documentoTitular ?? "",
+-      pixTipo: lead.pixTipo ?? "",
+-      pixChave: lead.pixChave ?? "",
+-      rdStatus: lead.rdStatus ?? "nao_consultado",
+-      rdConsultedAt: lead.rdConsultedAt ?? "",
+-      rdNotes: lead.rdNotes ?? "",
+-      racionalCompany_id: lead.racionalCompany_id ?? null,
+-      franquia_id: lead.franquia_id ?? null,
+-      franqueado_id: lead.franqueado_id ?? null,
+-      pendenciaMotivo: lead.pendenciaMotivo ?? ""
++      banco: formData.banco ?? "",
++      agencia: formData.agencia ?? "",
++      conta: formData.conta ?? "",
++      tipoConta: formData.tipoConta ?? "",
++      titular: formData.titular ?? "",
++      documentoTitular: formData.documentoTitular ?? "",
++      pixTipo: formData.pixTipo ?? "",
++      pixChave: formData.pixChave ?? "",
++      rdStatus: formData.rdStatus ?? "nao_consultado",
++      rdConsultedAt: formData.rdConsultedAt ?? "",
++      rdNotes: formData.rdNotes ?? "",
++      racionalCompany_id: formData.racionalCompany_id ?? null,
++      franquia_id: formData.franquia_id ?? null,
++      franqueado_id: formData.franqueado_id ?? null,
++      pendenciaMotivo: formData.pendenciaMotivo ?? ""
+     });
+ 
+-    // Também preencher editDrawerData para compatibilidade
+-    setEditDrawerData({
+-      nome: lead.nome ?? "",
+-      tipoPessoa: lead.tipoPessoa ?? "CPF",
+-      cpf_cnpj: lead.cpf_cnpj ?? "",
+-      profissao: lead.profissao ?? "",
+-      estado_civil: lead.estado_civil ?? "",
+-      sexo: lead.sexo ?? "",
+-      data_nascimento: lead.data_nascimento ?? "",
+-      data_abertura: lead.data_abertura ?? "",
+-      celular: lead.celular ?? "",
+-      telefone: lead.telefone ?? "",
+-      email: lead.email ?? "",
+-      cep: lead.cep ?? "",
+-      rua: lead.rua ?? "",
+-      numero: lead.numero ?? "",
+-      complemento: lead.complemento ?? "",
+-      bairro: lead.bairro ?? "",
+-      cidade: lead.cidade ?? "",
+-      estado: lead.estado ?? "",
+-      produto: lead.produto ?? "",
+-      valor: lead.valor ?? 0,
+-      etapa_id: lead.etapa_id,
+-      responsavel_id: lead.responsavel_id ?? null,
+-      responsavel_nome: lead.responsavel_nome ?? "",
+-      observacoes: lead.observacoes ?? "",
+-      tags: Array.isArray(lead.tags) ? lead.tags : [],
+-      banco: lead.banco ?? "",
+-      agencia: lead.agencia ?? "",
+-      conta: lead.conta ?? "",
+-      tipoConta: lead.tipoConta ?? "",
+-      titular: lead.titular ?? "",
+-      documentoTitular: lead.documentoTitular ?? "",
+-      pixTipo: lead.pixTipo ?? "",
+-      pixChave: lead.pixChave ?? "",
+-      rdStatus: lead.rdStatus ?? "nao_consultado",
+-      rdConsultedAt: lead.rdConsultedAt ?? "",
+-      rdNotes: lead.rdNotes ?? "",
+-      racionalCompany_id: lead.racionalCompany_id ?? null,
+-      franquia_id: lead.franquia_id ?? null,
+-      franqueado_id: lead.franqueado_id ?? null,
+-      pendenciaMotivo: lead.pendenciaMotivo ?? ""
+-    });
+-
+-    // O formulário será aberto pelo botão que chamou esta função
++    // Edição sempre deve abrir o formulário enxuto de Opportunity
+     setSelectedLead(lead);
+     setEditingOportunidade(lead);
+-    setShowModal(true);
++    setShowModal(false);
++    setShowOpportunityForm(true);
++  };
++
++  const handleEditClick = (card: any) => {
++    openEditOpportunity(card);
+   };
+ 
+   const handleDelete = (id: string) => {
+@@ -2276,171 +2618,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+ 
+   // Funções para editar a partir do drawer
+   const handleOpenEditFromDrawer = () => {
+-    const lead = selectedLead || editingOportunidade;
+-    if (!lead) return;
+-    if (!canEditOportunidade(lead)) return;
+-
+-    const etapaAtual = lead.etapa_id ?? lead.etapa ?? 'novo_lead';
+-
+-    setEditingOportunidade(lead);
+-
+-    setFormData({
+-      nome: lead.cliente_nome ?? lead.nome ?? "",
+-      tipoPessoa: lead.tipoPessoa ?? "CPF",
+-      cpf_cnpj: lead.cpf_cnpj ?? lead.documentos ?? "",
+-      profissao: lead.profissao ?? "",
+-      estado_civil: lead.estado_civil ?? "",
+-      sexo: lead.sexo ?? "",
+-      data_nascimento: lead.data_nascimento ?? "",
+-      data_abertura: lead.data_abertura ?? "",
+-
+-      celular: lead.celular ?? lead.telefone ?? "",
+-      telefone: lead.telefone ?? "",
+-      email: lead.email ?? "",
+-
+-      cep: lead.cep ?? "",
+-      rua: lead.rua ?? "",
+-      numero: lead.numero ?? "",
+-      complemento: lead.complemento ?? "",
+-      bairro: lead.bairro ?? "",
+-      cidade: lead.cidade ?? "",
+-      estado: lead.estado ?? "",
+-
+-      produto: lead.produto ?? "",
+-      valor: Number(lead.valor ?? 0),
+-      etapa_id: etapaAtual,
+-      tags: Array.isArray(lead.tags) ? lead.tags : [],
+-      cliente_id: lead.cliente_id ?? null,
+-      responsavel_id: lead.responsavel_id ?? null,
+-      responsavel_nome: lead.responsavel_nome ?? "",
+-      observacoes: lead.observacoes ?? "",
+-
+-      banco: lead.banco ?? "",
+-      agencia: lead.agencia ?? "",
+-      conta: lead.conta ?? "",
+-      tipoConta: lead.tipoConta ?? "",
+-      titular: lead.titular ?? "",
+-      documentoTitular: lead.documentoTitular ?? "",
+-      pixTipo: lead.pixTipo ?? "",
+-      pixChave: lead.pixChave ?? "",
+-
+-      rdStatus: lead.rdStatus ?? "nao_consultado",
+-      rdConsultedAt: lead.rdConsultedAt ?? "",
+-      rdNotes: lead.rdNotes ?? "",
+-
+-      racionalCompany_id: lead.racionalCompany_id ?? null,
+-      franquia_id: lead.franquia_id ?? null,
+-      franqueado_id: lead.franqueado_id ?? null,
+-      pendenciaMotivo: lead.pendenciaMotivo ?? ""
+-    });
+-
+-    setShowModal(true);
+-  };
+-
+-  const handleSaveEditFromDrawer = () => {
+-    const leadToEdit = selectedLead || editingOportunidade;
+-    if (!leadToEdit) return;
+-
+-    const idToUpdate = leadToEdit.id ?? leadToEdit.displayId;
+-    if (!idToUpdate) return;
+-
+-    // Se a etapa mudou, validar antes de salvar
+-    const etapaAnterior = leadToEdit.etapa_id || leadToEdit.etapa;
+-    if (etapaAnterior !== editDrawerData.etapa_id && editDrawerData.etapa_id !== 'perdido') {
+-      const validacao = validarEtapa(editDrawerData, editDrawerData.etapa_id as EtapaKey);
+-      if (!validacao.valido) {
+-        alert(`Não é possível avançar para esta etapa.\n\n${validacao.mensagem}`);
+-        return;
+-      }
+-    }
+-
+-    // Determinar o status com base na nova etapa
+-    const novoStatus = editDrawerData.etapa_id === 'integrado' ? 'ganho' : 
+-                      editDrawerData.etapa_id === 'perdido' ? 'perdido' : 'ativo';
+-
+-    updateOportunidade(String(idToUpdate), {
+-      // Dados Pessoais / Cliente
+-      nome: editDrawerData.nome,
+-      telefone: editDrawerData.telefone?.replace(/\D/g, "") || "",
+-      celular: editDrawerData.celular?.replace(/\D/g, "") || "",
+-      email: editDrawerData.email || "",
+-      cpf_cnpj: editDrawerData.cpf_cnpj || "",
+-      tipoPessoa: editDrawerData.tipoPessoa || "CPF",
+-      profissao: editDrawerData.profissao || "",
+-      estado_civil: editDrawerData.estado_civil || "",
+-      sexo: editDrawerData.sexo || "",
+-      data_nascimento: editDrawerData.data_nascimento || "",
+-      data_abertura: editDrawerData.data_abertura || "",
+-      // Endereço
+-      cep: editDrawerData.cep || "",
+-      rua: editDrawerData.rua || "",
+-      numero: editDrawerData.numero || "",
+-      complemento: editDrawerData.complemento || "",
+-      bairro: editDrawerData.bairro || "",
+-      cidade: editDrawerData.cidade || "",
+-      estado: editDrawerData.estado || "",
+-      // Dados da Oportunidade
+-      produto: editDrawerData.produto || "",
+-      valor: Number(editDrawerData.valor || 0),
+-      etapa_id: editDrawerData.etapa_id,
+-      etapa: editDrawerData.etapa_id,
+-      status: novoStatus,
+-      cliente_nome: editDrawerData.nome,
+-      responsavel_id: editDrawerData.responsavel_id,
+-      responsavel_nome: editDrawerData.responsavel_nome,
+-      observacoes: editDrawerData.observacoes || "",
+-      tags: Array.isArray(editDrawerData.tags) ? editDrawerData.tags : [],
+-      // Dados Bancários
+-      banco: editDrawerData.banco || "",
+-      agencia: editDrawerData.agencia || "",
+-      conta: editDrawerData.conta || "",
+-      tipoConta: editDrawerData.tipoConta || "",
+-      titular: editDrawerData.titular || "",
+-      documentoTitular: editDrawerData.documentoTitular || "",
+-      pixTipo: editDrawerData.pixTipo || "",
+-      pixChave: editDrawerData.pixChave || "",
+-      // RD / Consulta Restrição
+-      rdStatus: editDrawerData.rdStatus || "nao_consultado",
+-      rdConsultedAt: editDrawerData.rdConsultedAt || "",
+-      rdNotes: editDrawerData.rdNotes || "",
+-      // Hierarquia Comercial
+-      racionalCompany_id: editDrawerData.racionalCompany_id,
+-      franquia_id: editDrawerData.franquia_id,
+-      franqueado_id: editDrawerData.franqueado_id,
+-      // Motivo de pendência
+-      pendenciaMotivo: editDrawerData.etapa_id === "pendencia" ? editDrawerData.pendenciaMotivo : ""
+-    });
+-
+-    // Atualizar o selectedLead com os novos dados
+-    setSelectedLead({
+-      ...leadToEdit,
+-      nome: editDrawerData.nome,
+-      cliente_nome: editDrawerData.nome,
+-      telefone: editDrawerData.telefone,
+-      celular: editDrawerData.celular,
+-      email: editDrawerData.email,
+-      produto: editDrawerData.produto,
+-      valor: editDrawerData.valor,
+-      etapa_id: editDrawerData.etapa_id,
+-      etapa: editDrawerData.etapa_id,
+-      status: novoStatus,
+-      responsavel_id: editDrawerData.responsavel_id,
+-      responsavel_nome: editDrawerData.responsavel_nome,
+-      tags: editDrawerData.tags,
+-      observacoes: editDrawerData.observacoes
+-    });
+-
+-    // Se a etapa mudou, mover o card para a coluna correta
+-    if (etapaAnterior !== editDrawerData.etapa_id) {
+-      moveOportunidade(idToUpdate, {
+-        etapa_id: editDrawerData.etapa_id,
+-        status: novoStatus
+-      });
+-    }
+-
+-    setShowEditDrawerModal(false);
+-    setEditingOportunidade(null);
+-    setSelectedLead(null);
++    openEditOpportunity(selectedLead || editingOportunidade);
+   };
+ 
+   const pipelineSelectControl = (
+@@ -2516,7 +2694,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+         ]}
+         onFilterChange={updateFilter}
+         filterValues={filters}
+-        exportData={filteredOportunidades}
++        exportData={dedupedFilteredOportunidades}
+         exportColumns={[
+           { key: 'nome', label: 'Nome' },
+           { key: 'telefone', label: 'Telefone' },
+@@ -2827,9 +3005,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+               <div className="p-2 space-y-2 overflow-y-auto flex-1">
+                 {columnOportunidades.map((card) => {
+                   // Normalizar dados do card com optional chaining e fallbacks
++                  const visualDisplayId = getVisualOpportunityId(card);
+                   const cardData = {
+-                    id: card?.id ?? '0',
+-                    displayId: card?.displayId ?? card?.id ?? 'L-0000',
++                    id: card?.id ?? "",
++                    displayId: visualDisplayId,
+                     nome: card?.cliente_nome ?? card?.nome ?? 'Sem nome',
+                     produto: card?.produto ?? '',
+                     valor: Number(card?.valor ?? 0),
+@@ -2842,7 +3021,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                     responsavel_id: card?.responsavel_id ?? null,
+                     responsavel_nome: card?.responsavel_nome ?? '',
+                     createdAt: card?.createdAt ?? null,
+-                    updatedAt: card?.updatedAt ?? null
++                    updatedAt: card?.updatedAt ?? null,
++                    __officialApiSource: card?.__officialApiSource === true
+                   };
+ 
+                   // Função para formatar data
+@@ -2873,11 +3053,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                   };
+ 
+                   const telefoneLimpo = String(cardData.telefone).replace(/\D/g, '');
++                  const cardHasCanonicalId = hasCanonicalOpportunityId(cardData);
++                  const cardIsOfficial = isOfficialApiOpportunity(cardData);
++                  const cardCanUseCriticalActions = cardHasCanonicalId && cardIsOfficial;
+                   
+                   return (
+                     <div
+-                      key={cardData.id}
+-                      draggable={true}
++                      key={cardData.id || cardData.displayId || `${cardData.nome}-${etapa.id}`}
++                      draggable={cardCanUseCriticalActions}
+                       onDragStart={(e) => handleDragStart(e, String(cardData.id))}
+                       onDragEnd={handleDragEnd}
+                       onClick={() => handleOpenLead(cardData)}
+@@ -2894,7 +3077,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                       {/* ID no topo - usa displayId (L-0001) */}
+                       <div className="flex items-center justify-between mb-1">
+                         <span className="text-[10px] text-slate-400 font-semibold">
+-                          #{cardData.displayId}
++                          #{cardData.displayId || "SEM-ID-VISUAL"}
+                         </span>
+                         <StatusBadge 
+                           status={cardData.status === 'ganho' ? 'aprovado' : cardData.status === 'perdido' ? 'reprovado' : 'pendente'} 
+@@ -2982,13 +3165,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                               e.preventDefault();
+                               e.stopPropagation();
+ 
+-                              if (!selectedLead) {
+-                                alert("Nenhuma oportunidade selecionada para edição.");
+-                                return;
+-                              }
+-
+                               handleEditClick(cardData);
+-                              setShowOpportunityForm(true);
+                             }}
+                             className="p-1 rounded bg-blue-900/20 text-blue-700 hover:bg-blue-900/20"
+                             title="Editar"
+@@ -3052,9 +3229,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+           <div className="relative w-full max-w-md mx-4 rounded-xl shadow-2xl bg-[#111827] border border-[#1f2937]">
+             {/* Header */}
+             <div className="flex items-center justify-between p-4 border-b border-[#1f2937]">
+-              <h2 className="text-lg font-semibold text-white">
+-                {editingOportunidade ? "Editar Oportunidade" : "Nova Oportunidade"}
+-              </h2>
++              <h2 className="text-lg font-semibold text-white">Nova Oportunidade</h2>
+               <button
+                 onClick={() => { setShowModal(false); setEditingOportunidade(null); }}
+                 className="p-1 rounded-lg hover:bg-gray-100 text-slate-500 transition-colors"
+@@ -3064,7 +3239,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+             </div>
+             
+             {/* Form - Completo */}
+-            <form onSubmit={editingOportunidade ? handleSubmitEdit : handleSubmit} className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
++            <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+               {/* Seção: Dados do Cliente */}
+               <div className="border-b pb-3">
+                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
+@@ -3152,8 +3327,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                     >
+                       <option value="">Selecione</option>
+                       {catalogProductOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+-                      {/* Fallback para produtos legados */}
+-                      {safeProdutos.filter(sp => !catalogProductOptions.find(cp => cp.name === sp.nome)).map((p) => <option key={`legacy-${p.id}`} value={p.nome}>{p.nome}</option>)}
+                     </select>
+                   </div>
+                   {/* Subproduto */}
+@@ -3695,7 +3868,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+             <div className="p-5 border-b flex items-center justify-between">
+               <div>
+                 <span className="text-xs font-medium text-slate-500">OPORTUNIDADE</span>
+-                <h2 className="text-lg font-semibold">#{selectedLead?.displayId ?? selectedLead?.id ?? '-'}</h2>
++                <h2 className="text-lg font-semibold">#{getVisualOpportunityId(selectedLead)}</h2>
+               </div>
+               <button 
+                 onClick={() => setOpenLeadDrawer(false)}
+@@ -3907,304 +4080,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+         </div>
+       )}
+ 
+-      {/* Modal de Edição a partir do Drawer - Formulário completo igual ao criar */}
+-      {showEditDrawerModal && (
+-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+-          <div 
+-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+-            onClick={() => setShowEditDrawerModal(false)}
+-          />
+-          
+-          <div className="relative w-full max-w-2xl mx-4 rounded-xl shadow-2xl bg-[#111827] border border-[#1f2937] max-h-[90vh] flex flex-col">
+-            <div className="flex items-center justify-between p-4 border-b border-[#1f2937] flex-shrink-0">
+-              <h2 className="text-lg font-semibold text-white">
+-                {editingOportunidade ? 'Editar Oportunidade' : 'Nova Oportunidade'}
+-              </h2>
+-              <button
+-                onClick={() => setShowEditDrawerModal(false)}
+-                className="p-1 rounded-lg hover:bg-gray-100 text-slate-500 transition-colors"
+-              >
+-                <X size={20} />
+-              </button>
+-            </div>
+-            
+-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
+-              {/* Seção: Dados do Cliente */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
+-                    <input type="text" value={editDrawerData.nome ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
+-                    <select value={editDrawerData.tipoPessoa ?? "CPF"} onChange={(e) => setEditDrawerData({ ...editDrawerData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="CPF">Pessoa Física</option>
+-                      <option value="CNPJ">Pessoa Jurídica</option>
+-                    </select>
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">{editDrawerData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
+-                    <input type="text" value={editDrawerData.tipoPessoa === "CPF" ? formatCPFInput(editDrawerData.cpf_cnpj ?? "") : formatCNPJInput(editDrawerData.cpf_cnpj ?? "")} onChange={(e) => setEditDrawerData({ ...editDrawerData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={editDrawerData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
+-                    <input type="tel" value={editDrawerData.celular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
+-                    <input type="tel" value={editDrawerData.telefone ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
+-                    <input type="email" value={editDrawerData.email ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  {editDrawerData.tipoPessoa === "CPF" ? (
+-                    <div>
+-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
+-                      <input type="date" value={editDrawerData.data_nascimento ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                    </div>
+-                  ) : (
+-                    <div>
+-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
+-                      <input type="date" value={editDrawerData.data_abertura ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                    </div>
+-                  )}
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Profissão</label>
+-                    <input type="text" value={editDrawerData.profissao ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, profissao: e.target.value })} placeholder="Profissão" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Estado Civil</label>
+-                    <select value={editDrawerData.estado_civil ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, estado_civil: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione</option>
+-                      <option value="solteiro">Solteiro(a)</option>
+-                      <option value="casado">Casado(a)</option>
+-                      <option value="divorciado">Divorciado(a)</option>
+-                      <option value="viuvo">Viúvo(a)</option>
+-                      <option value="uniao">União Estável</option>
+-                    </select>
+-                  </div>
+-                </div>
+-              </div>
+-
+-              {/* Seção: Endereço */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">CEP</label>
+-                    <input type="text" value={editDrawerData.cep ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
+-                    <select value={editDrawerData.estado ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, estado: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione</option>
+-                      <option value="AC">Acre</option>
+-                      <option value="AL">Alagoas</option>
+-                      <option value="AP">Amapá</option>
+-                      <option value="AM">Amazonas</option>
+-                      <option value="BA">Bahia</option>
+-                      <option value="CE">Ceará</option>
+-                      <option value="DF">Distrito Federal</option>
+-                      <option value="ES">Espírito Santo</option>
+-                      <option value="GO">Goiás</option>
+-                      <option value="MA">Maranhão</option>
+-                      <option value="MT">Mato Grosso</option>
+-                      <option value="MS">Mato Grosso do Sul</option>
+-                      <option value="MG">Minas Gerais</option>
+-                      <option value="PA">Pará</option>
+-                      <option value="PB">Paraíba</option>
+-                      <option value="PR">Paraná</option>
+-                      <option value="PE">Pernambuco</option>
+-                      <option value="PI">Piauí</option>
+-                      <option value="RJ">Rio de Janeiro</option>
+-                      <option value="RN">Rio Grande do Norte</option>
+-                      <option value="RS">Rio Grande do Sul</option>
+-                      <option value="RO">Rondônia</option>
+-                      <option value="RR">Roraima</option>
+-                      <option value="SC">Santa Catarina</option>
+-                      <option value="SP">São Paulo</option>
+-                      <option value="SE">Sergipe</option>
+-                      <option value="TO">Tocantins</option>
+-                    </select>
+-                  </div>
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label>
+-                    <input type="text" value={editDrawerData.cidade ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Endereço</label>
+-                    <input type="text" value={editDrawerData.rua ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, rua: e.target.value })} placeholder="Rua, Avenida, etc." className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Número</label>
+-                    <input type="text" value={editDrawerData.numero ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, numero: e.target.value })} placeholder="Número" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label>
+-                    <input type="text" value={editDrawerData.complemento ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label>
+-                    <input type="text" value={editDrawerData.bairro ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                </div>
+-              </div>
+-
+-              {/* Seção: Dados da Oportunidade */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados da Oportunidade</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
+-                    <select value={editDrawerData.produto ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, produto: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione um produto</option>
+-                      {safeProdutos.map((produto) => (
+-                        <option key={produto.id} value={produto.nome}>
+-                          {produto.nome}
+-                        </option>
+-                      ))}
+-                    </select>
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
+-                    <select value={editDrawerData.etapa_id && OFICIAL_ETAPAS.some(e => e.key === editDrawerData.etapa_id) ? editDrawerData.etapa_id : "novo_lead"} onChange={(e) => setEditDrawerData({ ...editDrawerData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      {OFICIAL_ETAPAS.map((etapa) => (
+-                        <option key={etapa.key} value={etapa.key}>
+-                          {etapa.label}
+-                        </option>
+-                      ))}
+-                    </select>
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$)</label>
+-                    <input type="number" value={editDrawerData.valor ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, valor: parseFloat(e.target.value) || 0 })} placeholder="0,00" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Responsável</label>
+-                    <select value={editDrawerData.responsavel_id ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, responsavel_id: e.target.value ? Number(e.target.value) : null })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione um responsável</option>
+-                      {availableResponsibles.map((usuario: any) => (
+-                        <option key={usuario.id} value={usuario.id}>
+-                          {usuario.nome} {usuario.perfil ? `(${usuario.perfil})` : ''}
+-                        </option>
+-                      ))}
+-                    </select>
+-                  </div>
+-                  <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
+-                    <textarea value={editDrawerData.observacoes ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, observacoes: e.target.value })} placeholder="Observações..." rows={3} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] resize-none" />
+-                  </div>
+-                </div>
+-              </div>
+-
+-              {/* Seção: Dados Bancários */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Banco</label>
+-                    <input type="text" value={editDrawerData.banco ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Agência</label>
+-                    <input type="text" value={editDrawerData.agencia ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Conta</label>
+-                    <input type="text" value={editDrawerData.conta ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Conta</label>
+-                    <select value={editDrawerData.tipoConta ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione</option>
+-                      <option value="corrente">Conta Corrente</option>
+-                      <option value="poupanca">Poupança</option>
+-                    </select>
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome do Titular</label>
+-                    <input type="text" value={editDrawerData.titular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Doc. do Titular</label>
+-                    <input type="text" value={editDrawerData.documentoTitular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Chave PIX</label>
+-                    <select value={editDrawerData.pixTipo ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione</option>
+-                      <option value="cpf">CPF</option>
+-                      <option value="cnpj">CNPJ</option>
+-                      <option value="email">E-mail</option>
+-                      <option value="telefone">Telefone</option>
+-                      <option value="aleatoria">Chave Aleatória</option>
+-                    </select>
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label>
+-                    <input type="text" value={editDrawerData.pixChave ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                </div>
+-              </div>
+-              
+-              {/* Tags */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Tags</h3>
+-                <div className="flex flex-wrap gap-2">
+-                  {listarTags().map((tag) => (
+-                    <button
+-                      key={tag.id}
+-                      type="button"
+-                      onClick={() => {
+-                        const newTags = editDrawerData.tags?.includes(tag.id)
+-                          ? editDrawerData.tags.filter((t: string) => t !== tag.id)
+-                          : [...(editDrawerData.tags || []), tag.id];
+-                        setEditDrawerData({ ...editDrawerData, tags: newTags });
+-                      }}
+-                      className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
+-                        editDrawerData.tags?.includes(tag.id)
+-                          ? "text-white"
+-                          : "bg-gray-100 text-slate-600"
+-                      }`}
+-                      style={editDrawerData.tags?.includes(tag.id) ? { backgroundColor: tag.cor } : {}}
+-                    >
+-                      {tag.nome}
+-                    </button>
+-                  ))}
+-                </div>
+-              </div>
+-              
+-              {/* Botões */}
+-              <div className="flex gap-2 pt-2">
+-                <button
+-                  type="button"
+-                  onClick={() => setShowEditDrawerModal(false)}
+-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors"
+-                >
+-                  Cancelar
+-                </button>
+-                <button
+-                  type="button"
+-                  onClick={() => {
+-                    if (editingOportunidade) {
+-                      handleSaveEditFromDrawer();
+-                    } else {
+-                      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+-                    }
+-                  }}
+-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-[#000dff] text-white hover:bg-[#000dff]/90 transition-colors"
+-                >
+-                  Salvar
+-                </button>
+-              </div>
+-            </div>
+-          </div>
+-        </div>
+-      )}
+-
+       {/* Modal Fullscreen de Detalhes da Negociação */}
+       {showFullscreenModal && selectedLead && (
+         <OverlayPortal>
+@@ -4215,7 +4090,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                 <div className="flex items-center gap-4">
+                   <button onClick={handleCloseNegotiation} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
+                   <span className="text-slate-300">|</span>
+-                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedLead?.displayId ?? selectedLead?.id ?? '---'}</h1></div>
++                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{getVisualOpportunityId(selectedLead)}</h1></div>
+                 </div>
+               </div>
+               <div className="flex items-center gap-6 flex-wrap">
+@@ -4865,20 +4740,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                                         onChange={(e) => setNovaFaseAposAceite(e.target.value)}
+                                         className="w-full p-2.5 border border-green-300 rounded-lg text-sm bg-[#111827]"
+                                       >
+-                                        <option value="novo_lead">Novo Lead</option>
+-                                        <option value="negociacao">Negociação</option>
+-                                        <option value="aguardando_assinatura">Aguardando Assinatura</option>
+-                                        <option value="pendencia">Pendência</option>
+-                                        <option value="formalizacao">Formalização</option>
+-                                        <option value="integrado">Integrado</option>
+-                                        <option value="perdido">Perdido</option>
++                                        {etapasPosSimulacao.map((etapa) => (
++                                          <option key={etapa.id} value={etapa.id}>
++                                            {etapa.nome}
++                                          </option>
++                                        ))}
+                                       </select>
+                                       <button 
+                                         onClick={confirmarMudancaFase}
+                                         className="w-full px-3 py-2.5 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 flex items-center justify-center gap-2"
+                                       >
+                                         <ArrowRight size={14} className="inline mr-1" />
+-                                        Confirmar e mover para {OFICIAL_ETAPAS.find(e => e.key === novaFaseAposAceite)?.label}
++                                        Confirmar e mover para {fasePosAceiteSelecionada?.nome ?? OFICIAL_ETAPAS.find(e => e.key === novaFaseAposAceite)?.label ?? "Etapa"}
+                                       </button>
+                                     </div>
+                                   )}
+@@ -4890,7 +4763,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                                     </button>
+                                   </div>
+                                   <div className="flex gap-2">
+-                                    <button className="flex-1 px-3 py-2 bg-gray-100 text-slate-300 text-sm rounded-lg font-medium hover:bg-gray-200">
++                                    <button
++                                      type="button"
++                                      disabled
++                                      onClick={() =>
++                                        alert("Persistência oficial de simulação será implementada na fase OpportunitySimulation.")
++                                      }
++                                      className="flex-1 px-3 py-2 bg-gray-100 text-slate-300 text-sm rounded-lg font-medium cursor-not-allowed opacity-80"
++                                      title="Persistência oficial de simulação será implementada na fase OpportunitySimulation."
++                                    >
+                                       <Save size={14} className="inline mr-1" />Salvar simulação
+                                     </button>
+                                     <button className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700">
+@@ -4992,7 +4873,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+                   </div>
+                 </div>
+                 <div className="lg:col-span-1 space-y-4">
+-                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><User size={16} className="text-[#000dff]" />Ações rápidas</h4><div className="space-y-2">{selectedLead?.telefone && (<><a href={`https://wa.me/55${String(selectedLead.telefone).replace(/\D/g, "")}`} target="_blank" className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-green-900/20 text-green-700 text-sm rounded-lg"><MessageCircle size={16} />WhatsApp</a><a href={`tel:${String(selectedLead.telefone).replace(/\D/g, "")}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-blue-900/20 text-blue-700 text-sm rounded-lg"><Phone size={16} />Ligar</a></>)}{selectedLead?.email && (<a href={`mailto:${selectedLead.email}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-purple-900/20 text-purple-700 text-sm rounded-lg"><Mail size={16} />E-mail</a>)}{canEditOportunidade(selectedLead) && (<button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!selectedLead) { alert("Nenhuma oportunidade selecionada para edição."); return; } handleEditClick(selectedLead); }} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-[#000dff] text-white text-sm rounded-lg"><Edit2 size={16} />Editar</button>)}</div></div>
++                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><User size={16} className="text-[#000dff]" />Ações rápidas</h4><div className="space-y-2">{selectedLead?.telefone && (<><a href={`https://wa.me/55${String(selectedLead.telefone).replace(/\D/g, "")}`} target="_blank" className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-green-900/20 text-green-700 text-sm rounded-lg"><MessageCircle size={16} />WhatsApp</a><a href={`tel:${String(selectedLead.telefone).replace(/\D/g, "")}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-blue-900/20 text-blue-700 text-sm rounded-lg"><Phone size={16} />Ligar</a></>)}{selectedLead?.email && (<a href={`mailto:${selectedLead.email}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-purple-900/20 text-purple-700 text-sm rounded-lg"><Mail size={16} />E-mail</a>)}{canEditOportunidade(selectedLead || editingOportunidade) && (<button onClick={(e) => { e.preventDefault(); e.stopPropagation(); const currentDetailOpportunity = selectedLead || editingOportunidade; if (!currentDetailOpportunity) { alert("Nenhuma oportunidade carregada para edição."); return; } openEditOpportunity(currentDetailOpportunity); }} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-[#000dff] text-white text-sm rounded-lg"><Edit2 size={16} />Editar</button>)}</div></div>
+                   <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><FileText size={16} className="text-[#000dff]" />Resumo</h4><div className="space-y-3"><div><span className="text-xs text-slate-500">Valor</span><p className="font-bold text-lg text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>{selectedLead?.telefone && (<div><span className="text-xs text-slate-500">Telefone</span><p className="text-sm">{selectedLead.telefone}</p></div>)}{selectedLead?.email && (<div><span className="text-xs text-slate-500">E-mail</span><p className="text-sm">{selectedLead.email}</p></div>)}<div><span className="text-xs text-slate-500">Criação</span><p className="text-sm">{selectedLead?.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString('pt-BR') : '-'}</p></div><div><span className="text-xs text-slate-500">Última</span><p className="text-sm">{selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleDateString('pt-BR') : '-'}</p></div></div></div>
+                   <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><Timer size={16} className="text-[#000dff]" />SLA</h4>{(() => { const d = selectedLead?.updatedAt || selectedLead?.createdAt; const dias = d ? Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000) : 0; const s = dias <= 4 ? 'Saudável' : dias <= 9 ? 'Atenção' : 'Crítico'; const c = dias <= 4 ? '#22c55e' : dias <= 9 ? '#f59e0b' : '#ef4444'; return (<div className="text-center"><p className="text-3xl font-bold" style={{color:c}}>{dias}</p><p className="text-sm text-slate-600">{dias === 0 ? 'dia' : 'dias'} sem atuação</p><div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{backgroundColor:c+'20',color:c}}><Circle size={8} fill={c} />{s}</div></div>); })()}</div>
+                 </div>
+@@ -5031,7 +4912,37 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+       )}
+ 
+       {/* Formulário Lateral de Edição de Oportunidade */}
+-      {showOpportunityForm && (
++      {showOpportunityForm && !editingOportunidade && (
++        <div className="fixed inset-0 z-[99999] bg-black/50 flex justify-end">
++          <div className="w-full max-w-2xl h-full bg-[#111827] shadow-2xl overflow-y-auto">
++            <div className="flex items-center justify-between p-6 border-b">
++              <h2 className="text-xl font-bold">Editar Oportunidade</h2>
++              <button
++                type="button"
++                onClick={() => setShowOpportunityForm(false)}
++                className="p-2 rounded-lg hover:bg-gray-100"
++              >
++                <X size={22} />
++              </button>
++            </div>
++            <div className="p-6">
++              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
++                Não foi possível abrir a edição desta oportunidade com segurança.
++              </div>
++              <div className="pt-4">
++                <button
++                  type="button"
++                  onClick={() => setShowOpportunityForm(false)}
++                  className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors"
++                >
++                  Fechar
++                </button>
++              </div>
++            </div>
++          </div>
++        </div>
++      )}
++      {showOpportunityForm && editingOportunidade && (
+         <div className="fixed inset-0 z-[99999] bg-black/50 flex justify-end">
+           <div className="w-full max-w-2xl h-full bg-[#111827] shadow-2xl overflow-y-auto">
+             <div className="flex items-center justify-between p-6 border-b">
+@@ -5050,202 +4961,120 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
+ 
+             {/* Formulário completo - mesmo usado em Nova Oportunidade */}
+             <form onSubmit={handleSubmitEdit} className="p-6 space-y-4">
+-              {/* Seção: Dados do Cliente */}
++              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
++                Dados do cliente devem ser alterados no CRM Cliente.
++              </div>
++
+               <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
++                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados da Oportunidade</h3>
+                 <div className="grid grid-cols-2 gap-3">
+                   <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
+-                    <input type="text" value={formData.nome ?? ""} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
+-                    <select value={formData.tipoPessoa ?? "CPF"} onChange={(e) => setFormData({ ...formData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="CPF">Pessoa Física</option>
+-                      <option value="CNPJ">Pessoa Jurídica</option>
+-                    </select>
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
+-                    <input type="text" value={formData.tipoPessoa === "CPF" ? formatCPFInput(formData.cpf_cnpj ?? "") : formatCNPJInput(formData.cpf_cnpj ?? "")} onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={formData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
+-                    <input type="tel" value={formData.celular ?? ""} onChange={(e) => setFormData({ ...formData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                  <div>
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
+-                    <input type="tel" value={formData.telefone ?? ""} onChange={(e) => setFormData({ ...formData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
++                    <label className="block text-xs font-medium text-slate-600 mb-1">Título da oportunidade *</label>
++                    <input
++                      type="text"
++                      value={formData.nome ?? ""}
++                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
++                      placeholder="Título"
++                      required
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
++                    />
+                   </div>
++
+                   <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
+-                    <input type="email" value={formData.email ?? ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
++                    <label className="block text-xs font-medium text-slate-600 mb-1">Pipeline *</label>
++                    <select
++                      value={formData.pipelineId || safeCurrentPipelineId || ""}
++                      onChange={(e) => setFormData({ ...formData, pipelineId: e.target.value })}
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
++                      required
++                    >
++                      <option value="" disabled>Selecione um pipeline</option>
++                      {catalogPipelineOptions.map((pipeline) => (
++                        <option key={pipeline.id} value={pipeline.id}>
++                          {pipeline.name}
++                        </option>
++                      ))}
++                    </select>
+                   </div>
+-                  {formData.tipoPessoa === "CPF" ? (
+-                    <div>
+-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
+-                      <input type="date" value={formData.data_nascimento ?? ""} onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                    </div>
+-                  ) : (
+-                    <div>
+-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
+-                      <input type="date" value={formData.data_abertura ?? ""} onChange={(e) => setFormData({ ...formData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                    </div>
+-                  )}
+-                </div>
+-              </div>
+-              
+-              {/* Seção: Endereço */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Rua" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="Nº" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label><input type="text" value={formData.bairro ?? ""} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label><input type="text" value={formData.cidade ?? ""} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="Estado" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                </div>
+-              </div>
+-              
+-              {/* Seção: Dados do Negócio */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Negócio</h3>
+-                <div className="grid grid-cols-2 gap-3">
++
+                   <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
+-                    <select value={formData.produto ?? ""} onChange={(e) => setFormData({ ...formData, produto: e.target.value })} required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      <option value="">Selecione um produto</option>
+-                      <option value="consignado">Consignado</option>
+-                      <option value="personalite">Personalité</option>
+-                      <option value="cartão_beneficio">Cartão Benefício</option>
+-                      <option value="cartão_consignado">Cartão Consignado</option>
+-                      <option value="emprestimo_pessoal">Empréstimo Pessoal</option>
+-                      <option value="seguros">Seguros</option>
+-                      <option value="outros">Outros</option>
++                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
++                    <select
++                      value={formData.etapa_id ?? "novo_lead"}
++                      onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })}
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
++                      required
++                    >
++                      {(getPipelineStages(formData.pipelineId || safeCurrentPipelineId || "").length > 0
++                        ? getPipelineStages(formData.pipelineId || safeCurrentPipelineId || "").map((stageName) => ({
++                            id: normalizeKey(stageName),
++                            nome: stageName,
++                          }))
++                        : OFICIAL_ETAPAS.map((etapa) => ({ id: etapa.key, nome: etapa.label }))).map((etapa) => (
++                        <option key={etapa.id} value={etapa.id}>
++                          {etapa.nome}
++                        </option>
++                      ))}
+                     </select>
+                   </div>
++
+                   <div className="col-span-2">
+                     <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$) *</label>
+-                    <input type="number" value={formData.valor ?? 0} onChange={(e) => setFormData({ ...formData, valor: Number(e.target.value) })} placeholder="0,00" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
++                    <input
++                      type="number"
++                      value={formData.valor ?? 0}
++                      onChange={(e) => setFormData({ ...formData, valor: Number(e.target.value) })}
++                      placeholder="0,00"
++                      required
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
++                    />
+                   </div>
++
+                   <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa</label>
+-                    <select value={formData.etapa_id ?? "novo_lead"} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+-                      {OFICIAL_ETAPAS.map((etapa) => (
+-                        <option key={etapa.key} value={etapa.key}>{etapa.label}</option>
++                    <label className="block text-xs font-medium text-slate-600 mb-1">Responsável</label>
++                    <select
++                      value={formData.responsavel_id ?? ""}
++                      onChange={(e) =>
++                        setFormData({ ...formData, responsavel_id: e.target.value ? String(e.target.value) : null })
++                      }
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
++                    >
++                      <option value="">Sem responsável</option>
++                      {safeUsuarios.map((usuario: any) => (
++                        <option key={usuario.id} value={usuario.id}>
++                          {usuario.nome}
++                        </option>
+                       ))}
+                     </select>
+                   </div>
++
+                   <div className="col-span-2">
+-                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
+-                    <textarea value={formData.observacoes ?? ""} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} placeholder="Observações..." rows={3} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+-                  </div>
+-                </div>
+-              </div>
+-              
+-              {/* Seção: Dados Bancários */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Banco</label><input type="text" value={formData.banco ?? ""} onChange={(e) => setFormData({ ...formData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Agência</label><input type="text" value={formData.agencia ?? ""} onChange={(e) => setFormData({ ...formData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Conta Corrente</option><option value="poupança">Poupança</option></select></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Doc Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                </div>
+-              </div>
+-              
+-              {/* Seção: PIX */}
+-              <div className="border-b pb-3">
+-                <h3 className="text-sm font-semibold text-slate-200 mb-3">PIX</h3>
+-                <div className="grid grid-cols-2 gap-3">
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Chave Aleatória</option></select></div>
+-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+-                </div>
+-              </div>
+-              
+-              {/* SEÇÃO ONBOARDING PARCEIROS COMERCIAIS (Edit Form) */}
+-              {isParceiro && (
+-                <div className="border-b pb-3 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-lg">
+-                  <h3 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
+-                    <Package size={16} /> Dados do Parceiro Comercial
+-                  </h3>
+-                  <div className="grid grid-cols-2 gap-3">
+-                    <div className="col-span-2">
+-                      <label className="block text-xs font-medium text-purple-700 mb-1">Tipo de Parceiro</label>
+-                      <select value={formData.parceiroTipo ?? ""} onChange={(e) => setFormData({ ...formData, parceiroTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]">
+-                        <option value="">Selecione</option>
+-                        <option value="COMPANY">Company</option>
+-                        <option value="FRANQUIA">Franquia</option>
+-                        <option value="FRANQUEADO">Franqueado</option>
+-                      </select>
+-                    </div>
+-                    <div className="col-span-2">
+-                      <label className="block text-xs font-medium text-purple-700 mb-1">Razão Social</label>
+-                      <input type="text" value={formData.razaoSocial ?? ""} onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" />
+-                    </div>
+-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">CNPJ</label><input type="text" value={formData.cnpj ?? ""} onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
+-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">Tel. Comercial</label><input type="text" value={formData.telefoneComercial ?? ""} onChange={(e) => setFormData({ ...formData, telefoneComercial: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
+-                    <div className="col-span-2"><label className="block text-xs font-medium text-purple-700 mb-1">E-mail Corporativo</label><input type="email" value={formData.emailCorporativo ?? ""} onChange={(e) => setFormData({ ...formData, emailCorporativo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
+-                    <div className="col-span-2"><label className="block text-xs font-medium text-purple-700 mb-1">Responsável Legal</label><input type="text" value={formData.responsavelLegal ?? ""} onChange={(e) => setFormData({ ...formData, responsavelLegal: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
+-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">CPF Resp.</label><input type="text" value={formData.cpfResponsavel ?? ""} onChange={(e) => setFormData({ ...formData, cpfResponsavel: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
+-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">Cargo</label><input type="text" value={formData.cargoResponsavel ?? ""} onChange={(e) => setFormData({ ...formData, cargoResponsavel: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
+-                  </div>
+-                  <div className="mt-3 p-2 bg-[#111827] rounded border border-purple-200">
+-                    <span className="text-xs font-semibold text-purple-800">Docs:</span>
+-                    <div className="flex flex-wrap gap-2 mt-1">
+-                      {documentosObrigatorios.map((doc: string) => (
+-                        <label key={doc} className="flex items-center gap-1 text-xs">
+-                          <input type="checkbox" checked={formData.documentosEnviados?.includes(doc) || false} onChange={(e) => { const d = formData.documentosEnviados || []; setFormData({ ...formData, documentosEnviados: e.target.checked ? [...d, doc] : d.filter((x: string) => x !== doc) }); }} className="rounded" />
+-                          <span>{doc.replace(/_/g, ' ')}</span>
+-                        </label>
+-                      ))}
+-                    </div>
++                    <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
++                    <input
++                      type="text"
++                      value={
++                        formData.etapa_id === "integrado"
++                          ? "ganho"
++                          : formData.etapa_id === "perdido"
++                            ? "perdido"
++                            : "ativo"
++                      }
++                      disabled
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-gray-100 text-slate-500"
++                    />
+                   </div>
+-                </div>
+-              )}
+-              
+-              {/* SEÇÃO ONBOARDING COLABORADOR FINQZ (Edit Form) */}
+-              {isColaborador && (
+-                <div className="border-b pb-3 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
+-                  <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+-                    <User size={16} /> Dados do Colaborador
+-                  </h3>
+-                  <div className="grid grid-cols-2 gap-3">
+-                    <div className="col-span-2">
+-                      <label className="block text-xs font-medium text-green-700 mb-1">Tipo de Vínculo</label>
+-                      <select value={formData.vinculoTipo ?? ""} onChange={(e) => setFormData({ ...formData, vinculoTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]">
+-                        <option value="">Selecione</option>
+-                        <option value="CLT">CLT</option>
+-                        <option value="PJ">Pessoa Jurídica</option>
+-                        <option value="ESTAGIO">Estágio</option>
+-                      </select>
+-                    </div>
+-                    <div className="col-span-2">
+-                      <label className="block text-xs font-medium text-green-700 mb-1">Cargo</label>
+-                      <input type="text" value={formData.cargo ?? ""} onChange={(e) => setFormData({ ...formData, cargo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" />
+-                    </div>
+-                    <div><label className="block text-xs font-medium text-green-700 mb-1">Departamento</label><select value={formData.departamento ?? ""} onChange={(e) => setFormData({ ...formData, departamento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"><option value="">Selecione</option><option value="comercial">Comercial</option><option value="operacional">Operacional</option><option value="financeiro">Financeiro</option></select></div>
+-                    <div><label className="block text-xs font-medium text-green-700 mb-1">Salário</label><input type="text" value={formData.salario ?? ""} onChange={(e) => setFormData({ ...formData, salario: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" /></div>
+-                    <div className="col-span-2"><label className="block text-xs font-medium text-green-700 mb-1">Formação</label><select value={formData.formacao ?? ""} onChange={(e) => setFormData({ ...formData, formacao: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"><option value="">Selecione</option><option value="superior">Superior</option><option value="tecnico">Técnico</option></select></div>
+-                    <div className="col-span-2"><label className="block text-xs font-medium text-green-700 mb-1">Experiência</label><textarea value={formData.experienciaProfissional ?? ""} onChange={(e) => setFormData({ ...formData, experienciaProfissional: e.target.value })} rows={2} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" /></div>
++
++                  <div className="col-span-2">
++                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
++                    <textarea
++                      value={formData.observacoes ?? ""}
++                      onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
++                      placeholder="Observações..."
++                      rows={3}
++                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
++                    />
+                   </div>
+                 </div>
+-              )}
+-              
+-              {/* Tags */}
+-              <div>
+-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags</label>
+-                <div className="flex flex-wrap gap-2">
+-                  {listarTags().map((tag) => (
+-                    <button key={tag.id} type="button" onClick={() => { const newTags = formData.tags?.includes(tag.id) ? formData.tags.filter((t: string) => t !== tag.id) : [...(formData.tags || []), tag.id]; setFormData({ ...formData, tags: newTags }); }} className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${formData.tags?.includes(tag.id) ? 'text-white ring-2 ring-offset-1' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`} style={formData.tags?.includes(tag.id) ? { backgroundColor: tag.cor, ringColor: tag.cor } : {}}>
+-                      {tag.nome}
+-                    </button>
+-                  ))}
+-                </div>
+               </div>
+               
+               {/* Actions */}
