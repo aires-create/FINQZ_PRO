@@ -116,7 +116,7 @@ export async function createApp(
     'ROLE_CEO': ['*'],
     
     // Roles de franquia
-    'ADMIN_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'produtos:*', 'financeiro:read', 'usuarios:read'],
+    'ADMIN_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
     
     // Franqueado
     'FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move', 'parceiros:read'],
@@ -131,8 +131,8 @@ export async function createApp(
     'OPERACIONAL': ['clientes:read', 'oportunidades:read', 'oportunidades:edit'],
     
     // Roles legadas
-    'ROLE_DIRETOR_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'produtos:*', 'financeiro:read', 'usuarios:read'],
-    'ROLE_GERENTE_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:read', 'produtos:read', 'financeiro:read'],
+    'ROLE_DIRETOR_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
+    'ROLE_GERENTE_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:read', 'financeiro:read'],
     'ROLE_SDR': ['oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'clientes:read', 'clientes:create'],
     'ROLE_FINANCEIRO': ['financeiro:*', 'conta_corrente:*', 'clientes:read', 'oportunidades:read'],
     'ROLE_OPERACIONAL': ['oportunidades:read', 'oportunidades:edit', 'clientes:read'],
@@ -1759,111 +1759,6 @@ app.get("/api/get-session", (c) => {
       `Cliente deletado: ${existing[0].nome} (ID: ${id})`,
       { entity: 'cliente', resourceId: id, nome: existing[0].nome }
     );
-
-    return c.json({ success: true });
-  });
-
-  // ═══════════════════════════════════════════════════════════
-  // PRODUTOS
-  // ═══════════════════════════════════════════════════════════
-
-  app.get("/api/produtos", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const produtos = await edgespark.db
-      .select()
-      .from(tables.produtos)
-      .where(eq(tables.produtos.ativo, 1));
-
-    return c.json({ produtos });
-  });
-
-  app.get("/api/produtos/:id", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const id = parseInt(c.req.param("id"));
-    const produto = await edgespark.db
-      .select()
-      .from(tables.produtos)
-      .where(eq(tables.produtos.id, id));
-
-    if (produto.length === 0) {
-      return c.json({ error: "Produto não encontrado" }, 404);
-    }
-
-    return c.json({ produto: produto[0] });
-  });
-
-  app.post("/api/produtos", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    const body = await c.req.json();
-    console.log("[API] POST /api/produtos - creating:", body);
-
-    const newProduto = await edgespark.db.insert(tables.produtos).values({
-      nome: body.nome,
-      descricao: body.descricao || null,
-      pipeline: body.pipeline || "default",
-      documentos: body.documentos ? JSON.stringify(body.documentos) : null,
-      ativo: body.ativo !== undefined ? body.ativo : 1,
-    }).returning();
-
-    await logAction(user.id, "CREATE", "produtos", newProduto[0].id, null, body);
-
-    return c.json({ produto: newProduto[0] });
-  });
-
-  app.put("/api/produtos/:id", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    // RBAC: Verifica permissão de edição
-    const permission = requirePermission(user, 'produtos', 'edit');
-    if (!permission.allowed) return c.json({ error: permission.error }, 403);
-
-    const id = parseInt(c.req.param("id"));
-    const body = await c.req.json();
-
-    const existing = await edgespark.db
-      .select()
-      .from(tables.produtos)
-      .where(eq(tables.produtos.id, id));
-
-    if (existing.length === 0) {
-      return c.json({ error: "Produto não encontrado" }, 404);
-    }
-
-    const updated = await edgespark.db
-      .update(tables.produtos)
-      .set({ ...body, updatedAt: Date.now() })
-      .where(eq(tables.produtos.id, id))
-      .returning();
-
-    await logAction(user.id, "UPDATE", "produtos", id, existing[0], body);
-
-    return c.json({ produto: updated[0] });
-  });
-
-  app.delete("/api/produtos/:id", async (c) => {
-    const user = await getCurrentUser(c);
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
-
-    // RBAC: Verifica permissão de exclusão
-    const permission = requirePermission(user, 'produtos', 'delete');
-    if (!permission.allowed) return c.json({ error: permission.error }, 403);
-
-    const id = parseInt(c.req.param("id"));
-
-    // Soft delete
-    await edgespark.db
-      .update(tables.produtos)
-      .set({ ativo: 0, updatedAt: Date.now() })
-      .where(eq(tables.produtos.id, id));
-
-    await logAction(user.id, "DELETE", "produtos", id, null, null);
 
     return c.json({ success: true });
   });

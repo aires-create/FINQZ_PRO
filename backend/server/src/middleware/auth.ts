@@ -37,8 +37,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   'CEO': ['*'],
   
   // Roles de franquia
-  'ADMIN_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'produtos:*', 'financeiro:read', 'usuarios:read'],
-  'GERENTE_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'produtos:*', 'financeiro:read', 'usuarios:read'],
+  'ADMIN_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
+  'GERENTE_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
   
   // Franqueado
   'FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move', 'parceiros:read'],
@@ -59,8 +59,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   'ROLE_OPERACIONAL': ['clientes:read', 'oportunidades:read', 'oportunidades:edit'],
   
   // Roles legadas
-  'ROLE_DIRETOR_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'produtos:*', 'financeiro:read', 'usuarios:read'],
-  'ROLE_GERENTE_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:read', 'produtos:read', 'financeiro:read'],
+  'ROLE_DIRETOR_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
+  'ROLE_GERENTE_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:read', 'financeiro:read'],
 };
 
 // ============================================
