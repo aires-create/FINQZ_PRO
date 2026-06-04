@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Clock, Shield, Upload } from "lucide-react";
 import api from "../api/client";
+import { clientesApi } from "../api/modules/clientes.api";
 import useAppStore from "../store";
 import type { Cliente } from "../types";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
@@ -109,12 +110,7 @@ export const ClientesPage: React.FC = () => {
   const loadClientes = async () => {
     try {
       setLoading(true);
-      const response = await api.getClientes(search);
-      const clientesData = Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.clientes)
-          ? response.clientes
-          : [];
+      const clientesData = await clientesApi.getAll({ search });
 
       const normalizedClientes = clientesData.map((cliente: any) => {
         let parsedAddress: any = null;
@@ -623,9 +619,9 @@ export const ClientesPage: React.FC = () => {
         };
 
         if (editingCliente) {
-          await api.updateCliente(editingCliente.id, apiPayload);
+          await clientesApi.update(Number(editingCliente.id), apiPayload as any);
         } else {
-          await api.createCliente(apiPayload);
+          await clientesApi.create(apiPayload as any);
         }
 
         await loadClientes();
@@ -840,7 +836,7 @@ export const ClientesPage: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (confirm("Tem certeza que deseja excluir este cliente?")) {
       try {
-        await api.deleteCliente(id);
+        await clientesApi.delete(Number(id));
         await loadClientes();
       } catch (apiError) {
         console.error('API error deleting cliente:', apiError);
@@ -870,7 +866,7 @@ export const ClientesPage: React.FC = () => {
       };
       
       try {
-        await api.updateCliente(cliente.id, {
+        await clientesApi.update(Number(cliente.id), {
           firstName: cliente.firstName || cliente.nome?.split(' ')[0] || '',
           lastName:
             cliente.lastName ||
@@ -880,7 +876,7 @@ export const ClientesPage: React.FC = () => {
           cpf: onlyNumbers(cliente.cpf_cnpj || cliente.cpf || ''),
           phone: onlyNumbers(cliente.celular || cliente.telefone || cliente.phone || ''),
           ...statusPayload,
-        });
+        } as any);
         await loadClientes();
       } catch (apiError) {
         console.error("API error updating cliente status:", apiError);
