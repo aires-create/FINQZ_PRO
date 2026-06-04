@@ -1,6 +1,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticationError, AuthorizationError } from '../../types/index.js';
-import type { JWTPayload, TenantContext } from '../../shared/types/index.js';
+import { prisma } from '../../core/prisma/client.js';
+import type {
+  JWTPayload,
+  OwnershipMetadata,
+  TenantContext,
+  TenantScopeRole,
+} from '../../shared/types/index.js';
 import { recordRequestSecurityEvent } from '../../modules/security-events/index.js';
 
 type TenantBearingSource = Record<string, unknown> | null | undefined;
@@ -15,6 +21,17 @@ const jwtAuthRequiredCodes = new Set([
 
 const jwtExpiredCodes = new Set([
   'FST_JWT_AUTHORIZATION_TOKEN_EXPIRED',
+]);
+
+const TENANT_ADMIN_ROLE_TYPES = new Set(['ADMIN', 'SYSTEM']);
+const TENANT_ADMIN_ROLE_NAMES = new Set([
+  'admin',
+  'owner',
+  'super_admin',
+  'tenant_admin',
+  'matrix',
+  'matriz',
+  'root',
 ]);
 
 const getErrorCode = (error: unknown): string | undefined => {
@@ -57,6 +74,116 @@ const getRequestedTenantId = (request: FastifyRequest): string | undefined => {
   );
 };
 
+const normalizeRoleName = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized || undefined;
+};
+
+const isTenantAdminRole = (role: {
+  slug?: string | null;
+  name?: string | null;
+  type?: string | null;
+}) => {
+  const roleType = role.type?.trim().toUpperCase();
+  if (roleType && TENANT_ADMIN_ROLE_TYPES.has(roleType)) {
+    return true;
+  }
+
+  const roleSlug = normalizeRoleName(role.slug);
+  const roleName = normalizeRoleName(role.name);
+
+  return Boolean(
+    (roleSlug && TENANT_ADMIN_ROLE_NAMES.has(roleSlug)) ||
+      (roleName && TENANT_ADMIN_ROLE_NAMES.has(roleName)),
+  );
+};
+
+const resolveScopeRole = (
+  partnerId: string | null | undefined,
+  roles: Array<{ slug?: string | null; name?: string | null; type?: string | null }>,
+): TenantScopeRole => {
+  if (roles.some((role) => isTenantAdminRole(role))) {
+    return 'tenant_admin';
+  }
+
+  if (partnerId) {
+    return 'partner_user';
+  }
+
+  return 'owner_user';
+};
+
+const resolveTenantContextFromDatabase = async (
+  payload: JWTPayload,
+): Promise<TenantContext | null> => {
+  const user = await prisma.user.findFirst({
+    where: {
+      id: payload.userId,
+      tenantId: payload.tenantId,
+      deletedAt: null,
+      isActive: true,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      organizationId: true,
+      partnerId: true,
+      userRoles: {
+        select: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              type: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  const roles = user.userRoles
+    .map((userRole) => userRole.role)
+    .filter(Boolean) as Array<{
+    id: string;
+    name: string;
+    slug: string;
+    type: string | null;
+  }>;
+
+  const organizationId = payload.organizationId ?? user.organizationId ?? undefined;
+  const partnerId = payload.partnerId ?? user.partnerId ?? undefined;
+  const scopeRole = payload.scopeRole ?? resolveScopeRole(partnerId, roles);
+
+  const ownership: OwnershipMetadata = {
+    userId: user.id,
+    ...(organizationId ? { organizationId } : {}),
+    ...(partnerId ? { partnerId } : {}),
+    scopeRole,
+  };
+
+  return {
+    tenantId: user.tenantId,
+    userId: user.id,
+    ...(organizationId ? { organizationId } : {}),
+    ...(partnerId ? { partnerId } : {}),
+    scopeRole,
+    ownership,
+    permissions: payload.permissions ?? [],
+    ...(payload.roleId ? { roleId: payload.roleId } : {}),
+    ...(payload.role ? { role: payload.role } : {}),
+  };
+};
+
 export const isJwtPayload = (payload: unknown): payload is JWTPayload => {
   if (!payload || typeof payload !== 'object') {
     return false;
@@ -73,6 +200,10 @@ export const isJwtPayload = (payload: unknown): payload is JWTPayload => {
 export const buildTenantContext = (payload: JWTPayload): TenantContext => ({
   tenantId: payload.tenantId,
   userId: payload.userId,
+  ...(payload.organizationId ? { organizationId: payload.organizationId } : {}),
+  ...(payload.partnerId ? { partnerId: payload.partnerId } : {}),
+  ...(payload.scopeRole ? { scopeRole: payload.scopeRole } : {}),
+  ...(payload.ownership ? { ownership: payload.ownership } : {}),
   permissions: payload.permissions ?? [],
   ...(payload.roleId ? { roleId: payload.roleId } : {}),
   ...(payload.role ? { role: payload.role } : {}),
@@ -186,7 +317,21 @@ export async function tenantContextMiddleware(
     throw new AuthorizationError('Tenant context is missing from the token');
   }
 
-  request.currentTenant = buildTenantContext(user);
+  const resolvedTenantContext = await resolveTenantContextFromDatabase(user);
+
+  if (!resolvedTenantContext) {
+    throw new AuthorizationError('User context could not be resolved');
+  }
+
+  request.currentUser = {
+    ...user,
+    ...(resolvedTenantContext.organizationId ? { organizationId: resolvedTenantContext.organizationId } : {}),
+    ...(resolvedTenantContext.partnerId ? { partnerId: resolvedTenantContext.partnerId } : {}),
+    ...(resolvedTenantContext.scopeRole ? { scopeRole: resolvedTenantContext.scopeRole } : {}),
+    ...(resolvedTenantContext.ownership ? { ownership: resolvedTenantContext.ownership } : {}),
+  };
+
+  request.currentTenant = resolvedTenantContext;
 
   const requestedTenantId = getRequestedTenantId(request);
 

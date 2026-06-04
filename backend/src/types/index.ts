@@ -45,6 +45,10 @@ export interface JWTPayload {
   roleId?: string;
   role?: string;
   email?: string;
+  organizationId?: string;
+  partnerId?: string;
+  scopeRole?: TenantScopeRole;
+  ownership?: OwnershipMetadata;
   permissions?: string[];
   jti?: string;
   iat?: number;
@@ -90,7 +94,20 @@ export interface TenantContext {
   userId: string;
   roleId?: string;
   role?: string;
+  organizationId?: string;
+  partnerId?: string;
+  scopeRole?: TenantScopeRole;
+  ownership?: OwnershipMetadata;
   permissions: string[];
+}
+
+export type TenantScopeRole = 'tenant_admin' | 'partner_user' | 'owner_user' | 'user';
+
+export interface OwnershipMetadata {
+  userId: string;
+  organizationId?: string;
+  partnerId?: string;
+  scopeRole?: TenantScopeRole;
 }
 
 // Error Types

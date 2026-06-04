@@ -5,19 +5,9 @@
 import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/app.js';
-import { AppError } from '../types/index.js';
+import { AppError, type JWTPayload as SharedJWTPayload } from '../types/index.js';
 
-export interface JWTPayload {
-  userId: string;
-  tenantId: string;
-  roleId: string;
-  role: string;
-  email: string;
-  permissions?: string[];
-  jti?: string;
-  iat?: number;
-  exp?: number;
-}
+export interface JWTPayload extends SharedJWTPayload {}
 
 export interface TokenPair {
   accessToken: string;
