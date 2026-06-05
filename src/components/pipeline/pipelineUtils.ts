@@ -75,21 +75,6 @@ export const filterOportunitiesByPipeline = (
       return o.pipeline_id === currentPipelineConfig.id;
     }
     
-    // Se tem produto, tentar mapear
-    if (o?.produto) {
-      const LEGACY_PRODUCT_TO_PIPELINE: Record<string, string> = {
-        'Empréstimo Pessoal': 'emprestimo_pessoal',
-        'Crédito Consignado': 'credito_consignado',
-        'Empréstimo com Garantia': 'emprestimo_com_garantia',
-        'Financiamento de Veículo': 'financiamento_veiculo',
-        'Assinatura de Veículos': 'assinatura_veiculos',
-        'Energia por Assinatura - GD': 'energia_gd',
-        'Mercado Livre de Energia - ML': 'mercado_livre_energia',
-      };
-      const pipelineId = LEGACY_PRODUCT_TO_PIPELINE[o.produto];
-      return pipelineId === currentPipelineConfig.id;
-    }
-    
     // Mostrar dados legados
     return true;
   });
