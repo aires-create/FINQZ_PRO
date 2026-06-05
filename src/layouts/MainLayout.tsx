@@ -18,7 +18,6 @@ import {
   Wallet,
   PiggyBank,
   Bell,
-  Package,
   Shield,
   Send,
   MessageCircle,
@@ -93,7 +92,6 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   // Legado (redirects)
   "/app/admin/configuracoes": "system:config",
   "/app/configuracoes": "system:config",
-  "/app/produtos": "produtos:read",
   "/app/automacoes": "automacoes:read",
 };
 
@@ -185,7 +183,6 @@ const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   "/app/auditoria": { title: "Auditoria", icon: Shield },
   "/app/usuarios": { title: "Usuários", icon: UserCog },
   "/app/configuracoes": { title: "Configurações", icon: Settings },
-  "/app/produtos": { title: "Produtos", icon: Package },
   "/app/automacoes": { title: "Automações", icon: Settings },
   "/app/campanhas": { title: "Campanhas", icon: Send },
   "/app/conversas": { title: "WhatsApp", icon: Phone },
@@ -264,7 +261,6 @@ const menuGroups: MenuGroup[] = [
 // Itens legados (para compatibilidade com rotas antigas)
 const legacyMenuItems: MenuItem[] = [
   { path: "/app/configuracoes", label: "Configurações", icon: Settings },
-  { path: "/app/produtos", label: "Produtos", icon: Package },
 ];
 
 const dashboardSidebarItems: MenuItem[] = [

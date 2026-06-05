@@ -34,7 +34,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
     return 'general';
   };
   
-  const { theme, setTheme, toggleTheme, usuarios, produtos, updateUsuario, user, updateUserAvatar, updateUserProfile } = useAppStore();
+  const { theme, setTheme, toggleTheme, usuarios, updateUsuario, user, updateUserAvatar, updateUserProfile } = useAppStore();
   const [activeTab, setActiveTab] = useState(getInitialTab);
   
   // Update tab when URL changes (e.g., direct navigation)

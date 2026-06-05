@@ -136,15 +136,6 @@ export const ENDPOINTS = {
     TOGGLE_STATUS: (id: number) => `${getEndpoint('/api/v1/users', id)}/toggle-status`,
   },
   
-  // Produtos
-  PRODUTOS: {
-    LIST: '/api/produtos',
-    GET: (id: number) => getEndpoint('/api/produtos', id),
-    CREATE: '/api/produtos',
-    UPDATE: (id: number) => getEndpoint('/api/produtos', id),
-    DELETE: (id: number) => getEndpoint('/api/produtos', id),
-  },
-  
   // Financeiro
   FINANCEIRO: {
     TRANSACOES: '/api/financeiro/transacoes',

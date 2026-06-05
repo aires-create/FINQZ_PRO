@@ -22,7 +22,6 @@ import {
   List,
   Lock,
   Mail,
-  Package,
   Phone,
   PiggyBank,
   Plus,
@@ -131,7 +130,6 @@ const pageDefaults: Record<string, { title: string; icon: React.ElementType }> =
   "/app/hub/sdr-ia": { title: "SDR IA", icon: Bot },
   "/app/hub/higienizacao": { title: "Higienização", icon: Database },
   "/app/hub/mailing": { title: "E-mail Marketing", icon: Mail },
-  "/app/produtos": { title: "Produtos", icon: Package },
   "/app/automacoes": { title: "Automações", icon: Settings },
 }
 
