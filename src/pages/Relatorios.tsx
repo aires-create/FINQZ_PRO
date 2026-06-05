@@ -347,7 +347,7 @@ const ReportFilters: React.FC<{
 
 const RelatoriosPage: React.FC = () => {
   // Store
-  const { produtos, oportunidadesKanban, clientes, parceiros, transacoesFinanceiras } = useAppStore();
+  const { estruturaComercial, oportunidadesKanban, clientes, parceiros, transacoesFinanceiras } = useAppStore();
   
   // State
   const [reportType, setReportType] = useState<ReportType>('producao');
@@ -361,6 +361,17 @@ const RelatoriosPage: React.FC = () => {
 
   // Estado do FilterDrawer
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+
+  const produtos = useMemo(
+    () =>
+      (Array.isArray(estruturaComercial) ? estruturaComercial : [])
+        .filter((item) => item.nivel === "produto")
+        .map((item) => ({
+          id: String(item.id),
+          nome: item.nome,
+        })),
+    [estruturaComercial]
+  );
 
   const filterDrawerValues = useMemo<Record<string, string>>(() => {
     return Object.entries(filters).reduce<Record<string, string>>((acc, [key, value]) => {
