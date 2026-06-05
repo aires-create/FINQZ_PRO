@@ -1639,7 +1639,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   // Drag handlers
   const handleDragStart = (e: React.DragEvent, cardId: string) => {
-    if (!can('oportunidades', 'move')) return;
+    if (!can('oportunidades', 'move_stage')) return;
     setDraggedCard(cardId);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", cardId);
@@ -1651,7 +1651,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   };
 
   const handleDragOver = (e: React.DragEvent, columnId: string) => {
-    if (!can('oportunidades', 'move')) return;
+    if (!can('oportunidades', 'move_stage')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDragOverColumn(columnId);
@@ -1662,7 +1662,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   };
 
   const handleDrop = (e: React.DragEvent, etapaId: string) => {
-    if (!can('oportunidades', 'move')) return;
+    if (!can('oportunidades', 'move_stage')) return;
 
     e.preventDefault();
 
