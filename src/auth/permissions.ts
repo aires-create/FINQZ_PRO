@@ -252,16 +252,38 @@ export const canAccess = (
     return true;
   }
   
+  const normalizedModule = String(module).toLowerCase();
+  const normalizedAction = String(action).toLowerCase();
+
   // 7. Prioriza padrão canônico resource:action e mantém fallback legado MODULE_ACTION.
   const userPermissions = user.permissions;
-  const canonicalPermission = `${module}:${action}`;
+  const canonicalPermission = `${normalizedModule}:${normalizedAction}`;
   if (hasPermissionMatch(userPermissions, canonicalPermission)) {
     return true;
   }
 
   // Fallback legado (mantido por compatibilidade)
-  const requiredPermission = `${module}_${action}`.toUpperCase() as Permission;
-  return hasPermissionMatch(userPermissions, requiredPermission);
+  const requiredPermission = `${normalizedModule}_${normalizedAction}`.toUpperCase() as Permission;
+  if (hasPermissionMatch(userPermissions, requiredPermission)) {
+    return true;
+  }
+
+  // Ponte transitória cross-module aprovada para pipeline management.
+  if (
+    (normalizedModule === 'pipelines' || normalizedModule === 'pipeline') &&
+    normalizedAction === 'manage'
+  ) {
+    return hasPermissionMatch(userPermissions, 'oportunidades:edit_pipeline');
+  }
+
+  if (
+    normalizedModule === 'oportunidades' &&
+    normalizedAction === 'edit_pipeline'
+  ) {
+    return hasPermissionMatch(userPermissions, 'pipelines:manage');
+  }
+
+  return false;
 };
 
 /**

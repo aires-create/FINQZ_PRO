@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import type { Cliente, Produto, Parceiro, Oportunidade, DashboardKPIs, DashboardProducao, DashboardFunil, Pipeline, PipelineColumn, OportunidadeKanban, PROFILE_PERMISSIONS, EstruturaComercial, RoteiroOperacional, TransacaoFinanceira, FinanceiroSaldo, ContaCorrenteMovimento, ContaCorrenteSaldo } from "../types";
 import { PROFILE_PERMISSIONS, ROLE_PERMISSIONS } from "../types";
 import { creditPfCatalog } from "../data/creditPfCatalog";
+import { canAccess, type AuthUser } from "../auth/permissions";
 
 // Initial mock data
 const initialPipelines: Pipeline[] = [
@@ -53,6 +54,20 @@ const initialPipelines: Pipeline[] = [
     ],
   },
 ];
+
+const serializeUserPermissions = (permissions: Record<string, string[]>): string[] => {
+  if (!permissions || typeof permissions !== "object") {
+    return [];
+  }
+
+  if (permissions["*"]?.includes("*")) {
+    return ["*"];
+  }
+
+  return Object.entries(permissions).flatMap(([module, actions]) =>
+    (actions || []).map((action) => `${module}_${action}`.toUpperCase()),
+  );
+};
 
 const initialOportunidades: OportunidadeKanban[] = [
   { id: 1, nome: "João Silva", telefone: "11999999999", produto: "Empréstimo Pessoal", pipeline_id: "finqz-auto", coluna_id: "entrada", valor: 15000, cliente_nome: "João Silva" },
@@ -476,11 +491,21 @@ const useAppStore = create<AppState>()(
                 return acc;
               }
 
-              const normalizedPermission = permission.toUpperCase();
+              const trimmedPermission = permission.trim();
+              const normalizedPermission = trimmedPermission.toUpperCase();
 
               if (normalizedPermission === "*") {
                 acc["*"] = ["*"];
                 return acc;
+              }
+
+              if (trimmedPermission.includes(":")) {
+                const [moduleName, actionName] = trimmedPermission.toLowerCase().split(":");
+                if (moduleName && actionName) {
+                  acc[moduleName] = acc[moduleName] || [];
+                  acc[moduleName].push(actionName);
+                  return acc;
+                }
               }
 
               const lastSeparatorIndex = normalizedPermission.lastIndexOf("_");
@@ -893,35 +918,37 @@ const useAppStore = create<AppState>()(
         const state = useAppStore.getState();
         const normalizedModule = String(module).toLowerCase();
         const normalizedAction = String(action).toLowerCase();
-        
-        // Admin tem acesso total
-        if (
-          state.user?.role === 'ROLE_ADMIN_SISTEMA' ||
-          state.user?.perfil === 'admin' ||
-          state.user?.perfil === 'Admin Sistema'
-        ) return true;
-        
-        // Se tem permissões customizadas, usa elas
-        const modulePerms = state.userPermissions[normalizedModule];
-        if (modulePerms && modulePerms.length > 0) {
-          // Admin no perfil tem todas as permissões
-          if (modulePerms.includes('*')) return true;
-          return modulePerms.includes(normalizedAction);
-        }
-        
-        // Fallback: usa permissões baseadas no role do usuário
+
+        const explicitPermissions = Array.isArray(state.user?.permissions)
+          ? state.user.permissions.filter((permission): permission is string => typeof permission === "string" && permission.length > 0)
+          : [];
+
+        const cachedPermissions = serializeUserPermissions(state.userPermissions);
         const userRole = state.user?.role;
-        if (userRole) {
-          const rolePerms = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS];
-          if (rolePerms && rolePerms.length > 0) {
-            const rolePermsAsStrings: readonly string[] = rolePerms;
-            // Admin role tem todas as permissões
-            if (rolePermsAsStrings.includes('*')) return true;
-            return rolePermsAsStrings.includes(action);
-          }
-        }
-        
-        return false;
+        const rolePerms = userRole
+          ? [...(ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [])]
+          : [];
+
+        const mergedPermissions = Array.from(
+          new Set<string>([
+            ...explicitPermissions,
+            ...cachedPermissions,
+            ...rolePerms.map((permission) => String(permission)),
+          ]),
+        );
+
+        const authUser: AuthUser | null = state.user
+          ? {
+              ...state.user,
+              permissions: mergedPermissions,
+            }
+          : null;
+
+        return canAccess(
+          authUser,
+          normalizedModule as never,
+          normalizedAction as never,
+        );
       },
     }),
     {

@@ -1,46 +1,55 @@
 const ACTION_ALIAS_MAP: Record<string, string[]> = {
-  read: ["READ", "VIEW"],
-  view: ["VIEW", "READ"],
-  create: ["CREATE"],
-  edit: ["EDIT", "UPDATE"],
-  delete: ["DELETE"],
-  export: ["EXPORT"],
+  read: ["read", "view"],
+  view: ["view", "read"],
+  create: ["create"],
+  edit: ["edit", "update"],
+  delete: ["delete"],
+  export: ["export"],
+  move: ["move", "move_stage", "move_card", "move_opportunity"],
+  move_stage: ["move_stage", "move", "move_card", "move_opportunity"],
+  move_card: ["move_card", "move", "move_stage", "move_opportunity"],
+  move_opportunity: ["move_opportunity", "move", "move_stage", "move_card"],
 };
 
 const MODULE_ALIAS_MAP: Record<string, string[]> = {
-  customer: ["CUSTOMER", "CLIENTES", "PARCEIROS"],
-  sales: ["SALES", "OPORTUNIDADES", "ESTRUTURA_COMERCIAL", "TABELAS_COMERCIAIS"],
-  report: ["REPORT", "RELATORIOS"],
-  finance: ["FINANCE", "FINANCEIRO", "CONTA_CORRENTE"],
-  audit: ["AUDIT", "AUDITORIA"],
-  simulador: ["SIMULADOR"],
-  system: ["SYSTEM", "CONFIGURACOES", "GERAL", "TAGS", "PIPELINES", "INTEGRACOES", "AUTOMACOES", "NOTIFICACOES", "SEGURANCA", "BANCOS"],
-  system_users: ["SYSTEM_USERS", "USUARIOS"],
-  system_roles: ["SYSTEM_ROLES", "PERMISSOES"],
-  sdr_ia: ["SDR_IA"],
+  customer: ["customer", "clientes", "parceiros"],
+  sales: ["sales", "oportunidades", "estrutura_comercial", "tabelas_comerciais"],
+  report: ["report", "relatorios"],
+  finance: ["finance", "financeiro", "conta_corrente"],
+  audit: ["audit", "auditoria"],
+  simulador: ["simulador"],
+  system: ["system", "configuracoes", "geral", "tags", "pipelines", "integracoes", "automacoes", "notificacoes", "seguranca", "bancos"],
+  system_users: ["system_users", "usuarios"],
+  system_roles: ["system_roles", "permissoes"],
+  sdr_ia: ["sdr_ia"],
+  opportunity: ["opportunity", "oportunidades"],
+  oportunidades: ["oportunidades", "opportunity"],
 };
 
 export const buildPermissionVariants = (permission?: string): string[] => {
   if (!permission) return [];
 
+  const normalizedPermission = permission.toLowerCase();
   const variants = new Set<string>([
     permission,
-    permission.replace(':read', ''),
-    permission.replace(':read', ':*'),
-    permission.replace(':read', ':view'),
-    permission.replace(':view', ':read'),
-    permission.replace(':view', ''),
-    permission.replace(':view', ':*'),
+    normalizedPermission,
+    normalizedPermission.replace(':read', ''),
+    normalizedPermission.replace(':read', ':*'),
+    normalizedPermission.replace(':read', ':view'),
+    normalizedPermission.replace(':view', ':read'),
+    normalizedPermission.replace(':view', ''),
+    normalizedPermission.replace(':view', ':*'),
   ]);
 
-  if (permission.includes(':')) {
-    const [moduleName, actionName = 'read'] = permission.split(':');
-    const aliases = ACTION_ALIAS_MAP[actionName] || [actionName.toUpperCase()];
-    const moduleAliases = MODULE_ALIAS_MAP[moduleName] || [moduleName.toUpperCase()];
+  if (normalizedPermission.includes(':')) {
+    const [moduleName, actionName = 'read'] = normalizedPermission.split(':');
+    const aliases = ACTION_ALIAS_MAP[actionName] || [actionName];
+    const moduleAliases = MODULE_ALIAS_MAP[moduleName] || [moduleName];
 
     moduleAliases.forEach((moduleAlias) => {
       aliases.forEach((alias) => {
-        variants.add(`${moduleAlias}_${alias}`);
+        variants.add(`${moduleAlias}:${alias}`);
+        variants.add(`${moduleAlias.toUpperCase()}_${alias.toUpperCase()}`);
       });
     });
   }
