@@ -100,7 +100,7 @@ describe('ProviderRuntimeDiagnosticsService', () => {
 
     const diagnostics = service.getProviderDiagnostics('sos-bolso');
 
-    expect(diagnostics).toHaveLength(2);
+    expect(diagnostics).toHaveLength(3);
     expect(diagnostics.every((item) => item.providerKey === 'sos-bolso')).toBe(true);
   });
 });
