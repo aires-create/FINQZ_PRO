@@ -50,6 +50,26 @@ interface UserData {
   roleSlug: string;
 }
 
+const consignadoPipelineSeed = {
+  name: 'Consignado',
+  description: 'Pipeline oficial minimo para homologacao de oportunidades.',
+  isDefault: true,
+  isActive: true,
+  stages: [
+    { name: 'Novo Lead', order: 1, isWon: false, isLost: false },
+    { name: 'Negociação', order: 2, isWon: false, isLost: false },
+    { name: 'Documentação', order: 3, isWon: false, isLost: false },
+    { name: 'Aceite', order: 4, isWon: false, isLost: false },
+    { name: 'Contrato Enviado', order: 5, isWon: false, isLost: false },
+    { name: 'Aguardando Assinatura', order: 6, isWon: false, isLost: false },
+    { name: 'Contrato Assinado', order: 7, isWon: false, isLost: false },
+    { name: 'Formalização', order: 8, isWon: false, isLost: false },
+    { name: 'Integrado', order: 9, isWon: true, isLost: false },
+    { name: 'Pendência', order: 10, isWon: false, isLost: false },
+    { name: 'Perdido', order: 11, isWon: false, isLost: true },
+  ],
+} as const;
+
 /**
  * Enterprise RBAC Seed System for FINQZ PRO
  * Idempotent execution with TypeScript strict mode compatibility
@@ -60,6 +80,9 @@ async function seedRBAC(): Promise<void> {
 
     // 1. Create default tenant
     const tenant = await createDefaultTenant();
+
+    // 1.1 Create minimum pipeline/stage foundation
+    await seedOpportunityFoundation(tenant.id);
 
     // 2. Create permissions
     const permissions = await createPermissions();
@@ -84,6 +107,66 @@ async function seedRBAC(): Promise<void> {
     logger.error('RBAC seed process failed:', error);
     throw error;
   }
+}
+
+async function seedOpportunityFoundation(tenantId: string): Promise<void> {
+  logger.info('Creating minimum opportunity pipeline foundation...');
+
+  const existingPipeline = await prisma.pipeline.findFirst({
+    where: {
+      tenantId,
+      name: consignadoPipelineSeed.name,
+    },
+    select: { id: true },
+  });
+
+  const pipeline = existingPipeline
+    ? await prisma.pipeline.update({
+        where: { id: existingPipeline.id },
+        data: {
+          description: consignadoPipelineSeed.description,
+          isDefault: consignadoPipelineSeed.isDefault,
+          isActive: consignadoPipelineSeed.isActive,
+          deletedAt: null,
+        },
+      })
+    : await prisma.pipeline.create({
+        data: {
+          tenantId,
+          name: consignadoPipelineSeed.name,
+          description: consignadoPipelineSeed.description,
+          isDefault: consignadoPipelineSeed.isDefault,
+          isActive: consignadoPipelineSeed.isActive,
+        },
+      });
+
+  for (const stage of consignadoPipelineSeed.stages) {
+    await prisma.stage.upsert({
+      where: {
+        pipelineId_order: {
+          pipelineId: pipeline.id,
+          order: stage.order,
+        },
+      },
+      update: {
+        tenantId,
+        name: stage.name,
+        isWon: stage.isWon,
+        isLost: stage.isLost,
+        deletedAt: null,
+      },
+      create: {
+        tenantId,
+        pipelineId: pipeline.id,
+        name: stage.name,
+        order: stage.order,
+        isWon: stage.isWon,
+        isLost: stage.isLost,
+      },
+    });
+  }
+
+  logger.info(`Pipeline foundation created/updated: ${pipeline.id}`);
 }
 
 /**
