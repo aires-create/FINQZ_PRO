@@ -349,6 +349,171 @@ Ordem segura futura:
 4. Mover `Product` / `Catalog` / `Pipeline` para `COMMIT-04B`.
 5. Remover fallback apenas no `COMMIT-04C` futuro.
 
+### AUD-012 — PRODUCTS_COMPATIBILITY_LAYER_ISOLATION
+Status: `SAFE ISOLATION PLAN`
+
+Decisão:
+- `COMMIT-04B` pode avançar somente para a camada neutra `Product` / `Catalog` / `Pipeline Compatibility`.
+- Não tocar em `src/pages/Oportunidades.tsx`.
+
+Pode entrar no `COMMIT-04B`:
+- `src/store/index.ts`: blocos `EstruturaComercial`
+- `src/types/index.ts`: tipos `EstruturaComercial`
+
+Remoções seguras em patch separado:
+- `src/store/index.ts`: `delete nextState.produtos`
+- `src/types/index.ts`: `export interface Produto`
+- `src/types/index.ts`: `module` / grants `produtos`
+
+Bloqueados por `Oportunidades.tsx`:
+- `src/components/pipeline/pipelineUtils.ts`
+- `src/store/index.ts`: `initialOportunidades` legado
+- `src/types/index.ts`: campos `produto` em `OportunidadeKanban` / `Pipeline`
+- `src/api/client.ts` legacy opportunity functions
+- `src/api/dataService.ts` fallback
+- `src/api/adapters.ts` `defaultOportunidades`
+
+Próxima ordem:
+1. Documentar `AUD-012`.
+2. Planejar micro-patch `COMMIT-04B` apenas para `EstruturaComercial`.
+3. Planejar patch separado de cleanup seguro de `types` / `store`.
+4. Manter fallback legado até `COMMIT-04C` futuro.
+
+### AUD-013 — COMMERCIAL_STRUCTURE_COMPATIBILITY_EXTRACTION
+Status: `SAFE EXTRACTION PLAN`
+
+Decisão:
+- `COMMIT-04B` pode avançar somente com a camada neutra `Commercial Structure`.
+
+Pode entrar no `COMMIT-04B`:
+- `src/store/index.ts`
+- `buildEstruturaComercialFromCatalog`
+- `initialEstruturaComercial`
+- bloco de operações de `Estrutura Comercial`
+- `src/types/index.ts`
+- `EstruturaComercial`
+- `EstruturaComercialNivel`
+
+Não pode entrar:
+- `initialOportunidades`
+- `Pipeline.produto`
+- `OportunidadeKanban.produto`
+- qualquer fallback ligado a `Oportunidades.tsx`
+- `client.ts`
+- `dataService.ts`
+- `adapters.ts`
+- `pipelineUtils.ts`
+
+Remoções seguras em patch separado:
+- `delete nextState.produtos`
+- `export interface Produto`
+- `module` / grants `produtos`
+
+Riscos:
+- `Oportunidades.tsx` e `pipelineUtils.ts` ainda dependem do fallback legado.
+
+Testes futuros:
+- `npm run build`
+- `npm run test:unit`
+- smoke da página `Oportunidades`
+- validação de filtros / pipeline / cards históricos
+
+### AUD-014 — COMMERCIAL_STRUCTURE_PATCH_READINESS
+Status: `ISSUES FOUND`
+
+Decisão:
+- `COMMIT-04B` completo não aprovado.
+- `COMMIT-04B.1` pode avançar apenas para `Commercial Structure Store Layer`.
+
+`PATCH_READY`:
+- `src/store/index.ts`
+- `buildEstruturaComercialFromCatalog`
+- `initialEstruturaComercial`
+- operações de `EstruturaComercial`
+- `delete nextState.produtos`
+
+`BLOCKED` / `REVIEW_REQUIRED`:
+- `src/types/index.ts` `EstruturaComercial` duplicado
+- `src/types/index.ts` `interface Produto`
+- `src/types/index.ts` `module: 'produtos'`
+- `src/types/index.ts` grants `produtos`
+- qualquer fallback ligado a `Oportunidades.tsx`
+- `pipelineUtils.ts`
+
+Riscos:
+- `types/index.ts` possui duplicidade de `EstruturaComercial` e dependências em `Configuracoes` / `Oportunidades`.
+
+Próxima ação:
+- Planejar patch mínimo `COMMIT-04B.1` somente em `src/store/index.ts`.
+
+### AUD-015 — TYPES_PRODUCTS_DECOMMISSION_READINESS
+Status: `ISSUES FOUND`
+
+Decisão:
+- `src/types/index.ts` permanece `BLOCKED` / `REVIEW_REQUIRED`.
+
+Achados:
+- `EstruturaComercialNivel` duplicado
+- `EstruturaComercial` duplicado
+- definição canônica atual: linhas `362` e `381`
+- definição duplicada simplificada: linhas `1769` e `1795`
+- `interface Produto` ainda usada por `Oportunidade.produto`
+- `module: 'produtos'` ainda sustenta `Configuracoes`
+- `PROFILE_PERMISSIONS.produtos` ainda sustenta `store/permissions` e `Configuracoes`
+- `Pipeline.produto` e `OportunidadeKanban.produto` ainda sustentam `Oportunidades` / `Dashboard`
+
+Decisão:
+- Não remover `Produto`.
+- Não remover `module: 'produtos'`.
+- Não remover grants `produtos`.
+- Não remover `Pipeline.produto`.
+- Não remover `OportunidadeKanban.produto`.
+- Não mexer em `EstruturaComercial` até resolver duplicidade.
+
+Próxima ação:
+- `AUD-016 — TYPES_DUPLICATE_COMMERCIAL_STRUCTURE_RESOLUTION_PLAN`
+
+### AUD-016 — TYPES_DUPLICATE_COMMERCIAL_STRUCTURE_RESOLUTION_PLAN
+Status: `SAFE CLEANUP PLAN`
+
+Decisão:
+- A definição canônica de `EstruturaComercialNivel` e `EstruturaComercial` é a primeira:
+- `EstruturaComercialNivel` linha `~362`
+- `EstruturaComercial` linha `~381`
+
+A definição duplicada simplificada é:
+- `EstruturaComercialNivel` linha `~1769`
+- `EstruturaComercial` linha `~1795`
+
+Não remover ainda.
+
+Antes de remover, revisar campos exclusivos da duplicata simplificada:
+- `children`
+- `cnpj`
+- `contato`
+- `telefone`
+- `email`
+- `site`
+- `tabela_codigo_externo`
+- `taxa_juros_anual`
+- `parcela_minima`
+- `parcela_maxima`
+- `comissao_banco`
+- `comissao_promotora`
+- `observacao`
+- `created_at`
+- `updated_at`
+
+Plano seguro:
+1. Tratar primeiro bloco como fonte canônica.
+2. Decidir se campos exclusivos da duplicata devem ser incorporados.
+3. Validar consumidores:
+- `EstruturaComercial.tsx`
+- `Dashboard.tsx`
+- `RoteirosOperacionais.tsx`
+- `store/index.ts`
+4. Só depois remover duplicata final.
+
 ### REVIEW_REQUIRED — Separate Test Artifact
 Status: `REVIEW_REQUIRED`
 
