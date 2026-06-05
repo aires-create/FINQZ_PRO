@@ -48,7 +48,7 @@ export type Action =
   | 'view_reports'
   | 'change_settings'
   | 'reset_password'
-  | 'move_opportunity';
+  | 'move_stage';
 
 // ============================================
 // MODULE PERMISSIONS MAP
@@ -58,7 +58,7 @@ export type Action =
 export const MODULE_PERMISSIONS: Record<Module, Action[]> = {
   dashboard: ['view'],
   clientes: ['view', 'create', 'edit', 'delete', 'export'],
-  oportunidades: ['view', 'create', 'edit', 'delete', 'move_opportunity', 'export'],
+  oportunidades: ['view', 'create', 'edit', 'delete', 'move_stage', 'export'],
   parceiros: ['view', 'create', 'edit', 'delete', 'reset_password', 'export'],
   usuarios: ['view', 'create', 'edit', 'delete', 'reset_password'],
   produtos: ['view', 'create', 'edit', 'delete', 'export'],
@@ -266,21 +266,6 @@ export const canAccess = (
   const requiredPermission = `${normalizedModule}_${normalizedAction}`.toUpperCase() as Permission;
   if (hasPermissionMatch(userPermissions, requiredPermission)) {
     return true;
-  }
-
-  // Ponte transitória cross-module aprovada para pipeline management.
-  if (
-    (normalizedModule === 'pipelines' || normalizedModule === 'pipeline') &&
-    normalizedAction === 'manage'
-  ) {
-    return hasPermissionMatch(userPermissions, 'oportunidades:edit_pipeline');
-  }
-
-  if (
-    normalizedModule === 'oportunidades' &&
-    normalizedAction === 'edit_pipeline'
-  ) {
-    return hasPermissionMatch(userPermissions, 'pipelines:manage');
   }
 
   return false;

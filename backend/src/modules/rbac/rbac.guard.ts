@@ -6,98 +6,39 @@ import { recordRequestSecurityEvent } from '../security-events/index.js';
 const normalize = (value: string | string[]) =>
   Array.isArray(value) ? value : [value];
 
-const canonicalizePermission = (permission: string): string => {
-  const normalized = String(permission ?? '').trim().toLowerCase();
-
-  switch (normalized) {
-    case 'move':
-    case 'move_card':
-    case 'move_opportunity':
-      return 'move_stage';
-    case 'edit_pipeline':
-      return 'pipelines:manage';
-    case 'opportunity:move':
-    case 'opportunity:move_opportunity':
-      return 'opportunity:move_stage';
-    case 'oportunidades:move':
-    case 'oportunidades:move_card':
-      return 'oportunidades:move_stage';
-    case 'oportunidades:edit_pipeline':
-      return 'pipelines:manage';
-    default:
-      return normalized;
-  }
-};
-
-const permissionVariants = (permission: string): string[] => {
-  const canonical = canonicalizePermission(permission);
-  const variants = new Set<string>([canonical]);
-
-  switch (canonical) {
-    case 'move_stage':
-      variants.add('move');
-      variants.add('move_card');
-      variants.add('move_opportunity');
-      break;
-    case 'opportunity:move_stage':
-      variants.add('opportunity:move');
-      variants.add('opportunity:move_opportunity');
-      break;
-    case 'oportunidades:move_stage':
-      variants.add('oportunidades:move');
-      variants.add('oportunidades:move_card');
-      break;
-    case 'pipelines:manage':
-      variants.add('edit_pipeline');
-      variants.add('oportunidades:edit_pipeline');
-      break;
-    default:
-      break;
-  }
-
-  return Array.from(variants);
-};
-
 const permissionMatches = (grantedPermission: string, requiredPermission: string): boolean => {
-  const required = canonicalizePermission(requiredPermission);
-  const requiredVariants = new Set(permissionVariants(required));
-  const grantedVariants = permissionVariants(grantedPermission);
+  const required = String(requiredPermission ?? '').trim().toLowerCase();
+  const granted = String(grantedPermission ?? '').trim().toLowerCase();
 
-  for (const granted of grantedVariants) {
-    if (granted === '*') {
-      return true;
-    }
+  if (!required || !granted) {
+    return false;
+  }
 
-    if (requiredVariants.has(granted)) {
-      return true;
-    }
+  if (granted === '*') {
+    return true;
+  }
 
-    const [grantedResource, grantedAction] = granted.split(':');
-    const [requiredResource, requiredAction] = required.split(':');
+  if (granted === required) {
+    return true;
+  }
 
-    if (!grantedAction || !requiredAction) {
-      continue;
-    }
+  const [grantedResource, grantedAction] = granted.split(':');
+  const [requiredResource, requiredAction] = required.split(':');
 
-    if (grantedAction === '*' && grantedResource === requiredResource) {
-      return true;
-    }
+  if (!grantedAction || !requiredAction) {
+    return false;
+  }
 
-    const isOpportunityResourcePair =
-      (grantedResource === 'opportunity' || grantedResource === 'oportunidades') &&
-      (requiredResource === 'opportunity' || requiredResource === 'oportunidades');
+  if (grantedAction === '*' && grantedResource === requiredResource) {
+    return true;
+  }
 
-    if (grantedAction === '*' && isOpportunityResourcePair) {
-      return true;
-    }
+  const isOpportunityResourcePair =
+    (grantedResource === 'opportunity' || grantedResource === 'oportunidades') &&
+    (requiredResource === 'opportunity' || requiredResource === 'oportunidades');
 
-    if (
-      required === 'pipelines:manage' &&
-      grantedAction === '*' &&
-      (grantedResource === 'opportunity' || grantedResource === 'oportunidades')
-    ) {
-      return true;
-    }
+  if (grantedAction === '*' && isOpportunityResourcePair) {
+    return true;
   }
 
   return false;
@@ -142,7 +83,9 @@ export const requireRoles = (acceptedRoles: string | string[]) => {
 };
 
 export const requirePermissions = (requiredPermissions: string | string[]) => {
-  const permissions = normalize(requiredPermissions).map(canonicalizePermission);
+  const permissions = normalize(requiredPermissions).map((permission) =>
+    String(permission ?? '').trim().toLowerCase(),
+  );
 
   return async (request: FastifyRequest, _reply: FastifyReply) => {
     const user = request.currentUser;

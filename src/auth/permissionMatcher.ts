@@ -5,10 +5,7 @@ const ACTION_ALIAS_MAP: Record<string, string[]> = {
   edit: ["edit", "update"],
   delete: ["delete"],
   export: ["export"],
-  move: ["move", "move_stage", "move_card", "move_opportunity"],
-  move_stage: ["move_stage", "move", "move_card", "move_opportunity"],
-  move_card: ["move_card", "move", "move_stage", "move_opportunity"],
-  move_opportunity: ["move_opportunity", "move", "move_stage", "move_card"],
+  move_stage: ["move_stage"],
 };
 
 const MODULE_ALIAS_MAP: Record<string, string[]> = {

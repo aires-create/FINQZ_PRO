@@ -80,7 +80,7 @@ describe('Opportunities routes registration and RBAC', () => {
     expect(response.statusCode).toBe(403);
   });
 
-  it('PATCH /api/v1/opportunities/:id/stage sem opportunity:move retorna 403', async () => {
+  it('PATCH /api/v1/opportunities/:id/stage sem opportunity:move_stage retorna 403', async () => {
     const server = await getApp();
     const response = await server.inject({
       method: 'PATCH',
@@ -109,4 +109,3 @@ describe('Opportunities routes registration and RBAC', () => {
     expect(response.statusCode).toBe(403);
   });
 });
-

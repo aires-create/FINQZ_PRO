@@ -24,7 +24,7 @@ export interface AuthUser {
 
 export interface PermissionCheck {
   resource: string;
-  action: 'create' | 'read' | 'edit' | 'delete' | 'export' | 'move' | '*';
+  action: 'create' | 'read' | 'edit' | 'delete' | 'export' | 'move_stage' | '*';
 }
 
 // RBAC: Mapeamento de permissões por role
@@ -41,14 +41,14 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   'GERENTE_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
   
   // Franqueado
-  'FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move', 'parceiros:read'],
-  'ROLE_FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move', 'parceiros:read'],
+  'FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage', 'parceiros:read'],
+  'ROLE_FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage', 'parceiros:read'],
   
   // SDR (Sales Development Representative)
-  'SDR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move'],
-  'ROLE_SDR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move'],
-  'VENDEDOR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move'],
-  'ROLE_VENDEDOR_FRANQUIA': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move'],
+  'SDR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage'],
+  'ROLE_SDR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage'],
+  'VENDEDOR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage'],
+  'ROLE_VENDEDOR_FRANQUIA': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage'],
   
   // Financeiro
   'FINANCEIRO': ['financeiro:read', 'financeiro:export', 'clientes:read', 'oportunidades:read'],
@@ -63,109 +63,39 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   'ROLE_GERENTE_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:read', 'financeiro:read'],
 };
 
-const canonicalizePermission = (permission: string): string => {
-  const normalized = String(permission ?? '').trim().toLowerCase();
-
-  switch (normalized) {
-    case 'move':
-    case 'move_card':
-    case 'move_opportunity':
-      return 'move_stage';
-    case 'edit_pipeline':
-      return 'pipelines:manage';
-    case 'opportunity:move':
-    case 'opportunity:move_opportunity':
-      return 'opportunity:move_stage';
-    case 'oportunidades:move':
-    case 'oportunidades:move_card':
-      return 'oportunidades:move_stage';
-    case 'oportunidades:edit_pipeline':
-      return 'pipelines:manage';
-    default:
-      return normalized;
-  }
-};
-
-const canonicalizeResourceAction = (resource: string, action: string): string => {
-  const normalizedResource = String(resource ?? '').trim().toLowerCase();
-  const normalizedAction = String(action ?? '').trim().toLowerCase();
-
-  if (normalizedAction === '*') {
-    return `${normalizedResource}:*`;
-  }
-
-  return canonicalizePermission(`${normalizedResource}:${normalizedAction}`);
-};
-
-const permissionVariants = (permission: string): string[] => {
-  const canonical = canonicalizePermission(permission);
-  const variants = new Set<string>([canonical]);
-
-  switch (canonical) {
-    case 'move_stage':
-      variants.add('move');
-      variants.add('move_card');
-      variants.add('move_opportunity');
-      break;
-    case 'opportunity:move_stage':
-      variants.add('opportunity:move');
-      variants.add('opportunity:move_opportunity');
-      break;
-    case 'oportunidades:move_stage':
-      variants.add('oportunidades:move');
-      variants.add('oportunidades:move_card');
-      break;
-    case 'pipelines:manage':
-      variants.add('edit_pipeline');
-      variants.add('oportunidades:edit_pipeline');
-      break;
-    default:
-      break;
-  }
-
-  return Array.from(variants);
-};
-
 const permissionMatches = (grantedPermission: string, requiredPermission: string): boolean => {
-  const required = canonicalizePermission(requiredPermission);
-  const requiredVariants = new Set(permissionVariants(required));
-  const grantedVariants = permissionVariants(grantedPermission);
+  const required = String(requiredPermission ?? '').trim().toLowerCase();
+  const granted = String(grantedPermission ?? '').trim().toLowerCase();
 
-  for (const granted of grantedVariants) {
-    if (granted === '*') {
-      return true;
-    }
+  if (!required || !granted) {
+    return false;
+  }
 
-    if (requiredVariants.has(granted)) {
-      return true;
-    }
+  if (granted === '*') {
+    return true;
+  }
 
-    const [grantedResource, grantedAction] = granted.split(':');
-    const [requiredResource, requiredAction] = required.split(':');
+  if (granted === required) {
+    return true;
+  }
 
-    if (!grantedAction || !requiredAction) {
-      continue;
-    }
+  const [grantedResource, grantedAction] = granted.split(':');
+  const [requiredResource, requiredAction] = required.split(':');
 
-    if (grantedAction === '*' && grantedResource === requiredResource) {
-      return true;
-    }
+  if (!grantedAction || !requiredAction) {
+    return false;
+  }
 
-    const isOpportunityResourcePair =
-      (grantedResource === 'opportunity' || grantedResource === 'oportunidades') &&
-      (requiredResource === 'opportunity' || requiredResource === 'oportunidades');
+  if (grantedAction === '*' && grantedResource === requiredResource) {
+    return true;
+  }
 
-    if (grantedAction === '*' && isOpportunityResourcePair) {
-      return true;
-    }
+  const isOpportunityResourcePair =
+    (grantedResource === 'opportunity' || grantedResource === 'oportunidades') &&
+    (requiredResource === 'opportunity' || requiredResource === 'oportunidades');
 
-    if (
-      required === 'pipelines:manage' &&
-      grantedAction === '*' &&
-      (grantedResource === 'opportunity' || grantedResource === 'oportunidades')
-    ) {
-      return true;
-    }
+  if (grantedAction === '*' && isOpportunityResourcePair) {
+    return true;
   }
 
   return false;
@@ -192,7 +122,12 @@ export function hasPermission(user: AuthUser | null, resource: string, action: s
   // Admin with wildcard has full access
   if (user.permissions.includes('*')) return true;
 
-  const canonicalTarget = canonicalizeResourceAction(resource, action);
+  const normalizedResource = String(resource ?? '').trim().toLowerCase();
+  const normalizedAction = String(action ?? '').trim().toLowerCase();
+  const targetPermission =
+    normalizedAction === '*'
+      ? `${normalizedResource}:*`
+      : `${normalizedResource}:${normalizedAction}`;
   
   // Get role-based permissions
   const role = user.role || user.perfil;
@@ -203,13 +138,13 @@ export function hasPermission(user: AuthUser | null, resource: string, action: s
   
   // Check specific permission
   const hasExactPermission = rolePermissions.some((p: string) =>
-    permissionMatches(p, canonicalTarget),
+    permissionMatches(p, targetPermission),
   );
   
   if (hasExactPermission) return true;
   
   // Check user-level permissions
-  return user.permissions.some((p: string) => permissionMatches(p, canonicalTarget));
+  return user.permissions.some((p: string) => permissionMatches(p, targetPermission));
 }
 
 /**
@@ -246,7 +181,7 @@ export function requireAuth() {
  * Require specific permission
  * Returns 403 if user doesn't have permission
  */
-export function requirePermission(resource: string, action: 'create' | 'read' | 'edit' | 'delete' | 'export' | 'move' | '*') {
+export function requirePermission(resource: string, action: 'create' | 'read' | 'edit' | 'delete' | 'export' | 'move_stage' | '*' | 'manage') {
   return async (c: Context, next: Next) => {
     const user = getCurrentUser(c);
     

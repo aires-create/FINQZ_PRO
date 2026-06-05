@@ -159,7 +159,7 @@ describe('opportunities routes', () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it('PATCH stage sem opportunity:move retorna 403', async () => {
+  it('PATCH stage sem opportunity:move_stage retorna 403', async () => {
     const response = await app.inject({
       method: 'PATCH',
       url: '/api/v1/opportunities/opp-1/stage',

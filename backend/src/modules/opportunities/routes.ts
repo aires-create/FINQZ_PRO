@@ -257,7 +257,7 @@ export async function opportunitiesRoutes(app: FastifyInstance) {
 
   app.patch(
     '/:id/stage',
-    { preHandler: [requirePermissions('opportunity:move')] },
+    { preHandler: [requirePermissions('opportunity:move_stage')] },
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);

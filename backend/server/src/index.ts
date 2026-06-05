@@ -119,10 +119,10 @@ export async function createApp(
     'ADMIN_FRANQUIA': ['clientes:*', 'oportunidades:*', 'parceiros:*', 'financeiro:read', 'usuarios:read'],
     
     // Franqueado
-    'FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move', 'parceiros:read'],
+    'FRANQUEADO': ['clientes:read', 'clientes:create', 'clientes:edit', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage', 'parceiros:read'],
     
     // SDR (Sales Development Representative)
-    'SDR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move'],
+    'SDR': ['clientes:read', 'clientes:create', 'oportunidades:read', 'oportunidades:create', 'oportunidades:edit', 'oportunidades:move_stage'],
     
     // Financeiro
     'FINANCEIRO': ['financeiro:read', 'financeiro:export', 'clientes:read', 'oportunidades:read'],
