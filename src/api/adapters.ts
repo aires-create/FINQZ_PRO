@@ -7,7 +7,6 @@ import type {
   ClienteResponse, 
   OportunidadeResponse, 
   ParceiroResponse, 
-  ProdutoResponse,
   UsuarioResponse,
   AutomacaoResponse,
   TransacaoFinanceiraResponse
@@ -54,7 +53,6 @@ const STORAGE_ENTITY_KEYS = {
   oportunidadesKanban: 'finqz_oportunidades_kanban',
   parceiros: 'finqz_parceiros',
   usuarios: 'finqz_usuarios',
-  produtos: 'finqz_produtos',
   transacoesFinanceiras: 'finqz_transacoes_financeiras',
   automacoes: 'finqz_automacoes',
   estruturaComercial: 'finqz_estrutura_comercial',
@@ -75,12 +73,6 @@ const defaultOportunidades: OportunidadeResponse[] = [
   { id: 1, nome: "João Silva", telefone: "11999999999", produto: "Empréstimo Pessoal", valor: 15000, etapa: "novo_lead", created_at: Date.now(), updated_at: Date.now() },
   { id: 2, nome: "Maria Santos", telefone: "11988888888", produto: "Crédito Consignado", valor: 25000, etapa: "negociacao", created_at: Date.now(), updated_at: Date.now() },
   { id: 3, nome: "Pedro Costa", telefone: "11977777777", produto: "Empréstimo Pessoal", valor: 10000, etapa: "pendencia", created_at: Date.now(), updated_at: Date.now() },
-];
-
-const defaultProdutos: ProdutoResponse[] = [
-  { id: 1, nome: "Empréstimo Pessoal", descricao: "Empréstimo sem garantia", pipeline: "default", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 2, nome: "Crédito Consignado", descricao: "Crédito com desconto em folha", pipeline: "default", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 3, nome: "Cartão de Crédito", descricao: "Cartão sem anuidade", pipeline: "default", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
 ];
 
 // ============================================
@@ -197,61 +189,6 @@ export const oportunidadesAdapter = {
   },
 };
 
-/**
- * Adapter para dados de Produtos
- */
-export const produtosAdapter = {
-  getAll: (): ProdutoResponse[] => {
-    if (USE_MOCKS) {
-      return getFromStorage<ProdutoResponse>(STORAGE_ENTITY_KEYS.produtos, defaultProdutos);
-    }
-    return defaultProdutos;
-  },
-  
-  getById: (id: number): ProdutoResponse | undefined => {
-    const items = produtosAdapter.getAll();
-    return items.find(p => p.id === id);
-  },
-  
-  save: (data: ProdutoResponse[]): void => {
-    saveToStorage(STORAGE_ENTITY_KEYS.produtos, data);
-  },
-  
-  create: (data: Omit<ProdutoResponse, 'id' | 'created_at' | 'updated_at'>): ProdutoResponse => {
-    const items = produtosAdapter.getAll();
-    const newItem: ProdutoResponse = {
-      ...data,
-      id: Math.max(0, ...items.map(p => p.id)) + 1,
-      created_at: Date.now(),
-      updated_at: Date.now(),
-    };
-    items.push(newItem);
-    produtosAdapter.save(items);
-    return newItem;
-  },
-  
-  update: (id: number, data: Partial<ProdutoResponse>): ProdutoResponse | undefined => {
-    const items = produtosAdapter.getAll();
-    const index = items.findIndex(p => p.id === id);
-    if (index >= 0) {
-      items[index] = { ...items[index], ...data, updated_at: Date.now() };
-      produtosAdapter.save(items);
-      return items[index];
-    }
-    return undefined;
-  },
-  
-  delete: (id: number): boolean => {
-    const items = produtosAdapter.getAll();
-    const filtered = items.filter(p => p.id !== id);
-    if (filtered.length !== items.length) {
-      produtosAdapter.save(filtered);
-      return true;
-    }
-    return false;
-  },
-};
-
 // ============================================
 // EXPORTS
 // ============================================
@@ -259,5 +196,4 @@ export const produtosAdapter = {
 export default {
   clientes: clientesAdapter,
   oportunidades: oportunidadesAdapter,
-  produtos: produtosAdapter,
 };

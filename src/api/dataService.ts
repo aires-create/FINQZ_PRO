@@ -9,7 +9,6 @@ import type {
   ClienteResponse,
   OportunidadeResponse,
   ParceiroResponse,
-  ProdutoResponse,
   AutomacaoResponse,
   TransacaoFinanceiraResponse,
   DashboardKPIsResponse,
@@ -188,50 +187,6 @@ export const dataService = {
         throw new Error('Não disponível em modo mock');
       }
       return api.deleteParceiro(id);
-    },
-  },
-
-  // ========================================
-  // PRODUTOS
-  // ========================================
-  
-  produtos: {
-    list: async (): Promise<ProdutoResponse[]> => {
-      if (USE_MOCKS) {
-        return adapters.produtos.getAll();
-      }
-      return api.getProdutos();
-    },
-    
-    getById: async (id: number): Promise<ProdutoResponse | null> => {
-      if (USE_MOCKS) {
-        return adapters.produtos.getById(id) || null;
-      }
-      return api.getProduto(id);
-    },
-    
-    create: async (data: Omit<ProdutoResponse, 'id' | 'created_at' | 'updated_at'>): Promise<ProdutoResponse> => {
-      if (USE_MOCKS) {
-        return adapters.produtos.create(data);
-      }
-      return api.createProduto(data);
-    },
-    
-    update: async (id: number, data: Partial<ProdutoResponse>): Promise<ProdutoResponse> => {
-      if (USE_MOCKS) {
-        const updated = adapters.produtos.update(id, data);
-        if (!updated) throw new Error('Produto não encontrado');
-        return updated;
-      }
-      return api.updateProduto(id, data);
-    },
-    
-    delete: async (id: number): Promise<void> => {
-      if (USE_MOCKS) {
-        adapters.produtos.delete(id);
-        return;
-      }
-      return api.deleteProduto(id);
     },
   },
 

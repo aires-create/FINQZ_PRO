@@ -95,22 +95,6 @@ export const api = {
     return apiFetch<any>(`/audit/logs?${query.toString()}`);
   },
 
-  // Produtos
-  getProdutos: () => apiFetch<any>("/api/produtos"),
-  getProduto: (id: number) => apiFetch<any>(`/api/produtos/${id}`),
-  createProduto: (data: any) =>
-    apiFetch<any>("/api/produtos", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  updateProduto: (id: number, data: any) =>
-    apiFetch<any>(`/api/produtos/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteProduto: (id: number) =>
-    apiFetch<any>(`/api/produtos/${id}`, { method: "DELETE" }),
-
   // Parceiros
   getParceiros: (tipo?: string, status?: string) =>
     apiFetch<any>(
