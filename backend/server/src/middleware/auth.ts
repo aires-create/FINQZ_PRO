@@ -63,6 +63,114 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   'ROLE_GERENTE_COMERCIAL': ['clientes:*', 'oportunidades:*', 'parceiros:read', 'financeiro:read'],
 };
 
+const canonicalizePermission = (permission: string): string => {
+  const normalized = String(permission ?? '').trim().toLowerCase();
+
+  switch (normalized) {
+    case 'move':
+    case 'move_card':
+    case 'move_opportunity':
+      return 'move_stage';
+    case 'edit_pipeline':
+      return 'pipelines:manage';
+    case 'opportunity:move':
+    case 'opportunity:move_opportunity':
+      return 'opportunity:move_stage';
+    case 'oportunidades:move':
+    case 'oportunidades:move_card':
+      return 'oportunidades:move_stage';
+    case 'oportunidades:edit_pipeline':
+      return 'pipelines:manage';
+    default:
+      return normalized;
+  }
+};
+
+const canonicalizeResourceAction = (resource: string, action: string): string => {
+  const normalizedResource = String(resource ?? '').trim().toLowerCase();
+  const normalizedAction = String(action ?? '').trim().toLowerCase();
+
+  if (normalizedAction === '*') {
+    return `${normalizedResource}:*`;
+  }
+
+  return canonicalizePermission(`${normalizedResource}:${normalizedAction}`);
+};
+
+const permissionVariants = (permission: string): string[] => {
+  const canonical = canonicalizePermission(permission);
+  const variants = new Set<string>([canonical]);
+
+  switch (canonical) {
+    case 'move_stage':
+      variants.add('move');
+      variants.add('move_card');
+      variants.add('move_opportunity');
+      break;
+    case 'opportunity:move_stage':
+      variants.add('opportunity:move');
+      variants.add('opportunity:move_opportunity');
+      break;
+    case 'oportunidades:move_stage':
+      variants.add('oportunidades:move');
+      variants.add('oportunidades:move_card');
+      break;
+    case 'pipelines:manage':
+      variants.add('edit_pipeline');
+      variants.add('oportunidades:edit_pipeline');
+      break;
+    default:
+      break;
+  }
+
+  return Array.from(variants);
+};
+
+const permissionMatches = (grantedPermission: string, requiredPermission: string): boolean => {
+  const required = canonicalizePermission(requiredPermission);
+  const requiredVariants = new Set(permissionVariants(required));
+  const grantedVariants = permissionVariants(grantedPermission);
+
+  for (const granted of grantedVariants) {
+    if (granted === '*') {
+      return true;
+    }
+
+    if (requiredVariants.has(granted)) {
+      return true;
+    }
+
+    const [grantedResource, grantedAction] = granted.split(':');
+    const [requiredResource, requiredAction] = required.split(':');
+
+    if (!grantedAction || !requiredAction) {
+      continue;
+    }
+
+    if (grantedAction === '*' && grantedResource === requiredResource) {
+      return true;
+    }
+
+    const isOpportunityResourcePair =
+      (grantedResource === 'opportunity' || grantedResource === 'oportunidades') &&
+      (requiredResource === 'opportunity' || requiredResource === 'oportunidades');
+
+    if (grantedAction === '*' && isOpportunityResourcePair) {
+      return true;
+    }
+
+    if (
+      required === 'pipelines:manage' &&
+      grantedAction === '*' &&
+      (grantedResource === 'opportunity' || grantedResource === 'oportunidades')
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -83,6 +191,8 @@ export function hasPermission(user: AuthUser | null, resource: string, action: s
   
   // Admin with wildcard has full access
   if (user.permissions.includes('*')) return true;
+
+  const canonicalTarget = canonicalizeResourceAction(resource, action);
   
   // Get role-based permissions
   const role = user.role || user.perfil;
@@ -92,18 +202,14 @@ export function hasPermission(user: AuthUser | null, resource: string, action: s
   if (rolePermissions.includes('*')) return true;
   
   // Check specific permission
-  const hasExactPermission = rolePermissions.some((p: string) => {
-    const [r, a] = p.split(':');
-    return (r === resource || r === '*') && (a === '*' || a === action);
-  });
+  const hasExactPermission = rolePermissions.some((p: string) =>
+    permissionMatches(p, canonicalTarget),
+  );
   
   if (hasExactPermission) return true;
   
   // Check user-level permissions
-  return user.permissions.some((p: string) => {
-    const [r, a] = p.split(':');
-    return (r === resource || r === '*') && (a === '*' || a === action);
-  });
+  return user.permissions.some((p: string) => permissionMatches(p, canonicalTarget));
 }
 
 /**
