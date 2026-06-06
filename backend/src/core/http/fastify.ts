@@ -194,12 +194,27 @@ const isOperationalError = (error: unknown): error is OperationalError => {
     return true;
   }
 
-  return (
-    error instanceof Error &&
-    isRecord(error) &&
-    error.isOperational === true &&
-    typeof error.statusCode === 'number'
-  );
+  // Accept legacy operational errors by shape or by well-known names
+  if (error instanceof Error && isRecord(error)) {
+    // If the legacy error class set isOperational or numeric statusCode, treat as operational
+    if (error.isOperational === true && typeof error.statusCode === 'number') {
+      return true;
+    }
+
+    // Some legacy errors may not share prototype across bundles; fall back to name-based detection
+    const legacyNames = ['AuthenticationError', 'AuthorizationError', 'ValidationError', 'AppError'];
+    if (typeof error.name === 'string' && legacyNames.includes(error.name)) {
+      return true;
+    }
+
+    // Also accept objects that expose a numeric status via common properties
+    const statusCandidate = (error as any).statusCode ?? (error as any).status ?? (error as any).code;
+    if (typeof statusCandidate === 'number' && Number.isInteger(statusCandidate) && statusCandidate >= 400 && statusCandidate <= 599) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const getErrorCode = (error: unknown) => {
@@ -217,11 +232,32 @@ const getErrorCode = (error: unknown) => {
 };
 
 const getErrorStatusCode = (error: OperationalError) => {
-  const statusCode = Number(error.statusCode);
+  // Prefer explicit numeric fields in several common shapes
+  const candidates: Array<number | undefined> = [];
 
-  return Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599
-    ? statusCode
-    : 500;
+  if (typeof error.statusCode === 'number') candidates.push(Number(error.statusCode));
+  if ((error as any).status && typeof (error as any).status === 'number') candidates.push(Number((error as any).status));
+  if ((error as any).code && typeof (error as any).code === 'number') candidates.push(Number((error as any).code));
+  // Some legacy errors stored status in `status_code`
+  if ((error as any).status_code && typeof (error as any).status_code === 'number') candidates.push(Number((error as any).status_code));
+
+  for (const c of candidates) {
+    if (c != null && Number.isInteger(c) && c >= 400 && c <= 599) return c as number;
+  }
+
+  // Fallback: try to parse string numbers
+  const strCandidates = [
+    (error as any).statusCode,
+    (error as any).status,
+    (error as any).code,
+    (error as any).status_code,
+  ].map((v) => (typeof v === 'string' && /^[0-9]+$/.test(v) ? Number(v) : undefined));
+
+  for (const c of strCandidates) {
+    if (c != null && Number.isInteger(c) && c >= 400 && c <= 599) return c as number;
+  }
+
+  return 500;
 };
 
 const getErrorResponseErrors = (error: OperationalError) => {
