@@ -19,6 +19,11 @@ vi.mock('../../database/prisma.js', () => ({
   prisma: prismaMock,
 }));
 
+vi.mock('../../core/prisma/client.js', () => ({
+  // Transitional mock until Prisma runtime entrypoint is unified.
+  prisma: prismaMock,
+}));
+
 let app: FastifyInstance | undefined;
 
 const basePayload: Omit<JWTPayload, 'iat' | 'exp'> = {

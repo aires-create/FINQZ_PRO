@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { JWTPayload } from '../../types/index.js';
 import { generateAccessToken } from '../../utils/jwt.js';
@@ -10,9 +10,27 @@ const sosBolsoClientMock = vi.hoisted(() => ({
   testSosBolsoConnection: vi.fn(),
 }));
 
+const prismaMock = vi.hoisted(() => ({
+  user: {
+    findFirst: vi.fn(),
+  },
+  securityEventLog: {
+    create: vi.fn(),
+  },
+}));
+
 vi.mock('../../modules/integrations/providers/sos-bolso/sos-bolso.client.js', () => ({
   inquireSosBolsoMargin: sosBolsoClientMock.inquireSosBolsoMargin,
   testSosBolsoConnection: sosBolsoClientMock.testSosBolsoConnection,
+}));
+
+vi.mock('../../database/prisma.js', () => ({
+  prisma: prismaMock,
+}));
+
+vi.mock('../../core/prisma/client.js', () => ({
+  // Transitional mock until Prisma runtime entrypoint is unified.
+  prisma: prismaMock,
 }));
 
 let app: FastifyInstance | undefined;
@@ -31,6 +49,28 @@ const basePayload: Omit<JWTPayload, 'iat' | 'exp'> = {
   email: 'admin@finqz.com.br',
   permissions: ['tenant:read'],
 };
+
+beforeEach(() => {
+  prismaMock.user.findFirst.mockReset();
+  prismaMock.securityEventLog.create.mockReset();
+  prismaMock.user.findFirst.mockResolvedValue({
+    id: 'user-1',
+    tenantId: 'tenant-1',
+    organizationId: null,
+    partnerId: null,
+    userRoles: [
+      {
+        role: {
+          id: 'role-1',
+          name: 'Admin',
+          slug: 'admin',
+          type: 'SYSTEM',
+        },
+      },
+    ],
+  });
+  prismaMock.securityEventLog.create.mockResolvedValue(undefined);
+});
 
 afterEach(async () => {
   sosBolsoClientMock.inquireSosBolsoMargin.mockReset();

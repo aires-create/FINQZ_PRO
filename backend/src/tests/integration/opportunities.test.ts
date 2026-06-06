@@ -1,9 +1,27 @@
 import type { FastifyInstance } from 'fastify';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../app.js';
 import { generateAccessToken } from '../../utils/jwt.js';
 import type { JWTPayload } from '../../types/index.js';
+
+const prismaMock = vi.hoisted(() => ({
+  user: {
+    findFirst: vi.fn(),
+  },
+  securityEventLog: {
+    create: vi.fn(),
+  },
+}));
+
+vi.mock('../../database/prisma.js', () => ({
+  prisma: prismaMock,
+}));
+
+vi.mock('../../core/prisma/client.js', () => ({
+  // Transitional mock until Prisma runtime entrypoint is unified.
+  prisma: prismaMock,
+}));
 
 let app: FastifyInstance | undefined;
 
@@ -28,6 +46,28 @@ const getToken = (permissions: string[]) =>
     ...basePayload,
     permissions,
   });
+
+beforeEach(() => {
+  prismaMock.user.findFirst.mockReset();
+  prismaMock.securityEventLog.create.mockReset();
+  prismaMock.user.findFirst.mockResolvedValue({
+    id: 'user-1',
+    tenantId: 'tenant-1',
+    organizationId: null,
+    partnerId: null,
+    userRoles: [
+      {
+        role: {
+          id: 'role-1',
+          name: 'Admin Sistema',
+          slug: 'ROLE_ADMIN_SISTEMA',
+          type: 'SYSTEM',
+        },
+      },
+    ],
+  });
+  prismaMock.securityEventLog.create.mockResolvedValue(undefined);
+});
 
 afterEach(async () => {
   if (app) {

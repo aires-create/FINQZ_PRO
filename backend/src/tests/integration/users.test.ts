@@ -24,6 +24,11 @@ vi.mock('../../database/prisma.js', () => ({
   prisma: prismaMock,
 }));
 
+vi.mock('../../core/prisma/client.js', () => ({
+  // Transitional mock until Prisma runtime entrypoint is unified.
+  prisma: prismaMock,
+}));
+
 let app: FastifyInstance | undefined;
 
 const basePayload: Omit<JWTPayload, 'iat' | 'exp'> = {
@@ -71,6 +76,23 @@ const buildRole = () => ({
 
 const buildCreatedUser = () => buildUsers()[0];
 
+const buildTenantContextUser = () => ({
+  id: 'user-1',
+  tenantId: 'tenant-1',
+  organizationId: null,
+  partnerId: null,
+  userRoles: [
+    {
+      role: {
+        id: 'role-1',
+        name: 'Admin Sistema',
+        slug: 'ROLE_ADMIN_SISTEMA',
+        type: 'SYSTEM',
+      },
+    },
+  ],
+});
+
 const getApp = async () => {
   app = await createApp();
   await app.ready();
@@ -88,7 +110,37 @@ beforeEach(() => {
   prismaMock.role.findFirst.mockReset();
   prismaMock.securityEventLog.create.mockReset();
   prismaMock.user.findMany.mockResolvedValue(buildUsers());
-  prismaMock.user.findFirst.mockResolvedValue(null);
+  prismaMock.user.findFirst.mockImplementation(async (args?: {
+    where?: Record<string, unknown>;
+    select?: Record<string, unknown>;
+  }) => {
+    const where = args?.where ?? {};
+    const select = args?.select ?? {};
+
+    if (
+      where.id === 'user-1' &&
+      where.tenantId === 'tenant-1' &&
+      where.deletedAt === null &&
+      where.isActive === true &&
+      'organizationId' in select
+    ) {
+      return buildTenantContextUser();
+    }
+
+    if (
+      where.id === 'user-1' &&
+      where.tenantId === 'tenant-1' &&
+      where.deletedAt === null &&
+      'emailNormalized' in select
+    ) {
+      return {
+        id: 'user-1',
+        emailNormalized: 'admin@finqz.com.br',
+      };
+    }
+
+    return null;
+  });
   prismaMock.user.create.mockResolvedValue(buildCreatedUser());
   prismaMock.user.update.mockResolvedValue(buildCreatedUser());
   prismaMock.role.findFirst.mockResolvedValue(buildRole());
@@ -244,10 +296,6 @@ describe('PUT /api/v1/users/:id', () => {
       isActive: false,
     };
 
-    prismaMock.user.findFirst.mockResolvedValueOnce({
-      id: 'user-1',
-      emailNormalized: 'admin@finqz.com.br',
-    });
     prismaMock.user.update.mockResolvedValueOnce(updatedUser);
 
     const response = await server.inject({
@@ -296,8 +344,6 @@ describe('PUT /api/v1/users/:id', () => {
 
   it('returns 404 when the user does not exist in the authenticated tenant', async () => {
     const server = await getApp();
-    prismaMock.user.findFirst.mockResolvedValueOnce(null);
-
     const response = await server.inject({
       method: 'PUT',
       url: '/api/v1/users/user-missing',
