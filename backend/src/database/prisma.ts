@@ -1,6 +1,8 @@
 import { config } from "../config/app.js";
 import { logger } from "../shared/logger.js";
-import { prisma } from "../core/prisma/client.js";
+import { prisma as corePrisma } from "../core/prisma/client.js";
+
+export const prisma = corePrisma;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === "object" && value !== null;
