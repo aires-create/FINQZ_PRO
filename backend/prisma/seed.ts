@@ -235,6 +235,13 @@ async function createPermissions() {
       resource: 'users',
       action: PermissionAction.DELETE,
     },
+    {
+      name: 'Reset User Password',
+      slug: 'user:reset-password',
+      description: 'Reset user passwords administratively',
+      resource: 'users',
+      action: PermissionAction.UPDATE,
+    },
 
     // Role permissions
     {
@@ -1364,6 +1371,7 @@ async function createRolePermissions(
       roleSlug: 'ROLE_ADMIN_SISTEMA',
       permissionSlugs: [
         'tenant:read',
+        'user:reset-password',
         'customer:create',
         'customer:read',
         'customer:update',
@@ -1421,6 +1429,7 @@ async function createRolePermissions(
       roleSlug: 'admin',
       permissionSlugs: [
         'user:create', 'user:read', 'user:update', 'user:delete',
+        'user:reset-password',
         'role:create', 'role:read', 'role:update', 'role:delete',
         'permission:create', 'permission:read', 'permission:update', 'permission:delete',
         'organization:create', 'organization:read', 'organization:update', 'organization:delete',

@@ -3,8 +3,10 @@ import { z } from 'zod';
 
 import { prisma } from '../../database/prisma.js';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
+import { registerAuditLog } from '../audit/services/audit.service.js';
+import { requirePermissions } from '../rbac/rbac.guard.js';
 import { ConflictError, NotFoundError, ValidationAppError } from '../../shared/errors/index.js';
-import { hashPassword } from '../../utils/password.js';
+import { hashPassword, validatePasswordStrength } from '../../utils/password.js';
 
 type UserRoleRow = {
   role?: {
@@ -65,6 +67,10 @@ type UpdateUserBody = {
   isActive?: boolean;
 };
 
+type ResetPasswordBody = {
+  newPassword: string;
+};
+
 const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -81,6 +87,10 @@ const updateUserSchema = z.object({
 }).strict().refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided',
 });
+
+const resetPasswordSchema = z.object({
+  newPassword: z.string().min(8),
+}).strict();
 
 const validateBody = (schema: z.ZodTypeAny) => async (request: FastifyRequest, reply: FastifyReply) => {
   const result = schema.safeParse(request.body);
@@ -374,6 +384,76 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       success: true,
       data: buildSafeUser(createdUser),
       message: 'User created successfully',
+    });
+  });
+
+  app.patch('/:id/reset-password', {
+    preHandler: [authenticate, tenantContextMiddleware, requirePermissions('user:reset-password')],
+    preValidation: validateBody(resetPasswordSchema),
+  }, async (request, reply) => {
+    const tenantId = getTenantId(request);
+    const actorUserId = request.currentUser?.userId ?? null;
+    const { id } = request.params as { id: string };
+    const body = request.body as ResetPasswordBody;
+
+    const targetUser = await prisma.user.findFirst({
+      where: {
+        id,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+      },
+    });
+
+    if (!targetUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    const passwordValidation = validatePasswordStrength(body.newPassword);
+    if (!passwordValidation.isValid) {
+      throw new ValidationAppError('New password does not meet requirements', passwordValidation.errors);
+    }
+
+    const hashedPassword = await hashPassword(body.newPassword);
+
+    await Promise.all([
+      prisma.user.update({
+        where: {
+          id: targetUser.id,
+        },
+        data: {
+          password: hashedPassword,
+          updatedAt: new Date(),
+        },
+      }),
+      prisma.refreshToken.updateMany({
+        where: {
+          userId: targetUser.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokedReason: 'Password reset by administrator',
+        },
+      }),
+      registerAuditLog({
+        tenantId,
+        userId: actorUserId,
+        action: 'USER_PASSWORD_RESET',
+        entity: 'USER',
+        entityId: targetUser.id,
+        metadata: {
+          targetEmail: targetUser.email,
+        },
+      }),
+    ]);
+
+    return reply.send({
+      success: true,
+      message: 'Password reset successfully',
     });
   });
 };
