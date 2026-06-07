@@ -265,6 +265,7 @@ export const UsuariosPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nextPassword = formData.senha.trim();
 
     if (editingUsuario) {
       // Verificar se está tentando bloquear o último admin
@@ -278,6 +279,11 @@ export const UsuariosPage: React.FC = () => {
           editingUsuario.id,
           mapLegacyUsuarioFormToUpdatePayload(formData),
         );
+
+        if (nextPassword) {
+          await usuariosApi.resetPassword(editingUsuario.id, nextPassword);
+        }
+
         await loadUsuarios();
       } catch (error) {
         console.error("[USUARIOS] Failed to update user", error);

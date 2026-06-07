@@ -113,6 +113,16 @@ export const usuariosApi = {
   },
 
   /**
+   * Reset usuário password
+   */
+  async resetPassword(id: number | string, newPassword: string): Promise<void> {
+    return apiCall<void>(`${USERS_BASE_PATH}/${id}/reset-password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newPassword }),
+    });
+  },
+
+  /**
    * Delete usuário
    */
   async delete(id: number): Promise<void> {
