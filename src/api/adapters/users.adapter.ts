@@ -72,6 +72,14 @@ const buildTemporaryAccessCode = (userId: string): string => {
   return `USR-${suffix || 'TEMP'}`;
 };
 
+const mapBackendIsActiveToLegacyStatus = (
+  isActive: boolean,
+): LegacyUsuario['status'] => {
+  // No contrato oficial atual, `isActive=false` representa apenas inativacao.
+  // O estado `BLOQUEADO` continua sendo legado de UI e nao deve ser inferido daqui.
+  return isActive ? 'ATIVO' : 'INATIVO';
+};
+
 const getLegacyRole = (roles?: BackendUserRole[]): string => {
   const primaryRole = roles?.[0];
   return primaryRole?.slug || primaryRole?.name || 'ROLE_ASSISTENTE_BACKOFFICE';
@@ -107,7 +115,7 @@ export const mapBackendUserToLegacyUsuario = (
     role: getLegacyRole(user.roles),
     scope: 'GLOBAL',
     partner_id: null,
-    status: user.isActive ? 'ATIVO' : 'INATIVO',
+    status: mapBackendIsActiveToLegacyStatus(user.isActive),
     mfa_enabled: false,
     permissions: user.permissions ?? [],
     created_at: safeDateToTimestamp(user.createdAt),
