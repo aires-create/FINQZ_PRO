@@ -624,6 +624,7 @@ export const UsuariosPage: React.FC = () => {
           onClose={() => setShowModal(false)}
           title={editingUsuario ? "Editar Usuário" : "Novo Usuário"}
           size="md"
+          closeOnOverlayClick={false}
         >
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
@@ -724,7 +725,7 @@ export const UsuariosPage: React.FC = () => {
               value={formData.access_code}
               readOnly={true}
               placeholder={editingUsuario ? "" : "Gerado automaticamente"}
-              helperText={editingUsuario ? "Código fixo após criação" : "Gerado automaticamente ao criar"}
+              helperText="Código visual temporário. Não é enviado à API oficial."
             />
 
             {/* Campo Status - apenas em modo edição */}
