@@ -25,6 +25,7 @@ export interface UpdateUsuarioPayload {
   /** ID do parceiro vinculado (obrigatório para usuários não-admin) */
   partner_id?: number;
   status?: 'ativo' | 'inativo';
+  isActive?: boolean;
 }
 
 // TODO(legacy-cleanup): manter path relativo para compatibilidade com API_BASE_URL=/api/v1 sem gerar /api/v1/api/v1/*.
