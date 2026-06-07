@@ -11,6 +11,7 @@ import { AUTOMAÇÕES_BASE, getConfigPipeline, salvarConfigPipeline, toggleAutom
 import { Button, Card as DSCard, Input, Select } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { API_BASE_URL } from "../config/environment";
+import { authApi } from "../api/modules/auth.api";
 
 interface ConfiguracoesPageProps {
   defaultTab?: string;
@@ -293,14 +294,23 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
     }
 
     setChangingPassword(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo purposes, just show success
-    setPasswordSuccess(true);
-    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setChangingPassword(false);
+
+    try {
+      const result = await authApi.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      if (!result.success) {
+        setPasswordError(result.error || "Não foi possível alterar a senha");
+        return;
+      }
+
+      setPasswordSuccess(true);
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   // Integration settings

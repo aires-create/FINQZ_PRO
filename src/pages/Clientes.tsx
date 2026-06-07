@@ -579,6 +579,22 @@ export const ClientesPage: React.FC = () => {
       const getClientId = (client: any) => client?.id || client?._id || client?.uuid || client?.clientId;
       
       try {
+        const normalizedStatus = formData?.status || 'ativo';
+        const statusPayload = normalizedStatus === 'inativo'
+          ? {
+              isActive: false,
+              doNotCallStatus: 'clear',
+            }
+          : normalizedStatus === 'nao_perturbe'
+            ? {
+                isActive: true,
+                doNotCallStatus: 'blocked',
+              }
+            : {
+                isActive: true,
+                doNotCallStatus: 'clear',
+              };
+
         const apiPayload = {
           firstName: newClient.nome?.split(' ')[0] || '',
           lastName:
@@ -614,8 +630,8 @@ export const ClientesPage: React.FC = () => {
           rdStatus: formData?.rdStatus || null,
           rdConsultedAt: formData?.rdConsultedAt || null,
           rdNotes: formData?.rdNotes || null,
-          doNotCallStatus: formData?.doNotCallStatus || null,
           doNotCallConsultedAt: formData?.doNotCallConsultedAt || null,
+          ...statusPayload,
         };
 
         if (editingCliente) {
