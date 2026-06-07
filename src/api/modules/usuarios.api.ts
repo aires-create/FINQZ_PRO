@@ -28,7 +28,7 @@ export interface UpdateUsuarioPayload {
 }
 
 // TODO(legacy-cleanup): manter path relativo para compatibilidade com API_BASE_URL=/api/v1 sem gerar /api/v1/api/v1/*.
-const USERS_BASE_PATH = '/users';
+const USERS_BASE_PATH = '/api/v1/users';
 
 // ============================================
 // SCOPE HELPER FUNCTIONS
