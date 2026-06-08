@@ -1101,7 +1101,8 @@ export const ClientesPage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setImportModalOpen(true)}
+              disabled
+              title="Importação em implantação"
               className="flex items-center gap-1"
             >
               <Upload size={14} />
@@ -1503,7 +1504,7 @@ export const ClientesPage: React.FC = () => {
               </div>
 
               {/* Campos condicionais para CNPJ */}
-              {tipoPessoa === "CNPJ" && (
+              {false && tipoPessoa === "CNPJ" && (
                 <div>
                   <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
                     <Building2 size={16} />
@@ -1842,13 +1843,15 @@ export const ClientesPage: React.FC = () => {
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium text-slate-300">Restrição de Crédito</p>
-                      <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ</p>
+                      <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ. Em implantação.</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {renderCreditStatus()}
                       <button
                         type="button"
                         onClick={handleConsultCredit}
+                        disabled
+                        title="Em implantação"
                         className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
                       >
                         Consultar
@@ -1860,13 +1863,15 @@ export const ClientesPage: React.FC = () => {
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="text-sm font-medium text-slate-300">Não Perturbe</p>
-                      <p className="text-xs text-slate-500">Bloqueio de contato por telefone</p>
+                      <p className="text-xs text-slate-500">Bloqueio de contato por telefone. Em implantação.</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {renderDoNotCallStatus()}
                       <button
                         type="button"
                         onClick={handleConsultDoNotCall}
+                        disabled
+                        title="Em implantação"
                         className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
                       >
                         Consultar
