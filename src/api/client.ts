@@ -92,7 +92,7 @@ export const api = {
     query.set("entity", params.entity);
     query.set("entityId", params.entityId);
     query.set("limit", String(params.limit ?? 20));
-    return apiFetch<any>(`/audit/logs?${query.toString()}`);
+    return apiFetch<any>(`/api/v1/audit/logs?${query.toString()}`);
   },
 
   // Parceiros
