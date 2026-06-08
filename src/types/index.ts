@@ -309,7 +309,7 @@ export interface OportunidadeKanban {
 }
 
 export interface Cliente {
-  id: number;
+  id: string | number;
   nome: string;
   cpf_cnpj?: string;
   email?: string;

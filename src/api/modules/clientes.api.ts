@@ -36,6 +36,8 @@ export interface CreateClientePayload {
 
 export interface UpdateClientePayload extends Partial<CreateClientePayload> {}
 
+type ClienteId = string | number;
+
 // TODO(legacy-cleanup): remover aliases antigos de clientes e manter somente /api/v1/crm/clientes.
 const CRM_CLIENTES_BASE_PATH = '/api/v1/crm/clientes';
 
@@ -59,7 +61,7 @@ export const clientesApi = {
   /**
    * Get single cliente by ID
    */
-  async getById(id: number): Promise<any> {
+  async getById(id: ClienteId): Promise<any> {
     return apiCall<any>(`${CRM_CLIENTES_BASE_PATH}/${id}`);
   },
 
@@ -76,7 +78,7 @@ export const clientesApi = {
   /**
    * Update existing cliente
    */
-  async update(id: number, data: UpdateClientePayload): Promise<any> {
+  async update(id: ClienteId, data: UpdateClientePayload): Promise<any> {
     return apiCall<any>(`${CRM_CLIENTES_BASE_PATH}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -86,7 +88,7 @@ export const clientesApi = {
   /**
    * Delete cliente
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: ClienteId): Promise<void> {
     return apiCall<void>(`${CRM_CLIENTES_BASE_PATH}/${id}`, {
       method: 'DELETE',
     });
@@ -114,7 +116,7 @@ export const clientesApiResult = {
     }
   },
 
-  async getById(id: number): Promise<ApiResult<any>> {
+  async getById(id: ClienteId): Promise<ApiResult<any>> {
     try {
       const data = await clientesApi.getById(id);
       return { success: true, data };
@@ -132,7 +134,7 @@ export const clientesApiResult = {
     }
   },
 
-  async update(id: number, data: UpdateClientePayload): Promise<ApiResult<any>> {
+  async update(id: ClienteId, data: UpdateClientePayload): Promise<ApiResult<any>> {
     try {
       const result = await clientesApi.update(id, data);
       return { success: true, data: result };
@@ -141,7 +143,7 @@ export const clientesApiResult = {
     }
   },
 
-  async delete(id: number): Promise<ApiResult<void>> {
+  async delete(id: ClienteId): Promise<ApiResult<void>> {
     try {
       await clientesApi.delete(id);
       return { success: true, data: undefined };

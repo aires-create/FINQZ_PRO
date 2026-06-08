@@ -583,16 +583,16 @@ export const ClientesPage: React.FC = () => {
         const statusPayload = normalizedStatus === 'inativo'
           ? {
               isActive: false,
-              doNotCallStatus: 'clear',
+              doNotCallStatus: 'liberado',
             }
           : normalizedStatus === 'nao_perturbe'
             ? {
                 isActive: true,
-                doNotCallStatus: 'blocked',
+                doNotCallStatus: 'bloqueado',
               }
             : {
                 isActive: true,
-                doNotCallStatus: 'clear',
+                doNotCallStatus: 'liberado',
               };
 
         const apiPayload = {
@@ -635,7 +635,7 @@ export const ClientesPage: React.FC = () => {
         };
 
         if (editingCliente) {
-          await clientesApi.update(Number(editingCliente.id), apiPayload as any);
+          await clientesApi.update(editingCliente.id, apiPayload as any);
         } else {
           await clientesApi.create(apiPayload as any);
         }
@@ -849,10 +849,10 @@ export const ClientesPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string | number) => {
     if (confirm("Tem certeza que deseja excluir este cliente?")) {
       try {
-        await clientesApi.delete(Number(id));
+        await clientesApi.delete(id);
         await loadClientes();
       } catch (apiError) {
         console.error('API error deleting cliente:', apiError);
@@ -882,7 +882,7 @@ export const ClientesPage: React.FC = () => {
       };
       
       try {
-        await clientesApi.update(Number(cliente.id), {
+        await clientesApi.update(cliente.id, {
           firstName: cliente.firstName || cliente.nome?.split(' ')[0] || '',
           lastName:
             cliente.lastName ||
