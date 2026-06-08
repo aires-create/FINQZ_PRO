@@ -266,6 +266,11 @@ export const UsuariosPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const nextPassword = formData.senha.trim();
+    const closeModalAfterSuccess = () => {
+      setShowModal(false);
+      setEditingUsuario(null);
+      resetForm();
+    };
 
     if (editingUsuario) {
       // Verificar se está tentando bloquear o último admin
@@ -285,23 +290,22 @@ export const UsuariosPage: React.FC = () => {
         }
 
         await loadUsuarios();
+        closeModalAfterSuccess();
       } catch (error) {
         console.error("[USUARIOS] Failed to update user", error);
         return;
       }
-    } else {
-      try {
-        await usuariosApi.create(mapLegacyUsuarioFormToCreatePayload(formData));
-        await loadUsuarios();
-      } catch (error) {
-        console.error("[USUARIOS] Failed to create user", error);
-        return;
-      }
+
+      return;
     }
 
-    setShowModal(false);
-    setEditingUsuario(null);
-    resetForm();
+    try {
+      await usuariosApi.create(mapLegacyUsuarioFormToCreatePayload(formData));
+      await loadUsuarios();
+      closeModalAfterSuccess();
+    } catch (error) {
+      console.error("[USUARIOS] Failed to create user", error);
+    }
   };
 
   const handleEdit = (usuario: any) => {
