@@ -1,8 +1,22 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { prisma } from '../../../core/prisma/client.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from '../../../shared/errors/AppError.js';
 import type { TenantContext } from '../../../shared/types/index.js';
 import { registerAuditLog } from '../../audit/services/audit.service.js';
+import {
+  customersRepository,
+  type CreateCustomerRepositoryInput,
+} from '../../crm/repositories/customers.repository.js';
+import type {
+  CreateOpportunityIntakeBodyDto,
+  CreateOpportunityIntakeCustomerDto,
+  CreateOpportunityIntakeResponseDto,
+} from '../dto/opportunities.dto.js';
 import {
   opportunitiesRepository,
   type FindManyOpportunitiesParams,
@@ -110,6 +124,8 @@ export type ArchiveOpportunityInput = {
   opportunityId: string;
 };
 
+type OpportunitiesPrismaClient = typeof prisma | Prisma.TransactionClient;
+
 const AuditActions = {
   OPPORTUNITY_CREATED: 'OPPORTUNITY_CREATED',
   OPPORTUNITY_UPDATED: 'OPPORTUNITY_UPDATED',
@@ -120,6 +136,11 @@ const AuditActions = {
 const normalizeText = (value?: string | null) => {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+};
+
+const normalizeEmail = (value?: string | null) => {
+  const normalized = normalizeText(value);
+  return normalized ? normalized.toLowerCase() : null;
 };
 
 const normalizePositiveInteger = (value: number | undefined, fallback: number) => {
@@ -338,6 +359,67 @@ export class OpportunitiesService {
     return created;
   }
 
+  async createOpportunityIntake(
+    tenantId: string,
+    userId: string,
+    body: CreateOpportunityIntakeBodyDto,
+  ): Promise<CreateOpportunityIntakeResponseDto> {
+    if (!tenantId) throw new TenantScopeViolationError('tenant', 'missing');
+
+    return prisma.$transaction(async (tx) => {
+      await this.assertPipelineAndStageConsistency(
+        {
+          tenantId,
+          pipelineId: body.opportunity.pipelineId,
+          stageId: body.opportunity.stageId,
+        },
+        tx,
+      );
+
+      const resolvedCustomer = await this.resolveCustomerForIntake(
+        tenantId,
+        body.customer,
+        body.options?.allowCreateCustomer !== false,
+        tx,
+      );
+      const customerId = resolvedCustomer.customer.id;
+
+      const createdOpportunity = await opportunitiesRepository.create(
+        {
+          tenantId,
+          title: body.opportunity.title.trim(),
+          description: normalizeText(body.opportunity.description),
+          amount: body.opportunity.amount,
+          currency: body.opportunity.currency?.trim() ?? 'BRL',
+          probability: body.opportunity.probability ?? 50,
+          status: 'open',
+          expectedCloseDate: parseOptionalDate(body.opportunity.expectedCloseDate),
+          actualCloseDate: null,
+          partnerId: null,
+          leadId: null,
+          customerId,
+          pipelineId: body.opportunity.pipelineId,
+          stageId: body.opportunity.stageId,
+          ownerId: normalizeText(body.opportunity.ownerId) ?? userId,
+        },
+        tx,
+      );
+
+      return {
+        customer: {
+          id: customerId,
+          status: resolvedCustomer.status,
+        },
+        opportunity: {
+          id: createdOpportunity.id,
+          customerId: createdOpportunity.customerId ?? customerId,
+          pipelineId: createdOpportunity.pipelineId,
+          stageId: createdOpportunity.stageId,
+        },
+      };
+    });
+  }
+
   async update(input: UpdateOpportunityInput, scope: OpportunityAccessScope) {
     const scopedInput = scopeUpdateInput(input, scope);
     const tenantId = scopedInput.tenantId;
@@ -471,12 +553,15 @@ export class OpportunitiesService {
     });
   }
 
-  private async assertPipelineAndStageConsistency(input: {
-    tenantId: string;
-    pipelineId: string;
-    stageId: string;
-  }) {
-    const pipeline = await prisma.pipeline.findFirst({
+  private async assertPipelineAndStageConsistency(
+    input: {
+      tenantId: string;
+      pipelineId: string;
+      stageId: string;
+    },
+    client: OpportunitiesPrismaClient = prisma,
+  ) {
+    const pipeline = await client.pipeline.findFirst({
       where: {
         id: input.pipelineId,
         tenantId: input.tenantId,
@@ -488,7 +573,7 @@ export class OpportunitiesService {
       await this.throwInvalidOrTenantScope('pipeline', input.pipelineId, input.tenantId);
     }
 
-    const stage = await prisma.stage.findFirst({
+    const stage = await client.stage.findFirst({
       where: {
         id: input.stageId,
         tenantId: input.tenantId,
@@ -503,6 +588,133 @@ export class OpportunitiesService {
     if (stage!.pipelineId !== input.pipelineId) {
       throw new InvalidStageError(input.stageId);
     }
+  }
+
+  private async resolveCustomerForIntake(
+    tenantId: string,
+    customer: CreateOpportunityIntakeCustomerDto,
+    allowCreateCustomer: boolean,
+    tx: Prisma.TransactionClient,
+  ) {
+    if (customer.id) {
+      const existingById = await customersRepository.findById(tenantId, customer.id, tx);
+
+      if (!existingById) {
+        await this.throwInvalidOrTenantScope('customer', customer.id, tenantId);
+      }
+      const customerById = existingById!;
+
+      return {
+        customer: customerById,
+        status: 'linked_existing' as const,
+      };
+    }
+
+    const cpfCnpj = normalizeText(customer.cpfCnpj);
+    const email = normalizeText(customer.email);
+    const emailNormalized = normalizeEmail(customer.email);
+
+    const [existingByCpfCnpj, existingByEmail] = await Promise.all([
+      cpfCnpj ? customersRepository.findByCpf(tenantId, cpfCnpj, tx) : Promise.resolve(null),
+      emailNormalized
+        ? customersRepository.findByEmailNormalized(tenantId, emailNormalized, tx)
+        : Promise.resolve(null),
+    ]);
+
+    if (
+      existingByCpfCnpj &&
+      existingByEmail &&
+      existingByCpfCnpj.id !== existingByEmail.id
+    ) {
+      throw new ConflictError(
+        'Conflito de identidade: CPF/CNPJ e e-mail pertencem a clientes diferentes.',
+      );
+    }
+
+    const existingCustomer = existingByCpfCnpj ?? existingByEmail;
+    if (existingCustomer) {
+      return {
+        customer: existingCustomer,
+        status: 'linked_existing' as const,
+      };
+    }
+
+    if (!allowCreateCustomer) {
+      throw new NotFoundError('Customer not found and automatic creation is disabled');
+    }
+
+    const firstName = normalizeText(customer.firstName);
+    const lastName = normalizeText(customer.lastName);
+
+    if (!firstName) {
+      throw new BadRequestError('Customer firstName is required when customer creation is allowed');
+    }
+
+    if (!lastName) {
+      throw new BadRequestError('Customer lastName is required when customer creation is allowed');
+    }
+
+    if (!email) {
+      throw new BadRequestError('Customer email is required when customer creation is allowed');
+    }
+
+    if (!emailNormalized) {
+      throw new BadRequestError('Customer email is required when customer creation is allowed');
+    }
+
+    if (!cpfCnpj) {
+      throw new BadRequestError('Customer CPF/CNPJ is required when customer creation is allowed');
+    }
+
+    const createdCustomer = await tx.customer.create({
+      data: this.buildCustomerCreateDataForIntake(tenantId, customer, {
+        firstName,
+        lastName,
+        email,
+        emailNormalized,
+        cpfCnpj,
+      }),
+    });
+
+    return {
+      customer: createdCustomer,
+      status: 'created' as const,
+    };
+  }
+
+  private buildCustomerCreateDataForIntake(
+    tenantId: string,
+    customer: CreateOpportunityIntakeCustomerDto,
+    required: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      emailNormalized: string;
+      cpfCnpj: string;
+    },
+  ): CreateCustomerRepositoryInput {
+    return {
+      tenantId,
+      customerCode: `CUST-${Date.now()}`,
+      firstName: required.firstName,
+      lastName: required.lastName,
+      email: required.email,
+      emailNormalized: required.emailNormalized,
+      cpf: required.cpfCnpj,
+      phone: normalizeText(customer.phone),
+      birthDate: parseOptionalDate(customer.birthDate),
+      profession: normalizeText(customer.profession),
+      maritalStatus: normalizeText(customer.maritalStatus),
+      gender: normalizeText(customer.gender),
+      documentType: normalizeText(customer.documentType),
+      address: (customer.address as Prisma.InputJsonValue | null | undefined) ?? Prisma.JsonNull,
+      bankData: (customer.bankData as Prisma.InputJsonValue | null | undefined) ?? Prisma.JsonNull,
+      notes: normalizeText(customer.notes),
+      isActive: true,
+      partnerId: null,
+      leadId: null,
+      parentCustomerId: null,
+    };
   }
 
   private async assertCustomerBelongsToTenant(tenantId: string, customerId: string) {

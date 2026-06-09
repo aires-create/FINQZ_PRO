@@ -42,3 +42,53 @@ export interface MoveOpportunityStageBodyDto {
   reason?: string | null;
 }
 
+export interface CreateOpportunityIntakeCustomerDto {
+  id?: string | null;
+  cpfCnpj?: string | null;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  birthDate?: string | Date | null;
+  documentType?: string | null;
+  address?: Record<string, unknown> | null;
+  bankData?: Record<string, unknown> | null;
+  profession?: string | null;
+  maritalStatus?: string | null;
+  gender?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateOpportunityIntakeOptionsDto {
+  updateExistingCustomer?: boolean;
+  allowCreateCustomer?: boolean;
+}
+
+export interface CreateOpportunityIntakeBodyDto {
+  opportunity: {
+    title: string;
+    amount: number;
+    pipelineId: string;
+    stageId: string;
+    ownerId?: string | null;
+    description?: string | null;
+    probability?: number;
+    currency?: string;
+    expectedCloseDate?: string | Date | null;
+  };
+  customer: CreateOpportunityIntakeCustomerDto;
+  options?: CreateOpportunityIntakeOptionsDto;
+}
+
+export interface CreateOpportunityIntakeResponseDto {
+  customer: {
+    id: string;
+    status: 'linked_existing' | 'created';
+  };
+  opportunity: {
+    id: string;
+    customerId: string;
+    pipelineId: string;
+    stageId: string;
+  };
+}

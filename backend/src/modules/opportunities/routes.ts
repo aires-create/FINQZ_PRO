@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { ZodError } from 'zod';
 
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
+import { AppError } from '../../shared/errors/AppError.js';
 import { logger } from '../../shared/logger.js';
 import { requirePermissions } from '../rbac/rbac.guard.js';
 import {
@@ -18,6 +19,7 @@ import {
   type UpdateOpportunityInput,
 } from './services/opportunities.service.js';
 import {
+  createOpportunityIntakeBodySchema,
   createOpportunityBodySchema,
   listOpportunitiesQuerySchema,
   moveOpportunityStageBodySchema,
@@ -113,6 +115,17 @@ const handleRouteError = (error: unknown, reply: FastifyReply) => {
     });
   }
 
+  if (error instanceof AppError) {
+    return reply.status(error.statusCode).send({
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.details !== undefined ? { details: error.details } : {}),
+      },
+    });
+  }
+
   logger.error('Opportunities route error', { error });
 
   return reply.status(500).send({
@@ -173,6 +186,73 @@ export async function opportunitiesRoutes(app: FastifyInstance) {
 
         return reply.send({
           success: true,
+          data,
+        });
+      } catch (error) {
+        return handleRouteError(error, reply);
+      }
+    },
+  );
+
+  app.post(
+    '/intake',
+    { preHandler: [requirePermissions('opportunity:create')] },
+    async (request, reply) => {
+      try {
+        const tenantId = getTenantId(request);
+        const userId = getActorId(request);
+
+        if (!userId) {
+          throw new TenantScopeViolationError('user', 'missing');
+        }
+
+        const parsedBody = createOpportunityIntakeBodySchema.parse(request.body);
+        const body = {
+          opportunity: withDefined({
+            title: parsedBody.opportunity.title,
+            amount: parsedBody.opportunity.amount,
+            pipelineId: parsedBody.opportunity.pipelineId,
+            stageId: parsedBody.opportunity.stageId,
+            ownerId: parsedBody.opportunity.ownerId,
+            description: parsedBody.opportunity.description,
+            probability: parsedBody.opportunity.probability,
+            currency: parsedBody.opportunity.currency,
+            expectedCloseDate: parsedBody.opportunity.expectedCloseDate,
+          }),
+          customer: withDefined({
+            id: parsedBody.customer.id,
+            cpfCnpj: parsedBody.customer.cpfCnpj,
+            email: parsedBody.customer.email,
+            firstName: parsedBody.customer.firstName,
+            lastName: parsedBody.customer.lastName,
+            phone: parsedBody.customer.phone,
+            birthDate: parsedBody.customer.birthDate,
+            documentType: parsedBody.customer.documentType,
+            address: parsedBody.customer.address,
+            bankData: parsedBody.customer.bankData,
+            profession: parsedBody.customer.profession,
+            maritalStatus: parsedBody.customer.maritalStatus,
+            gender: parsedBody.customer.gender,
+            notes: parsedBody.customer.notes,
+          }),
+          ...(parsedBody.options
+            ? {
+                options: withDefined({
+                  updateExistingCustomer: parsedBody.options.updateExistingCustomer,
+                  allowCreateCustomer: parsedBody.options.allowCreateCustomer,
+                }),
+              }
+            : {}),
+        };
+        const data = await opportunitiesService.createOpportunityIntake(
+          tenantId,
+          userId,
+          body,
+        );
+
+        return reply.status(201).send({
+          success: true,
+          message: 'Opportunity intake created successfully',
           data,
         });
       } catch (error) {
