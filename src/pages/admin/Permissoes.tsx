@@ -1,9 +1,14 @@
 // Permissões/Funções - Página Administrativa
-import React, { useState } from "react";
-import { Shield, Plus, Users, Key, ChevronRight, Search, MoreVertical, Edit, Trash2, Copy, X, Check, AlertCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { Shield, Users, Key, Search, Edit, Trash2, Copy, X, Check, AlertCircle } from "lucide-react";
 import { KpiCard } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
+import {
+  rolesApi,
+  permissionsApi,
+  type RoleResponse,
+  type PermissionResponse,
+} from "../../api/modules";
 
 interface Role {
   id: string;
@@ -11,89 +16,57 @@ interface Role {
   descricao: string;
   usuarios: number;
   permissoes: number;
-  rolePermissions?: string[]; // IDs das permissões atribuídas
+  rolePermissions?: string[];
   tipo: "sistema" | "personalizada";
   createdAt: string;
 }
 
-// Lista de permissões disponíveis
-const PERMISSIONS_LIST = [
-  { id: "dashboard_view", nome: "Visualizar Dashboard", categoria: "Dashboard" },
-  { id: "clientes_view", nome: "Visualizar Clientes", categoria: "Clientes" },
-  { id: "clientes_create", nome: "Criar Clientes", categoria: "Clientes" },
-  { id: "clientes_edit", nome: "Editar Clientes", categoria: "Clientes" },
-  { id: "clientes_delete", nome: "Excluir Clientes", categoria: "Clientes" },
-  { id: "oportunidades_view", nome: "Visualizar Oportunidades", categoria: "Oportunidades" },
-  { id: "oportunidades_create", nome: "Criar Oportunidades", categoria: "Oportunidades" },
-  { id: "oportunidades_edit", nome: "Editar Oportunidades", categoria: "Oportunidades" },
-  { id: "oportunidades_delete", nome: "Excluir Oportunidades", categoria: "Oportunidades" },
-  { id: "parceiros_view", nome: "Visualizar Parceiros", categoria: "Parceiros" },
-  { id: "parceiros_create", nome: "Criar Parceiros", categoria: "Parceiros" },
-  { id: "parceiros_edit", nome: "Editar Parceiros", categoria: "Parceiros" },
-  { id: "usuarios_view", nome: "Visualizar Usuários", categoria: "Usuários" },
-  { id: "usuarios_create", nome: "Criar Usuários", categoria: "Usuários" },
-  { id: "usuarios_edit", nome: "Editar Usuários", categoria: "Usuários" },
-  { id: "usuarios_delete", nome: "Excluir Usuários", categoria: "Usuários" },
-  { id: "auditoria_view", nome: "Visualizar Auditoria", categoria: "Auditoria" },
-  { id: "eventos_view", nome: "Visualizar Eventos", categoria: "Eventos" },
-  { id: "configuracoes_view", nome: "Visualizar Configurações", categoria: "Configurações" },
-  { id: "configuracoes_edit", nome: "Editar Configurações", categoria: "Configurações" },
-  { id: "relatorios_view", nome: "Visualizar Relatórios", categoria: "Relatórios" },
-  { id: "relatorios_export", nome: "Exportar Relatórios", categoria: "Relatórios" },
-  { id: "financeiro_view", nome: "Visualizar Financeiro", categoria: "Financeiro" },
-  { id: "financeiro_edit", nome: "Editar Financeiro", categoria: "Financeiro" },
-];
+interface PermissionOption {
+  id: string;
+  nome: string;
+  categoria: string;
+  slug: string;
+}
 
-const mockRoles: Role[] = [
-  {
-    id: "1",
-    nome: "Admin Sistema",
-    descricao: "Acesso total ao sistema com todas as permissões",
-    usuarios: 3,
-    permissoes: 24,
-    rolePermissions: PERMISSIONS_LIST.map(p => p.id),
-    tipo: "sistema",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    nome: "Diretor Auditoria",
-    descricao: "Gestão de auditoria e eventos do sistema",
-    usuarios: 2,
-    permissoes: 8,
-    rolePermissions: ["auditoria_view", "eventos_view", "relatorios_view", "relatorios_export", "clientes_view", "oportunidades_view", "dashboard_view", "usuarios_view"],
-    tipo: "sistema",
-    createdAt: "2024-02-01",
-  },
-  {
-    id: "3",
-    nome: "Gerente Auditoria",
-    descricao: "Supervisão de atividades de auditoria",
-    usuarios: 5,
-    permissoes: 6,
-    rolePermissions: ["auditoria_view", "eventos_view", "relatorios_view", "clientes_view", "oportunidades_view", "dashboard_view"],
-    tipo: "sistema",
-    createdAt: "2024-02-15",
-  },
-  {
-    id: "4",
-    nome: "Auditor",
-    descricao: "Acesso para visualização e criação de relatórios de auditoria",
-    usuarios: 12,
-    permissoes: 4,
-    rolePermissions: ["auditoria_view", "eventos_view", "relatorios_view", "relatorios_export"],
-    tipo: "sistema",
-    createdAt: "2024-03-01",
-  },
-];
+type RoleFormPayload = Omit<Role, "id" | "usuarios" | "permissoes" | "createdAt"> & {
+  permissoes: string[];
+};
+
+const mapPermissionToOption = (permission: PermissionResponse): PermissionOption => ({
+  id: permission.slug,
+  nome: permission.name,
+  categoria: permission.resource,
+  slug: permission.slug,
+});
+
+const mapRoleResponseToRole = (role: RoleResponse): Role => ({
+  id: role.id,
+  nome: role.name,
+  descricao: role.description ?? "",
+  usuarios: 0,
+  permissoes: role.permissions?.length ?? 0,
+  rolePermissions: role.permissions?.map((p) => p.slug) ?? [],
+  tipo: role.isSystem ? "sistema" : "personalizada",
+  createdAt: role.createdAt ? String(role.createdAt).split("T")[0] : "-",
+});
+
+const slugifyRole = (name: string): string =>
+  name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 // Modal para criar/editar função
 const NovaRoleModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  onSave: (role: Omit<Role, "id" | "usuarios" | "permissoes" | "createdAt"> & { permissoes: string[] }) => void;
-  editingRole?: Role | null; // Função sendo editada (se fornecida, modo edição)
-}> = ({ isOpen, onClose, onSave, editingRole }) => {
+  onSave: (role: RoleFormPayload) => Promise<void>;
+  editingRole?: Role | null;
+  permissionsList: PermissionOption[];
+}> = ({ isOpen, onClose, onSave, editingRole, permissionsList }) => {
   const isEditing = !!editingRole;
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -102,8 +75,7 @@ const NovaRoleModal: React.FC<{
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Preencher dados quando abre para edição
-  React.useEffect(() => {
+  useEffect(() => {
     if (editingRole) {
       setNome(editingRole.nome);
       setDescricao(editingRole.descricao);
@@ -116,23 +88,24 @@ const NovaRoleModal: React.FC<{
     setError("");
   }, [editingRole, isOpen]);
 
-  const filteredPermissions = PERMISSIONS_LIST.filter(
+  const filteredPermissions = permissionsList.filter(
     (p) =>
       p.nome.toLowerCase().includes(searchPermission.toLowerCase()) ||
-      p.categoria.toLowerCase().includes(searchPermission.toLowerCase())
+      p.categoria.toLowerCase().includes(searchPermission.toLowerCase()) ||
+      p.slug.toLowerCase().includes(searchPermission.toLowerCase())
   );
 
   const groupedPermissions = filteredPermissions.reduce((acc, p) => {
     if (!acc[p.categoria]) acc[p.categoria] = [];
     acc[p.categoria].push(p);
     return acc;
-  }, {} as Record<string, typeof PERMISSIONS_LIST>);
+  }, {} as Record<string, PermissionOption[]>);
 
-  const togglePermission = (permissionId: string) => {
+  const togglePermission = (permissionSlug: string) => {
     setSelectedPermissions((prev) =>
-      prev.includes(permissionId)
-        ? prev.filter((id) => id !== permissionId)
-        : [...prev, permissionId]
+      prev.includes(permissionSlug)
+        ? prev.filter((id) => id !== permissionSlug)
+        : [...prev, permissionSlug]
     );
   };
 
@@ -157,33 +130,32 @@ const NovaRoleModal: React.FC<{
 
     setLoading(true);
 
-    // Simular chamada de API
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      await onSave({
+        nome: nome.trim(),
+        descricao: descricao.trim(),
+        tipo: "personalizada",
+        permissoes: selectedPermissions,
+      });
 
-    onSave({
-      nome: nome.trim(),
-      descricao: descricao.trim(),
-      tipo: "personalizada",
-      permissoes: selectedPermissions,
-    });
-
-    setLoading(false);
-    setNome("");
-    setDescricao("");
-    setSelectedPermissions([]);
-    onClose();
+      setNome("");
+      setDescricao("");
+      setSelectedPermissions([]);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao salvar função");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative bg-[#111827] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#1f2937]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl flex items-center justify-center">
@@ -194,12 +166,13 @@ const NovaRoleModal: React.FC<{
                 {isEditing ? "Editar Função" : "Nova Função"}
               </h2>
               <p className="text-sm text-slate-500">
-                {isEditing 
-                  ? "Edite as permissões da função selecionada" 
-                  : "Crie uma nova função com permissões personalizadas"}
+                {isEditing
+                  ? "Edite as permissões da função selecionada"
+                  : "Crie uma nova função com permissões oficiais do backend"}
               </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -208,7 +181,6 @@ const NovaRoleModal: React.FC<{
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]">
           {error && (
             <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
@@ -217,7 +189,6 @@ const NovaRoleModal: React.FC<{
             </div>
           )}
 
-          {/* Nome */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Nome da Função <span className="text-red-500">*</span>
@@ -231,7 +202,6 @@ const NovaRoleModal: React.FC<{
             />
           </div>
 
-          {/* Descrição */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Descrição <span className="text-red-500">*</span>
@@ -245,14 +215,14 @@ const NovaRoleModal: React.FC<{
             />
           </div>
 
-          {/* Permissões */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Permissões <span className="text-red-500">*</span>
-              <span className="text-slate-400 font-normal ml-2">({selectedPermissions.length} selecionadas)</span>
+              <span className="text-slate-400 font-normal ml-2">
+                ({selectedPermissions.length} selecionadas)
+              </span>
             </label>
 
-            {/* Busca */}
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input
@@ -264,7 +234,6 @@ const NovaRoleModal: React.FC<{
               />
             </div>
 
-            {/* Lista de permissões por categoria */}
             <div className="space-y-4 max-h-64 overflow-y-auto border border-[#1f2937] rounded-xl p-4">
               {Object.entries(groupedPermissions).map(([categoria, permissions]) => (
                 <div key={categoria}>
@@ -274,26 +243,36 @@ const NovaRoleModal: React.FC<{
                   <div className="space-y-1">
                     {permissions.map((permission) => (
                       <label
-                        key={permission.id}
+                        key={permission.slug}
                         className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
                       >
                         <input
                           type="checkbox"
-                          checked={selectedPermissions.includes(permission.id)}
-                          onChange={() => togglePermission(permission.id)}
+                          checked={selectedPermissions.includes(permission.slug)}
+                          onChange={() => togglePermission(permission.slug)}
                           className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
                         />
-                        <span className="text-sm text-slate-300">{permission.nome}</span>
+                        <span className="text-sm text-slate-300">
+                          {permission.nome}
+                          <span className="ml-2 text-xs text-slate-500">
+                            {permission.slug}
+                          </span>
+                        </span>
                       </label>
                     ))}
                   </div>
                 </div>
               ))}
+
+              {permissionsList.length === 0 && (
+                <p className="text-sm text-slate-500">
+                  Nenhuma permissão encontrada no backend.
+                </p>
+              )}
             </div>
           </div>
         </form>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-[#1f2937] bg-gray-50">
           <button
             type="button"
@@ -310,7 +289,7 @@ const NovaRoleModal: React.FC<{
             {loading ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Criando...
+                Salvando...
               </>
             ) : (
               <>
@@ -326,55 +305,84 @@ const NovaRoleModal: React.FC<{
 };
 
 const PermissoesPage: React.FC = () => {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [roles, setRoles] = useState<Role[]>(mockRoles);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [permissionsList, setPermissionsList] = useState<PermissionOption[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [pageError, setPageError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
 
-  const filteredRoles = roles.filter(
-    (role) =>
-      role.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.descricao.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const loadData = async () => {
+    setLoadingData(true);
+    setPageError("");
 
-  const handleCreateRole = (newRole: Omit<Role, "id" | "usuarios" | "permissoes" | "createdAt"> & { permissoes: string[] }) => {
-    const role: Role = {
-      id: String(Date.now()),
-      nome: newRole.nome,
-      descricao: newRole.descricao,
-      tipo: newRole.tipo,
-      usuarios: 0,
-      permissoes: newRole.permissoes.length,
-      createdAt: new Date().toISOString().split("T")[0],
-    };
+    try {
+      const [rolesResponse, permissionsResponse] = await Promise.all([
+        rolesApi.getAll({ limit: 100 }),
+        permissionsApi.getAll({ limit: 500 }),
+      ]);
 
-    setRoles((prev) => [role, ...prev]);
+      setRoles((rolesResponse.data ?? []).map(mapRoleResponseToRole));
+      setPermissionsList((permissionsResponse.data ?? []).map(mapPermissionToOption));
+    } catch (err) {
+      setPageError(err instanceof Error ? err.message : "Erro ao carregar permissões e funções");
+    } finally {
+      setLoadingData(false);
+    }
   };
 
-  const handleUpdateRole = (updatedRole: Omit<Role, "id" | "usuarios" | "permissoes" | "createdAt"> & { permissoes: string[] }) => {
-    if (!editingRole) return;
-    
-    const role: Role = {
-      ...editingRole,
-      nome: updatedRole.nome,
-      descricao: updatedRole.descricao,
-      tipo: updatedRole.tipo,
-      permissoes: updatedRole.permissoes.length,
-      rolePermissions: updatedRole.permissoes,
-    };
+  useEffect(() => {
+    void loadData();
+  }, []);
 
-    setRoles((prev) =>
-      prev.map((r) => (r.id === editingRole.id ? role : r))
-    );
-    
+  const filteredRoles = useMemo(
+    () =>
+      roles.filter(
+        (role) =>
+          role.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          role.descricao.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [roles, searchTerm]
+  );
+
+  const handleCreateRole = async (newRole: RoleFormPayload) => {
+    await rolesApi.create({
+      name: newRole.nome,
+      slug: slugifyRole(newRole.nome),
+      description: newRole.descricao,
+      permissions: newRole.permissoes,
+    });
+
+    await loadData();
+  };
+
+  const handleUpdateRole = async (updatedRole: RoleFormPayload) => {
+    if (!editingRole) return;
+
+    await rolesApi.update(editingRole.id, {
+      name: updatedRole.nome,
+      description: updatedRole.descricao,
+      permissions: updatedRole.permissoes,
+    });
+
     setEditingRole(null);
     setIsModalOpen(false);
+    await loadData();
+  };
+
+  const handleDeleteRole = async (role: Role) => {
+    if (role.tipo === "sistema") return;
+
+    const confirmed = window.confirm(`Deseja excluir a função "${role.nome}"?`);
+    if (!confirmed) return;
+
+    await rolesApi.delete(role.id);
+    await loadData();
   };
 
   return (
     <div className="app-page">
-      {/* Modal de Nova Função */}
       <NovaRoleModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -383,6 +391,7 @@ const PermissoesPage: React.FC = () => {
         }}
         onSave={editingRole ? handleUpdateRole : handleCreateRole}
         editingRole={editingRole}
+        permissionsList={permissionsList}
       />
 
       <PageHeader
@@ -392,7 +401,13 @@ const PermissoesPage: React.FC = () => {
         createLabel="Nova Função"
       />
 
-      {/* Stats Cards */}
+      {pageError && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+          <AlertCircle size={18} />
+          <span className="text-sm">{pageError}</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <KpiCard label="Total de Funções" value={roles.length} icon={<Shield size={18} />} variant="gray" />
         <KpiCard label="Funções do Sistema" value={roles.filter((r) => r.tipo === "sistema").length} icon={<Key size={18} />} variant="blue" />
@@ -400,7 +415,6 @@ const PermissoesPage: React.FC = () => {
         <KpiCard label="Usuários" value={roles.reduce((acc, r) => acc + r.usuarios, 0)} icon={<Users size={18} />} variant="orange" />
       </div>
 
-      {/* Search and Filters */}
       <div className="finqz-card p-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1">
@@ -416,105 +430,127 @@ const PermissoesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabela de funções */}
       <div className="finqz-card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b border-[#1f2937]">
-            <tr>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Função
-              </th>
-              <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Descrição
-              </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Tipo
-              </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Usuários
-              </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Permissões
-              </th>
-              <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredRoles.map((role) => (
-              <tr key={role.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      role.tipo === "sistema" 
-                        ? "bg-gradient-to-br from-purple-500 to-purple-700" 
-                        : "bg-gradient-to-br from-green-500 to-green-700"
-                    }`}>
-                      <Shield className="text-white" size={18} />
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">{role.nome}</p>
-                      <p className="text-xs text-slate-500">Criado em {role.createdAt}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <p className="text-sm text-slate-600 max-w-xs truncate">{role.descricao}</p>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    role.tipo === "sistema"
-                      ? "bg-purple-100 text-purple-800"
-                      : "bg-green-100 text-green-800"
-                  }`}>
-                    {role.tipo === "sistema" ? "Sistema" : "Personalizada"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                    {role.usuarios}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <span className="inline-flex items-center justify-center w-8 h-8 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
-                    {role.permissoes}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                      title="Editar"
-                      onClick={() => {
-                        setEditingRole(role);
-                        setIsModalOpen(true);
-                      }}
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Duplicar"
-                    >
-                      <Copy size={16} />
-                    </button>
-                    {role.tipo === "personalizada" && (
-                      <button
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </td>
+        {loadingData ? (
+          <div className="p-12 text-center text-slate-500">Carregando funções e permissões...</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-[#1f2937]">
+              <tr>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Função
+                </th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Descrição
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Usuários
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Permissões
+                </th>
+                <th className="text-center px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Ações
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
 
-        {filteredRoles.length === 0 && (
+            <tbody className="divide-y divide-gray-200">
+              {filteredRoles.map((role) => (
+                <tr key={role.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        role.tipo === "sistema"
+                          ? "bg-gradient-to-br from-purple-500 to-purple-700"
+                          : "bg-gradient-to-br from-green-500 to-green-700"
+                      }`}>
+                        <Shield className="text-white" size={18} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{role.nome}</p>
+                        <p className="text-xs text-slate-500">Criado em {role.createdAt}</p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-slate-600 max-w-xs truncate">{role.descricao}</p>
+                  </td>
+
+                  <td className="px-6 py-4 text-center">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      role.tipo === "sistema"
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-green-100 text-green-800"
+                    }`}>
+                      {role.tipo === "sistema" ? "Sistema" : "Personalizada"}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-center">
+                    <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      {role.usuarios}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 text-center">
+                    <span className="inline-flex items-center justify-center w-8 h-8 bg-orange-100 text-orange-800 rounded-full text-sm font-medium">
+                      {role.permissoes}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-40"
+                        title={role.tipo === "sistema" ? "Função de sistema não pode ser editada" : "Editar"}
+                        disabled={role.tipo === "sistema"}
+                        onClick={() => {
+                          setEditingRole(role);
+                          setIsModalOpen(true);
+                        }}
+                      >
+                        <Edit size={16} />
+                      </button>
+
+                      <button
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Duplicar"
+                        onClick={() => {
+                          setEditingRole({
+                            ...role,
+                            id: "",
+                            nome: `${role.nome} cópia`,
+                            tipo: "personalizada",
+                          });
+                          setIsModalOpen(true);
+                        }}
+                      >
+                        <Copy size={16} />
+                      </button>
+
+                      {role.tipo === "personalizada" && (
+                        <button
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Excluir"
+                          onClick={() => void handleDeleteRole(role)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {!loadingData && filteredRoles.length === 0 && (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="text-slate-400" size={32} />
@@ -523,7 +559,7 @@ const PermissoesPage: React.FC = () => {
             <p className="text-slate-500">
               {searchTerm
                 ? "Tente buscar com outros termos"
-                : "Comece criando uma nova função para o sistema"}
+                : "Nenhuma função retornada pelo backend"}
             </p>
           </div>
         )}

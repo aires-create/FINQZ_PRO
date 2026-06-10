@@ -209,13 +209,15 @@ export class RolesService {
         },
       });
 
-      // Update permissions if provided
+            // Update permissions if provided
       if (data.permissions) {
         await this.updateRolePermissions(roleId, data.permissions);
       }
 
+      const refreshedRole = await this.getRole(tenantId, roleId);
+
       logger.info(`Role updated: ${roleId}`);
-      return updatedRole as unknown as RoleResponse;
+      return refreshedRole;
     } catch (error) {
       logger.error('Failed to update role:', error);
       throw error;
@@ -267,31 +269,45 @@ export class RolesService {
   /**
    * Update role permissions
    */
-  async updateRolePermissions(roleId: string, permissionSlugs: string[]): Promise<void> {
+    async updateRolePermissions(roleId: string, permissionSlugs: string[]): Promise<void> {
     try {
       logger.info(`Updating permissions for role: ${roleId}`);
 
-      // Get permissions by slug
+      const role = await prisma.role.findUnique({
+        where: { id: roleId },
+        select: { id: true, tenantId: true },
+      });
+
+      if (!role) {
+        throw new AppError('Role not found', 404);
+      }
+
       const permissions = await prisma.permission.findMany({
         where: {
           slug: { in: permissionSlugs },
         },
-        select: { id: true },
+        select: { id: true, slug: true },
       });
 
       if (permissions.length !== permissionSlugs.length) {
-        throw new ValidationError('Some permissions not found', ['One or more permission slugs are invalid']);
+        throw new ValidationError('Some permissions not found', [
+          'One or more permission slugs are invalid',
+        ]);
       }
 
-      // Update role permissions
-      await prisma.role.update({
-        where: { id: roleId },
-        data: {
-          rolePermissions: {
-            set: permissions.map((p) => ({ roleId_permissionId: { roleId, permissionId: p.id } })),
-          },
-        },
-      });
+      await prisma.$transaction([
+        prisma.rolePermission.deleteMany({
+          where: { roleId },
+        }),
+        prisma.rolePermission.createMany({
+          data: permissions.map((permission) => ({
+            tenantId: role.tenantId,
+            roleId,
+            permissionId: permission.id,
+          })),
+          skipDuplicates: true,
+        }),
+      ]);
 
       logger.info(`Permissions updated for role: ${roleId}`);
     } catch (error) {
@@ -300,6 +316,4 @@ export class RolesService {
     }
   }
 }
-
 export const rolesService = new RolesService();
-

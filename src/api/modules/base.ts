@@ -60,10 +60,22 @@ export async function apiCall<T>(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
-      throw new Error((errorData.message as string | undefined) || `Erro HTTP ${response.status}`);
+      const nestedError =
+        typeof errorData.error === 'object' && errorData.error !== null
+          ? (errorData.error as Record<string, unknown>)
+          : null;
+      const message =
+        (nestedError?.message as string | undefined) ||
+        (errorData.message as string | undefined) ||
+        `Erro HTTP ${response.status}`;
+      throw new Error(message);
     }
 
-    return response.json() as Promise<T>;
+    if (response.status === 204) {
+  return undefined as T;
+}
+
+return response.json() as Promise<T>;
   } catch (error) {
     if (error instanceof Error) {
       console.error(`[API Error] ${endpoint}:`, error.message);

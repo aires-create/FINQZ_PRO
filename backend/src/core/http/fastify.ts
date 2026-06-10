@@ -34,8 +34,11 @@ import { integrationsRoutes } from '../../modules/integrations/integrations.modu
 import { organizationRoutes } from '../../modules/organization/organization.routes.js';
 import { membershipsRoutes } from '../../modules/memberships/memberships.routes.js';
 import usersRoutes from '../../modules/users/users.routes.js';
+import { rolesFastifyRoutes } from '../../modules/roles/roles.fastify.routes.js';
+import { permissionsFastifyRoutes } from '../../modules/permissions/permissions.fastify.routes.js';
 import { opportunitiesRoutes } from '../../modules/opportunities/routes.js';
 import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
+
 import {
   applyRequestSanitization,
   baselineSecurityHeaders,
@@ -576,17 +579,24 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   // Auth routes
   await authRoutes(app);
 
-  // Protected module routes
+    // Protected module routes
   await app.register(crmRoutes, { prefix: '/api/v1/crm' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
   await app.register(commercialRoutes, { prefix: '/api/v1/commercial' });
+
   await app.register(commercialGovernanceRoutes, {
-  prefix: '/api/v1/commercial-governance',
-});
+    prefix: '/api/v1/commercial-governance',
+  });
+
   await app.register(integrationsRoutes, { prefix: '/api/v1/integrations' });
   await app.register(organizationRoutes, { prefix: '/api/v1/organizations' });
   await app.register(membershipsRoutes, { prefix: '/api/v1/memberships' });
   await app.register(usersRoutes, { prefix: '/api/v1/users' });
+
+  // AUD-RBAC-010 - RBAC Enterprise Fastify routes
+  await app.register(rolesFastifyRoutes, { prefix: '/api/v1/roles' });
+  await app.register(permissionsFastifyRoutes, { prefix: '/api/v1/permissions' });
+
   await app.register(pipelinesRoutes, { prefix: '/api/v1/pipelines' });
   await app.register(opportunitiesRoutes, { prefix: '/api/v1/opportunities' });
 

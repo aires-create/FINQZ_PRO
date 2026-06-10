@@ -9,6 +9,8 @@ export * from './clientes.api';
 export * from './parceiros.api';
 export * from './oportunidades.api';
 export * from './usuarios.api';
+export * from './roles.api';
+export * from './permissions.api';
 export * from './financeiro.api';
 export * from './automacoes.api';
 export * from './dashboard.api';
