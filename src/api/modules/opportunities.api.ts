@@ -22,6 +22,15 @@ export interface Opportunity {
   deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  customer?: OpportunityCustomer | null;
+}
+
+export interface OpportunityCustomer {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
 }
 
 export interface ListOpportunitiesParams {
@@ -68,6 +77,55 @@ export interface MoveOpportunityStagePayload {
   reason?: string | null;
 }
 
+export interface CreateOpportunityIntakeCustomerPayload {
+  id?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  cpfCnpj?: string | null;
+  phone?: string | null;
+  birthDate?: string | Date | null;
+  documentType?: string | null;
+  address?: Record<string, unknown> | null;
+  bankData?: Record<string, unknown> | null;
+  profession?: string | null;
+  maritalStatus?: string | null;
+  gender?: string | null;
+}
+
+export interface CreateOpportunityIntakePayload {
+  customer: CreateOpportunityIntakeCustomerPayload;
+  opportunity: {
+    title: string;
+    amount: number;
+    pipelineId: string;
+    stageId: string;
+    ownerId?: string | null;
+    description?: string | null;
+  };
+  options?: {
+    allowCreateCustomer?: boolean;
+    updateExistingCustomer?: boolean;
+  };
+}
+
+export interface OpportunityIntakeResponse {
+  success: boolean;
+  message: string;
+  data: {
+    customer: {
+      id: string;
+      status: 'linked_existing' | 'created';
+    };
+    opportunity: {
+      id: string;
+      customerId: string;
+      pipelineId: string;
+      stageId: string;
+    };
+  };
+}
+
 export interface ListOpportunitiesResponse {
   success: boolean;
   data: Opportunity[];
@@ -104,6 +162,13 @@ export const opportunitiesApi = {
     });
   },
 
+  async createIntake(payload: CreateOpportunityIntakePayload): Promise<OpportunityIntakeResponse> {
+    return apiCall<OpportunityIntakeResponse>(`${OPPORTUNITIES_BASE_PATH}/intake`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
   async update(id: string, payload: UpdateOpportunityPayload): Promise<OpportunityMutationResponse> {
     return apiCall<OpportunityMutationResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}`, {
       method: 'PUT',
@@ -127,4 +192,3 @@ export const opportunitiesApi = {
     });
   },
 };
-

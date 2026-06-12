@@ -69,6 +69,7 @@ const serializeUserPermissions = (permissions: Record<string, string[]>): string
   );
 };
 
+// @deprecated Compatibilidade transitória de Opportunity/Kanban. `produto` e `pipeline_id` ainda refletem legado até a remoção controlada dos consumidores.
 const initialOportunidades: OportunidadeKanban[] = [
   { id: 1, nome: "João Silva", telefone: "11999999999", produto: "Empréstimo Pessoal", pipeline_id: "finqz-auto", coluna_id: "entrada", valor: 15000, cliente_nome: "João Silva" },
   { id: 2, nome: "Maria Santos", telefone: "11988888888", produto: "Crédito Consignado", pipeline_id: "finqz-consignado", coluna_id: "triagem", valor: 25000, cliente_nome: "Maria Santos" },
@@ -85,6 +86,7 @@ const initialClientes: Cliente[] = [
   { id: 5, nome: "Carlos Lima", cpf_cnpj: "56789012345", email: "carlos@email.com", telefone: "11955555555", created_at: Date.now(), updated_at: Date.now() },
 ];
 
+// @deprecated Produto standalone descomissionado. Mantido apenas para compatibilidade transitória e migração gradual da UI.
 const initialProdutos: Produto[] = [
   { id: 1, nome: "Empréstimo Pessoal", descricao: "Empréstimo sem garantia", pipeline: "default", documentos: "RG, CPF, Comprovante de renda", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
   { id: 2, nome: "Crédito Consignado", descricao: "Crédito com desconto em folha", pipeline: "default", documentos: "RG, CPF, Contracheque", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
@@ -560,6 +562,7 @@ const useAppStore = create<AppState>()(
       setClientes: (clientes) => set({ clientes }),
       addCliente: (cliente) => set((state) => ({ clientes: [...state.clientes, cliente] })),
       
+      // @deprecated Estado legado de Produto. Fonte operacional oficial deve ser Estrutura Comercial/Backend; este bloco permanece só para compatibilidade transitória.
       produtos: initialProdutos,
       setProdutos: (produtos) => set({ produtos }),
       addProduto: (produto) => set((state) => ({ produtos: [...state.produtos, produto] })),
@@ -613,7 +616,7 @@ const useAppStore = create<AppState>()(
         return state.estruturaComercial;
       },
       migrateProdutosToEstruturaComercial: () => set((state) => {
-        // Migra produtos antigos para estruturaComercial
+        // @deprecated Migração transitória de legado Produto -> EstruturaComercial. Não representa a arquitetura oficial.
         const produtos = state.produtos;
         if (produtos.length === 0) return state;
         
@@ -888,6 +891,7 @@ const useAppStore = create<AppState>()(
         oportunidadesKanban: initialOportunidades,
       }),
 
+      // @deprecated Kanban legado de Opportunity com compatibilidade de produto/pipeline; permanece apenas até os consumidores canônicos migrarem.
       oportunidadesKanban: initialOportunidades,
       setOportunidadesKanban: (oportunidades) => set({ oportunidadesKanban: oportunidades }),
       addOportunidade: (oportunidade) => set((state) => ({
@@ -962,6 +966,7 @@ const useAppStore = create<AppState>()(
 
         const nextState = { ...persistedState };
         delete nextState.clientes;
+        // @deprecated Remoção parcial de persistência legada; mantém apenas o que é necessário para compatibilidade de UI durante a transição.
         delete nextState.produtos;
         delete nextState.parceiros;
         delete nextState.usuarios;
@@ -969,12 +974,10 @@ const useAppStore = create<AppState>()(
         return nextState;
       },
       partialize: (state) => ({
-        theme: state.theme,
-        pipelines: state.pipelines,
-        currentPipelineId: state.currentPipelineId,
-        oportunidadesKanban: state.oportunidadesKanban,
-        // TODO(legacy-cleanup): listas operacionais nao devem ficar em cache local persistente.
-      }),
+  theme: state.theme,
+  pipelines: state.pipelines,
+  currentPipelineId: state.currentPipelineId,
+}),
     }
   )
 );
