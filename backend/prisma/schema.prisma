@@ -39,6 +39,7 @@ model Tenant {
   pipelines       Pipeline[]
   stages          Stage[]
   opportunities   Opportunity[]
+  operations      Operation[]
   activities      Activity[]
   bankProposals   BankProposal[]
   commissions     Commission[]
@@ -188,6 +189,20 @@ enum CommercialRequestStatus {
   Closed
 }
 
+enum OperationStatus {
+  CREATED
+  PROPOSAL_REQUESTED
+  PROPOSAL_RECEIVED
+  PROPOSAL_APPROVED
+  EXECUTED
+  COMMISSION_CALCULATED
+  SETTLEMENT_PENDING
+  SETTLED
+  REJECTED
+  FAILED
+  CANCELED
+}
+
 model Role {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String
@@ -300,6 +315,7 @@ model User {
   ownedLeads         Lead[]         @relation("LeadOwner")
   ownedOpportunities Opportunity[]  @relation("OpportunityOwner")
   createdProposals   BankProposal[] @relation("ProposalCreatedBy")
+  createdOperations  Operation[]    @relation("OperationCreatedBy")
   activities         Activity[]
   commissions        Commission[]
   auditLogs          AuditLog[]
@@ -516,6 +532,7 @@ model Opportunity {
 
   activities    Activity[]
   bankProposals BankProposal[]
+  operations    Operation[]
   commissions   Commission[]
 
   @@index([tenantId])
@@ -612,6 +629,8 @@ model BankProposal {
   createdById String @db.Uuid
   creator     User   @relation("ProposalCreatedBy", fields: [createdById], references: [id])
 
+  operations Operation[]
+
   @@unique([tenantId, proposalNumber])
   @@index([tenantId])
   @@index([partnerId])
@@ -623,6 +642,45 @@ model BankProposal {
   @@index([createdById])
   @@index([deletedAt])
   @@map("bank_proposals")
+}
+
+model Operation {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String          @db.Uuid
+  operationNumber     String
+  year                Int
+  sequence            Int
+  opportunityId       String          @db.Uuid
+  bankProposalId      String?         @db.Uuid
+  createdById         String          @db.Uuid
+  amount              Float
+  currency            String          @default("BRL")
+  status              OperationStatus @default(CREATED)
+  executedAt          DateTime?
+  referenceDate       DateTime?
+  providerOperationId String?
+  externalReference   String?
+  metadata            Json?
+  notes               String?
+  correlationId       String?
+  deletedAt           DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity  Opportunity  @relation(fields: [opportunityId], references: [id])
+  bankProposal BankProposal? @relation(fields: [bankProposalId], references: [id])
+  creator      User         @relation("OperationCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([tenantId, operationNumber])
+  @@unique([tenantId, year, sequence])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([opportunityId])
+  @@index([bankProposalId])
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("operations")
 }
 
 model Commission {
