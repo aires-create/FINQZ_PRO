@@ -92,6 +92,15 @@ const opportunitiesReadInclude = {
       isLost: true,
     },
   },
+  customer: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+    },
+  },
 } satisfies Prisma.OpportunityInclude;
 
 export const opportunitiesRepository = {

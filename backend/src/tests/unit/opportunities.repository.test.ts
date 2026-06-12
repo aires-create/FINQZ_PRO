@@ -57,6 +57,15 @@ describe('opportunitiesRepository', () => {
             isLost: true,
           },
         },
+        customer: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
       },
     });
   });
@@ -91,7 +100,7 @@ describe('opportunitiesRepository', () => {
             },
           },
         }),
-        include: {
+        include: expect.objectContaining({
           pipeline: {
             select: {
               id: true,
@@ -107,7 +116,21 @@ describe('opportunitiesRepository', () => {
               isLost: true,
             },
           },
+          customer: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+            },
+          },
+        }),
+        orderBy: {
+          createdAt: 'desc',
         },
+        skip: 0,
+        take: 20,
       }),
     );
     expect(prismaMock.opportunity.count).toHaveBeenCalledWith({

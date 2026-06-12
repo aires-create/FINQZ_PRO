@@ -5,6 +5,7 @@ const serviceMock = vi.hoisted(() => ({
   list: vi.fn(),
   getById: vi.fn(),
   create: vi.fn(),
+  createOpportunityIntake: vi.fn(),
   update: vi.fn(),
   moveStage: vi.fn(),
   archive: vi.fn(),
@@ -157,6 +158,76 @@ describe('opportunities routes', () => {
     });
 
     expect(response.statusCode).toBe(400);
+  });
+
+  it('POST /intake chama createOpportunityIntake e retorna 201', async () => {
+    serviceMock.createOpportunityIntake.mockResolvedValueOnce({
+      customer: {
+        id: 'cust-1',
+        status: 'created',
+      },
+      opportunity: {
+        id: 'opp-1',
+        customerId: 'cust-1',
+        pipelineId: '11111111-1111-1111-1111-111111111111',
+        stageId: '22222222-2222-2222-2222-222222222222',
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/opportunities/intake',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'opportunity:create',
+      },
+      payload: {
+        opportunity: {
+          title: 'Opportunity intake',
+          amount: 1500,
+          pipelineId: '11111111-1111-1111-1111-111111111111',
+          stageId: '22222222-2222-2222-2222-222222222222',
+        },
+        customer: {
+          firstName: 'Maria',
+          lastName: 'Silva',
+          email: 'maria@finqz.com.br',
+          cpfCnpj: '12345678900',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Opportunity intake created successfully',
+      data: {
+        customer: {
+          id: 'cust-1',
+          status: 'created',
+        },
+        opportunity: {
+          id: 'opp-1',
+          customerId: 'cust-1',
+          pipelineId: '11111111-1111-1111-1111-111111111111',
+          stageId: '22222222-2222-2222-2222-222222222222',
+        },
+      },
+    });
+    expect(serviceMock.createOpportunityIntake).toHaveBeenCalledWith(
+      'tenant-1',
+      'user-1',
+      expect.objectContaining({
+        opportunity: expect.objectContaining({
+          title: 'Opportunity intake',
+          amount: 1500,
+        }),
+        customer: expect.objectContaining({
+          email: 'maria@finqz.com.br',
+          cpfCnpj: '12345678900',
+        }),
+      }),
+    );
   });
 
   it('PATCH stage sem opportunity:move_stage retorna 403', async () => {
