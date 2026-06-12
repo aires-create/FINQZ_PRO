@@ -138,6 +138,10 @@ export const normalizeApiEndpoint = (endpoint: string, preserveApiPrefix = false
     return endpoint;
   }
 
+  if (/^\/api\/v\d+(?:\/|$)/i.test(endpoint)) {
+    return endpoint;
+  }
+
   if (endpoint.startsWith("/api/")) {
     return endpoint.replace(/^\/api/, "");
   }

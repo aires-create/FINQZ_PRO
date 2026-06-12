@@ -135,6 +135,10 @@ export const ClientesPage: React.FC = () => {
           telefone: cliente.telefone || cliente.phone,
           cidade: cliente.cidade || parsedAddress?.cidade || parsedAddress?.city,
           estado: cliente.estado || parsedAddress?.estado || parsedAddress?.state || parsedAddress?.uf,
+          tenant_id: cliente.tenant_id || cliente.tenantId,
+          owner_id: cliente.owner_id || cliente.ownerId,
+          franquia_id: cliente.franquia_id || cliente.franquiaId,
+          franqueado_id: cliente.franqueado_id || cliente.franqueadoId,
           created_at: cliente.created_at || cliente.createdAt,
           updated_at: cliente.updated_at || cliente.updatedAt,
           status:
@@ -154,6 +158,26 @@ export const ClientesPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void loadClientes();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadClientes();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [search]);
 
   // Definições para importação/exportação
   const importColumns = [
@@ -511,6 +535,10 @@ export const ClientesPage: React.FC = () => {
     // Validações mínimas
     if (!(formData?.nome || '').trim()) {
       alert("Nome é obrigatório");
+      return;
+    }
+    if (!(formData?.email || '').trim()) {
+      alert("E-mail é obrigatório");
       return;
     }
     if (!(formData?.celular || '').trim()) {
@@ -1489,7 +1517,7 @@ export const ClientesPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Email
+                      Email *
                     </label>
                     <input
                       type="email"
@@ -1497,7 +1525,7 @@ export const ClientesPage: React.FC = () => {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="email@exemplo.com"
+                      placeholder="Obrigatório - email@exemplo.com"
                     />
                   </div>
                 </div>

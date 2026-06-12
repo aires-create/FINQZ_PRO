@@ -56,6 +56,9 @@ const buildFilterParams = (filters: DashboardFilters): string => {
   return params.toString();
 };
 
+const shouldPreserveOfficialApiPrefix = (endpoint: string): boolean =>
+  /^\/api\/v\d+(?:\/|$)/i.test(endpoint);
+
 export const api = {
   // Dashboard
   getDashboardKPIs: (filters?: DashboardFilters) => {
@@ -92,7 +95,9 @@ export const api = {
     query.set("entity", params.entity);
     query.set("entityId", params.entityId);
     query.set("limit", String(params.limit ?? 20));
-    return apiFetch<any>(`/v1/audit/logs?${query.toString()}`);
+    return apiFetch<any>(`/api/v1/audit/logs?${query.toString()}`, {
+      preserveApiPrefix: true,
+    });
   },
 
   // Parceiros
@@ -175,20 +180,28 @@ export const api = {
   },
   get: <T = any>(endpoint: string, params?: Record<string, unknown>) => {
     const query = buildQueryString(params || {});
-    return apiFetch<T>(`${endpoint}${query}`);
+    return apiFetch<T>(`${endpoint}${query}`, {
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
+    });
   },
   post: <T = any>(endpoint: string, data?: any) =>
     apiFetch<T>(endpoint, {
       method: "POST",
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
       body: JSON.stringify(data),
     }),
   put: <T = any>(endpoint: string, data?: any) =>
     apiFetch<T>(endpoint, {
       method: "PUT",
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
       body: JSON.stringify(data),
     }),
   delete: <T = any>(endpoint: string) =>
-    apiFetch<T>(endpoint, { method: "DELETE" }),};
+    apiFetch<T>(endpoint, {
+      method: "DELETE",
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
+    }),
+};
 
 // ============================================
 // EXPORTS
