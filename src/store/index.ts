@@ -322,14 +322,6 @@ interface AppState {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 
-  // Data Cache
-  kpis: DashboardKPIs | null;
-  setKpis: (kpis: DashboardKPIs) => void;
-  producao: DashboardProducao | null;
-  setProducao: (producao: DashboardProducao) => void;
-  funil: DashboardFunil | null;
-  setFunil: (funil: DashboardFunil) => void;
-
   // Lists
   clientes: Cliente[];
   setClientes: (clientes: Cliente[]) => void;
@@ -415,10 +407,6 @@ interface AppState {
   updateOportunidade: (id: string, data: Partial<OportunidadeKanban>) => void;
   deleteOportunidade: (id: string) => void;
   moveOportunidade: (id: string, updates: { etapa_id?: string; status?: string }) => void;
-
-  // Filters
-  filtroPeriodo: string;
-  setFiltroPeriodo: (periodo: string) => void;
 
   // Permissions
   userPermissions: Record<string, string[]>;
@@ -548,14 +536,6 @@ const useAppStore = create<AppState>()(
       // UI State
       sidebarOpen: true,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
-
-      // Data Cache
-      kpis: null,
-      setKpis: (kpis) => set({ kpis }),
-      producao: null,
-      setProducao: (producao) => set({ producao }),
-      funil: null,
-      setFunil: (funil) => set({ funil }),
 
       // Lists
       clientes: initialClientes,
@@ -883,13 +863,6 @@ const useAppStore = create<AppState>()(
 
       currentPipelineId: "",
       setCurrentPipelineId: (id) => set({ currentPipelineId: id }),
-      
-      // Função para resetar pipelines para valores padrão
-      resetPipelines: () => set({ 
-        pipelines: initialPipelines,
-        currentPipelineId: "",
-        oportunidadesKanban: initialOportunidades,
-      }),
 
       // @deprecated Kanban legado de Opportunity com compatibilidade de produto/pipeline; permanece apenas até os consumidores canônicos migrarem.
       oportunidadesKanban: initialOportunidades,
@@ -910,10 +883,6 @@ const useAppStore = create<AppState>()(
           o.id.toString() === id ? { ...o, ...updates } : o
         ),
       })),
-
-      // Filters
-      filtroPeriodo: "hoje",
-      setFiltroPeriodo: (periodo) => set({ filtroPeriodo: periodo }),
 
       // Permissions
       userPermissions: {},
