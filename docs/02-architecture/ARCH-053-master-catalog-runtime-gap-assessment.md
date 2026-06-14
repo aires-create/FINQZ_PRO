@@ -65,15 +65,15 @@ Testes unitários do domínio
 [backend/src/tests/unit/master-catalog/master-catalog.seed.test.ts](C:\\Projects\\FINQZ_PRO\\backend\\src\\tests\\unit\\master-catalog\\master-catalog.seed.test.ts)
 [backend/src/tests/unit/master-catalog/master-catalog.validator.test.ts](C:\\Projects\\FINQZ_PRO\\backend\\src\\tests\\unit\\master-catalog\\master-catalog.validator.test.ts)
 Documentação arquitetural existente
-[docs/architecture/ARCH-045-master-catalog-prisma-schema-proposal.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-045-master-catalog-prisma-schema-proposal.md)
-[docs/architecture/ARCH-046-master-catalog-persistence-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-046-master-catalog-persistence-blueprint.md)
-[docs/architecture/ARCH-047-master-catalog-repository-contract-design.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-047-master-catalog-repository-contract-design.md)
-[docs/architecture/ARCH-048-master-catalog-api-read-contract-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-048-master-catalog-api-read-contract-blueprint.md)
-[docs/architecture/ARCH-049-master-catalog-application-service-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-049-master-catalog-application-service-blueprint.md)
-[docs/architecture/ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md)
-[docs/architecture/ARCH-051-master-catalog-runtime-readiness-checklist.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-051-master-catalog-runtime-readiness-checklist.md)
-[docs/architecture/ARCH-052-master-catalog-architecture-consolidation-review.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-052-master-catalog-architecture-consolidation-review.md)
-[docs/architecture/ARCH-053-master-catalog-runtime-gap-assessment.md](C:\\Projects\\FINQZ_PRO\\docs\\architecture\\ARCH-053-master-catalog-runtime-gap-assessment.md)
+[docs/02-architecture/ARCH-045-master-catalog-prisma-schema-proposal.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-045-master-catalog-prisma-schema-proposal.md)
+[docs/02-architecture/ARCH-046-master-catalog-persistence-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-046-master-catalog-persistence-blueprint.md)
+[docs/02-architecture/ARCH-047-master-catalog-repository-contract-design.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-047-master-catalog-repository-contract-design.md)
+[docs/02-architecture/ARCH-048-master-catalog-api-read-contract-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-048-master-catalog-api-read-contract-blueprint.md)
+[docs/02-architecture/ARCH-049-master-catalog-application-service-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-049-master-catalog-application-service-blueprint.md)
+[docs/02-architecture/ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md)
+[docs/02-architecture/ARCH-051-master-catalog-runtime-readiness-checklist.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-051-master-catalog-runtime-readiness-checklist.md)
+[docs/02-architecture/ARCH-052-master-catalog-architecture-consolidation-review.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-052-master-catalog-architecture-consolidation-review.md)
+[docs/02-architecture/ARCH-053-master-catalog-runtime-gap-assessment.md](C:\\Projects\\FINQZ_PRO\\docs\\02-architecture\\ARCH-053-master-catalog-runtime-gap-assessment.md)
 Prisma
 backend/prisma/schema.prisma ainda não contém models de Master Catalog.
 O schema atual tem domínio operacional existente, mas nenhuma entidade canônica para:Segment
