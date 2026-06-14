@@ -38,6 +38,7 @@ import { rolesFastifyRoutes } from '../../modules/roles/roles.fastify.routes.js'
 import { permissionsFastifyRoutes } from '../../modules/permissions/permissions.fastify.routes.js';
 import { opportunitiesRoutes } from '../../modules/opportunities/routes.js';
 import { operationRoutes } from '../../modules/operation/presentation/http/operation.routes.js';
+import { masterCatalogRoutes } from '../../modules/master-catalog/presentation/http/master-catalog.routes.js';
 import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
 
 import {
@@ -601,6 +602,7 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   await app.register(pipelinesRoutes, { prefix: '/api/v1/pipelines' });
   await app.register(opportunitiesRoutes, { prefix: '/api/v1/opportunities' });
   await app.register(operationRoutes, { prefix: '/api/v1/operations' });
+  await app.register(masterCatalogRoutes, { prefix: '/api/v1/master-catalog' });
 
   // Error handler
   app.setErrorHandler(sendErrorResponse);
