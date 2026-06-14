@@ -45,6 +45,10 @@ model Tenant {
   commissions     Commission[]
   commercialTables CommercialTable[]
   commercialConditions CommercialCondition[]
+  masterCatalogSegments   MasterCatalogSegment[]
+  masterCatalogProducts   MasterCatalogProduct[]
+  masterCatalogSubproducts MasterCatalogSubproduct[]
+  masterCatalogModalities  MasterCatalogModality[]
   rolePermissions RolePermission[]
   userRoles       UserRole[]
   auditLogs       AuditLog[]
@@ -201,6 +205,13 @@ enum OperationStatus {
   REJECTED
   FAILED
   CANCELED
+}
+
+enum CatalogStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
 }
 
 model Role {
@@ -834,6 +845,92 @@ model CommercialCondition {
   @@index([active])
   @@index([deletedAt])
   @@map("commercial_conditions")
+}
+
+model MasterCatalogSegment {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String        @db.Uuid
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  status       CatalogStatus @default(ACTIVE)
+  displayOrder Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_segments")
+}
+
+model MasterCatalogProduct {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String                   @db.Uuid
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  status       CatalogStatus            @default(ACTIVE)
+  displayOrder Int                      @default(0)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  deletedAt    DateTime?
+
+  subproducts  MasterCatalogSubproduct[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_products")
+}
+
+model MasterCatalogSubproduct {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String                   @db.Uuid
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId    String                   @db.Uuid
+  product      MasterCatalogProduct     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  code         String
+  name         String
+  status       CatalogStatus            @default(ACTIVE)
+  displayOrder Int                      @default(0)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  deletedAt    DateTime?
+
+  modalities   MasterCatalogModality[]
+
+  @@unique([tenantId, productId, code])
+  @@index([tenantId])
+  @@index([tenantId, productId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_subproducts")
+}
+
+model MasterCatalogModality {
+  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String                   @db.Uuid
+  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subproductId String                   @db.Uuid
+  subproduct   MasterCatalogSubproduct  @relation(fields: [subproductId], references: [id], onDelete: Restrict)
+  code         String
+  name         String
+  status       CatalogStatus            @default(ACTIVE)
+  displayOrder Int                      @default(0)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  deletedAt    DateTime?
+
+  @@unique([tenantId, subproductId, code])
+  @@index([tenantId])
+  @@index([tenantId, subproductId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_modalities")
 }
 
 // ============================================
