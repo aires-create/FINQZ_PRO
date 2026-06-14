@@ -56,6 +56,7 @@ import {
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
 import { creditPfCatalog, getActiveProducts } from "../data/catalogRepository";
+import { loadEstruturaComercialFromMasterCatalog } from "../features/master-catalog/loadEstruturaComercialFromMasterCatalog";
 
 // Tipos de fornecedor para select
 const fornecedorTipos: { value: FornecedorTipo; label: string }[] = [
@@ -403,13 +404,33 @@ const EstruturaComercialPage: React.FC = () => {
 
   // Estado do FilterDrawer
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
 
   // Handler: Sincronizar com Catálogo PF Credit
-  const handleSyncWithCatalog = () => {
-    if (confirm("Isso irá substituir a estrutura atual pelos produtos do catálogo PF Credit. Deseja continuar?")) {
-      const newEstrutura = buildEstruturaFromCatalog();
+  const handleSyncWithCatalog = async () => {
+    if (isSyncingCatalog) return;
+
+    if (!confirm("Isso irá substituir a estrutura atual pelos dados do Master Catalog. Deseja continuar?")) {
+      return;
+    }
+
+    setIsSyncingCatalog(true);
+
+    try {
+      const newEstrutura = await loadEstruturaComercialFromMasterCatalog();
+
+      if (!newEstrutura.length) {
+        alert("O Master Catalog retornou vazio. A estrutura atual foi mantida.");
+        return;
+      }
+
       setEstruturaComercial(newEstrutura);
-      alert(`Sincronizado! ${newEstrutura.length} itens foram importados do catálogo.`);
+      alert(`Sincronizado com Master Catalog! ${newEstrutura.length} itens foram importados.`);
+    } catch (error) {
+      console.error("[EstruturaComercial] Falha ao sincronizar com Master Catalog:", error);
+      alert("Não foi possível sincronizar com o Master Catalog. A estrutura atual foi mantida.");
+    } finally {
+      setIsSyncingCatalog(false);
     }
   };
 
@@ -1042,10 +1063,11 @@ const EstruturaComercialPage: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleSyncWithCatalog}
+              disabled={isSyncingCatalog}
               className="flex items-center gap-1"
             >
               <RefreshCw size={14} />
-              Sincronizar Catálogo
+              {isSyncingCatalog ? "Sincronizando..." : "Sincronizar Catálogo"}
             </Button>
           </div>
         }
