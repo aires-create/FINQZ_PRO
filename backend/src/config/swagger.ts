@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import swaggerJsdoc from 'swagger-jsdoc';
 import { config } from './app.js';
 
@@ -22,6 +23,7 @@ const swaggerDefinition = {
     { name: 'Roles', description: 'Tenant-scoped role hierarchy' },
     { name: 'Permissions', description: 'Granular RBAC permission catalog' },
     { name: 'Integrations', description: 'Provider engine operational and catalog endpoints' },
+    { name: 'Master Catalog', description: 'Master catalog read-only endpoints' },
   ],
   components: {
     securitySchemes: {
@@ -153,7 +155,17 @@ const swaggerDefinition = {
   },
 };
 
+const resolveSwaggerApis = (): string[] => {
+  const runtimeFilePath = fileURLToPath(import.meta.url);
+  const runtimeDir = path.dirname(runtimeFilePath);
+  const runtimeRoot = path.resolve(runtimeDir, '..');
+
+  return runtimeRoot.endsWith(`${path.sep}dist`)
+    ? [path.join(runtimeRoot, 'modules/**/*.js')]
+    : [path.join(runtimeRoot, 'modules/**/*.ts')];
+};
+
 export const swaggerSpec = swaggerJsdoc({
   definition: swaggerDefinition,
-  apis: [path.join(process.cwd(), 'src/modules/**/*.ts')],
+  apis: resolveSwaggerApis(),
 });
