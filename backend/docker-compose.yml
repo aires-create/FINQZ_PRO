@@ -60,8 +60,11 @@ services:
       - /tmp
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ../dist:/usr/share/nginx/html:ro
     depends_on:
       api:
         condition: service_healthy
