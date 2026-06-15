@@ -30,19 +30,33 @@ describe('master-catalog.seed', () => {
     ).toBeDefined();
   });
 
-  it('Consignado deve conter os 6 subproducts esperados', () => {
+  it('Consignado deve conter os 3 subproducts esperados', () => {
     const consignado = MASTER_CATALOG_INITIAL_TREE.products.find(
       (product) => product.code === 'CONSIGNADO',
     );
 
-    expect(consignado?.subproducts).toHaveLength(6);
+    expect(consignado?.subproducts).toHaveLength(3);
     expect(consignado?.subproducts.map((subproduct) => subproduct.code)).toEqual([
+      'EMPRESTIMO_CONSIGNADO',
+      'CARTAO_RMC',
+      'CARTAO_BENEFICIO',
+    ]);
+  });
+
+  it('Empréstimo Consignado deve conter as 4 modalities esperadas', () => {
+    const consignado = MASTER_CATALOG_INITIAL_TREE.products.find(
+      (product) => product.code === 'CONSIGNADO',
+    );
+    const emprestimoConsignado = consignado?.subproducts.find(
+      (subproduct) => subproduct.code === 'EMPRESTIMO_CONSIGNADO',
+    );
+
+    expect(emprestimoConsignado?.modalities).toHaveLength(4);
+    expect(emprestimoConsignado?.modalities.map((modality) => modality.code)).toEqual([
       'NOVO',
       'REFINANCIAMENTO',
       'PORTABILIDADE',
       'PORT_REFIN',
-      'CARTAO_RMC',
-      'CARTAO_BENEFICIO',
     ]);
   });
 

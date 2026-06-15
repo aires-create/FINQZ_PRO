@@ -53,43 +53,48 @@ const segments: CatalogSegmentReadModel[] = [
 
 const consignadoSubproducts: CatalogProductReadModel['subproducts'] = [
   {
-    id: 'subproduct-novo',
-    code: 'NOVO',
-    name: 'Novo',
+    id: 'subproduct-emprestimo-consignado',
+    code: 'EMPRESTIMO_CONSIGNADO',
+    name: 'Empréstimo Consignado',
     status: activeStatus,
     displayOrder: 1,
-    modalities: [],
-  },
-  {
-    id: 'subproduct-refinanciamento',
-    code: 'REFINANCIAMENTO',
-    name: 'Refinanciamento',
-    status: activeStatus,
-    displayOrder: 2,
-    modalities: [],
-  },
-  {
-    id: 'subproduct-portabilidade',
-    code: 'PORTABILIDADE',
-    name: 'Portabilidade',
-    status: activeStatus,
-    displayOrder: 3,
-    modalities: [],
-  },
-  {
-    id: 'subproduct-port-refin',
-    code: 'PORT_REFIN',
-    name: 'Port + Refin',
-    status: activeStatus,
-    displayOrder: 4,
-    modalities: [],
+    modalities: [
+      {
+        id: 'modality-novo',
+        code: 'NOVO',
+        name: 'Novo',
+        status: activeStatus,
+        displayOrder: 1,
+      },
+      {
+        id: 'modality-refinanciamento',
+        code: 'REFINANCIAMENTO',
+        name: 'Refinanciamento',
+        status: activeStatus,
+        displayOrder: 2,
+      },
+      {
+        id: 'modality-portabilidade',
+        code: 'PORTABILIDADE',
+        name: 'Portabilidade',
+        status: activeStatus,
+        displayOrder: 3,
+      },
+      {
+        id: 'modality-port-refin',
+        code: 'PORT_REFIN',
+        name: 'Port + Refin',
+        status: activeStatus,
+        displayOrder: 4,
+      },
+    ],
   },
   {
     id: 'subproduct-cartao-rmc',
     code: 'CARTAO_RMC',
     name: 'Cartão RMC',
     status: activeStatus,
-    displayOrder: 5,
+    displayOrder: 2,
     modalities: [
       {
         id: 'modality-cartao',
@@ -119,7 +124,7 @@ const consignadoSubproducts: CatalogProductReadModel['subproducts'] = [
     code: 'CARTAO_BENEFICIO',
     name: 'Cartão Benefício',
     status: activeStatus,
-    displayOrder: 6,
+    displayOrder: 3,
     modalities: [
       {
         id: 'modality-cartao-beneficio',

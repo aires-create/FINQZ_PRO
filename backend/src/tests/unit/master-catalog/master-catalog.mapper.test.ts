@@ -66,12 +66,42 @@ describe('master-catalog.mapper', () => {
     const result = normalizeMasterCatalogTree(input);
 
     expect(result.products[0]?.subproducts.map((subproduct) => subproduct.code)).toEqual([
+      'EMPRESTIMO_CONSIGNADO',
+      'CARTAO_RMC',
+      'CARTAO_BENEFICIO',
+    ]);
+  });
+
+  it('ordena modalities of Empréstimo Consignado', () => {
+    const consignado = MASTER_CATALOG_INITIAL_TREE.products.find(
+      (product) => product.code === 'CONSIGNADO',
+    );
+    const emprestimoConsignado = consignado?.subproducts.find(
+      (subproduct) => subproduct.code === 'EMPRESTIMO_CONSIGNADO',
+    );
+
+    const input = {
+      ...MASTER_CATALOG_INITIAL_TREE,
+      products: [
+        {
+          ...consignado!,
+          subproducts: [
+            {
+              ...emprestimoConsignado!,
+              modalities: [...emprestimoConsignado!.modalities].reverse(),
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = normalizeMasterCatalogTree(input);
+
+    expect(result.products[0]?.subproducts[0]?.modalities.map((modality) => modality.code)).toEqual([
       'NOVO',
       'REFINANCIAMENTO',
       'PORTABILIDADE',
       'PORT_REFIN',
-      'CARTAO_RMC',
-      'CARTAO_BENEFICIO',
     ]);
   });
 

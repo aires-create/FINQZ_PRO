@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient, PermissionAction, RoleType } from '@prisma/client';
+import { CatalogStatus, Prisma, PrismaClient, PermissionAction, RoleType } from '@prisma/client';
+import { MASTER_CATALOG_INITIAL_TREE } from '../src/modules/master-catalog/domain/master-catalog.seed.js';
 import { hashPassword } from '../src/utils/password';
 import { createModuleLogger } from '../src/shared/logger';
 
@@ -87,6 +88,9 @@ async function seedRBAC(): Promise<void> {
     // 2. Create permissions
     const permissions = await createPermissions();
 
+    // 2.1 Persist the official Master Catalog tree
+    await seedMasterCatalog(tenant.id);
+
     // 3. Create roles
     const roles = await createRoles(tenant.id, permissions);
 
@@ -167,6 +171,112 @@ async function seedOpportunityFoundation(tenantId: string): Promise<void> {
   }
 
   logger.info(`Pipeline foundation created/updated: ${pipeline.id}`);
+}
+
+async function seedMasterCatalog(tenantId: string): Promise<void> {
+  logger.info('Persisting Master Catalog tree...');
+
+  for (const segment of MASTER_CATALOG_INITIAL_TREE.segments) {
+    await prisma.masterCatalogSegment.upsert({
+      where: {
+        tenantId_code: {
+          tenantId,
+          code: segment.code,
+        },
+      },
+      update: {
+        name: segment.name,
+        status: segment.status as CatalogStatus,
+        displayOrder: segment.displayOrder,
+        deletedAt: null,
+      },
+      create: {
+        tenantId,
+        code: segment.code,
+        name: segment.name,
+        status: segment.status as CatalogStatus,
+        displayOrder: segment.displayOrder,
+      },
+    });
+  }
+
+  for (const product of MASTER_CATALOG_INITIAL_TREE.products) {
+    const persistedProduct = await prisma.masterCatalogProduct.upsert({
+      where: {
+        tenantId_code: {
+          tenantId,
+          code: product.code,
+        },
+      },
+      update: {
+        name: product.name,
+        status: product.status as CatalogStatus,
+        displayOrder: product.displayOrder,
+        deletedAt: null,
+      },
+      create: {
+        tenantId,
+        code: product.code,
+        name: product.name,
+        status: product.status as CatalogStatus,
+        displayOrder: product.displayOrder,
+      },
+    });
+
+    for (const subproduct of product.subproducts) {
+      const persistedSubproduct = await prisma.masterCatalogSubproduct.upsert({
+        where: {
+          tenantId_productId_code: {
+            tenantId,
+            productId: persistedProduct.id,
+            code: subproduct.code,
+          },
+        },
+        update: {
+          name: subproduct.name,
+          status: subproduct.status as CatalogStatus,
+          displayOrder: subproduct.displayOrder,
+          deletedAt: null,
+        },
+        create: {
+          tenantId,
+          productId: persistedProduct.id,
+          code: subproduct.code,
+          name: subproduct.name,
+          status: subproduct.status as CatalogStatus,
+          displayOrder: subproduct.displayOrder,
+        },
+      });
+
+      for (const modality of subproduct.modalities) {
+        await prisma.masterCatalogModality.upsert({
+          where: {
+            tenantId_subproductId_code: {
+              tenantId,
+              subproductId: persistedSubproduct.id,
+              code: modality.code,
+            },
+          },
+          update: {
+            name: modality.name,
+            status: modality.status as CatalogStatus,
+            displayOrder: modality.displayOrder,
+            deletedAt: null,
+          },
+          create: {
+            tenantId,
+            subproductId: persistedSubproduct.id,
+            code: modality.code,
+            name: modality.name,
+            status: modality.status as CatalogStatus,
+            displayOrder: modality.displayOrder,
+          },
+        });
+      }
+    }
+  }
+
+  logger.info('Master Catalog tree persisted successfully');
 }
 
 /**
@@ -689,6 +799,15 @@ async function createPermissions() {
       description: 'Export report data',
       resource: 'reports',
       action: PermissionAction.EXPORT,
+    },
+
+    // Master Catalog permissions
+    {
+      name: 'Read Master Catalog',
+      slug: 'master-catalog:read',
+      description: 'View master catalog information',
+      resource: 'master-catalogs',
+      action: PermissionAction.READ,
     },
 
     // Audit permissions
