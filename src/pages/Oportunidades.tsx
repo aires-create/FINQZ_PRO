@@ -83,6 +83,9 @@ const DETAIL_TABS = [
 
 type DetailTabId = typeof DETAIL_TABS[number]['id'];
 
+// Compatibilidade transitória de leitura/filtro para oportunidades legadas.
+// Nao representa taxonomia canônica nem source of truth de Pipeline.
+// TODO H-14G: remover após migração completa dos pipelineIds legados.
 const LEGACY_PIPELINE_IDS_BY_CATALOG: Record<string, string[]> = {
   "pipeline-antecipacao": ["pipeline-antecipacao", "fgts"],
   "pipeline-cartao": ["pipeline-cartao"],
@@ -95,7 +98,7 @@ const LEGACY_PIPELINE_IDS_BY_CATALOG: Record<string, string[]> = {
   "pipeline-seguro": ["pipeline-seguro"],
 };
 
-const getEquivalentPipelineIds = (pipelineId: string): string[] => {
+const getLegacyCompatiblePipelineIds = (pipelineId: string): string[] => {
   return LEGACY_PIPELINE_IDS_BY_CATALOG[pipelineId] || [pipelineId];
 };
 
@@ -2211,8 +2214,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       etapa: etapaFallbackId,
     };
   });
-  const equivalentPipelineIds = currentPipelineConfig
-    ? getEquivalentPipelineIds(
+  const legacyCompatiblePipelineIds = currentPipelineConfig
+    ? getLegacyCompatiblePipelineIds(
         selectedOfficialPipeline
           ? mapBackendPipelineNameToSemanticId(
               String(selectedOfficialPipeline.name ?? ""),
@@ -2237,12 +2240,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
     // Se a oportunidade tem o novo campo pipeline_id, usar ele
     if (o?.pipeline_id) {
-      return equivalentPipelineIds.includes(String(o.pipeline_id));
+      return legacyCompatiblePipelineIds.includes(String(o.pipeline_id));
     }
     // Se não, verificar se o produto antigo mapeia para o pipeline atual
     if (o?.produto && typeof mapearProdutoLegadoParaPipeline === "function") {
       const mappedPipelineId = mapearProdutoLegadoParaPipeline(o.produto);
-      return mappedPipelineId ? equivalentPipelineIds.includes(mappedPipelineId) : false;
+      return mappedPipelineId ? legacyCompatiblePipelineIds.includes(mappedPipelineId) : false;
     }
     // Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
     return true;
