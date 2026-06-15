@@ -729,11 +729,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const catalogPipelineOptions = useMemo(() => getPipelineOptions(), []);
   const selectedPipelineId = useMemo(() => {
     if (!pipelineSelectionReady) return "";
-    if (!safeCurrentPipelineId) return "";
-    return officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === safeCurrentPipelineId)
-      ? safeCurrentPipelineId
+    if (!currentPipelineId) return "";
+    return officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === currentPipelineId)
+      ? currentPipelineId
       : "";
-  }, [officialPipelines, pipelineSelectionReady, safeCurrentPipelineId]);
+  }, [currentPipelineId, officialPipelines, pipelineSelectionReady]);
   const catalogProductOptions = useMemo(() => getProductOptions(), []);
   const catalogSubproducts = useMemo(() => 
     selectedProductId ? getSubproductsByProductId(selectedProductId) : [], 
@@ -756,10 +756,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
 
-    if (safeCurrentPipelineId && !selectedPipelineId) {
+    if (currentPipelineId && !selectedPipelineId) {
       safeSetCurrentPipelineId("");
     }
-  }, [pipelineSelectionReady, safeCurrentPipelineId, safeSetCurrentPipelineId, selectedPipelineId]);
+  }, [currentPipelineId, pipelineSelectionReady, safeSetCurrentPipelineId, selectedPipelineId]);
   
   // Ordenação por coluna: { [etapaId]: 'valor_asc' | 'valor_desc' | 'data_asc' | 'data_desc' }
   const [columnSort, setColumnSort] = useState<Record<string, string>>({});
@@ -1532,7 +1532,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
     const targetEtapaKey = normalizeKey(novaFaseAposAceite);
     const origemPipelineSemantico = String(
-      selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? safeCurrentPipelineId ?? "",
+      selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? currentPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
       selectedLead?.backendPipelineId ||
@@ -2011,7 +2011,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return selectedOfficialPipeline;
     }
 
-    const origemPipelineSemantico = String(currentPipelineConfig?.id ?? safeCurrentPipelineId ?? "");
+    const origemPipelineSemantico = String(currentPipelineConfig?.id ?? currentPipelineId ?? "");
     const normalizedCurrentPipelineName = normalizeKey(String(currentPipelineConfig?.nome ?? ""));
 
     return officialPipelines.find((pipeline: any) => {
@@ -2026,7 +2026,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         (normalizedCurrentPipelineName.length > 0 && normalizedPipelineName === normalizedCurrentPipelineName)
       );
     }) ?? null;
-  }, [currentPipelineConfig?.id, currentPipelineConfig?.nome, officialPipelines, safeCurrentPipelineId, selectedOfficialPipeline]);
+  }, [currentPipelineConfig?.id, currentPipelineConfig?.nome, currentPipelineId, officialPipelines, selectedOfficialPipeline]);
   
   // ETAPAS DINÂMICAS do pipeline atual - usar OFICIAL_ETAPAS como base
   // HARDENING: Com normalizeKey e fallback seguro
@@ -2471,7 +2471,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
     const targetEtapaKey = normalizeKey(etapaId);
     const origemPipelineSemantico = String(
-      oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? safeCurrentPipelineId ?? "",
+      oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? currentPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
       oportunidade?.backendPipelineId ||
@@ -2825,7 +2825,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     );
     const targetEtapaLabelKey = normalizeKey(selectedEtapaOption?.nome ?? "");
     const origemPipelineSemantico = String(
-      currentPipelineConfig?.id ?? newOportunidade.pipeline_id ?? safeCurrentPipelineId ?? "",
+      currentPipelineConfig?.id ?? newOportunidade.pipeline_id ?? currentPipelineId ?? "",
     );
     const matchedOfficialPipeline = matchedOfficialPipelineForSelection;
 
@@ -3080,14 +3080,15 @@ if (
 
   const handleDeletePipeline = () => {
     const safePipelines = Array.isArray(pipelines) ? pipelines : [];
-    if (!safeCurrentPipelineId || safePipelines.length <= 1) return;
-    const pipelineName = currentPipelineConfig?.nome || safeCurrentPipelineId;
+    const currentPipelineKey = String(currentPipelineConfig?.id ?? currentPipelineId ?? "");
+    if (!currentPipelineKey || safePipelines.length <= 1) return;
+    const pipelineName = currentPipelineConfig?.nome || currentPipelineKey;
     if (confirm(`Excluir pipeline "${pipelineName}"?`)) {
-      const otherPipeline = safePipelines.find((p: any) => p?.id !== safeCurrentPipelineId);
+      const otherPipeline = safePipelines.find((p: any) => p?.id !== currentPipelineKey);
       if (otherPipeline?.id) {
         setCurrentPipelineId(otherPipeline.id);
       }
-      deletePipeline(safeCurrentPipelineId);
+      deletePipeline(currentPipelineKey);
     }
     setShowPipelineMenu(false);
   };
@@ -3102,7 +3103,7 @@ if (
       ordem: colunas.length + 1,
       cor: columnFormData.cor
     };
-    addColumn(currentPipelineConfig?.id || safeCurrentPipelineId, newColumn);
+    addColumn(String(currentPipelineConfig?.id ?? currentPipelineId ?? ""), newColumn);
     setShowColumnModal(false);
     setColumnFormData({ nome: "", cor: "#3b82f6" });
   };
@@ -3110,7 +3111,7 @@ if (
   const handleEditColumn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingColumn) return;
-    updateColumn(currentPipelineConfig?.id || safeCurrentPipelineId, editingColumn.id, editingColumn.nome);
+    updateColumn(String(currentPipelineConfig?.id ?? currentPipelineId ?? ""), editingColumn.id, editingColumn.nome);
     setEditingColumn(null);
   };
 
@@ -3121,7 +3122,7 @@ if (
       return;
     }
     if (confirm("Excluir esta coluna?")) {
-      deleteColumn(currentPipelineConfig?.id || safeCurrentPipelineId, columnId);
+      deleteColumn(String(currentPipelineConfig?.id ?? currentPipelineId ?? ""), columnId);
     }
   };
 
@@ -5734,7 +5735,7 @@ if (
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-slate-600 mb-1">Pipeline *</label>
                     <select
-                      value={formData.pipelineId || safeCurrentPipelineId || ""}
+                      value={formData.pipelineId || currentPipelineId || ""}
                       onChange={(e) => setFormData({ ...formData, pipelineId: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
                       required
@@ -5756,8 +5757,8 @@ if (
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
                       required
                     >
-                      {(getPipelineStages(formData.pipelineId || safeCurrentPipelineId || "").length > 0
-                        ? getPipelineStages(formData.pipelineId || safeCurrentPipelineId || "").map((stageName) => ({
+                      {(getPipelineStages(formData.pipelineId || currentPipelineId || "").length > 0
+                        ? getPipelineStages(formData.pipelineId || currentPipelineId || "").map((stageName) => ({
                             id: normalizeKey(stageName),
                             nome: stageName,
                           }))
