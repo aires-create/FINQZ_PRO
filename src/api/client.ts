@@ -127,8 +127,6 @@ export const api = {
     if (params?.parceiro_id) query.set("parceiro_id", params.parceiro_id);
     return apiFetch<any>(`/api/oportunidades${query.toString() ? "?" + query.toString() : ""}`);
   },
-  getOportunidadesPipeline: (produtoId?: string) =>
-    apiFetch<any>(`/api/oportunidades/pipeline${produtoId ? `?produto_id=${produtoId}` : ""}`),
   getOportunidade: (id: number) => apiFetch<any>(`/api/oportunidades/${id}`),
   createOportunidade: (data: any) =>
     apiFetch<any>("/api/oportunidades", {

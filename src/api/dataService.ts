@@ -139,13 +139,6 @@ export const dataService = {
       }
       return api.deleteOportunidade(id);
     },
-    
-    getPipeline: async (produtoId?: string): Promise<any> => {
-      if (USE_MOCKS) {
-        return { etapas: [], colunas: [] };
-      }
-      return api.getOportunidadesPipeline(produtoId);
-    },
   },
 
   // ========================================
