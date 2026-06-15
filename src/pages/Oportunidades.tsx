@@ -2003,6 +2003,23 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         etapas: selectedCatalogStages,
       }
     : null;
+
+  // Adapter local do formulário: pipeline oficial selecionado no form, independente do pipeline ativo da página.
+  const formSelectedOfficialPipeline = useMemo(
+    () => officialPipelines.find((pipeline: any) => String(pipeline?.id ?? "") === String(formData.pipelineId ?? "")) ?? null,
+    [officialPipelines, formData.pipelineId],
+  );
+
+  const formOfficialStages = useMemo(() => {
+    const stages = Array.isArray(formSelectedOfficialPipeline?.stages)
+      ? formSelectedOfficialPipeline.stages
+      : [];
+
+    return stages
+      .map((stage: any) => String(stage?.name ?? stage?.id ?? stage ?? ""))
+      .filter((stageName: string) => stageName.length > 0);
+  }, [formSelectedOfficialPipeline]);
+
   const matchedOfficialPipelineForSelection = useMemo(() => {
     if (selectedOfficialPipeline) {
       return selectedOfficialPipeline;
@@ -5738,9 +5755,9 @@ if (
                       required
                     >
                       <option value="" disabled>Selecione um pipeline</option>
-                      {catalogPipelineOptions.map((pipeline) => (
+                      {officialPipelines.map((pipeline: any) => (
                         <option key={pipeline.id} value={pipeline.id}>
-                          {pipeline.name}
+                          {`Pipeline - ${String(pipeline?.name ?? "Pipeline")}`}
                         </option>
                       ))}
                     </select>
@@ -5754,12 +5771,17 @@ if (
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
                       required
                     >
-                      {(getPipelineStages(formData.pipelineId || currentPipelineId || "").length > 0
-                        ? getPipelineStages(formData.pipelineId || currentPipelineId || "").map((stageName) => ({
+                      {(formOfficialStages.length > 0
+                        ? formOfficialStages.map((stageName) => ({
                             id: normalizeKey(stageName),
                             nome: stageName,
                           }))
-                        : OFICIAL_ETAPAS.map((etapa) => ({ id: etapa.key, nome: etapa.label }))).map((etapa) => (
+                        : getPipelineStages(formData.pipelineId || currentPipelineId || "").length > 0
+                          ? getPipelineStages(formData.pipelineId || currentPipelineId || "").map((stageName) => ({
+                              id: normalizeKey(stageName),
+                              nome: stageName,
+                            }))
+                          : OFICIAL_ETAPAS.map((etapa) => ({ id: etapa.key, nome: etapa.label }))).map((etapa) => (
                         <option key={etapa.id} value={etapa.id}>
                           {etapa.nome}
                         </option>
