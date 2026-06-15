@@ -341,16 +341,3 @@ export const getSubproductById = (productId: string, subproductId: string): Subp
   const subproducts = getSubproductsByProductId(productId);
   return subproducts.find((item) => item?.id === subproductId);
 };
-
-/**
- * Obtém pipeline por ID de produto
- */
-export const getPipelineByProductId = (productId: string): { id: string; code: string; name: string } | undefined => {
-  const product = getProductById(productId);
-  if (!product) return undefined;
-  return {
-    id: product.pipelineId,
-    code: product.pipelineCode,
-    name: product.pipelineName
-  };
-};

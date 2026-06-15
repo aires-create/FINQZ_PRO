@@ -18,7 +18,6 @@ import {
   getProductById,
   getProductByCode,
   getSubproductById,
-  getPipelineByProductId,
   getModalityLabel
 } from './creditPfCatalog';
 
@@ -487,6 +486,5 @@ export {
   getProductById,
   getProductByCode,
   getSubproductById,
-  getPipelineByProductId,
   getModalityLabel
 };

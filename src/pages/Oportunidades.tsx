@@ -15,7 +15,7 @@ import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
 import { KanbanColumn, PipelineSelect, getStageColor, formatCurrency, filterOportunitiesByPipeline, groupOportunitiesByStage, calculateTotalsByStage } from "../components/pipeline";
-import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, getPipelineByProductId, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages, getPipelineStageColor } from "../data/catalogRepository";
+import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages, getPipelineStageColor } from "../data/catalogRepository";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
@@ -1950,12 +1950,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   // Drag state
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-  
-  // Get pipeline for selected product
-  const getPipelineForProduct = (produtoId: string) => {
-    if (!produtoId) return null;
-    return getPipelineByProductId(produtoId) ?? null;
-  };
   
   // Handle product/pipeline selection - switch pipeline
   const handleProductChange = (produtoId: string) => {
