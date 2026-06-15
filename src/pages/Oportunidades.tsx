@@ -2739,7 +2739,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       produto_id: selectedProductId || null,
       
       // Pipeline (novo sistema PIPELINES)
-      pipeline_id: currentPipelineConfig?.id || selectedProductId || "consignado",
+      pipeline_id: String(formData.pipelineId || currentPipelineConfig?.id || "").trim(),
       pipelineNome: currentPipelineConfig?.nome,
       pipelineTipo: currentPipelineConfig?.tipo,
       etapa: etapaId,
@@ -2967,10 +2967,22 @@ const handleSubmitEdit = async (e: React.FormEvent) => {
     etapaId === "perdido" ? "perdido" :
     "ativo";
 
+  const explicitPipelineId = String(formData.pipelineId || lead.pipeline_id || "").trim();
+
+  if (!explicitPipelineId) {
+    console.error("[Oportunidades] Update bloqueado: pipelineId explícito ausente.", {
+      leadId: lead.id,
+      formPipelineId: formData.pipelineId,
+      leadPipelineId: lead.pipeline_id,
+    });
+    alert("Não foi possível salvar: pipelineId explícito ausente.");
+    return;
+  }
+
   const payload = {
     nome: formData.nome || "Sem nome",
     valor: Number(formData.valor || 0),
-    pipeline_id: String(formData.pipelineId || lead.pipeline_id || safeCurrentPipelineId || ""),
+    pipeline_id: explicitPipelineId,
     etapa_id: etapaId,
     status: novoStatus,
     cliente_id: formData.cliente_id || null,
@@ -3201,7 +3213,7 @@ if (
       subproductId: leadSubproductId,
       subproductCode: String(lead.subproductCode ?? ""),
       modality: leadModality,
-      pipelineId: String(lead.pipeline_id ?? safeCurrentPipelineId ?? cleanFormData.pipelineId),
+      pipelineId: String(cleanFormData.pipelineId || lead.pipeline_id || "").trim(),
       pipelineCode: String(lead.pipelineCode ?? ""),
       catalogVersion:
         typeof lead.catalogVersion === "number" && Number.isFinite(lead.catalogVersion)
