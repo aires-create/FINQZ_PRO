@@ -1520,6 +1520,7 @@ async function createRolePermissions(
         'customer:update',
         'customer:delete',
         'customer:export',
+        'master-catalog:read',
         'commercial-request:read',
         'commercial-request:approve',
         'commercial-request:reject',
