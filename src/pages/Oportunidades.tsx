@@ -728,8 +728,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedModality, setSelectedModality] = useState<string>("");
   const [pipelineSelectionReady, setPipelineSelectionReady] = useState(false);
   
-  // Opções do catálogo de crédito PF (memoized para performance)
-  const catalogPipelineOptions = useMemo(() => getPipelineOptions(), []);
   const selectedPipelineId = useMemo(() => {
     if (!pipelineSelectionReady) return "";
     if (!currentPipelineId) return "";
@@ -1976,8 +1974,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       officialPipelines.find((pipeline: any) => String(pipeline?.id ?? "") === selectedPipelineId) ?? null,
     [officialPipelines, selectedPipelineId],
   );
-  const selectedCatalogPipeline = catalogPipelineOptions.find((pipeline) => pipeline.id === selectedPipelineId);
-  const selectedCatalogStages = selectedCatalogPipeline ? getPipelineStages(selectedCatalogPipeline.id) : [];
   const selectedOfficialStages = Array.isArray(selectedOfficialPipeline?.stages)
     ? selectedOfficialPipeline.stages.map((stage: any) => String(stage?.name ?? stage?.id ?? "Etapa"))
     : [];
@@ -1993,14 +1989,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         ),
         descricao: String(selectedOfficialPipeline.name ?? ""),
         etapas: selectedOfficialStages,
-      }
-    : selectedCatalogPipeline
-    ? {
-        id: selectedCatalogPipeline.id,
-        nome: selectedCatalogPipeline.name,
-        tipo: inferPipelineTipo(selectedCatalogPipeline.id),
-        descricao: selectedCatalogPipeline.name,
-        etapas: selectedCatalogStages,
       }
     : null;
 
@@ -2046,7 +2034,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   // HARDENING: Com normalizeKey e fallback seguro
   const etapasAtivasRaw = Array.isArray(currentPipelineConfig?.etapas)
     ? currentPipelineConfig.etapas.map((key: string, index: number) => {
-        const stageName = selectedCatalogStages[index] || String(key);
+        const stageName = String(key);
         const etapaOriginal = OFICIAL_ETAPAS.find(
           e => normalizeKey(e.key) === normalizeKey(key) || normalizeKey(e.label) === normalizeKey(stageName)
         );
