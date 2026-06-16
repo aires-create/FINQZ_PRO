@@ -5,7 +5,7 @@
 // - Estrutura completa (API/Integrações/Automações/Financeiro)
 // - Importação e Exportação CSV/JSON
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import {
   Plus,
   Search,
@@ -405,10 +405,43 @@ const EstruturaComercialPage: React.FC = () => {
   // Estado do FilterDrawer
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
+  const [isBootstrappingCatalog, setIsBootstrappingCatalog] = useState(false);
+  const hasBootstrappedCatalogRef = useRef(false);
+
+  useEffect(() => {
+    if (hasBootstrappedCatalogRef.current) return;
+    hasBootstrappedCatalogRef.current = true;
+
+    let cancelled = false;
+
+    const bootstrapCatalog = async () => {
+      setIsBootstrappingCatalog(true);
+
+      try {
+        const newEstrutura = await loadEstruturaComercialFromMasterCatalog();
+
+        if (!cancelled && Array.isArray(newEstrutura) && newEstrutura.length > 0) {
+          setEstruturaComercial(newEstrutura);
+        }
+      } catch (error) {
+        console.error("[EstruturaComercial] Bootstrap do Master Catalog falhou:", error);
+      } finally {
+        if (!cancelled) {
+          setIsBootstrappingCatalog(false);
+        }
+      }
+    };
+
+    void bootstrapCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setEstruturaComercial]);
 
   // Handler: Sincronizar com Catálogo PF Credit
   const handleSyncWithCatalog = async () => {
-    if (isSyncingCatalog) return;
+    if (isSyncingCatalog || isBootstrappingCatalog) return;
 
     if (!confirm("Isso irá substituir a estrutura atual pelos dados do Master Catalog. Deseja continuar?")) {
       return;
@@ -1067,7 +1100,11 @@ const EstruturaComercialPage: React.FC = () => {
               className="flex items-center gap-1"
             >
               <RefreshCw size={14} />
-              {isSyncingCatalog ? "Sincronizando..." : "Sincronizar Catálogo"}
+              {isBootstrappingCatalog
+                ? "Carregando catálogo..."
+                : isSyncingCatalog
+                  ? "Sincronizando..."
+                  : "Sincronizar Catálogo"}
             </Button>
           </div>
         }
