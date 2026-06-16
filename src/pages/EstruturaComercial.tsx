@@ -55,7 +55,7 @@ import {
 } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
-import { creditPfCatalog, getActiveProducts } from "../data/catalogRepository";
+import { creditPfCatalog } from "../data/catalogRepository";
 import { loadEstruturaComercialFromMasterCatalog } from "../features/master-catalog/loadEstruturaComercialFromMasterCatalog";
 
 // Tipos de fornecedor para select
@@ -287,89 +287,6 @@ const formatModalityLabel = (modality: string): string => {
     TRANSFERENCIA_COTA: "Transferência de Cota"
   };
   return labels[modality] || modality || "Não informado";
-};
-
-/**
- * Converte o creditPfCatalog para o formato EstruturaComercial
- * Usado para sincronizar a estrutura comercial com o catálogo de produtos
- */
-const buildEstruturaFromCatalog = (): EstruturaComercial[] => {
-  const now = Date.now();
-  const items: EstruturaComercial[] = [];
-  let id = 1;
-
-  // Verificar se o catálogo existe e é um array
-  const safeCatalog = Array.isArray(creditPfCatalog) ? creditPfCatalog : [];
-
-  // Nível 1: Vertical de Negócio (Crédito PF)
-  const verticalId = id++;
-  items.push({
-    id: verticalId,
-    nivel: "vertical",
-    nome: "Crédito PF",
-    descricao: "Produtos de crédito para pessoa física",
-    ativo: 1,
-    created_at: now,
-    updated_at: now
-  });
-
-  // Para cada produto no catálogo
-  safeCatalog.filter(p => p?.active).forEach((product) => {
-    if (!product?.id || !product?.name) return;
-
-    // Nível 2: Produto
-    const produtoId = id++;
-    items.push({
-      id: produtoId,
-      parent_id: verticalId,
-      nivel: "produto",
-      nome: product.name,
-      codigo: product.code,
-      descricao: product.name,
-      ativo: product.active ? 1 : 0,
-      created_at: now,
-      updated_at: now
-    });
-
-    // Nível 3: Subprodutos
-    const safeSubproducts = Array.isArray(product.subproducts) ? product.subproducts : [];
-    safeSubproducts.filter(sp => sp?.active).forEach((subproduct) => {
-      if (!subproduct?.id || !subproduct?.name) return;
-
-      const subprodutoId = id++;
-      const modalityLabels = (subproduct.modalities || []).map(formatModalityLabel).join(", ");
-      
-      items.push({
-        id: subprodutoId,
-        parent_id: produtoId,
-        nivel: "subproduto",
-        nome: subproduct.name,
-        codigo: subproduct.code,
-        descricao: `Modalidades: ${modalityLabels}`,
-        ativo: subproduct.active ? 1 : 0,
-        created_at: now,
-        updated_at: now
-      });
-
-      // Nível 4: Modalidades (usando labels amigáveis)
-      const safeModalities = Array.isArray(subproduct.modalities) ? subproduct.modalities : [];
-      safeModalities.forEach((modality) => {
-        items.push({
-          id: id++,
-          parent_id: subprodutoId,
-          nivel: "tabela_plano_campanha",
-          nome: formatModalityLabel(modality),
-          codigo: modality,
-          descricao: "Modalidade permitida",
-          ativo: 1,
-          created_at: now,
-          updated_at: now
-        });
-      });
-    });
-  });
-
-  return items;
 };
 
 const EstruturaComercialPage: React.FC = () => {
