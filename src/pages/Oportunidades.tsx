@@ -5776,12 +5776,7 @@ if (
                             id: normalizeKey(stageName),
                             nome: stageName,
                           }))
-                        : getPipelineStages(formData.pipelineId || currentPipelineId || "").length > 0
-                          ? getPipelineStages(formData.pipelineId || currentPipelineId || "").map((stageName) => ({
-                              id: normalizeKey(stageName),
-                              nome: stageName,
-                            }))
-                          : OFICIAL_ETAPAS.map((etapa) => ({ id: etapa.key, nome: etapa.label }))).map((etapa) => (
+                        : OFICIAL_ETAPAS.map((etapa) => ({ id: etapa.key, nome: etapa.label }))).map((etapa) => (
                         <option key={etapa.id} value={etapa.id}>
                           {etapa.nome}
                         </option>
