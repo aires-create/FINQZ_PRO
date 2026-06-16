@@ -977,6 +977,8 @@ const EstruturaComercialPage: React.FC = () => {
 
   // Itens raiz (sem pai)
   const rootItems = filteredEstrutura.filter((item) => !item.parent_id || item.parent_id === null);
+  const rootSegments = rootItems.filter((item) => item.nivel === "vertical");
+  const rootProducts = rootItems.filter((item) => item.nivel === "produto");
 
   return (
     <div className="app-page">
@@ -1088,7 +1090,41 @@ const EstruturaComercialPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              rootItems.map((item) => renderItem(item))
+              <div className="space-y-6">
+                <section className="space-y-3">
+                  <div className="px-4 pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+                      Segmentos Comerciais
+                    </h3>
+                  </div>
+                  <div className="border-t border-[var(--border-muted)]">
+                    {rootSegments.length > 0 ? (
+                      rootSegments.map((item) => renderItem(item))
+                    ) : (
+                      <div className="px-4 py-6 text-sm text-slate-500">
+                        Nenhum segmento comercial encontrado
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <div className="px-4 pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+                      Produtos Comerciais
+                    </h3>
+                  </div>
+                  <div className="border-t border-[var(--border-muted)]">
+                    {rootProducts.length > 0 ? (
+                      rootProducts.map((item) => renderItem(item))
+                    ) : (
+                      <div className="px-4 py-6 text-sm text-slate-500">
+                        Nenhum produto comercial encontrado
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
             )}
           </div>
         </Card>
