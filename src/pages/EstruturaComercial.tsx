@@ -55,7 +55,6 @@ import {
 } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
-import { creditPfCatalog } from "../data/catalogRepository";
 import { loadEstruturaComercialFromMasterCatalog } from "../features/master-catalog/loadEstruturaComercialFromMasterCatalog";
 
 // Tipos de fornecedor para select
@@ -1522,3 +1521,4 @@ const EstruturaComercialPage: React.FC = () => {
 };
 
 export default EstruturaComercialPage;
+
