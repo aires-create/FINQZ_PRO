@@ -70,6 +70,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   // Operações
   "/app/operacoes/parceiros": "customer:view",
   "/app/operacoes/estrutura-comercial": "sales:view",
+  "/app/operacoes/commercial-coverage": "sales:view",
   "/app/operacoes/tabelas-comerciais": "sales:view",
   "/app/operacoes/roteiros": "roteiros:read",
   "/app/operacoes/financeiro": "finance:view",
@@ -151,6 +152,7 @@ const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   // Operações
   "/app/operacoes/parceiros": { title: "Parceiros", icon: Handshake },
   "/app/operacoes/estrutura-comercial": { title: "Estrutura Comercial", icon: Building2 },
+  "/app/operacoes/commercial-coverage": { title: "Coverage Comercial", icon: Layers },
   "/app/operacoes/tabelas-comerciais": { title: "Tabelas Comerciais", icon: Table2 },
   "/app/operacoes/roteiros": { title: "Roteiros Operacionais", icon: ClipboardList },
   "/app/operacoes/financeiro": { title: "Financeiro", icon: Wallet },
@@ -216,7 +218,8 @@ const menuGroups: MenuGroup[] = [
     icon: Building2,
     items: [
       { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
-      { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
+      { path: "/app/operacoes/commercial-coverage", label: "Coverage Comercial", icon: Layers, permission: "sales:view" },
+  { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
       { path: "/app/operacoes/tabelas-comerciais", label: "Tabelas Comerciais", icon: Table2, permission: "sales:view" },
       { path: "/app/operacoes/roteiros", label: "Roteiros Operacionais", icon: ClipboardList, permission: "roteiros:read" },
       { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "finance:view" },
@@ -267,6 +270,7 @@ const dashboardSidebarItems: MenuItem[] = [
   { path: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard:view" },
   { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "customer:read" },
   { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "sales:view" },
+  { path: "/app/operacoes/commercial-coverage", label: "Coverage Comercial", icon: Layers, permission: "sales:view" },
   { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
   { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
   { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "report:view" },
@@ -720,3 +724,5 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     </div>
   );
 };
+
+
