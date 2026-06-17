@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Building2, Layers, Package } from "lucide-react";
 
 import { PageHeader } from "../components/layout/PageHeader";
+import { CommercialCoverageTree } from "../components/commercial-coverage/CommercialCoverageTree";
 import { loadCommercialStructureCoverageTree } from "../features/commercial-structure/loadCommercialStructureCoverageTree";
 import type { CommercialStructureCoverageTreeView } from "../features/commercial-structure/commercialStructureCoverage.types";
 
@@ -117,16 +118,7 @@ const CommercialCoveragePage: React.FC = () => {
         ) : errorMessage ? (
           <p className="text-sm text-red-500">{errorMessage}</p>
         ) : (
-          <div>
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-              Coverage Read-Only Foundation
-            </h2>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">
-              Esta tela já consome a cadeia canônica Master Catalog → Coverage
-              Loader → Coverage Mapper, sem store legado, sem CRUD e sem fontes
-              paralelas.
-            </p>
-          </div>
+          <CommercialCoverageTree tree={coverageTree} />
         )}
       </div>
     </div>
@@ -134,3 +126,6 @@ const CommercialCoveragePage: React.FC = () => {
 };
 
 export default CommercialCoveragePage;
+
+
+
