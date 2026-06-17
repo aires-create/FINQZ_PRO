@@ -61,3 +61,16 @@ export interface CommercialCoverageViewModel {
   reason?: string | null
   notes?: string | null
 }
+
+export interface CommercialStructureCoverageTreeView {
+  segments: CommercialStructureSegmentView[]
+  products: Array<
+    CommercialStructureProductView & {
+      subproducts: Array<
+        CommercialStructureSubproductView & {
+          modalities: CommercialStructureModalityView[]
+        }
+      >
+    }
+  >
+}

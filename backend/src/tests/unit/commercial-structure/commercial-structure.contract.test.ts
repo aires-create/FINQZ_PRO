@@ -4,6 +4,7 @@ import {
   type CommercialCoverageStatus,
   type CommercialCoverageViewModel,
   type CommercialStructureModalityView,
+  type CommercialStructureCoverageTreeView,
   type CommercialStructureProductView,
   type CommercialStructureSegmentView,
   type CommercialStructureSubproductView,
@@ -91,5 +92,50 @@ describe('Commercial Structure canonical contracts', () => {
     expect(coverage.productId).toBe('product-id')
     expect(coverage.subproductId).toBe('subproduct-id')
     expect(coverage.modalityId).toBe('modality-id')
+  })
+  it('supports canonical commercial structure coverage tree view', () => {
+    const tree: CommercialStructureCoverageTreeView = {
+      segments: [
+        {
+          id: 'segment-id',
+          code: 'PF',
+          name: 'Pessoa Física',
+          status: 'ACTIVE',
+          displayOrder: 1,
+        },
+      ],
+      products: [
+        {
+          id: 'product-id',
+          code: 'CREDIT',
+          name: 'Crédito',
+          status: 'ACTIVE',
+          displayOrder: 1,
+          subproducts: [
+            {
+              id: 'subproduct-id',
+              productId: 'product-id',
+              code: 'INSS',
+              name: 'INSS',
+              status: 'ACTIVE',
+              displayOrder: 1,
+              modalities: [
+                {
+                  id: 'modality-id',
+                  subproductId: 'subproduct-id',
+                  code: 'NEW_LOAN',
+                  name: 'Novo Empréstimo',
+                  status: 'ACTIVE',
+                  displayOrder: 1,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    expect(tree.segments).toHaveLength(1)
+    expect(tree.products[0]?.subproducts[0]?.modalities).toHaveLength(1)
   })
 })
