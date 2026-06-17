@@ -4,6 +4,7 @@ import { ProtectedRoute } from "../auth/guards";
 
 const ParceirosPage = lazy(() => import("../pages/Parceiros"));
 const EstruturaComercialPage = lazy(() => import("../pages/EstruturaComercial"));
+const CommercialCoveragePage = lazy(() => import("../pages/CommercialCoverage"));
 const RoteirosOperacionaisPage = lazy(() => import("../pages/RoteirosOperacionais"));
 const FinanceiroPage = lazy(() => import("../pages/Financeiro"));
 const ContaCorrentePage = lazy(() => import("../pages/ContaCorrente"));
@@ -101,6 +102,18 @@ export const operacoesRoutes = (
       }
     />
     <Route
+      path="operacoes/commercial-coverage"
+      element={
+        <ProtectedRoute
+          requiredPermission="SALES_VIEW"
+          requiredModule="estrutura_comercial"
+          requiredAction="view"
+        >
+          <CommercialCoveragePage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="operacoes/tabelas-comerciais"
       element={
         <ProtectedRoute requiredPermission="sales:view">
@@ -162,3 +175,4 @@ export const operacoesRoutes = (
     <Route path="relatorios" element={<Navigate to="/app/operacoes/relatorios" replace />} />
   </>
 );
+
