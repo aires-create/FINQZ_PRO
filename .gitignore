@@ -48,3 +48,6 @@ __generated__/
 .tmp-*
 .tmp-chrome-*
 **/*.tsbuildinfo
+
+# Local deployment artifacts
+dist-hml-*.tar.gz
