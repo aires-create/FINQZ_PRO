@@ -8,6 +8,8 @@ Data: Junho/2026
 
 Owner: FINQZ PRO Enterprise Architecture
 
+---
+
 # 1. Objetivo
 
 Definir os contratos canônicos oficiais da Commercial Structure Coverage.
