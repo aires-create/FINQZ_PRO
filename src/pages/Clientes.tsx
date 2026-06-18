@@ -15,8 +15,8 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
     return `#C-${String(index + 1).padStart(4, '0')}`;
   }
   
-  // Prioridade 1: código já existente
-  const raw = cliente?.codigo || cliente?.code || cliente?.id;
+  // Prioridade: código já existente, sem cair no id técnico
+  const raw = cliente?.codigo || cliente?.code || (cliente as any)?.customerCode;
   
   if (raw !== undefined && raw !== null) {
     const num = String(raw).replace(/\D/g, '');
