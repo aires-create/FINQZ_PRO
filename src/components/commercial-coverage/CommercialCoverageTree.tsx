@@ -4,7 +4,7 @@ import { Building2, Layers, Package } from "lucide-react";
 import type { CommercialStructureCoverageTreeView } from "../../features/commercial-structure/commercialStructureCoverage.types";
 
 type CommercialCoverageTreeProps = {
-  tree: CommercialStructureCoverageTreeView;
+  tree: CommercialStructureCoverageTreeView | null;
 };
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
@@ -16,6 +16,16 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
 export const CommercialCoverageTree: React.FC<CommercialCoverageTreeProps> = ({
   tree,
 }) => {
+  if (!tree) {
+    return (
+      <div className="rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface)] p-6">
+        <p className="text-sm text-[var(--text-muted)]">
+          Nenhuma cobertura comercial disponível para exibição.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface)] p-6">
