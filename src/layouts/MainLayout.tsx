@@ -219,7 +219,6 @@ const menuGroups: MenuGroup[] = [
     items: [
       { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
       { path: "/app/operacoes/commercial-coverage", label: "Coverage Comercial", icon: Layers, permission: "sales:view" },
-  { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
       { path: "/app/operacoes/tabelas-comerciais", label: "Tabelas Comerciais", icon: Table2, permission: "sales:view" },
       { path: "/app/operacoes/roteiros", label: "Roteiros Operacionais", icon: ClipboardList, permission: "roteiros:read" },
       { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "finance:view" },
@@ -271,7 +270,6 @@ const dashboardSidebarItems: MenuItem[] = [
   { path: "/app/crm/clientes", label: "CRM de Clientes", icon: Users, permission: "customer:read" },
   { path: "/app/crm/pipeline", label: "Pipeline", icon: TrendingUp, permission: "sales:view" },
   { path: "/app/operacoes/commercial-coverage", label: "Coverage Comercial", icon: Layers, permission: "sales:view" },
-  { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
   { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
   { path: "/app/operacoes/relatorios", label: "Relatórios", icon: BarChart3, permission: "report:view" },
   { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "finance:view" },
