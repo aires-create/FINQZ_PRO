@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { ZodError } from 'zod';
 
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
 import { logger } from '../../shared/logger.js';
@@ -15,7 +16,22 @@ const getTenantId = (request: FastifyRequest) => {
   return tenantId;
 };
 
+const getActorId = (request: FastifyRequest) => {
+  return request.currentUser?.userId ?? request.currentTenant?.userId ?? null;
+};
+
 const handleRouteError = (error: unknown, reply: FastifyReply) => {
+  if (error instanceof ZodError) {
+    return reply.status(400).send({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation error',
+        details: error.flatten(),
+      },
+    });
+  }
+
   if (error instanceof TenantScopeViolationError) {
     return reply.status(403).send({
       success: false,
