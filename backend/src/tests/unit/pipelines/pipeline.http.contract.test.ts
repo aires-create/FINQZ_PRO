@@ -1,0 +1,91 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+import {
+  createPipelineBodySchema,
+  createStageBodySchema,
+  pipelineIdParamsSchema,
+  reorderStagesBodySchema,
+  stageIdParamsSchema,
+  updatePipelineBodySchema,
+} from '../../../modules/pipelines/validators/pipeline.http.schema.js';
+import {
+  createPipelineHttpContract,
+  createStageHttpContract,
+  deletePipelineHttpContract,
+  deleteStageHttpContract,
+  reorderStagesHttpContract,
+  updatePipelineHttpContract,
+  updateStageHttpContract,
+} from '../../../modules/pipelines/presentation/http/pipeline.http.contract.js';
+
+const contractSource = readFileSync(
+  resolve(process.cwd(), 'src/modules/pipelines/presentation/http/pipeline.http.contract.ts'),
+  'utf8',
+);
+
+describe('pipeline.http.contract', () => {
+  it('createPipelineBodySchema rejects empty name', () => {
+    expect(() => createPipelineBodySchema.parse({ name: '   ' })).toThrow();
+  });
+
+  it('updatePipelineBodySchema accepts partial payloads', () => {
+    expect(
+      updatePipelineBodySchema.parse({
+        description: 'Updated description',
+      }),
+    ).toEqual({
+      description: 'Updated description',
+    });
+  });
+
+  it('createStageBodySchema rejects won and lost together', () => {
+    expect(() =>
+      createStageBodySchema.parse({
+        name: 'Novo Lead',
+        order: 1,
+        isWon: true,
+        isLost: true,
+      }),
+    ).toThrow();
+  });
+
+  it('createStageBodySchema rejects order lower than 1', () => {
+    expect(() =>
+      createStageBodySchema.parse({
+        name: 'Novo Lead',
+        order: 0,
+        isWon: false,
+        isLost: false,
+      }),
+    ).toThrow();
+  });
+
+  it('reorderStagesBodySchema rejects empty array', () => {
+    expect(() => reorderStagesBodySchema.parse({ stages: [] })).toThrow();
+  });
+
+  it('pipelineIdParamsSchema rejects invalid uuid', () => {
+    expect(() => pipelineIdParamsSchema.parse({ pipelineId: 'not-a-uuid' })).toThrow();
+  });
+
+  it('stageIdParamsSchema rejects invalid uuid', () => {
+    expect(() => stageIdParamsSchema.parse({ stageId: 'not-a-uuid' })).toThrow();
+  });
+
+  it('contracts use correct permissions', () => {
+    expect(createPipelineHttpContract.permission).toBe('pipeline:create');
+    expect(updatePipelineHttpContract.permission).toBe('pipeline:update');
+    expect(deletePipelineHttpContract.permission).toBe('pipeline:delete');
+    expect(createStageHttpContract.permission).toBe('stage:create');
+    expect(updateStageHttpContract.permission).toBe('stage:update');
+    expect(deleteStageHttpContract.permission).toBe('stage:delete');
+    expect(reorderStagesHttpContract.permission).toBe('stage:update');
+  });
+
+  it('contracts do not include code or isActive', () => {
+    expect(contractSource).not.toContain('code');
+    expect(contractSource).not.toContain('isActive');
+  });
+});
