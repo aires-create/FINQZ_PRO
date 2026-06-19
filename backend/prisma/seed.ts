@@ -748,6 +748,36 @@ async function createPermissions() {
       action: PermissionAction.DELETE,
     },
 
+    // Stage permissions
+    {
+      name: 'Create Stage',
+      slug: 'stage:create',
+      description: 'Create new stages',
+      resource: 'stages',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Read Stage',
+      slug: 'stage:read',
+      description: 'View stage information',
+      resource: 'stages',
+      action: PermissionAction.READ,
+    },
+    {
+      name: 'Update Stage',
+      slug: 'stage:update',
+      description: 'Update stage information',
+      resource: 'stages',
+      action: PermissionAction.UPDATE,
+    },
+    {
+      name: 'Delete Stage',
+      slug: 'stage:delete',
+      description: 'Delete stages',
+      resource: 'stages',
+      action: PermissionAction.DELETE,
+    },
+
     // Commercial Governance permissions
     {
       name: 'Create Commercial Request',
@@ -1092,6 +1122,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:create', 'partner:read', 'partner:update', 'partner:delete', 'partner:assign',
         // Pipeline management
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        // Stage management
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
         // Reports
         'report:read', 'report:export',
         // Audit
@@ -1127,6 +1159,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:read', 'partner:update', 'partner:assign',
         // Pipeline management
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        // Stage management
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
         // Reports
         'report:read', 'report:export',
       ],
@@ -1155,6 +1189,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:read',
         // Pipeline management (limited)
         'pipeline:read',
+        // Stage management (limited)
+        'stage:read',
         // Reports (limited)
         'report:read',
       ],
@@ -1562,6 +1598,7 @@ async function createRolePermissions(
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:create', 'partner:read', 'partner:update', 'partner:delete', 'partner:assign',
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
         'commercial-request:create', 'commercial-request:read', 'commercial-request:submit', 'commercial-request:approve', 'commercial-request:reject',
         'report:read', 'report:export',
         'audit:read',
@@ -1580,6 +1617,7 @@ async function createRolePermissions(
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:read', 'partner:update', 'partner:assign',
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
         'commercial-request:create', 'commercial-request:read', 'commercial-request:submit', 'commercial-request:approve', 'commercial-request:reject',
         'report:read', 'report:export',
       ],
@@ -1596,6 +1634,7 @@ async function createRolePermissions(
         'commission:read',
         'partner:read',
         'pipeline:read',
+        'stage:read',
         'commercial-request:create', 'commercial-request:read', 'commercial-request:submit',
         'report:read',
       ],
