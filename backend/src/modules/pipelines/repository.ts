@@ -4,6 +4,7 @@ import { prisma } from '../../core/prisma/client.js';
 import type {
   CreatePipelineInput,
 } from './domain/pipeline.contract.js';
+import type { PipelineRepositoryContract } from './domain/pipeline-repository.contract.js';
 
 type PipelinesPrismaClient = typeof prisma | Prisma.TransactionClient;
 
@@ -33,8 +34,8 @@ type UpdateStageRepositoryInput = {
   isWon?: boolean;
   isLost?: boolean;
 };
-type SoftDeletePipelineRepositoryInput = { tenantId: string; pipelineId: string };
-type SoftDeleteStageRepositoryInput = { tenantId: string; stageId: string };
+type SoftDeletePipelineRepositoryInput = { tenantId: string; pipelineId: string; actorUserId?: string };
+type SoftDeleteStageRepositoryInput = { tenantId: string; stageId: string; actorUserId?: string };
 type ReorderStagesRepositoryInput = {
   tenantId: string;
   pipelineId: string;
@@ -48,10 +49,15 @@ const pipelineReadInclude = {
     },
     select: {
       id: true,
+      tenantId: true,
+      pipelineId: true,
       name: true,
       order: true,
       isWon: true,
       isLost: true,
+      createdAt: true,
+      updatedAt: true,
+      deletedAt: true,
     },
     orderBy: {
       order: 'asc',
@@ -83,21 +89,27 @@ const runInTransaction = async <T>(
   return action(client);
 };
 
+const listActiveByTenant = (
+  tenantId: string,
+  client: PipelinesPrismaClient = prisma,
+) => {
+  return client.pipeline.findMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      isActive: true,
+    },
+    include: pipelineReadInclude,
+    orderBy: [
+      { isDefault: 'desc' },
+      { createdAt: 'asc' },
+    ],
+  });
+};
+
 export const pipelinesRepository = {
-  findActiveByTenant(tenantId: string, client: PipelinesPrismaClient = prisma) {
-    return client.pipeline.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-        isActive: true,
-      },
-      include: pipelineReadInclude,
-      orderBy: [
-        { isDefault: 'desc' },
-        { createdAt: 'asc' },
-      ],
-    });
-  },
+  listActiveByTenant,
+  findActiveByTenant: listActiveByTenant,
 
   findById(
     input: FindByIdInput,
@@ -143,11 +155,11 @@ export const pipelinesRepository = {
     });
   },
 
-  updatePipeline(
+  async updatePipeline(
     input: UpdatePipelineRepositoryInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    return client.pipeline.updateMany({
+    await client.pipeline.updateMany({
       where: {
         id: input.pipelineId,
         tenantId: input.tenantId,
@@ -162,11 +174,11 @@ export const pipelinesRepository = {
     });
   },
 
-  softDeletePipeline(
+  async softDeletePipeline(
     input: SoftDeletePipelineRepositoryInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    return client.pipeline.updateMany({
+    await client.pipeline.updateMany({
       where: {
         id: input.pipelineId,
         tenantId: input.tenantId,
@@ -195,11 +207,11 @@ export const pipelinesRepository = {
     });
   },
 
-  updateStage(
+  async updateStage(
     input: UpdateStageRepositoryInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    return client.stage.updateMany({
+    await client.stage.updateMany({
       where: {
         id: input.stageId,
         tenantId: input.tenantId,
@@ -214,11 +226,11 @@ export const pipelinesRepository = {
     });
   },
 
-  softDeleteStage(
+  async softDeleteStage(
     input: SoftDeleteStageRepositoryInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    return client.stage.updateMany({
+    await client.stage.updateMany({
       where: {
         id: input.stageId,
         tenantId: input.tenantId,
@@ -230,11 +242,11 @@ export const pipelinesRepository = {
     });
   },
 
-  reorderStages(
+  async reorderStages(
     input: ReorderStagesRepositoryInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    return runInTransaction(client, async (transaction) => {
+    await runInTransaction(client, async (transaction) => {
       const updates = input.stages.map((stage) =>
         transaction.stage.updateMany({
           where: {
@@ -252,4 +264,4 @@ export const pipelinesRepository = {
       return Promise.all(updates);
     });
   },
-};
+} satisfies PipelineRepositoryContract;
