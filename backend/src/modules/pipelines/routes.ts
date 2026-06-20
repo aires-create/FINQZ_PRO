@@ -111,6 +111,74 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.post(
     '/',
     { preHandler: [requirePermissions('pipeline:create')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines:
+     *   post:
+     *     summary: Create pipeline
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required: [name]
+     *             properties:
+     *               name:
+     *                 type: string
+     *                 minLength: 1
+     *               description:
+     *                 type: string
+     *                 nullable: true
+     *               isDefault:
+     *                 type: boolean
+     *     responses:
+     *       201:
+     *         description: Pipeline created successfully
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               required: [success, message, data]
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   enum: [true]
+     *                 message:
+     *                   type: string
+     *                 data:
+     *                   type: object
+     *       400:
+     *         description: Validation error
+     *         content:
+     *           application/json:
+     *             schema:
+     *               type: object
+     *               required: [success, error]
+     *               properties:
+     *                 success:
+     *                   type: boolean
+     *                   enum: [false]
+     *                 error:
+     *                   type: object
+     *                   properties:
+     *                     code:
+     *                       type: string
+     *                       enum: [VALIDATION_ERROR]
+     *                     message:
+     *                       type: string
+     *                     details:
+     *                       type: object
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
@@ -138,6 +206,50 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.put(
     '/:pipelineId',
     { preHandler: [requirePermissions('pipeline:update')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines/{pipelineId}:
+     *   put:
+     *     summary: Update pipeline
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: pipelineId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               name:
+     *                 type: string
+     *                 minLength: 1
+     *               description:
+     *                 type: string
+     *                 nullable: true
+     *               isDefault:
+     *                 type: boolean
+     *     responses:
+     *       200:
+     *         description: Pipeline updated successfully
+     *       400:
+     *         description: Validation error
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Pipeline not found
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
@@ -167,6 +279,33 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.delete(
     '/:pipelineId',
     { preHandler: [requirePermissions('pipeline:delete')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines/{pipelineId}:
+     *   delete:
+     *     summary: Delete pipeline
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: pipelineId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Pipeline deleted successfully
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Pipeline not found
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
@@ -195,6 +334,54 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.post(
     '/:pipelineId/stages',
     { preHandler: [requirePermissions('stage:create')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines/{pipelineId}/stages:
+     *   post:
+     *     summary: Create stage
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: pipelineId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required: [name, order, isWon, isLost]
+     *             properties:
+     *               name:
+     *                 type: string
+     *                 minLength: 1
+     *               order:
+     *                 type: integer
+     *                 minimum: 1
+     *               isWon:
+     *                 type: boolean
+     *               isLost:
+     *                 type: boolean
+     *             description: isWon and isLost must not be true at the same time.
+     *     responses:
+     *       201:
+     *         description: Stage created successfully
+     *       400:
+     *         description: Validation error
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Pipeline not found
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
@@ -222,6 +409,53 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.put(
     '/stages/:stageId',
     { preHandler: [requirePermissions('stage:update')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines/stages/{stageId}:
+     *   put:
+     *     summary: Update stage
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: stageId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               name:
+     *                 type: string
+     *                 minLength: 1
+     *               order:
+     *                 type: integer
+     *                 minimum: 1
+     *               isWon:
+     *                 type: boolean
+     *               isLost:
+     *                 type: boolean
+     *             description: isWon and isLost must not be true at the same time.
+     *     responses:
+     *       200:
+     *         description: Stage updated successfully
+     *       400:
+     *         description: Validation error
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Stage not found
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
@@ -252,6 +486,33 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.delete(
     '/stages/:stageId',
     { preHandler: [requirePermissions('stage:delete')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines/stages/{stageId}:
+     *   delete:
+     *     summary: Delete stage
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: stageId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     responses:
+     *       200:
+     *         description: Stage deleted successfully
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Stage not found
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
@@ -280,6 +541,56 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.patch(
     '/:pipelineId/stages/reorder',
     { preHandler: [requirePermissions('stage:update')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines/{pipelineId}/stages/reorder:
+     *   patch:
+     *     summary: Reorder stages
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: pipelineId
+     *         required: true
+     *         schema:
+     *           type: string
+     *           format: uuid
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             required: [stages]
+     *             properties:
+     *               stages:
+     *                 type: array
+     *                 minItems: 1
+     *                 items:
+     *                   type: object
+     *                   required: [stageId, order]
+     *                   properties:
+     *                     stageId:
+     *                       type: string
+     *                       format: uuid
+     *                     order:
+     *                       type: integer
+     *                       minimum: 1
+     *     responses:
+     *       200:
+     *         description: Stages reordered successfully
+     *       400:
+     *         description: Validation error
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       404:
+     *         description: Pipeline not found
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);

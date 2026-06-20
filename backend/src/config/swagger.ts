@@ -24,6 +24,7 @@ const swaggerDefinition = {
     { name: 'Permissions', description: 'Granular RBAC permission catalog' },
     { name: 'Integrations', description: 'Provider engine operational and catalog endpoints' },
     { name: 'Master Catalog', description: 'Master catalog read-only endpoints' },
+    { name: 'Pipeline', description: 'Pipeline and stage write operations' },
   ],
   components: {
     securitySchemes: {
