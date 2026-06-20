@@ -132,6 +132,15 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<PipelineContract['stages'][number]> {
     validateStageWrite(input);
 
+    const pipeline = await this.repository.findById({
+      tenantId: input.tenantId,
+      pipelineId: input.pipelineId,
+    });
+
+    if (!pipeline) {
+      throw new PipelineNotFoundError(input.pipelineId);
+    }
+
     return this.repository.createStage({
       tenantId: input.tenantId,
       pipelineId: input.pipelineId,

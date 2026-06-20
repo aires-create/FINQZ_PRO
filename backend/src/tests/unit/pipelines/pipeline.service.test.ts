@@ -164,6 +164,57 @@ describe('PipelinesService', () => {
     expect(repository.createStage).not.toHaveBeenCalled();
   });
 
+  it('createStage looks up pipeline by tenantId and pipelineId before insert', async () => {
+    repository.findById.mockResolvedValueOnce(basePipeline);
+    repository.createStage.mockResolvedValueOnce(baseStage);
+
+    const result = await service.createStage({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+      name: 'Novo Lead',
+      order: 1,
+      isWon: false,
+      isLost: false,
+      actorUserId: 'user-1',
+    });
+
+    expect(repository.findById).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.createStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+      name: 'Novo Lead',
+      order: 1,
+      isWon: false,
+      isLost: false,
+    });
+    expect(result).toBe(baseStage);
+  });
+
+  it('createStage throws PipelineNotFoundError when pipeline is missing', async () => {
+    repository.findById.mockResolvedValueOnce(null);
+
+    await expect(
+      service.createStage({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        name: 'Novo Lead',
+        order: 1,
+        isWon: false,
+        isLost: false,
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(PipelineNotFoundError);
+
+    expect(repository.findById).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.createStage).not.toHaveBeenCalled();
+  });
+
   it('createStage rejects invalid order', async () => {
     await expect(
       service.createStage({
@@ -194,6 +245,35 @@ describe('PipelinesService', () => {
     ).rejects.toThrow('Stage cannot be won and lost at the same time');
 
     expect(repository.createStage).not.toHaveBeenCalled();
+  });
+
+  it('createStage delegates when pipeline exists', async () => {
+    repository.findById.mockResolvedValueOnce(basePipeline);
+    repository.createStage.mockResolvedValueOnce(baseStage);
+
+    const result = await service.createStage({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+      name: 'Novo Lead',
+      order: 1,
+      isWon: false,
+      isLost: false,
+      actorUserId: 'user-1',
+    });
+
+    expect(repository.findById).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.createStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+      name: 'Novo Lead',
+      order: 1,
+      isWon: false,
+      isLost: false,
+    });
+    expect(result).toBe(baseStage);
   });
 
   it('updateStage validates flags', async () => {
