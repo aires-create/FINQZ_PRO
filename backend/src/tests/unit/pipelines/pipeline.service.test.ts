@@ -3,7 +3,11 @@ import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PipelineRepositoryContract } from '../../../modules/pipelines/domain/pipeline-repository.contract.js';
-import { PipelinesService } from '../../../modules/pipelines/service.js';
+import {
+  PipelineNotFoundError,
+  PipelinesService,
+  StageNotFoundError,
+} from '../../../modules/pipelines/service.js';
 
 type PipelineRepositoryMock = PipelineRepositoryContract & {
   listActiveByTenant: ReturnType<typeof vi.fn>;
@@ -197,7 +201,6 @@ describe('PipelinesService', () => {
       service.updateStage({
         id: 'stage-1',
         tenantId: 'tenant-a',
-        pipelineId: 'pipeline-1',
         name: 'Novo Lead',
         isWon: true,
         isLost: true,
@@ -206,6 +209,34 @@ describe('PipelinesService', () => {
     ).rejects.toThrow('Stage cannot be won and lost at the same time');
 
     expect(repository.updateStage).not.toHaveBeenCalled();
+  });
+
+  it('updatePipeline throws PipelineNotFoundError when record is missing', async () => {
+    repository.updatePipeline.mockResolvedValueOnce(undefined);
+    repository.findById.mockResolvedValueOnce(null);
+
+    await expect(
+      service.updatePipeline({
+        id: 'pipeline-1',
+        tenantId: 'tenant-a',
+        name: 'Main Pipeline',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(PipelineNotFoundError);
+  });
+
+  it('updateStage throws StageNotFoundError when record is missing', async () => {
+    repository.updateStage.mockResolvedValueOnce(undefined);
+    repository.findStageById.mockResolvedValueOnce(null);
+
+    await expect(
+      service.updateStage({
+        id: 'stage-1',
+        tenantId: 'tenant-a',
+        name: 'Stage A',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(StageNotFoundError);
   });
 
   it('reorderStages rejects empty list', async () => {
@@ -245,6 +276,20 @@ describe('PipelinesService', () => {
       pipelineId: 'pipeline-1',
     });
     expect(result).toEqual([baseStage]);
+  });
+
+  it('reorderStages throws PipelineNotFoundError when pipeline is missing', async () => {
+    repository.reorderStages.mockResolvedValueOnce([{ count: 1 }]);
+    repository.findById.mockResolvedValueOnce(null);
+
+    await expect(
+      service.reorderStages({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        stages: [{ id: 'stage-1', order: 2 }],
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(PipelineNotFoundError);
   });
 
   it('deactivatePipeline delegates tenantId/pipelineId/actorUserId', async () => {

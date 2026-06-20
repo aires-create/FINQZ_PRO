@@ -84,6 +84,11 @@ describe('pipeline.http.contract', () => {
     expect(reorderStagesHttpContract.permission).toBe('stage:update');
   });
 
+  it('stage contracts use the pipeline-prefixed paths', () => {
+    expect(updateStageHttpContract.path).toBe('/api/v1/pipelines/stages/:stageId');
+    expect(deleteStageHttpContract.path).toBe('/api/v1/pipelines/stages/:stageId');
+  });
+
   it('contracts do not include code or isActive', () => {
     expect(contractSource).not.toContain('code');
     expect(contractSource).not.toContain('isActive');

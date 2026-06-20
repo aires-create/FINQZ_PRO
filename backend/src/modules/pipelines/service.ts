@@ -111,7 +111,7 @@ export class PipelinesService implements PipelineServiceContract {
     });
 
     if (!pipeline) {
-      throw new Error('Pipeline not found');
+      throw new PipelineNotFoundError(input.id);
     }
 
     return pipeline;
@@ -164,7 +164,7 @@ export class PipelinesService implements PipelineServiceContract {
     });
 
     if (!stage) {
-      throw new Error('Stage not found');
+      throw new StageNotFoundError(input.id);
     }
 
     return stage;
@@ -206,10 +206,24 @@ export class PipelinesService implements PipelineServiceContract {
     });
 
     if (!pipeline) {
-      throw new Error('Pipeline not found');
+      throw new PipelineNotFoundError(input.pipelineId);
     }
 
     return pipeline.stages;
+  }
+}
+
+export class PipelineNotFoundError extends Error {
+  constructor(pipelineId: string) {
+    super(`Pipeline ${pipelineId} not found`);
+    this.name = 'PipelineNotFoundError';
+  }
+}
+
+export class StageNotFoundError extends Error {
+  constructor(stageId: string) {
+    super(`Stage ${stageId} not found`);
+    this.name = 'StageNotFoundError';
   }
 }
 

@@ -13,6 +13,21 @@ const serviceMock = vi.hoisted(() => ({
   reorderStages: vi.fn(),
 }));
 
+const serviceErrorsMock = vi.hoisted(() => ({
+  PipelineNotFoundError: class PipelineNotFoundError extends Error {
+    constructor(message = 'Pipeline not found') {
+      super(message);
+      this.name = 'PipelineNotFoundError';
+    }
+  },
+  StageNotFoundError: class StageNotFoundError extends Error {
+    constructor(message = 'Stage not found') {
+      super(message);
+      this.name = 'StageNotFoundError';
+    }
+  },
+}));
+
 vi.mock('../../../core/http/middleware.js', () => ({
   authenticate: async (request: any) => {
     if (!request.headers.authorization) {
@@ -73,6 +88,8 @@ vi.mock('../../../modules/opportunities/services/opportunities.service.js', () =
 
 vi.mock('../../../modules/pipelines/service.js', () => ({
   pipelinesService: serviceMock,
+  PipelineNotFoundError: serviceErrorsMock.PipelineNotFoundError,
+  StageNotFoundError: serviceErrorsMock.StageNotFoundError,
 }));
 
 import { pipelinesRoutes } from '../../../modules/pipelines/routes.js';
@@ -184,6 +201,60 @@ describe('pipelines routes', () => {
       error: {
         code: 'INTERNAL_ERROR',
         message: 'Internal server error',
+      },
+    });
+  });
+
+  it('PipelineNotFoundError returns 404', async () => {
+    serviceMock.updatePipeline.mockRejectedValueOnce(
+      new serviceErrorsMock.PipelineNotFoundError('Pipeline missing'),
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        name: 'Pipeline B',
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Pipeline missing',
+      },
+    });
+  });
+
+  it('StageNotFoundError returns 404', async () => {
+    serviceMock.updateStage.mockRejectedValueOnce(
+      new serviceErrorsMock.StageNotFoundError('Stage missing'),
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:update',
+      },
+      payload: {
+        name: 'Stage B',
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Stage missing',
       },
     });
   });
@@ -368,7 +439,6 @@ describe('pipelines routes', () => {
       tenantId: 'tenant-1',
       actorUserId: 'user-1',
       id: '11111111-1111-1111-1111-111111111111',
-      pipelineId: '11111111-1111-1111-1111-111111111111',
       name: 'Stage B',
       isWon: true,
     });

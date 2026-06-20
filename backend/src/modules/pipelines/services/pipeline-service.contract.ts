@@ -30,7 +30,7 @@ export interface CreateStageServiceInput extends CreateStageInput {
   actorUserId: UUID;
 }
 
-export interface UpdateStageServiceInput extends UpdateStageInput {
+export interface UpdateStageServiceInput extends Omit<UpdateStageInput, 'pipelineId'> {
   actorUserId: UUID;
 }
 

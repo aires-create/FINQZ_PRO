@@ -47,14 +47,14 @@ export type PipelineHttpRouteContract =
     }
   | {
       method: 'PUT';
-      path: '/api/v1/stages/:stageId';
+      path: '/api/v1/pipelines/stages/:stageId';
       permission: PipelineHttpPermissionMap['updateStage'];
       paramsSchema: StageIdParams;
       bodySchema: UpdateStageBody;
     }
   | {
       method: 'DELETE';
-      path: '/api/v1/stages/:stageId';
+      path: '/api/v1/pipelines/stages/:stageId';
       permission: PipelineHttpPermissionMap['deleteStage'];
       paramsSchema: StageIdParams;
     }
@@ -104,7 +104,7 @@ export const createStageHttpContract = {
 
 export const updateStageHttpContract = {
   method: 'PUT',
-  path: '/api/v1/stages/:stageId',
+  path: '/api/v1/pipelines/stages/:stageId',
   permission: 'stage:update',
 } as const satisfies Pick<
   PipelineHttpRouteContract,
@@ -113,7 +113,7 @@ export const updateStageHttpContract = {
 
 export const deleteStageHttpContract = {
   method: 'DELETE',
-  path: '/api/v1/stages/:stageId',
+  path: '/api/v1/pipelines/stages/:stageId',
   permission: 'stage:delete',
 } as const satisfies Pick<
   PipelineHttpRouteContract,

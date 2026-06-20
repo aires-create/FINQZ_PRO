@@ -5,7 +5,11 @@ import { authenticate, tenantContextMiddleware } from '../../core/http/middlewar
 import { logger } from '../../shared/logger.js';
 import { requirePermissions } from '../rbac/rbac.guard.js';
 import { TenantScopeViolationError } from '../opportunities/services/opportunities.service.js';
-import { pipelinesService } from './service.js';
+import {
+  PipelineNotFoundError,
+  StageNotFoundError,
+  pipelinesService,
+} from './service.js';
 import {
   createPipelineBodySchema,
   createStageBodySchema,
@@ -47,6 +51,16 @@ const handleRouteError = (error: unknown, reply: FastifyReply) => {
         code: 'VALIDATION_ERROR',
         message: 'Validation error',
         details: error.flatten(),
+      },
+    });
+  }
+
+  if (error instanceof PipelineNotFoundError || error instanceof StageNotFoundError) {
+    return reply.status(404).send({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: error.message,
       },
     });
   }
@@ -218,7 +232,6 @@ export async function pipelinesRoutes(app: FastifyInstance) {
           tenantId,
           actorUserId,
           id: params.stageId,
-          pipelineId: params.stageId,
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.order !== undefined ? { order: body.order } : {}),
           ...(body.isWon !== undefined ? { isWon: body.isWon } : {}),
