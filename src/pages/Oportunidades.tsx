@@ -2,8 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import useAppStore from "../store";
-import api from "../api/client";
 import { opportunitiesApi } from "../api/modules/opportunities.api";
+import { pipelinesApi } from "../api/modules/pipelines.api";
 import { clientesApi } from "../api/modules/clientes.api";
 import { useTenantFilter } from "../hooks/useTenantFilter";
 import { Plus, X, Edit2, Trash2, MoreVertical, MoreHorizontal, Search, RefreshCw, Calendar, Filter, LayoutGrid, List, ChevronDown, MessageCircle, Phone, Mail, Clock, User, Timer, ArrowUpDown, ArrowUp, ArrowDown, ArrowUpDown as SortIcon, FileText, Package, ArrowLeft, ArrowRight, AlertCircle, CheckCircle, XCircle, Tag, Paperclip, History, File, Upload, Send, Check, Circle, FileCheck, FileX, FilePlus, GripVertical, Calculator, DollarSign, Percent, CalendarDays, Wallet, Save, TrendingUp, MapPin, Target, FileSignature, Shield } from "lucide-react";
@@ -640,7 +640,7 @@ const OportunidadesPageInner = () => {
 
     const loadOfficialPipelines = async () => {
       try {
-        const response = await api.get<any>("/api/v1/pipelines");
+        const response = await pipelinesApi.getAll();
         const rawData = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : [];
 
         if (!cancelled) {

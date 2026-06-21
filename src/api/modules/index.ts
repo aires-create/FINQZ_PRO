@@ -8,6 +8,7 @@ export * from './base';
 export * from './clientes.api';
 export * from './parceiros.api';
 export * from './oportunidades.api';
+export * from './pipelines.api';
 export * from './usuarios.api';
 export * from './roles.api';
 export * from './permissions.api';
