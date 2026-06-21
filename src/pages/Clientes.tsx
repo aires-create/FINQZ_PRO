@@ -3,6 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Clock, Shield, Upload } from "lucide-react";
 import api from "../api/client";
 import { clientesApi } from "../api/modules/clientes.api";
+import { useLocation } from "react-router-dom";
 import useAppStore from "../store";
 import type { Cliente } from "../types";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
@@ -32,10 +33,11 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
 
 export const ClientesPage: React.FC = () => {
   const { clientes: storeClientes, setClientes } = useAppStore();
+  const location = useLocation();
   
   const [clientes, setClientesLocal] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => new URLSearchParams(location.search).get("search") ?? "");
   // Lista apenas - sem Kanban
   const [showModal, setShowModal] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
@@ -106,6 +108,13 @@ export const ClientesPage: React.FC = () => {
   useEffect(() => {
     loadClientes();
   }, [search]);
+
+  useEffect(() => {
+    const nextSearch = new URLSearchParams(location.search).get("search") ?? "";
+    setSearch((currentSearch) =>
+      currentSearch === nextSearch ? currentSearch : nextSearch,
+    );
+  }, [location.search]);
 
   const loadClientes = async () => {
     try {

@@ -102,6 +102,32 @@ const getLegacyCompatiblePipelineIds = (pipelineId: string): string[] => {
   return LEGACY_PIPELINE_IDS_BY_CATALOG[pipelineId] || [pipelineId];
 };
 
+const getClienteSearchValue = (cardData: any): string => {
+  const candidates = [
+    cardData?.cpf_cnpj,
+    cardData?.cpfCnpj,
+    cardData?.email,
+    cardData?.telefone,
+    cardData?.celular,
+    cardData?.nome,
+    cardData?.cliente,
+    cardData?.cliente_id,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) {
+      continue;
+    }
+
+    const value = String(candidate).trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+};
+
 const inferPipelineTipo = (pipelineId: string): PipelineTipo => {
   if (pipelineId === "pipeline-energia") return "energia";
   if (pipelineId === "pipeline-financiamento") return "veiculo";
@@ -3855,8 +3881,13 @@ if (
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log("[CLIENTE] Abrir CRM Clientes", cardData.cliente_id);
-                            navigate("/app/crm/clientes");
+                            const searchValue = getClienteSearchValue(cardData);
+                            console.log("[CLIENTE] Abrir CRM Clientes", searchValue || cardData.cliente_id);
+                            navigate(
+                              searchValue
+                                ? `/app/crm/clientes?search=${encodeURIComponent(searchValue)}`
+                                : "/app/crm/clientes",
+                            );
                           }}
                           className="p-1 rounded bg-slate-900/20 text-slate-700 hover:bg-slate-900/20"
                           title="Cliente"
