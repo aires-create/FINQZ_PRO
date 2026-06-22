@@ -25,6 +25,7 @@ const swaggerDefinition = {
     { name: 'Integrations', description: 'Provider engine operational and catalog endpoints' },
     { name: 'Master Catalog', description: 'Master catalog read-only endpoints' },
     { name: 'Pipeline', description: 'Pipeline and stage write operations' },
+    { name: 'Partners', description: 'Partner tenant-scoped commercial hierarchy' },
   ],
   components: {
     securitySchemes: {
