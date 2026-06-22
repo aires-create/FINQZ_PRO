@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, X, Building2, Store, User, ToggleLeft, ToggleRight, UserCheck, UserX, Grid, List, Upload, Copy, Check, FileText, Image, File, Handshake, Shield } from "lucide-react";
 import useAppStore from "../store";
 import type { Parceiro } from "../types";
+import { partnersApi } from "../api/modules";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { API_BASE_URL } from "../config/environment";
@@ -42,8 +43,45 @@ const getCodigoParceiroNumber = (codigo: string | number | undefined): number =>
   return parseInt(num, 10) || 0;
 };
 
+const mapPartnerTypeToLegacy = (type: string): Parceiro["tipo"] => {
+  switch (type) {
+    case "COMPANY":
+      return "company";
+    case "FRANQUIA":
+      return "franquia";
+    case "FRANQUEADO":
+    default:
+      return "franqueado";
+  }
+};
+
+const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof partnersApi.getAll>>["data"][number], index: number): Parceiro => {
+  const createdAt = new Date(partner.createdAt).getTime();
+  const updatedAt = new Date(partner.updatedAt).getTime();
+
+  return {
+    id: index + 1,
+    codigo: getCodigoParceiroNumber(partner.code) || index + 1,
+    nome: partner.name,
+    tipo: mapPartnerTypeToLegacy(partner.type),
+    cpf_cnpj: partner.document ?? "",
+    telefone: partner.phone ?? "",
+    celular: partner.phone ?? "",
+    email: partner.email ?? "",
+    status: partner.status as Parceiro["status"],
+    parent_id: null,
+    comissao_company: 0,
+    comissao_franquia: 0,
+    comissao_franqueado: 0,
+    login: partner.code,
+    created_at: Number.isFinite(createdAt) ? createdAt : Date.now(),
+    updated_at: Number.isFinite(updatedAt) ? updatedAt : Date.now(),
+  };
+};
+
 export const ParceirosPage: React.FC = () => {
   const { parceiros, addParceiro, updateParceiro, deleteParceiro, toggleParceiroStatus, theme } = useAppStore();
+  const [apiParceiros, setApiParceiros] = useState<Parceiro[] | null>(null);
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -88,6 +126,33 @@ export const ParceirosPage: React.FC = () => {
       console.error('Erro ao persistir parceiros:', error);
     }
   }, [parceiros]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPartnersFromApi = async () => {
+      try {
+        const response = await partnersApi.getAll();
+        if (!isMounted) {
+          return;
+        }
+
+        const mappedPartners = Array.isArray(response.data)
+          ? response.data.map((partner, index) => mapPartnerRecordToLegacyParceiro(partner, index))
+          : [];
+
+        setApiParceiros(mappedPartners);
+      } catch (error) {
+        console.error("Erro ao carregar parceiros da API:", error);
+      }
+    };
+
+    void loadPartnersFromApi();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Definições para importação/exportação
   const importColumns = [
@@ -214,6 +279,7 @@ export const ParceirosPage: React.FC = () => {
   };
 
   const safeParceiros = Array.isArray(parceiros) ? parceiros : [];
+  const parceirosParaExibicao = apiParceiros !== null ? apiParceiros : safeParceiros;
 
   // Função para gerar código automático sequencial
   const generateCodigo = () => {
@@ -383,7 +449,7 @@ export const ParceirosPage: React.FC = () => {
   });
 
   // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
-  const tenantFilteredParceiros = useTenantFilter(parceiros) as Parceiro[];
+  const tenantFilteredParceiros = useTenantFilter(parceirosParaExibicao) as Parceiro[];
   
   const filteredParceiros = tenantFilteredParceiros.filter((p) => {
     const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -771,25 +837,25 @@ export const ParceirosPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3 lg:gap-4">
         <KpiCard
           label="Total"
-          value={parceiros.length}
+          value={parceirosParaExibicao.length}
           icon={<Store size={18} />}
           variant="blue"
         />
         <KpiCard
           label="Ativos"
-          value={parceiros.filter(p => p.status === 'ativo').length}
+          value={parceirosParaExibicao.filter(p => p.status === 'ativo').length}
           icon={<UserCheck size={18} />}
           variant="green"
         />
         <KpiCard
           label="Inativos"
-          value={parceiros.filter(p => p.status === 'inativo').length}
+          value={parceirosParaExibicao.filter(p => p.status === 'inativo').length}
           icon={<UserX size={18} />}
           variant="red"
         />
         <KpiCard
           label="Franquias"
-          value={parceiros.filter(p => p.tipo === 'franquia').length}
+          value={parceirosParaExibicao.filter(p => p.tipo === 'franquia').length}
           icon={<Building2 size={18} />}
           variant="purple"
         />
