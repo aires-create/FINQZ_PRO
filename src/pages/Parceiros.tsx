@@ -36,6 +36,18 @@ const normalizeCodigoParceiro = (codigo: string | number | undefined): string =>
   return `#P-${num.padStart(4, '0')}`;
 };
 
+// Função para normalizar código oficial da API sem caractere especial
+const normalizePartnerApiCode = (codigo: string | number | undefined): string => {
+  if (!codigo && codigo !== 0) {
+    return 'P-0001';
+  }
+  const num = String(codigo).replace(/\D/g, '');
+  if (!num) {
+    return 'P-0001';
+  }
+  return `P-${num.padStart(4, '0')}`;
+};
+
 // Função para extrair número do código do parceiro
 const getCodigoParceiroNumber = (codigo: string | number | undefined): number => {
   if (!codigo && codigo !== 0) return 0;
@@ -127,31 +139,23 @@ export const ParceirosPage: React.FC = () => {
     }
   }, [parceiros]);
 
+  const loadApiParceiros = async () => {
+    try {
+      const response = await partnersApi.getAll();
+      const mappedPartners = Array.isArray(response.data)
+        ? response.data.map((partner, index) => mapPartnerRecordToLegacyParceiro(partner, index))
+        : [];
+
+      setApiParceiros(mappedPartners);
+      return mappedPartners;
+    } catch (error) {
+      console.error("Erro ao carregar parceiros da API:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
-    let isMounted = true;
-
-    const loadPartnersFromApi = async () => {
-      try {
-        const response = await partnersApi.getAll();
-        if (!isMounted) {
-          return;
-        }
-
-        const mappedPartners = Array.isArray(response.data)
-          ? response.data.map((partner, index) => mapPartnerRecordToLegacyParceiro(partner, index))
-          : [];
-
-        setApiParceiros(mappedPartners);
-      } catch (error) {
-        console.error("Erro ao carregar parceiros da API:", error);
-      }
-    };
-
-    void loadPartnersFromApi();
-
-    return () => {
-      isMounted = false;
-    };
+    void loadApiParceiros();
   }, []);
 
   // Definições para importação/exportação
@@ -283,7 +287,7 @@ export const ParceirosPage: React.FC = () => {
 
   // Função para gerar código automático sequencial
   const generateCodigo = () => {
-    const parceirosList = Array.isArray(parceiros) ? parceiros : [];
+    const parceirosList = Array.isArray(apiParceiros) ? apiParceiros : (Array.isArray(parceiros) ? parceiros : []);
     if (parceirosList.length === 0) return 1;
     // Extrair apenas números dos códigos existentes
     const numeros = parceirosList.map(p => getCodigoParceiroNumber(p.codigo));
@@ -525,7 +529,7 @@ export const ParceirosPage: React.FC = () => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const now = Date.now();
     
@@ -558,41 +562,75 @@ export const ParceirosPage: React.FC = () => {
         bankData: temDadosBancarios ? dadosBancarios : undefined,
         updated_at: now,
       });
+
+      setShowModal(false);
+      setEditingParceiro(null);
+      setDocumentos([]);
+      resetForm();
+      return;
     } else {
+      const nome = formData.nome.trim();
+      const tipo = formData.tipo.trim();
+      const status = formData.status.trim();
+      const email = formData.email.trim();
+
+      if (!nome) {
+        alert("Informe o nome do parceiro.");
+        return;
+      }
+
+      if (!tipo) {
+        alert("Selecione o tipo do parceiro.");
+        return;
+      }
+
+      if (!status) {
+        alert("Selecione o status do parceiro.");
+        return;
+      }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert("Informe um email válido.");
+        return;
+      }
+
       // Gerar código, login e senha automáticos
       const novoCodigo = generateCodigo();
       const novoLogin = normalizeCodigoParceiro(novoCodigo);
       const novaSenha = generateSenha();
-      
-      const newParceiro: Parceiro = {
-        id: Date.now(),
-        codigo: novoCodigo,
-        login: novoLogin,
-        senha: novaSenha,
-        ...formData,
-        cpf_cnpj: formData.cpf_cnpj || undefined,
-        celular: formData.celular || undefined,
-        profissao: formData.profissao || undefined,
-        estado_civil: formData.estado_civil || undefined,
-        responsavel_legal: formData.responsavel_legal || undefined,
-        cpf_responsavel: formData.cpf_responsavel || undefined,
-        parent_id: formData.parent_id || undefined,
-        documentos: documentos.length > 0 ? documentos : undefined,
-        bankData: temDadosBancarios ? dadosBancarios : undefined,
-        created_at: now,
-        updated_at: now,
+
+      const payload: Parameters<typeof partnersApi.create>[0] = {
+        code: normalizePartnerApiCode(novoCodigo),
+        name: nome,
+        type: formData.tipo === "company"
+          ? "COMPANY"
+          : formData.tipo === "franquia"
+            ? "FRANQUIA"
+            : "FRANQUEADO",
+        status: status === "nao_perturbe" ? "inativo" : status,
+        document: formData.cpf_cnpj?.trim() || undefined,
+        email: email || undefined,
+        phone: (formData.celular || formData.telefone || "").trim() || undefined,
+        parentId: formData.parent_id ? String(formData.parent_id) : undefined,
       };
-      addParceiro(newParceiro);
-      
-      // Mostrar credenciais geradas
-      setGeneratedCredentials({ login: novoLogin, senha: novaSenha });
-      setShowCredentials(true);
+
+      try {
+        await partnersApi.create(payload);
+        await loadApiParceiros();
+
+        // Mostrar credenciais geradas
+        setGeneratedCredentials({ login: novoLogin, senha: novaSenha });
+        setShowCredentials(true);
+        setShowModal(false);
+        setEditingParceiro(null);
+        setDocumentos([]);
+        resetForm();
+      } catch (error) {
+        console.error("Erro ao criar parceiro na API:", error);
+        alert("Não foi possível criar o parceiro no servidor.");
+        return;
+      }
     }
-    
-    setShowModal(false);
-    setEditingParceiro(null);
-    setDocumentos([]);
-    resetForm();
   };
 
   const handleEdit = (parceiro: Parceiro) => {
@@ -1118,7 +1156,7 @@ export const ParceirosPage: React.FC = () => {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 bg-[#111827]:text-slate-300 mb-1">
