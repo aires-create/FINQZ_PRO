@@ -76,44 +76,6 @@ const partnerTypeJsonSchema = {
   enum: [...partnerTypeValues],
 };
 
-const partnerJsonSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['id', 'tenantId', 'code', 'name', 'type', 'status', 'createdAt', 'updatedAt'],
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    tenantId: { type: 'string', format: 'uuid' },
-    code: { type: 'string' },
-    name: { type: 'string' },
-    type: partnerTypeJsonSchema,
-    status: partnerStatusJsonSchema,
-    document: { type: ['string', 'null'] },
-    email: { type: ['string', 'null'], format: 'email' },
-    phone: { type: ['string', 'null'] },
-    parentId: { type: ['string', 'null'], format: 'uuid' },
-    deletedAt: { type: ['string', 'null'], format: 'date-time' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const partnerErrorResponseJsonSchema = {
-  type: 'object',
-  required: ['success', 'error'],
-  properties: {
-    success: { type: 'boolean', enum: [false] },
-    error: {
-      type: 'object',
-      required: ['code', 'message'],
-      properties: {
-        code: { type: 'string' },
-        message: { type: 'string' },
-        details: {},
-      },
-    },
-  },
-};
-
 const partnerListQueryJsonSchema = {
   type: 'object',
   additionalProperties: false,
@@ -166,85 +128,22 @@ const partnerUpdateBodyJsonSchema = {
   },
 };
 
-const partnerListSuccessResponseJsonSchema = {
-  type: 'object',
-  required: ['success', 'data', 'meta'],
-  properties: {
-    success: { type: 'boolean', enum: [true] },
-    data: {
-      type: 'array',
-      items: partnerJsonSchema,
-    },
-    meta: {
-      type: 'object',
-      required: ['page', 'limit', 'total', 'totalPages'],
-      properties: {
-        page: { type: 'integer' },
-        limit: { type: 'integer' },
-        total: { type: 'integer' },
-        totalPages: { type: 'integer' },
-      },
-    },
-  },
-};
-
-const partnerSuccessResponseJsonSchema = {
-  type: 'object',
-  required: ['success', 'data'],
-  properties: {
-    success: { type: 'boolean', enum: [true] },
-    data: partnerJsonSchema,
-  },
-};
-
-const partnerDeleteSuccessResponseJsonSchema = {
-  type: 'object',
-  required: ['success', 'message'],
-  properties: {
-    success: { type: 'boolean', enum: [true] },
-    message: { type: 'string' },
-  },
-};
-
 export const listPartnersRouteSchema = {
   tags: ['Partners'],
   security: [{ bearerAuth: [] }],
   querystring: partnerListQueryJsonSchema,
-  response: {
-    200: partnerListSuccessResponseJsonSchema,
-    400: partnerErrorResponseJsonSchema,
-    401: partnerErrorResponseJsonSchema,
-    403: partnerErrorResponseJsonSchema,
-    500: partnerErrorResponseJsonSchema,
-  },
 } as const;
 
 export const getPartnerRouteSchema = {
   tags: ['Partners'],
   security: [{ bearerAuth: [] }],
   params: partnerIdParamsJsonSchema,
-  response: {
-    200: partnerSuccessResponseJsonSchema,
-    400: partnerErrorResponseJsonSchema,
-    401: partnerErrorResponseJsonSchema,
-    403: partnerErrorResponseJsonSchema,
-    404: partnerErrorResponseJsonSchema,
-    500: partnerErrorResponseJsonSchema,
-  },
 } as const;
 
 export const createPartnerRouteSchema = {
   tags: ['Partners'],
   security: [{ bearerAuth: [] }],
   body: partnerCreateBodyJsonSchema,
-  response: {
-    201: partnerSuccessResponseJsonSchema,
-    400: partnerErrorResponseJsonSchema,
-    401: partnerErrorResponseJsonSchema,
-    403: partnerErrorResponseJsonSchema,
-    409: partnerErrorResponseJsonSchema,
-    500: partnerErrorResponseJsonSchema,
-  },
 } as const;
 
 export const updatePartnerRouteSchema = {
@@ -252,28 +151,10 @@ export const updatePartnerRouteSchema = {
   security: [{ bearerAuth: [] }],
   params: partnerIdParamsJsonSchema,
   body: partnerUpdateBodyJsonSchema,
-  response: {
-    200: partnerSuccessResponseJsonSchema,
-    400: partnerErrorResponseJsonSchema,
-    401: partnerErrorResponseJsonSchema,
-    403: partnerErrorResponseJsonSchema,
-    404: partnerErrorResponseJsonSchema,
-    409: partnerErrorResponseJsonSchema,
-    500: partnerErrorResponseJsonSchema,
-  },
 } as const;
 
 export const deletePartnerRouteSchema = {
   tags: ['Partners'],
   security: [{ bearerAuth: [] }],
   params: partnerIdParamsJsonSchema,
-  response: {
-    200: partnerDeleteSuccessResponseJsonSchema,
-    400: partnerErrorResponseJsonSchema,
-    401: partnerErrorResponseJsonSchema,
-    403: partnerErrorResponseJsonSchema,
-    404: partnerErrorResponseJsonSchema,
-    500: partnerErrorResponseJsonSchema,
-  },
 } as const;
-
