@@ -97,7 +97,7 @@ const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof par
 };
 
 export const ParceirosPage: React.FC = () => {
-  const { parceiros, addParceiro, updateParceiro, deleteParceiro, toggleParceiroStatus, theme } = useAppStore();
+  const { parceiros, addParceiro, theme } = useAppStore();
   const [apiParceiros, setApiParceiros] = useState<PartnerUiRecord[]>([]);
   const [isLoadingParceiros, setIsLoadingParceiros] = useState(true);
   const [search, setSearch] = useState("");
@@ -364,12 +364,6 @@ export const ParceirosPage: React.FC = () => {
         throw new Error(result.error || "Erro desconhecido");
       }
 
-      // Atualiza local
-      updateParceiro(editingParceiro.id, {
-        senha: novaSenha,
-        updated_at: Date.now(),
-      });
-
       setGeneratedCredentials({
         login: normalizeCodigoParceiro(editingParceiro.codigo),
         senha: novaSenha,
@@ -402,12 +396,6 @@ export const ParceirosPage: React.FC = () => {
       console.error("Erro crítico:", error);
 
       alert("Erro ao comunicar com servidor. Senha atualizada localmente.");
-
-      // fallback seguro
-      updateParceiro(editingParceiro.id, {
-        senha: novaSenha,
-        updated_at: Date.now(),
-      });
 
       setGeneratedCredentials({
         login: normalizeCodigoParceiro(editingParceiro.codigo),
@@ -733,14 +721,51 @@ export const ParceirosPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (parceiro: PartnerUiRecord) => {
+    if (!parceiro.partnerId) {
+      alert("Não foi possível excluir este parceiro porque o ID oficial da API não está disponível.");
+      return;
+    }
+
     if (confirm("Tem certeza que deseja excluir este parceiro?")) {
-      deleteParceiro(id);
+      try {
+        await partnersApi.delete(parceiro.partnerId);
+        await loadApiParceiros();
+      } catch (error) {
+        console.error("Erro ao excluir parceiro na API:", error);
+        alert("Não foi possível excluir o parceiro no servidor.");
+      }
     }
   };
 
-  const handleToggleStatus = (id: number) => {
-    toggleParceiroStatus(id);
+  const handleToggleStatus = async (parceiro: PartnerUiRecord) => {
+    if (!parceiro.partnerId) {
+      alert("Não foi possível alterar o status porque o ID oficial da API não está disponível.");
+      return;
+    }
+
+    const nextStatus = parceiro.status === "ativo" ? "inativo" : "ativo";
+
+    try {
+      await partnersApi.update(parceiro.partnerId, {
+        code: normalizePartnerApiCode(parceiro.codigo),
+        name: parceiro.nome,
+        type: parceiro.tipo === "company"
+          ? "COMPANY"
+          : parceiro.tipo === "franquia"
+            ? "FRANQUIA"
+            : "FRANQUEADO",
+        status: nextStatus,
+        document: parceiro.cpf_cnpj?.trim() || undefined,
+        email: parceiro.email?.trim() || undefined,
+        phone: (parceiro.celular || parceiro.telefone || "").trim() || undefined,
+        parentId: parceiro.parent_id ? String(parceiro.parent_id) : undefined,
+      });
+      await loadApiParceiros();
+    } catch (error) {
+      console.error("Erro ao alternar status do parceiro na API:", error);
+      alert("Não foi possível alterar o status do parceiro no servidor.");
+    }
   };
 
   const resetForm = () => {
@@ -1029,7 +1054,7 @@ export const ParceirosPage: React.FC = () => {
                         <Edit size={16} />
                       </button>
                       <button
-                        onClick={() => handleDelete((parceiro as Parceiro).id)}
+                        onClick={() => handleDelete(parceiro as PartnerUiRecord)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500/80 hover:text-red-600 hover:bg-red-500/10 transition-colors"
                         title="Excluir"
                       >
@@ -1109,7 +1134,7 @@ export const ParceirosPage: React.FC = () => {
                 Editar
               </button>
               <button
-                onClick={() => handleDelete((parceiro as Parceiro).id)}
+                onClick={() => handleDelete(parceiro as PartnerUiRecord)}
                 className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg sm:rounded-xl hover:bg-red-500/20 transition-colors text-xs sm:text-sm font-medium"
               >
                 <Trash2 size={16} />
