@@ -97,7 +97,7 @@ const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof par
 };
 
 export const ParceirosPage: React.FC = () => {
-  const { parceiros, addParceiro, theme } = useAppStore();
+  const { addParceiro } = useAppStore();
   const [apiParceiros, setApiParceiros] = useState<PartnerUiRecord[]>([]);
   const [isLoadingParceiros, setIsLoadingParceiros] = useState(true);
   const [search, setSearch] = useState("");
@@ -122,29 +122,7 @@ export const ParceirosPage: React.FC = () => {
   // Import/Export
   const [importModalOpen, setImportModalOpen] = useState(false);
 
-  // Chave para persistência no localStorage
-  const PARCEIROS_STORAGE_KEY = 'finqz_pro_parceiros';
   const initialApiLoadCompletedRef = useRef(false);
-
-  // Função para carregar parceiros do localStorage
-  const loadParceirosFromStorage = (): Parceiro[] => {
-    try {
-      const saved = localStorage.getItem(PARCEIROS_STORAGE_KEY);
-      const parsed = saved ? JSON.parse(saved) : null;
-      return Array.isArray(parsed) ? parsed : parceiros;
-    } catch {
-      return parceiros;
-    }
-  };
-
-  // Persistir parceiros no localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(PARCEIROS_STORAGE_KEY, JSON.stringify(parceiros || []));
-    } catch (error) {
-      console.error('Erro ao persistir parceiros:', error);
-    }
-  }, [parceiros]);
 
   const loadApiParceiros = async () => {
     try {
