@@ -2308,6 +2308,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
           : currentPipelineConfig.id,
       )
     : [];
+  const resolveLegacyProductPipelineFallback = (produto: string | undefined | null): string | undefined => {
+    if (!produto || typeof mapearProdutoLegadoParaPipeline !== "function") {
+      return undefined;
+    }
+
+    return mapearProdutoLegadoParaPipeline(produto);
+  };
   const oportunidades = oportunidadesBase.filter((o: any) => {
     // Proteção: verificar se o objeto existe
     if (!o) return false;
@@ -2327,8 +2334,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return legacyCompatiblePipelineIds.includes(String(o.pipeline_id));
     }
     // Se não, verificar se o produto antigo mapeia para o pipeline atual
-    if (o?.produto && typeof mapearProdutoLegadoParaPipeline === "function") {
-      const mappedPipelineId = mapearProdutoLegadoParaPipeline(o.produto);
+    if (o?.produto) {
+      const mappedPipelineId = resolveLegacyProductPipelineFallback(o.produto);
       return mappedPipelineId ? legacyCompatiblePipelineIds.includes(mappedPipelineId) : false;
     }
     // Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
