@@ -4,10 +4,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, TrendingUp } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { Button, Input, Modal, TextArea, Toggle } from '../../components/ui';
 import { pipelinesApi } from '../../api/modules/pipelines.api';
 import {
   type Pipeline as OfficialPipeline,
   type AdminPipelineViewModel,
+  type AdminPipelineDraft,
+  buildCreatePipelinePayload,
   mapOfficialPipelinesToAdminViewModels,
 } from './pipelines.adapter';
 
@@ -43,6 +46,14 @@ export const PipelinesPage: React.FC = () => {
   const [pipelines, setPipelines] = useState<AdminPipelineViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState<AdminPipelineDraft>({
+    pipelineName: '',
+    description: '',
+    isDefault: false,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -66,6 +77,63 @@ export const PipelinesPage: React.FC = () => {
     void loadPipelines();
   }, []);
 
+  const resetCreateForm = () => {
+    setFormData({
+      pipelineName: '',
+      description: '',
+      isDefault: false,
+    });
+    setSubmitError(null);
+  };
+
+  const openCreateModal = () => {
+    setSubmitError(null);
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    if (submitting) return;
+    setShowCreateModal(false);
+    resetCreateForm();
+  };
+
+  const handleCreatePipeline = async () => {
+    const normalizedName = (formData.pipelineName ?? '').trim();
+
+    if (!normalizedName) {
+      setSubmitError('O nome do pipeline é obrigatório.');
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const payload = buildCreatePipelinePayload({
+        ...formData,
+        pipelineName: normalizedName,
+      });
+
+      await pipelinesApi.createPipeline(payload);
+      setShowCreateModal(false);
+      resetCreateForm();
+      await loadPipelines();
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : 'Erro inesperado ao criar pipeline.';
+      const lowered = message.toLowerCase();
+
+      if (lowered.includes('validation') || lowered.includes('nome') || lowered.includes('required')) {
+        setSubmitError(message || 'Falha de validação.');
+      } else if (lowered.includes('forbidden') || lowered.includes('unauthorized') || lowered.includes('acesso')) {
+        setSubmitError('Você não tem permissão para criar pipeline.');
+      } else {
+        setSubmitError(message || 'Erro inesperado ao criar pipeline.');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const summary = useMemo(() => {
     const active = pipelines.filter((pipeline) => pipeline.active).length;
     const inactive = pipelines.filter((pipeline) => !pipeline.active).length;
@@ -83,6 +151,8 @@ export const PipelinesPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title="Pipelines"
+        onCreate={openCreateModal}
+        createLabel="Novo Pipeline"
         onRefresh={loadPipelines}
         exportData={exportRows}
         exportColumns={[
@@ -241,6 +311,67 @@ export const PipelinesPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={showCreateModal}
+        onClose={closeCreateModal}
+        title="Novo Pipeline"
+        size="md"
+      >
+        <div className="space-y-4">
+          {submitError && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              {submitError}
+            </div>
+          )}
+
+          <Input
+            label="Nome"
+            value={formData.pipelineName ?? ''}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, pipelineName: e.target.value }))
+            }
+            placeholder="Ex.: Pipeline Comercial"
+            required
+            disabled={submitting}
+          />
+
+          <TextArea
+            label="Descrição"
+            value={formData.description ?? ''}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
+            placeholder="Descrição opcional do pipeline"
+            disabled={submitting}
+          />
+
+          <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Pipeline padrão</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Marca este pipeline como padrão para o tenant atual.
+              </p>
+            </div>
+            <Toggle
+              checked={Boolean(formData.isDefault)}
+              onChange={(checked) =>
+                setFormData((prev) => ({ ...prev, isDefault: checked }))
+              }
+              disabled={submitting}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeCreateModal} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={handleCreatePipeline} disabled={submitting}>
+              {submitting ? 'Criando...' : 'Criar Pipeline'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
