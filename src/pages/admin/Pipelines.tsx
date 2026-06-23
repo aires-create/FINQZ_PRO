@@ -10,7 +10,9 @@ import {
   type Pipeline as OfficialPipeline,
   type AdminPipelineViewModel,
   type AdminPipelineDraft,
+  type AdminStageDraft,
   buildCreatePipelinePayload,
+  buildCreateStagePayload,
   mapOfficialPipelinesToAdminViewModels,
 } from './pipelines.adapter';
 
@@ -54,6 +56,19 @@ export const PipelinesPage: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showCreateStageModal, setShowCreateStageModal] = useState(false);
+  const [stageTargetPipeline, setStageTargetPipeline] = useState<{
+    pipelineId: string;
+    pipelineName: string;
+  } | null>(null);
+  const [stageFormData, setStageFormData] = useState<AdminStageDraft>({
+    name: '',
+    order: 1,
+    isWon: false,
+    isLost: false,
+  });
+  const [stageSubmitting, setStageSubmitting] = useState(false);
+  const [stageSubmitError, setStageSubmitError] = useState<string | null>(null);
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -131,6 +146,92 @@ export const PipelinesPage: React.FC = () => {
       }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const resetCreateStageForm = () => {
+    setStageFormData({
+      name: '',
+      order: 1,
+      isWon: false,
+      isLost: false,
+    });
+    setStageSubmitError(null);
+    setStageTargetPipeline(null);
+  };
+
+  const openCreateStageModal = (pipeline: AdminPipelineViewModel) => {
+    setStageTargetPipeline({
+      pipelineId: pipeline.pipelineId,
+      pipelineName: pipeline.pipelineName,
+    });
+    setStageFormData({
+      name: '',
+      order: pipeline.stages.length + 1,
+      isWon: false,
+      isLost: false,
+    });
+    setStageSubmitError(null);
+    setShowCreateStageModal(true);
+  };
+
+  const closeCreateStageModal = () => {
+    if (stageSubmitting) return;
+    setShowCreateStageModal(false);
+    resetCreateStageForm();
+  };
+
+  const handleCreateStage = async () => {
+    if (!stageTargetPipeline) {
+      setStageSubmitError('Pipeline de destino nao encontrado.');
+      return;
+    }
+
+    const normalizedName = (stageFormData.name ?? '').trim();
+
+    if (!normalizedName) {
+      setStageSubmitError('O nome da etapa é obrigatório.');
+      return;
+    }
+
+    const normalizedOrder = Number(stageFormData.order);
+    if (!Number.isFinite(normalizedOrder) || normalizedOrder < 1) {
+      setStageSubmitError('A ordem da etapa deve ser maior ou igual a 1.');
+      return;
+    }
+
+    if (stageFormData.isWon && stageFormData.isLost) {
+      setStageSubmitError('Uma etapa não pode ser ganho e perdido ao mesmo tempo.');
+      return;
+    }
+
+    setStageSubmitting(true);
+    setStageSubmitError(null);
+
+    try {
+      const payload = buildCreateStagePayload({
+        ...stageFormData,
+        name: normalizedName,
+        order: normalizedOrder,
+      });
+
+      await pipelinesApi.createStage(stageTargetPipeline.pipelineId, payload);
+      setShowCreateStageModal(false);
+      resetCreateStageForm();
+      await loadPipelines();
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : 'Erro inesperado ao criar etapa.';
+      const lowered = message.toLowerCase();
+
+      if (lowered.includes('validation') || lowered.includes('nome') || lowered.includes('required') || lowered.includes('order')) {
+        setStageSubmitError(message || 'Falha de validação.');
+      } else if (lowered.includes('forbidden') || lowered.includes('unauthorized') || lowered.includes('acesso')) {
+        setStageSubmitError('Você não tem permissão para criar etapa.');
+      } else {
+        setStageSubmitError(message || 'Erro inesperado ao criar etapa.');
+      }
+    } finally {
+      setStageSubmitting(false);
     }
   };
 
@@ -238,6 +339,13 @@ export const PipelinesPage: React.FC = () => {
                           Padrão
                         </span>
                       )}
+                      <Button
+                        variant="outline"
+                        onClick={() => openCreateStageModal(pipeline)}
+                        disabled={loading}
+                      >
+                        Adicionar etapa
+                      </Button>
                     </div>
                   </div>
 
@@ -368,6 +476,98 @@ export const PipelinesPage: React.FC = () => {
             </Button>
             <Button variant="primary" onClick={handleCreatePipeline} disabled={submitting}>
               {submitting ? 'Criando...' : 'Criar Pipeline'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showCreateStageModal}
+        onClose={closeCreateStageModal}
+        title="Nova Etapa"
+        size="md"
+      >
+        <div className="space-y-4">
+          {stageSubmitError && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              {stageSubmitError}
+            </div>
+          )}
+
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Pipeline selecionado</p>
+            <p className="mt-1">{stageTargetPipeline?.pipelineName ?? 'Pipeline oficial'}</p>
+          </div>
+
+          <Input
+            label="Nome"
+            value={stageFormData.name ?? ''}
+            onChange={(e) =>
+              setStageFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            placeholder="Ex.: Qualificação"
+            required
+            disabled={stageSubmitting}
+          />
+
+          <Input
+            label="Ordem"
+            type="number"
+            min={1}
+            value={stageFormData.order ?? 1}
+            onChange={(e) =>
+              setStageFormData((prev) => ({
+                ...prev,
+                order: Number(e.target.value),
+              }))
+            }
+            disabled={stageSubmitting}
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Etapa ganho</p>
+                <p className="text-xs text-[var(--text-muted)]">Marca esta etapa como finalizada com sucesso.</p>
+              </div>
+              <Toggle
+                checked={Boolean(stageFormData.isWon)}
+                onChange={(checked) =>
+                  setStageFormData((prev) => ({
+                    ...prev,
+                    isWon: checked,
+                    isLost: checked ? false : prev.isLost,
+                  }))
+                }
+                disabled={stageSubmitting}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Etapa perdida</p>
+                <p className="text-xs text-[var(--text-muted)]">Marca esta etapa como encerramento perdido.</p>
+              </div>
+              <Toggle
+                checked={Boolean(stageFormData.isLost)}
+                onChange={(checked) =>
+                  setStageFormData((prev) => ({
+                    ...prev,
+                    isLost: checked,
+                    isWon: checked ? false : prev.isWon,
+                  }))
+                }
+                disabled={stageSubmitting}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeCreateStageModal} disabled={stageSubmitting}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={handleCreateStage} disabled={stageSubmitting}>
+              {stageSubmitting ? 'Criando...' : 'Criar Etapa'}
             </Button>
           </div>
         </div>
