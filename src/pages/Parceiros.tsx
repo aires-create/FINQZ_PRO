@@ -67,11 +67,16 @@ const mapPartnerTypeToLegacy = (type: string): Parceiro["tipo"] => {
   }
 };
 
-const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof partnersApi.getAll>>["data"][number], index: number): Parceiro => {
+type PartnerUiRecord = Parceiro & {
+  partnerId?: string;
+};
+
+const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof partnersApi.getAll>>["data"][number], index: number): PartnerUiRecord => {
   const createdAt = new Date(partner.createdAt).getTime();
   const updatedAt = new Date(partner.updatedAt).getTime();
 
   return {
+    partnerId: partner.id,
     id: index + 1,
     codigo: getCodigoParceiroNumber(partner.code) || index + 1,
     nome: partner.name,
@@ -93,7 +98,8 @@ const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof par
 
 export const ParceirosPage: React.FC = () => {
   const { parceiros, addParceiro, updateParceiro, deleteParceiro, toggleParceiroStatus, theme } = useAppStore();
-  const [apiParceiros, setApiParceiros] = useState<Parceiro[] | null>(null);
+  const [apiParceiros, setApiParceiros] = useState<PartnerUiRecord[]>([]);
+  const [isLoadingParceiros, setIsLoadingParceiros] = useState(true);
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -103,7 +109,7 @@ export const ParceirosPage: React.FC = () => {
   const [filterEmail, setFilterEmail] = useState("");
   // Lista apenas - sem Kanban/Grid
   const [showModal, setShowModal] = useState(false);
-  const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
+  const [editingParceiro, setEditingParceiro] = useState<PartnerUiRecord | null>(null);
   const [showCredentials, setShowCredentials] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<{ login: string; senha: string } | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -118,6 +124,7 @@ export const ParceirosPage: React.FC = () => {
 
   // Chave para persistência no localStorage
   const PARCEIROS_STORAGE_KEY = 'finqz_pro_parceiros';
+  const initialApiLoadCompletedRef = useRef(false);
 
   // Função para carregar parceiros do localStorage
   const loadParceirosFromStorage = (): Parceiro[] => {
@@ -150,7 +157,13 @@ export const ParceirosPage: React.FC = () => {
       return mappedPartners;
     } catch (error) {
       console.error("Erro ao carregar parceiros da API:", error);
-      return null;
+      setApiParceiros([]);
+      return [];
+    } finally {
+      if (!initialApiLoadCompletedRef.current) {
+        initialApiLoadCompletedRef.current = true;
+        setIsLoadingParceiros(false);
+      }
     }
   };
 
@@ -238,7 +251,7 @@ export const ParceirosPage: React.FC = () => {
       return;
     }
 
-    const updatedParceiros = [...safeParceiros, ...newParceiros];
+    const updatedParceiros = [...apiParceiros, ...newParceiros];
     updatedParceiros.forEach((p, i) => addParceiro({ ...p, id: now + i }));
     
     alert(`${newParceiros.length} parceiro(s) importado(s) com sucesso!`);
@@ -282,12 +295,11 @@ export const ParceirosPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const safeParceiros = Array.isArray(parceiros) ? parceiros : [];
-  const parceirosParaExibicao = apiParceiros !== null ? apiParceiros : safeParceiros;
+  const parceirosParaExibicao = apiParceiros;
 
   // Função para gerar código automático sequencial
   const generateCodigo = () => {
-    const parceirosList = Array.isArray(apiParceiros) ? apiParceiros : (Array.isArray(parceiros) ? parceiros : []);
+    const parceirosList = apiParceiros;
     if (parceirosList.length === 0) return 1;
     // Extrair apenas números dos códigos existentes
     const numeros = parceirosList.map(p => getCodigoParceiroNumber(p.codigo));
@@ -549,24 +561,65 @@ export const ParceirosPage: React.FC = () => {
     const temDadosBancarios = Object.values(dadosBancarios).some(v => v && v !== "");
 
     if (editingParceiro) {
-      updateParceiro(editingParceiro.id, {
-        ...formData,
-        cpf_cnpj: formData.cpf_cnpj || undefined,
-        celular: formData.celular || undefined,
-        profissao: formData.profissao || undefined,
-        estado_civil: formData.estado_civil || undefined,
-        responsavel_legal: formData.responsavel_legal || undefined,
-        cpf_responsavel: formData.cpf_responsavel || undefined,
-        parent_id: formData.parent_id || undefined,
-        documentos: documentos.length > 0 ? documentos : undefined,
-        bankData: temDadosBancarios ? dadosBancarios : undefined,
-        updated_at: now,
-      });
+      const partnerId = editingParceiro.partnerId;
 
-      setShowModal(false);
-      setEditingParceiro(null);
-      setDocumentos([]);
-      resetForm();
+      if (!partnerId) {
+        alert("Não foi possível atualizar este parceiro porque o ID oficial da API não está disponível.");
+        return;
+      }
+
+      const nome = formData.nome.trim();
+      const tipo = formData.tipo.trim();
+      const status = formData.status.trim();
+      const email = formData.email.trim();
+
+      if (!nome) {
+        alert("Informe o nome do parceiro.");
+        return;
+      }
+
+      if (!tipo) {
+        alert("Selecione o tipo do parceiro.");
+        return;
+      }
+
+      if (!status) {
+        alert("Selecione o status do parceiro.");
+        return;
+      }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        alert("Informe um email válido.");
+        return;
+      }
+
+      const payload: Parameters<typeof partnersApi.update>[1] = {
+        code: normalizePartnerApiCode(editingParceiro.codigo),
+        name: nome,
+        type: tipo === "company"
+          ? "COMPANY"
+          : tipo === "franquia"
+            ? "FRANQUIA"
+            : "FRANQUEADO",
+        status: status === "nao_perturbe" ? "inativo" : status,
+        document: formData.cpf_cnpj?.trim() || undefined,
+        email: email || undefined,
+        phone: (formData.celular || formData.telefone || "").trim() || undefined,
+      };
+
+      try {
+        await partnersApi.update(partnerId, payload);
+        await loadApiParceiros();
+
+        setShowModal(false);
+        setEditingParceiro(null);
+        setDocumentos([]);
+        resetForm();
+      } catch (error) {
+        console.error("Erro ao atualizar parceiro na API:", error);
+        alert("Não foi possível atualizar o parceiro no servidor.");
+      }
+
       return;
     } else {
       const nome = formData.nome.trim();
@@ -633,7 +686,7 @@ export const ParceirosPage: React.FC = () => {
     }
   };
 
-  const handleEdit = (parceiro: Parceiro) => {
+  const handleEdit = (parceiro: PartnerUiRecord) => {
     setEditingParceiro(parceiro);
     setFormData({
       nome: parceiro.nome,
@@ -805,6 +858,14 @@ export const ParceirosPage: React.FC = () => {
   const getStatusLabel = (status: string) => {
     return PARCEIRO_STATUSES.find((s) => s.key === status)?.label || status;
   };
+
+  if (isLoadingParceiros) {
+    return (
+      <div className="space-y-5">
+        <LoadingState text="Carregando parceiros..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
