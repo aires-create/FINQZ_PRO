@@ -2141,6 +2141,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       })
     : [];
   const etapasAtivas = Array.isArray(etapasAtivasRaw) ? etapasAtivasRaw : [];
+  const hasSelectedOfficialPipeline = Boolean(selectedOfficialPipeline);
+  const hasSelectedPipelineWithoutStages = hasSelectedOfficialPipeline && etapasAtivas.length === 0;
   const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
   const etapasNovaOportunidade =
     Array.isArray(matchedOfficialPipelineForSelection?.stages) && matchedOfficialPipelineForSelection.stages.length > 0
@@ -3446,7 +3448,17 @@ if (
   if (!isPipelineValid) {
     return (
       <div className={`p-4 ${isDark ? "text-white" : "text-white"}`}>
-        {selectedProductId 
+        {hasSelectedPipelineWithoutStages ? (
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-6 text-sm text-[var(--text-secondary)]">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Pipeline sem etapas cadastradas</h2>
+            <p className="mt-2">
+              Este pipeline foi criado corretamente, mas ainda não possui etapas operacionais.
+            </p>
+            <p className="mt-2">
+              Cadastre etapas em Administração → Pipelines.
+            </p>
+          </div>
+        ) : selectedProductId 
           ? "Pipeline não encontrado para este produto. Selecione outro produto ou configure o pipeline."
           : "Nenhum pipeline encontrado"}
       </div>
