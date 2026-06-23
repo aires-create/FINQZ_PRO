@@ -791,14 +791,22 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedSubproductId, setSelectedSubproductId] = useState<string>("");
   const [selectedModality, setSelectedModality] = useState<string>("");
   const [pipelineSelectionReady, setPipelineSelectionReady] = useState(false);
+  const [localPipelineSelectionId, setLocalPipelineSelectionId] = useState("");
+
+  const syncPipelineSelection = (nextPipelineId: string) => {
+    const normalizedNextPipelineId = typeof nextPipelineId === "string" ? nextPipelineId : "";
+    setLocalPipelineSelectionId(normalizedNextPipelineId);
+    safeSetCurrentPipelineId(normalizedNextPipelineId);
+  };
   
   const selectedPipelineId = useMemo(() => {
     if (!pipelineSelectionReady) return "";
-    if (!currentPipelineId) return "";
-    return officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === currentPipelineId)
-      ? currentPipelineId
+    const candidatePipelineId = localPipelineSelectionId || currentPipelineId || "";
+    if (!candidatePipelineId) return "";
+    return officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === candidatePipelineId)
+      ? candidatePipelineId
       : "";
-  }, [currentPipelineId, officialPipelines, pipelineSelectionReady]);
+  }, [currentPipelineId, localPipelineSelectionId, officialPipelines, pipelineSelectionReady]);
   const catalogProductOptions = useMemo(() => getProductOptions(), []);
   const catalogSubproducts = useMemo(() => 
     selectedProductId ? getSubproductsByProductId(selectedProductId) : [], 
@@ -813,6 +821,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   React.useEffect(() => {
     if (!pipelineSelectionReady) {
+      setLocalPipelineSelectionId("");
       safeSetCurrentPipelineId("");
       setSelectedProductId("");
       setSelectedSubproductId("");
@@ -822,9 +831,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     }
 
     if (currentPipelineId && !selectedPipelineId) {
+      setLocalPipelineSelectionId("");
       safeSetCurrentPipelineId("");
+      return;
     }
-  }, [currentPipelineId, pipelineSelectionReady, safeSetCurrentPipelineId, selectedPipelineId]);
+
+    if (selectedPipelineId && selectedPipelineId !== localPipelineSelectionId) {
+      setLocalPipelineSelectionId(selectedPipelineId);
+    }
+  }, [currentPipelineId, localPipelineSelectionId, pipelineSelectionReady, safeSetCurrentPipelineId, selectedPipelineId]);
   
   // Ordenação por coluna: { [etapaId]: 'valor_asc' | 'valor_desc' | 'data_asc' | 'data_desc' }
   const [columnSort, setColumnSort] = useState<Record<string, string>>({});
@@ -2022,14 +2037,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       setSelectedProductId("");
       setSelectedSubproductId("");
       setSelectedModality("");
-      safeSetCurrentPipelineId("");
+      syncPipelineSelection("");
       return;
     }
 
     setSelectedProductId("");
     setSelectedSubproductId("");
     setSelectedModality("");
-    safeSetCurrentPipelineId(produtoId);
+    syncPipelineSelection(produtoId);
   };
   
   // Get current pipeline config - considers selected product with fallback
@@ -3132,7 +3147,7 @@ if (
       ]
     };
     addPipeline(newPipeline);
-    setCurrentPipelineId(newPipeline.id);
+    syncPipelineSelection(newPipeline.id);
     setShowPipelineModal(false);
     setPipelineFormData({ nome: "" });
   };
@@ -3152,7 +3167,7 @@ if (
     if (confirm(`Excluir pipeline "${pipelineName}"?`)) {
       const otherPipeline = safePipelines.find((p: any) => p?.id !== currentPipelineKey);
       if (otherPipeline?.id) {
-        setCurrentPipelineId(otherPipeline.id);
+        syncPipelineSelection(otherPipeline.id);
       }
       deletePipeline(currentPipelineKey);
     }
