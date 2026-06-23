@@ -2046,6 +2046,26 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setSelectedModality("");
     syncPipelineSelection(produtoId);
   };
+
+  const resolveOfficialStagesForSelectedPipeline = (officialPipeline: any): Array<{
+    id: string;
+    name: string;
+    order: number;
+    isWon: boolean;
+    isLost: boolean;
+  }> => {
+    const rawStages = Array.isArray(officialPipeline?.stages) ? officialPipeline.stages : [];
+
+    return rawStages
+      .map((stage: any, index: number) => ({
+        id: String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? `stage-${index}`),
+        name: String(stage?.name ?? stage?.nome ?? stage?.label ?? stage?.id ?? stage?.key ?? "Etapa"),
+        order: Number.isFinite(Number(stage?.order)) ? Number(stage.order) : index + 1,
+        isWon: Boolean(stage?.isWon),
+        isLost: Boolean(stage?.isLost),
+      }))
+      .filter((stage) => stage.id.length > 0);
+  };
   
   // Get current pipeline config - considers selected product with fallback
   const selectedOfficialPipeline = useMemo(
@@ -2053,9 +2073,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       officialPipelines.find((pipeline: any) => String(pipeline?.id ?? "") === selectedPipelineId) ?? null,
     [officialPipelines, selectedPipelineId],
   );
-  const selectedOfficialStages = Array.isArray(selectedOfficialPipeline?.stages)
-    ? selectedOfficialPipeline.stages.map((stage: any) => String(stage?.name ?? stage?.id ?? "Etapa"))
-    : [];
+  const selectedOfficialStages = resolveOfficialStagesForSelectedPipeline(selectedOfficialPipeline).map((stage) => stage.name);
   const currentPipelineConfig: PipelineRuntimeConfig | null = selectedOfficialPipeline
     ? {
         id: String(selectedOfficialPipeline.id),
@@ -2078,13 +2096,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   );
 
   const formOfficialStages = useMemo(() => {
-    const stages = Array.isArray(formSelectedOfficialPipeline?.stages)
-      ? formSelectedOfficialPipeline.stages
-      : [];
-
-    return stages
-      .map((stage: any) => String(stage?.name ?? stage?.id ?? stage ?? ""))
-      .filter((stageName: string) => stageName.length > 0);
+    return resolveOfficialStagesForSelectedPipeline(formSelectedOfficialPipeline).map((stage) => stage.name);
   }, [formSelectedOfficialPipeline]);
 
   const matchedOfficialPipelineForSelection = useMemo(() => {
