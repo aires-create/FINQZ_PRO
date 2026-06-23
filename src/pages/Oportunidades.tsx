@@ -102,6 +102,44 @@ const getLegacyCompatiblePipelineIds = (pipelineId: string): string[] => {
   return LEGACY_PIPELINE_IDS_BY_CATALOG[pipelineId] || [pipelineId];
 };
 
+const normalizeOfficialPipelinesForRead = (payload: any): any[] => {
+  const rawItems = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : [];
+
+  return rawItems
+    .map((pipeline: any, pipelineIndex: number) => {
+      const rawStages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+
+      return {
+        ...pipeline,
+        id: String(pipeline?.id ?? ""),
+        name: String(pipeline?.name ?? pipeline?.nome ?? "Pipeline"),
+        description: String(pipeline?.description ?? pipeline?.descricao ?? ""),
+        isDefault: Boolean(pipeline?.isDefault ?? pipeline?.default ?? false),
+        isActive:
+          pipeline?.isActive !== undefined
+            ? Boolean(pipeline.isActive)
+            : pipeline?.active !== undefined
+              ? Boolean(pipeline.active)
+              : true,
+        stages: rawStages
+          .map((stage: any, stageIndex: number) => ({
+            ...stage,
+            id: String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? `stage-${pipelineIndex}-${stageIndex}`),
+            name: String(stage?.name ?? stage?.nome ?? stage?.label ?? stage?.id ?? stage?.key ?? "Etapa"),
+            order: Number.isFinite(Number(stage?.order)) ? Number(stage.order) : stageIndex + 1,
+            isWon: Boolean(stage?.isWon),
+            isLost: Boolean(stage?.isLost),
+          }))
+          .filter((stage: any) => String(stage?.id ?? stage?.name ?? "").length > 0),
+      };
+    })
+    .filter((pipeline: any) => String(pipeline?.id ?? "").length > 0);
+};
+
 const getClienteSearchValue = (cardData: any): string => {
   const candidates = [
     cardData?.cpf_cnpj,
@@ -667,10 +705,10 @@ const OportunidadesPageInner = () => {
     const loadOfficialPipelines = async () => {
       try {
         const response = await pipelinesApi.getAll();
-        const rawData = Array.isArray(response) ? response : Array.isArray(response?.data) ? response.data : [];
+        const normalizedPipelines = normalizeOfficialPipelinesForRead(response);
 
         if (!cancelled) {
-          setOfficialPipelines(rawData);
+          setOfficialPipelines(normalizedPipelines);
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erro ao carregar pipelines oficiais";
