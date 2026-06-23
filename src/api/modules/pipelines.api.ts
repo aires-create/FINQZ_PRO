@@ -5,6 +5,65 @@ import { apiCall } from './base';
 
 const PIPELINES_BASE_PATH = '/api/v1/pipelines';
 
+export interface PipelineStage {
+  id: string;
+  tenantId: string;
+  pipelineId: string;
+  name: string;
+  order: number;
+  isWon: boolean;
+  isLost: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+}
+
+export interface Pipeline {
+  id: string;
+  tenantId: string;
+  name: string;
+  description?: string | null;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  stages?: PipelineStage[];
+}
+
+export interface CreatePipelinePayload {
+  name: string;
+  description?: string | null;
+  isDefault?: boolean;
+}
+
+export interface UpdatePipelinePayload {
+  name?: string;
+  description?: string | null;
+  isDefault?: boolean;
+}
+
+export interface CreateStagePayload {
+  name: string;
+  order: number;
+  isWon: boolean;
+  isLost: boolean;
+}
+
+export interface UpdateStagePayload {
+  name?: string;
+  order?: number;
+  isWon?: boolean;
+  isLost?: boolean;
+}
+
+export interface ReorderStagesPayload {
+  stages: Array<{
+    stageId: string;
+    order: number;
+  }>;
+}
+
 export const pipelinesApi = {
   /**
    * Lista pipelines oficiais.
@@ -12,5 +71,52 @@ export const pipelinesApi = {
    */
   async getAll(): Promise<any> {
     return apiCall<any>(PIPELINES_BASE_PATH);
+  },
+
+  async createPipeline(payload: CreatePipelinePayload): Promise<any> {
+    return apiCall<any>(PIPELINES_BASE_PATH, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updatePipeline(pipelineId: string, payload: UpdatePipelinePayload): Promise<any> {
+    return apiCall<any>(`${PIPELINES_BASE_PATH}/${pipelineId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deletePipeline(pipelineId: string): Promise<any> {
+    return apiCall<any>(`${PIPELINES_BASE_PATH}/${pipelineId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async createStage(pipelineId: string, payload: CreateStagePayload): Promise<any> {
+    return apiCall<any>(`${PIPELINES_BASE_PATH}/${pipelineId}/stages`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updateStage(stageId: string, payload: UpdateStagePayload): Promise<any> {
+    return apiCall<any>(`${PIPELINES_BASE_PATH}/stages/${stageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteStage(stageId: string): Promise<any> {
+    return apiCall<any>(`${PIPELINES_BASE_PATH}/stages/${stageId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async reorderStages(pipelineId: string, payload: ReorderStagesPayload): Promise<any> {
+    return apiCall<any>(`${PIPELINES_BASE_PATH}/${pipelineId}/stages/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
   },
 };
