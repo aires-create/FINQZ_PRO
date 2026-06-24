@@ -56,8 +56,8 @@ const extractErrorStatus = (error: unknown): number | undefined => {
   return typeof error.status === 'number' ? error.status : undefined;
 };
 
-const extractErrorMessage = (error: unknown): string => {
-  if (error instanceof Error && error.message.trim().length > 0) {
+const extractSafeErrorMessage = (error: unknown): string | undefined => {
+  if (error instanceof ApiException && error.message.trim().length > 0) {
     return error.message;
   }
 
@@ -76,19 +76,23 @@ const extractErrorMessage = (error: unknown): string => {
     }
   }
 
-  return 'Erro inesperado.';
+  return undefined;
 };
 
-const getPipelineActionErrorMessage = (
+export const getPipelineActionErrorMessage = (
   error: unknown,
-  operation: 'create' | 'update' | 'delete',
+  operation: 'create' | 'update' | 'inactivate' | 'reactivate' | 'archive',
 ): string => {
   const status = extractErrorStatus(error);
-  const message = extractErrorMessage(error);
+  const message = extractSafeErrorMessage(error);
 
   if (status === 403) {
-    if (operation === 'delete') {
-      return 'Você não tem permissão para inativar pipeline.';
+    if (operation === 'archive') {
+      return 'Você não tem permissão para arquivar pipeline.';
+    }
+
+    if (operation === 'inactivate' || operation === 'reactivate') {
+      return 'Você não tem permissão para alterar o status do pipeline.';
     }
 
     if (operation === 'create') {
@@ -99,18 +103,32 @@ const getPipelineActionErrorMessage = (
   }
 
   if (status === 409) {
-    return operation === 'delete'
-      ? 'Este pipeline possui oportunidades vinculadas e não pode ser inativado.'
-      : 'Conflito de domínio ao salvar pipeline. Verifique se ele pode ser atualizado neste momento.';
+    return message || (
+      operation === 'archive'
+        ? 'Não foi possível arquivar o pipeline.'
+        : 'Não foi possível alterar o status do pipeline.'
+    );
   }
 
   if (status === 400 || status === 422) {
-    return message || 'Falha de validação ao salvar pipeline.';
+    return message || (
+      operation === 'create'
+        ? 'Falha de validação ao criar pipeline.'
+        : operation === 'archive'
+          ? 'Falha de validação ao arquivar pipeline.'
+          : 'Falha de validação ao salvar pipeline.'
+    );
   }
 
-  return operation === 'delete'
-    ? 'Não foi possível inativar o pipeline.'
-    : operation === 'create'
+  if (message) {
+    return message;
+  }
+
+  return operation === 'archive'
+    ? 'Não foi possível arquivar o pipeline.'
+    : operation === 'inactivate' || operation === 'reactivate'
+      ? 'Não foi possível alterar o status do pipeline.'
+      : operation === 'create'
       ? 'Não foi possível criar o pipeline.'
       : 'Não foi possível salvar o pipeline.';
 };
@@ -157,10 +175,15 @@ export const PipelinesPage: React.FC = () => {
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingPipeline, setDeletingPipeline] = useState<AdminPipelineViewModel | null>(null);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showLifecycleModal, setShowLifecycleModal] = useState(false);
+  const [lifecycleAction, setLifecycleAction] = useState<'inactivate' | 'reactivate' | null>(null);
+  const [lifecyclePipeline, setLifecyclePipeline] = useState<AdminPipelineViewModel | null>(null);
+  const [lifecycleSubmitting, setLifecycleSubmitting] = useState(false);
+  const [lifecycleError, setLifecycleError] = useState<string | null>(null);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archivingPipeline, setArchivingPipeline] = useState<AdminPipelineViewModel | null>(null);
+  const [archiveSubmitting, setArchiveSubmitting] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [showCreateStageModal, setShowCreateStageModal] = useState(false);
   const [stageTargetPipeline, setStageTargetPipeline] = useState<{
     pipelineId: string;
@@ -304,41 +327,88 @@ export const PipelinesPage: React.FC = () => {
     }
   };
 
-  const resetDeleteState = () => {
-    setDeletingPipeline(null);
-    setDeleteError(null);
+  const openLifecycleModal = (
+    pipeline: AdminPipelineViewModel,
+    action: 'inactivate' | 'reactivate',
+  ) => {
+    setLifecyclePipeline(pipeline);
+    setLifecycleAction(action);
+    setLifecycleError(null);
+    setShowLifecycleModal(true);
   };
 
-  const openDeleteModal = (pipeline: AdminPipelineViewModel) => {
-    setDeletingPipeline(pipeline);
-    setDeleteError(null);
-    setShowDeleteModal(true);
+  const closeLifecycleModal = () => {
+    if (lifecycleSubmitting) return;
+    setShowLifecycleModal(false);
+    setLifecyclePipeline(null);
+    setLifecycleAction(null);
+    setLifecycleError(null);
   };
 
-  const closeDeleteModal = () => {
-    if (deleteSubmitting) return;
-    setShowDeleteModal(false);
-    resetDeleteState();
-  };
-
-  const handleDeletePipeline = async () => {
-    if (!deletingPipeline) {
-      setDeleteError('Pipeline selecionado nao encontrado.');
+  const handleLifecycleUpdate = async () => {
+    if (!lifecyclePipeline || !lifecycleAction) {
+      setLifecycleError('Pipeline selecionado nao encontrado.');
       return;
     }
 
-    setDeleteSubmitting(true);
-    setDeleteError(null);
+    setLifecycleSubmitting(true);
+    setLifecycleError(null);
 
     try {
-      await pipelinesApi.deletePipeline(deletingPipeline.pipelineId);
-      setShowDeleteModal(false);
-      resetDeleteState();
+      await pipelinesApi.updatePipeline(
+        lifecyclePipeline.pipelineId,
+        {
+          isActive: lifecycleAction === 'inactivate' ? false : true,
+        } as any,
+      );
+
+      setShowLifecycleModal(false);
+      setLifecyclePipeline(null);
+      setLifecycleAction(null);
+      await loadPipelines();
+    } catch (actionError) {
+      setLifecycleError(
+        getPipelineActionErrorMessage(
+          actionError,
+          lifecycleAction,
+        ),
+      );
+    } finally {
+      setLifecycleSubmitting(false);
+    }
+  };
+
+  const openArchiveModal = (pipeline: AdminPipelineViewModel) => {
+    setArchivingPipeline(pipeline);
+    setArchiveError(null);
+    setShowArchiveModal(true);
+  };
+
+  const closeArchiveModal = () => {
+    if (archiveSubmitting) return;
+    setShowArchiveModal(false);
+    setArchivingPipeline(null);
+    setArchiveError(null);
+  };
+
+  const handleArchivePipeline = async () => {
+    if (!archivingPipeline) {
+      setArchiveError('Pipeline selecionado nao encontrado.');
+      return;
+    }
+
+    setArchiveSubmitting(true);
+    setArchiveError(null);
+
+    try {
+      await pipelinesApi.deletePipeline(archivingPipeline.pipelineId);
+      setShowArchiveModal(false);
+      setArchivingPipeline(null);
       await loadPipelines();
     } catch (deleteError) {
-      setDeleteError(getPipelineActionErrorMessage(deleteError, 'delete'));
+      setArchiveError(getPipelineActionErrorMessage(deleteError, 'archive'));
     } finally {
-      setDeleteSubmitting(false);
+      setArchiveSubmitting(false);
     }
   };
 
@@ -548,13 +618,27 @@ export const PipelinesPage: React.FC = () => {
                         Adicionar etapa
                       </Button>
                       <Button
+                        variant={pipeline.active ? 'outline' : 'primary'}
+                        icon={pipeline.active ? <Trash2 size={14} /> : <RefreshCw size={14} />}
+                        onClick={() =>
+                          openLifecycleModal(
+                            pipeline,
+                            pipeline.active ? 'inactivate' : 'reactivate',
+                          )
+                        }
+                        disabled={loading}
+                        title={pipeline.active ? 'Inativar pipeline' : 'Reativar pipeline'}
+                      >
+                        {pipeline.active ? 'Inativar' : 'Reativar'}
+                      </Button>
+                      <Button
                         variant="danger"
                         icon={<Trash2 size={14} />}
-                        onClick={() => openDeleteModal(pipeline)}
-                        disabled={loading || !pipeline.active}
-                        title={pipeline.active ? 'Inativar pipeline' : 'Pipeline já está inativo'}
+                        onClick={() => openArchiveModal(pipeline)}
+                        disabled={loading}
+                        title="Arquivar pipeline"
                       >
-                        {pipeline.active ? 'Inativar' : 'Inativo'}
+                        Arquivar
                       </Button>
                     </div>
                   </div>
@@ -759,16 +843,16 @@ export const PipelinesPage: React.FC = () => {
       </Modal>
 
       <Modal
-        isOpen={showDeleteModal}
-        onClose={closeDeleteModal}
-        title="Inativar Pipeline"
+        isOpen={showLifecycleModal}
+        onClose={closeLifecycleModal}
+        title={lifecycleAction === 'reactivate' ? 'Reativar Pipeline' : 'Inativar Pipeline'}
         size="md"
       >
         <div className="space-y-4">
-          {deleteError && (
+          {lifecycleError && (
             <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-              <span>{deleteError}</span>
+              <span>{lifecycleError}</span>
             </div>
           )}
 
@@ -777,10 +861,14 @@ export const PipelinesPage: React.FC = () => {
               <CheckCircle2 className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" size={18} />
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  Confirme a inativação de {deletingPipeline?.pipelineName ?? 'este pipeline'}.
+                  {lifecycleAction === 'reactivate'
+                    ? `Confirme a reativação de ${lifecyclePipeline?.pipelineName ?? 'este pipeline'}.`
+                    : `Confirme a inativação de ${lifecyclePipeline?.pipelineName ?? 'este pipeline'}.`}
                 </p>
                 <p className="text-sm text-[var(--text-secondary)]">
-                  Esta ação usa a API oficial e pode ser bloqueada se houver oportunidades vinculadas.
+                  {lifecycleAction === 'reactivate'
+                    ? 'Esta ação vai definir isActive=true no backend e recarregar a lista oficial.'
+                    : 'Esta ação vai definir isActive=false no backend e recarregar a lista oficial.'}
                 </p>
               </div>
             </div>
@@ -789,16 +877,70 @@ export const PipelinesPage: React.FC = () => {
           <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
             <p className="font-medium text-[var(--text-primary)]">Efeito da ação</p>
             <p className="mt-1">
-              O pipeline será marcado como inativo no backend e a lista oficial será recarregada em seguida.
+              {lifecycleAction === 'reactivate'
+                ? 'O pipeline voltará a ficar ativo no backend após confirmação.'
+                : 'O pipeline deixará de ficar ativo no backend após confirmação.'}
             </p>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={closeDeleteModal} disabled={deleteSubmitting}>
+            <Button variant="outline" onClick={closeLifecycleModal} disabled={lifecycleSubmitting}>
               Cancelar
             </Button>
-            <Button variant="danger" onClick={handleDeletePipeline} disabled={deleteSubmitting}>
-              {deleteSubmitting ? 'Inativando...' : 'Confirmar inativação'}
+            <Button variant={lifecycleAction === 'reactivate' ? 'primary' : 'danger'} onClick={handleLifecycleUpdate} disabled={lifecycleSubmitting}>
+              {lifecycleSubmitting
+                ? lifecycleAction === 'reactivate'
+                  ? 'Reativando...'
+                  : 'Inativando...'
+                : lifecycleAction === 'reactivate'
+                  ? 'Confirmar reativação'
+                  : 'Confirmar inativação'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showArchiveModal}
+        onClose={closeArchiveModal}
+        title="Arquivar Pipeline"
+        size="md"
+      >
+        <div className="space-y-4">
+          {archiveError && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>{archiveError}</span>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" size={18} />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Confirme o arquivamento de {archivingPipeline?.pipelineName ?? 'este pipeline'}.
+                </p>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Esta ação usa DELETE e pode ser bloqueada pelo backend conforme as regras de domínio.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Efeito da ação</p>
+            <p className="mt-1">
+              O pipeline será arquivado no backend e a lista oficial será recarregada em seguida.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeArchiveModal} disabled={archiveSubmitting}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleArchivePipeline} disabled={archiveSubmitting}>
+              {archiveSubmitting ? 'Arquivando...' : 'Confirmar arquivamento'}
             </Button>
           </div>
         </div>
