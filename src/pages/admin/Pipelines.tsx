@@ -1,10 +1,11 @@
 // FINQZ PRO - Pipelines Page (Admin)
-// Fase read-only baseada no contrato oficial de Pipeline/Stage
+// Wave 1 do admin enterprise para update/inactivate de Pipeline via contrato oficial
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Pencil, RefreshCw, Trash2, TrendingUp } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Button, Input, Modal, TextArea, Toggle } from '../../components/ui';
+import { ApiException } from '../../api/http';
 import { pipelinesApi } from '../../api/modules/pipelines.api';
 import {
   type Pipeline as OfficialPipeline,
@@ -12,6 +13,7 @@ import {
   type AdminPipelineDraft,
   type AdminStageDraft,
   buildCreatePipelinePayload,
+  buildUpdatePipelinePayload,
   buildCreateStagePayload,
   mapOfficialPipelinesToAdminViewModels,
 } from './pipelines.adapter';
@@ -20,8 +22,98 @@ type PipelineApiEnvelope = {
   data?: unknown;
 };
 
+type ApiErrorLike = {
+  status?: number;
+  code?: string;
+  message?: string;
+  body?: unknown;
+  responseBody?: unknown;
+  details?: unknown;
+};
+
+type ApiExceptionWithBody = ApiException & {
+  body?: unknown;
+  responseBody?: unknown;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isApiExceptionLike = (error: unknown): error is ApiExceptionWithBody | ApiErrorLike => (
+  error instanceof ApiException ||
+  (isRecord(error) && 'status' in error && typeof error.status === 'number')
+);
+
+const extractErrorBody = (error: unknown): unknown => {
+  if (!isApiExceptionLike(error)) return undefined;
+  if ('body' in error && error.body !== undefined) return error.body;
+  if ('responseBody' in error && error.responseBody !== undefined) return error.responseBody;
+  return undefined;
+};
+
+const extractErrorStatus = (error: unknown): number | undefined => {
+  if (!isApiExceptionLike(error)) return undefined;
+  return typeof error.status === 'number' ? error.status : undefined;
+};
+
+const extractErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  const body = extractErrorBody(error);
+  if (isRecord(body)) {
+    const nestedError = isRecord(body.error) ? body.error : null;
+    const nestedMessage = nestedError && typeof nestedError.message === 'string' ? nestedError.message : null;
+    if (nestedMessage) return nestedMessage;
+
+    if (typeof body.message === 'string' && body.message.trim().length > 0) {
+      return body.message;
+    }
+
+    if (typeof body.error === 'string' && body.error.trim().length > 0) {
+      return body.error;
+    }
+  }
+
+  return 'Erro inesperado.';
+};
+
+const getPipelineActionErrorMessage = (
+  error: unknown,
+  operation: 'create' | 'update' | 'delete',
+): string => {
+  const status = extractErrorStatus(error);
+  const message = extractErrorMessage(error);
+
+  if (status === 403) {
+    if (operation === 'delete') {
+      return 'Você não tem permissão para inativar pipeline.';
+    }
+
+    if (operation === 'create') {
+      return 'Você não tem permissão para criar pipeline.';
+    }
+
+    return 'Você não tem permissão para editar pipeline.';
+  }
+
+  if (status === 409) {
+    return operation === 'delete'
+      ? 'Este pipeline possui oportunidades vinculadas e não pode ser inativado.'
+      : 'Conflito de domínio ao salvar pipeline. Verifique se ele pode ser atualizado neste momento.';
+  }
+
+  if (status === 400 || status === 422) {
+    return message || 'Falha de validação ao salvar pipeline.';
+  }
+
+  return operation === 'delete'
+    ? 'Não foi possível inativar o pipeline.'
+    : operation === 'create'
+      ? 'Não foi possível criar o pipeline.'
+      : 'Não foi possível salvar o pipeline.';
+};
 
 const extractOfficialPipelines = (response: unknown): unknown[] => {
   if (Array.isArray(response)) return response;
@@ -56,6 +148,19 @@ export const PipelinesPage: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingPipeline, setEditingPipeline] = useState<AdminPipelineViewModel | null>(null);
+  const [editFormData, setEditFormData] = useState<AdminPipelineDraft>({
+    pipelineName: '',
+    description: '',
+    isDefault: false,
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingPipeline, setDeletingPipeline] = useState<AdminPipelineViewModel | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showCreateStageModal, setShowCreateStageModal] = useState(false);
   const [stageTargetPipeline, setStageTargetPipeline] = useState<{
     pipelineId: string;
@@ -134,18 +239,106 @@ export const PipelinesPage: React.FC = () => {
       resetCreateForm();
       await loadPipelines();
     } catch (createError) {
-      const message = createError instanceof Error ? createError.message : 'Erro inesperado ao criar pipeline.';
-      const lowered = message.toLowerCase();
-
-      if (lowered.includes('validation') || lowered.includes('nome') || lowered.includes('required')) {
-        setSubmitError(message || 'Falha de validação.');
-      } else if (lowered.includes('forbidden') || lowered.includes('unauthorized') || lowered.includes('acesso')) {
-        setSubmitError('Você não tem permissão para criar pipeline.');
-      } else {
-        setSubmitError(message || 'Erro inesperado ao criar pipeline.');
-      }
+      setSubmitError(getPipelineActionErrorMessage(createError, 'create'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const resetEditForm = () => {
+    setEditingPipeline(null);
+    setEditFormData({
+      pipelineName: '',
+      description: '',
+      isDefault: false,
+    });
+    setEditError(null);
+  };
+
+  const openEditModal = (pipeline: AdminPipelineViewModel) => {
+    setEditingPipeline(pipeline);
+    setEditFormData({
+      pipelineName: pipeline.pipelineName,
+      description: pipeline.description ?? '',
+      isDefault: pipeline.isDefault,
+    });
+    setEditError(null);
+    setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    if (editSubmitting) return;
+    setShowEditModal(false);
+    resetEditForm();
+  };
+
+  const handleUpdatePipeline = async () => {
+    if (!editingPipeline) {
+      setEditError('Pipeline selecionado nao encontrado.');
+      return;
+    }
+
+    const normalizedName = (editFormData.pipelineName ?? '').trim();
+    if (!normalizedName) {
+      setEditError('O nome do pipeline é obrigatório.');
+      return;
+    }
+
+    setEditSubmitting(true);
+    setEditError(null);
+
+    try {
+      const payload = buildUpdatePipelinePayload({
+        ...editFormData,
+        pipelineName: normalizedName,
+      });
+
+      await pipelinesApi.updatePipeline(editingPipeline.pipelineId, payload);
+      setShowEditModal(false);
+      resetEditForm();
+      await loadPipelines();
+    } catch (updateError) {
+      setEditError(getPipelineActionErrorMessage(updateError, 'update'));
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const resetDeleteState = () => {
+    setDeletingPipeline(null);
+    setDeleteError(null);
+  };
+
+  const openDeleteModal = (pipeline: AdminPipelineViewModel) => {
+    setDeletingPipeline(pipeline);
+    setDeleteError(null);
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteSubmitting) return;
+    setShowDeleteModal(false);
+    resetDeleteState();
+  };
+
+  const handleDeletePipeline = async () => {
+    if (!deletingPipeline) {
+      setDeleteError('Pipeline selecionado nao encontrado.');
+      return;
+    }
+
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+
+    try {
+      await pipelinesApi.deletePipeline(deletingPipeline.pipelineId);
+      setShowDeleteModal(false);
+      resetDeleteState();
+      await loadPipelines();
+    } catch (deleteError) {
+      setDeleteError(getPipelineActionErrorMessage(deleteError, 'delete'));
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -341,10 +534,27 @@ export const PipelinesPage: React.FC = () => {
                       )}
                       <Button
                         variant="outline"
+                        icon={<Pencil size={14} />}
+                        onClick={() => openEditModal(pipeline)}
+                        disabled={loading}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
                         onClick={() => openCreateStageModal(pipeline)}
                         disabled={loading}
                       >
                         Adicionar etapa
+                      </Button>
+                      <Button
+                        variant="danger"
+                        icon={<Trash2 size={14} />}
+                        onClick={() => openDeleteModal(pipeline)}
+                        disabled={loading || !pipeline.active}
+                        title={pipeline.active ? 'Inativar pipeline' : 'Pipeline já está inativo'}
+                      >
+                        {pipeline.active ? 'Inativar' : 'Inativo'}
                       </Button>
                     </div>
                   </div>
@@ -476,6 +686,119 @@ export const PipelinesPage: React.FC = () => {
             </Button>
             <Button variant="primary" onClick={handleCreatePipeline} disabled={submitting}>
               {submitting ? 'Criando...' : 'Criar Pipeline'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showEditModal}
+        onClose={closeEditModal}
+        title="Editar Pipeline"
+        size="md"
+      >
+        <div className="space-y-4">
+          {editError && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>{editError}</span>
+            </div>
+          )}
+
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Pipeline selecionado</p>
+            <p className="mt-1">{editingPipeline?.pipelineName ?? 'Pipeline oficial'}</p>
+          </div>
+
+          <Input
+            label="Nome"
+            value={editFormData.pipelineName ?? ''}
+            onChange={(e) =>
+              setEditFormData((prev) => ({ ...prev, pipelineName: e.target.value }))
+            }
+            placeholder="Ex.: Pipeline Comercial"
+            required
+            disabled={editSubmitting}
+          />
+
+          <TextArea
+            label="Descrição"
+            value={editFormData.description ?? ''}
+            onChange={(e) =>
+              setEditFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
+            placeholder="Descrição opcional do pipeline"
+            disabled={editSubmitting}
+          />
+
+          <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Pipeline padrão</p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Marca este pipeline como padrão para o tenant atual.
+              </p>
+            </div>
+            <Toggle
+              checked={Boolean(editFormData.isDefault)}
+              onChange={(checked) =>
+                setEditFormData((prev) => ({ ...prev, isDefault: checked }))
+              }
+              disabled={editSubmitting}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeEditModal} disabled={editSubmitting}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={handleUpdatePipeline} disabled={editSubmitting}>
+              {editSubmitting ? 'Salvando...' : 'Salvar alterações'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        title="Inativar Pipeline"
+        size="md"
+      >
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" size={18} />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Confirme a inativação de {deletingPipeline?.pipelineName ?? 'este pipeline'}.
+                </p>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Esta ação usa a API oficial e pode ser bloqueada se houver oportunidades vinculadas.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Efeito da ação</p>
+            <p className="mt-1">
+              O pipeline será marcado como inativo no backend e a lista oficial será recarregada em seguida.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeDeleteModal} disabled={deleteSubmitting}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleDeletePipeline} disabled={deleteSubmitting}>
+              {deleteSubmitting ? 'Inativando...' : 'Confirmar inativação'}
             </Button>
           </div>
         </div>

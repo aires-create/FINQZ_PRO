@@ -68,6 +68,14 @@ const trimOptionalText = (value: string | null | undefined): string | null | und
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+const normalizeNullableText = (value: string | null | undefined): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const normalizePipelineStages = (stages: OfficialStage[] | undefined): OfficialStage[] => {
   if (!Array.isArray(stages)) return [];
 
@@ -196,7 +204,7 @@ export const buildUpdatePipelinePayload = (
     if (name.length > 0) payload.name = name;
   }
 
-  const description = trimOptionalText(draft.description);
+  const description = normalizeNullableText(draft.description);
   if (description !== undefined) {
     payload.description = description;
   }
