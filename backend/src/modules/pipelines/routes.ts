@@ -409,6 +409,8 @@ export async function pipelinesRoutes(app: FastifyInstance) {
      *                 type: boolean
      *               isLost:
      *                 type: boolean
+     *               isActive:
+     *                 type: boolean
      *             description: isWon and isLost must not be true at the same time.
      *     responses:
      *       201:
@@ -512,6 +514,7 @@ export async function pipelinesRoutes(app: FastifyInstance) {
           ...(body.order !== undefined ? { order: body.order } : {}),
           ...(body.isWon !== undefined ? { isWon: body.isWon } : {}),
           ...(body.isLost !== undefined ? { isLost: body.isLost } : {}),
+          ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
         });
 
         return reply.send({

@@ -38,6 +38,11 @@ export interface CountActiveByTenantInput {
   tenantId: UUID;
 }
 
+export interface CountActiveStagesByPipelineInput {
+  tenantId: UUID;
+  pipelineId: UUID;
+}
+
 export interface CreatePipelineRepositoryInput extends CreatePipelineInput {}
 
 export interface UpdatePipelineRepositoryInput {
@@ -95,6 +100,9 @@ export interface PipelineRepositoryContract {
     input: HasLinkedOpportunitiesForStageInput,
   ): Promise<boolean>;
   countActiveByTenant(input: CountActiveByTenantInput): Promise<number>;
+  countActiveStagesByPipeline(
+    input: CountActiveStagesByPipelineInput,
+  ): Promise<number>;
   createPipeline(input: CreatePipelineRepositoryInput): Promise<PipelineContract>;
   updatePipeline(input: UpdatePipelineRepositoryInput): Promise<void>;
   softDeletePipeline(input: SoftDeletePipelineRepositoryInput): Promise<void>;

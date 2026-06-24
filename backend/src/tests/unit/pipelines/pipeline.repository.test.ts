@@ -11,6 +11,7 @@ const { prismaMock, txMock } = vi.hoisted(() => {
     },
     stage: {
       findFirst: vi.fn(),
+      count: vi.fn(),
       create: vi.fn(),
       updateMany: vi.fn(),
     },
@@ -32,6 +33,7 @@ const { prismaMock, txMock } = vi.hoisted(() => {
     },
     stage: {
       findFirst: vi.fn(),
+      count: vi.fn(),
       create: vi.fn(),
       updateMany: vi.fn(),
     },
@@ -96,6 +98,7 @@ describe('pipelinesRepository', () => {
         id: true,
         tenantId: true,
         pipelineId: true,
+        isActive: true,
         deletedAt: true,
       }),
     });
@@ -325,7 +328,7 @@ describe('pipelinesRepository', () => {
     expect(txMock.pipeline.updateMany).not.toHaveBeenCalled();
   });
 
-  it('createStage does not use code or isActive', async () => {
+  it('createStage persists active stages by default', async () => {
     prismaMock.stage.create.mockResolvedValueOnce({ id: 'stage-1' });
 
     await pipelinesRepository.createStage({
@@ -345,14 +348,56 @@ describe('pipelinesRepository', () => {
         order: 1,
         isWon: false,
         isLost: false,
+        isActive: true,
       },
       select: expect.objectContaining({
         id: true,
         tenantId: true,
         pipelineId: true,
+        isActive: true,
         deletedAt: true,
       }),
     });
+  });
+
+  it('updateStage persists isActive when provided', async () => {
+    prismaMock.stage.updateMany.mockResolvedValueOnce({ count: 1 });
+
+    await pipelinesRepository.updateStage({
+      tenantId: 'tenant-a',
+      stageId: 'stage-1',
+      isActive: false,
+    });
+
+    expect(prismaMock.stage.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'stage-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+  });
+
+  it('countActiveStagesByPipeline counts active non-deleted stages for tenant pipeline', async () => {
+    prismaMock.stage.count.mockResolvedValueOnce(2);
+
+    const result = await pipelinesRepository.countActiveStagesByPipeline({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+
+    expect(prismaMock.stage.count).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+    expect(result).toBe(2);
   });
 
   it('softDeletePipeline uses deletedAt', async () => {

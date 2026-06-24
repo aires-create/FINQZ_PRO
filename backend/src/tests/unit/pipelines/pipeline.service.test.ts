@@ -19,6 +19,7 @@ type PipelineRepositoryMock = PipelineRepositoryContract & {
   hasLinkedOpportunitiesForPipeline: ReturnType<typeof vi.fn>;
   hasLinkedOpportunitiesForStage: ReturnType<typeof vi.fn>;
   countActiveByTenant: ReturnType<typeof vi.fn>;
+  countActiveStagesByPipeline: ReturnType<typeof vi.fn>;
   createPipeline: ReturnType<typeof vi.fn>;
   updatePipeline: ReturnType<typeof vi.fn>;
   softDeletePipeline: ReturnType<typeof vi.fn>;
@@ -37,6 +38,7 @@ const createRepositoryMock = (): PipelineRepositoryMock =>
     hasLinkedOpportunitiesForPipeline: vi.fn(),
     hasLinkedOpportunitiesForStage: vi.fn(),
     countActiveByTenant: vi.fn(),
+    countActiveStagesByPipeline: vi.fn(),
     createPipeline: vi.fn(),
     updatePipeline: vi.fn(),
     softDeletePipeline: vi.fn(),
@@ -72,6 +74,7 @@ const baseStage = {
   order: 1,
   isWon: false,
   isLost: false,
+  isActive: true,
   createdAt: new Date('2026-06-19T00:00:00.000Z'),
   updatedAt: new Date('2026-06-19T00:00:00.000Z'),
   deletedAt: null,
@@ -313,6 +316,95 @@ describe('PipelinesService', () => {
       }),
     ).rejects.toThrow('Stage cannot be won and lost at the same time');
 
+    expect(repository.updateStage).not.toHaveBeenCalled();
+  });
+
+  it('updateStage allows inactivation with linked opportunities and forwards isActive=false', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: true,
+    });
+    repository.countActiveStagesByPipeline.mockResolvedValueOnce(2);
+    repository.updateStage.mockResolvedValueOnce(undefined);
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: false,
+    });
+
+    const result = await service.updateStage({
+      id: 'stage-1',
+      tenantId: 'tenant-a',
+      isActive: false,
+      actorUserId: 'user-1',
+    });
+
+    expect(repository.countActiveStagesByPipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.hasLinkedOpportunitiesForStage).not.toHaveBeenCalled();
+    expect(repository.updateStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      stageId: 'stage-1',
+      isActive: false,
+    });
+    expect(result).toEqual({
+      ...baseStage,
+      isActive: false,
+    });
+  });
+
+  it('updateStage allows reactivation with isActive=true', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: false,
+    });
+    repository.updateStage.mockResolvedValueOnce(undefined);
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: true,
+    });
+
+    const result = await service.updateStage({
+      id: 'stage-1',
+      tenantId: 'tenant-a',
+      isActive: true,
+      actorUserId: 'user-1',
+    });
+
+    expect(repository.countActiveStagesByPipeline).not.toHaveBeenCalled();
+    expect(repository.updateStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      stageId: 'stage-1',
+      isActive: true,
+    });
+    expect(result).toEqual({
+      ...baseStage,
+      isActive: true,
+    });
+  });
+
+  it('updateStage blocks inactivation when it is the last active stage', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: true,
+    });
+    repository.countActiveStagesByPipeline.mockResolvedValueOnce(1);
+
+    await expect(
+      service.updateStage({
+        id: 'stage-1',
+        tenantId: 'tenant-a',
+        isActive: false,
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Pipeline must keep one active stage');
+
+    expect(repository.countActiveStagesByPipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.hasLinkedOpportunitiesForStage).not.toHaveBeenCalled();
     expect(repository.updateStage).not.toHaveBeenCalled();
   });
 
@@ -593,6 +685,10 @@ describe('PipelinesService', () => {
   });
 
   it('deactivateStage delegates tenantId/stageId/actorUserId', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: false,
+    });
     repository.hasLinkedOpportunitiesForStage.mockResolvedValueOnce(false);
     repository.softDeleteStage.mockResolvedValueOnce({ count: 1 });
 
@@ -610,6 +706,10 @@ describe('PipelinesService', () => {
   });
 
   it('deactivateStage blocks when stage has linked opportunities', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: false,
+    });
     repository.hasLinkedOpportunitiesForStage.mockResolvedValueOnce(true);
 
     await expect(
@@ -624,6 +724,29 @@ describe('PipelinesService', () => {
       tenantId: 'tenant-a',
       stageId: 'stage-1',
     });
+    expect(repository.softDeleteStage).not.toHaveBeenCalled();
+  });
+
+  it('deactivateStage blocks when stage is the last active stage', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: true,
+    });
+    repository.countActiveStagesByPipeline.mockResolvedValueOnce(1);
+
+    await expect(
+      service.deactivateStage({
+        tenantId: 'tenant-a',
+        stageId: 'stage-1',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Pipeline must keep one active stage');
+
+    expect(repository.countActiveStagesByPipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.hasLinkedOpportunitiesForStage).not.toHaveBeenCalled();
     expect(repository.softDeleteStage).not.toHaveBeenCalled();
   });
 });

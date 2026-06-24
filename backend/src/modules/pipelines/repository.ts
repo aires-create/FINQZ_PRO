@@ -14,6 +14,7 @@ type FindStageByIdInput = { tenantId: string; stageId: string };
 type HasLinkedOpportunitiesForPipelineInput = { tenantId: string; pipelineId: string };
 type HasLinkedOpportunitiesForStageInput = { tenantId: string; stageId: string };
 type CountActiveByTenantInput = { tenantId: string };
+type CountActiveStagesByPipelineInput = { tenantId: string; pipelineId: string };
 type UpdatePipelineRepositoryInput = {
   tenantId: string;
   pipelineId: string;
@@ -37,6 +38,7 @@ type UpdateStageRepositoryInput = {
   order?: number;
   isWon?: boolean;
   isLost?: boolean;
+  isActive?: boolean;
 };
 type SoftDeletePipelineRepositoryInput = { tenantId: string; pipelineId: string; actorUserId?: string };
 type SoftDeleteStageRepositoryInput = { tenantId: string; stageId: string; actorUserId?: string };
@@ -59,6 +61,7 @@ const pipelineReadInclude = {
       order: true,
       isWon: true,
       isLost: true,
+      isActive: true,
       createdAt: true,
       updatedAt: true,
       deletedAt: true,
@@ -77,6 +80,7 @@ const stageReadSelect = {
   order: true,
   isWon: true,
   isLost: true,
+  isActive: true,
   createdAt: true,
   updatedAt: true,
   deletedAt: true,
@@ -228,6 +232,20 @@ export const pipelinesRepository = {
     });
   },
 
+  async countActiveStagesByPipeline(
+    input: CountActiveStagesByPipelineInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.stage.count({
+      where: {
+        tenantId: input.tenantId,
+        pipelineId: input.pipelineId,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+  },
+
   createPipeline(
     input: CreatePipelineInput,
     client: PipelinesPrismaClient = prisma,
@@ -372,6 +390,7 @@ export const pipelinesRepository = {
         order: input.order ?? 1,
         isWon: input.isWon ?? false,
         isLost: input.isLost ?? false,
+        isActive: true,
       },
       select: stageReadSelect,
     });
@@ -392,6 +411,7 @@ export const pipelinesRepository = {
         ...(input.order !== undefined ? { order: input.order } : {}),
         ...(input.isWon !== undefined ? { isWon: input.isWon } : {}),
         ...(input.isLost !== undefined ? { isLost: input.isLost } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       },
     });
   },

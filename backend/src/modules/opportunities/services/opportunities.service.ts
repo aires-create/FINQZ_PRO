@@ -585,6 +585,10 @@ export class OpportunitiesService {
       await this.throwInvalidOrTenantScope('stage', input.stageId, input.tenantId);
     }
 
+    if (stage!.isActive === false) {
+      await this.throwInvalidOrTenantScope('stage', input.stageId, input.tenantId);
+    }
+
     if (stage!.pipelineId !== input.pipelineId) {
       throw new InvalidStageError(input.stageId);
     }

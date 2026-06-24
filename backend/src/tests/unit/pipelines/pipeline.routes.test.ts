@@ -514,6 +514,7 @@ describe('pipelines routes', () => {
       payload: {
         name: 'Stage B',
         isWon: true,
+        isActive: false,
       },
     });
 
@@ -529,6 +530,36 @@ describe('pipelines routes', () => {
       id: '11111111-1111-1111-1111-111111111111',
       name: 'Stage B',
       isWon: true,
+      isActive: false,
+    });
+  });
+
+  it.each([
+    [false, false],
+    [true, true],
+  ])('PUT /stages/:stageId repasses isActive=%s to service', async (isActive, expected) => {
+    serviceMock.updateStage.mockResolvedValueOnce({
+      id: 'stage-1',
+    });
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:update',
+      },
+      payload: {
+        isActive,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(serviceMock.updateStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      id: '11111111-1111-1111-1111-111111111111',
+      isActive: expected,
     });
   });
 

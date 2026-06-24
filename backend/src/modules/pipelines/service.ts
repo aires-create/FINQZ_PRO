@@ -217,6 +217,28 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<PipelineContract['stages'][number]> {
     validateStageWrite(input);
 
+    const currentStage = await this.repository.findStageById({
+      tenantId: input.tenantId,
+      stageId: input.id,
+    });
+
+    if (!currentStage) {
+      throw new StageNotFoundError(input.id);
+    }
+
+    if (input.isActive === false && currentStage.isActive !== false) {
+      const activeStagesCount = await this.repository.countActiveStagesByPipeline({
+        tenantId: input.tenantId,
+        pipelineId: currentStage.pipelineId,
+      });
+
+      if (activeStagesCount <= 1) {
+        throw new PipelineMustKeepOneActiveStageError(
+          'Pipeline must keep one active stage',
+        );
+      }
+    }
+
     const payload = {
       tenantId: input.tenantId,
       stageId: input.id,
@@ -224,6 +246,7 @@ export class PipelinesService implements PipelineServiceContract {
       ...(input.order !== undefined ? { order: input.order } : {}),
       ...(input.isWon !== undefined ? { isWon: input.isWon } : {}),
       ...(input.isLost !== undefined ? { isLost: input.isLost } : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     };
 
     await this.repository.updateStage(payload);
@@ -243,6 +266,28 @@ export class PipelinesService implements PipelineServiceContract {
   async deactivateStage(
     input: DeactivateStageServiceInput,
   ): Promise<void> {
+    const currentStage = await this.repository.findStageById({
+      tenantId: input.tenantId,
+      stageId: input.stageId,
+    });
+
+    if (!currentStage) {
+      throw new StageNotFoundError(input.stageId);
+    }
+
+    if (currentStage.isActive) {
+      const activeStagesCount = await this.repository.countActiveStagesByPipeline({
+        tenantId: input.tenantId,
+        pipelineId: currentStage.pipelineId,
+      });
+
+      if (activeStagesCount <= 1) {
+        throw new PipelineMustKeepOneActiveStageError(
+          'Pipeline must keep one active stage',
+        );
+      }
+    }
+
     const hasLinkedOpportunities = await this.repository.hasLinkedOpportunitiesForStage({
       tenantId: input.tenantId,
       stageId: input.stageId,
@@ -331,6 +376,13 @@ export class StageInUseError extends ConflictError {
   constructor(stageId: string) {
     super(`Stage ${stageId} has linked opportunities`);
     this.name = 'StageInUseError';
+  }
+}
+
+export class PipelineMustKeepOneActiveStageError extends ConflictError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PipelineMustKeepOneActiveStageError';
   }
 }
 

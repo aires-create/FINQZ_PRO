@@ -155,6 +155,33 @@ describe('OpportunitiesService', () => {
     ).rejects.toBeInstanceOf(InvalidStageError);
   });
 
+  it('create rejeita stage inativo', async () => {
+    prismaMock.pipeline.findFirst.mockResolvedValueOnce({ id: 'pipe-1', tenantId: 't1' });
+    prismaMock.stage.findFirst.mockResolvedValueOnce({
+      id: 'stage-1',
+      tenantId: 't1',
+      pipelineId: 'pipe-1',
+      isActive: false,
+    });
+    prismaMock.stage.findFirst.mockResolvedValueOnce({
+      id: 'stage-1',
+      tenantId: 't1',
+      pipelineId: 'pipe-1',
+      isActive: false,
+    });
+
+    await expect(
+      service.create({
+        tenantId: 't1',
+        title: 'Opp',
+        amount: 1000,
+        pipelineId: 'pipe-1',
+        stageId: 'stage-1',
+      }, tenantAdminScope),
+    ).rejects.toBeInstanceOf(InvalidStageError);
+    expect(repoMock.create).not.toHaveBeenCalled();
+  });
+
   it('create pipeline inválido', async () => {
     prismaMock.pipeline.findFirst.mockResolvedValueOnce(null);
     prismaMock.pipeline.findFirst.mockResolvedValueOnce(null);
@@ -201,6 +228,27 @@ describe('OpportunitiesService', () => {
 
     expect(result.stageId).toBe('stage-2');
     expect(repoMock.moveStage).toHaveBeenCalledOnce();
+  });
+
+  it('moveStage rejeita stage inativo', async () => {
+    repoMock.findById.mockResolvedValueOnce({ id: 'opp-1', pipelineId: 'pipe-1', stageId: 'stage-1', partnerId: 'partner-1', ownerId: 'user-owner' });
+    prismaMock.pipeline.findFirst.mockResolvedValueOnce({ id: 'pipe-1', tenantId: 't1' });
+    prismaMock.stage.findFirst.mockResolvedValueOnce({
+      id: 'stage-2',
+      tenantId: 't1',
+      pipelineId: 'pipe-1',
+      isActive: false,
+    });
+
+    await expect(
+      service.moveStage({
+        tenantId: 't1',
+        opportunityId: 'opp-1',
+        stageId: 'stage-2',
+      }, tenantAdminScope),
+    ).rejects.toBeInstanceOf(InvalidStageError);
+
+    expect(repoMock.moveStage).not.toHaveBeenCalled();
   });
 
   it('moveStage inválido (stage fora do pipeline)', async () => {
