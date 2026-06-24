@@ -146,6 +146,8 @@ export async function pipelinesRoutes(app: FastifyInstance) {
      *                 nullable: true
      *               isDefault:
      *                 type: boolean
+     *               isActive:
+     *                 type: boolean
      *     responses:
      *       201:
      *         description: Pipeline created successfully
@@ -274,6 +276,7 @@ export async function pipelinesRoutes(app: FastifyInstance) {
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.description !== undefined ? { description: body.description } : {}),
           ...(body.isDefault !== undefined ? { isDefault: body.isDefault } : {}),
+          ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
         });
 
         return reply.send({

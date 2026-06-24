@@ -43,6 +43,7 @@ export const updatePipelineBodySchema = z
     name: nameSchema.optional(),
     description: nullableDescriptionSchema,
     isDefault: z.boolean().optional(),
+    isActive: z.boolean().optional(),
   })
   .strict();
 

@@ -40,6 +40,26 @@ describe('pipeline.http.contract', () => {
     });
   });
 
+  it('updatePipelineBodySchema accepts isActive=false', () => {
+    expect(
+      updatePipelineBodySchema.parse({
+        isActive: false,
+      }),
+    ).toEqual({
+      isActive: false,
+    });
+  });
+
+  it('updatePipelineBodySchema accepts isActive=true', () => {
+    expect(
+      updatePipelineBodySchema.parse({
+        isActive: true,
+      }),
+    ).toEqual({
+      isActive: true,
+    });
+  });
+
   it('createStageBodySchema rejects won and lost together', () => {
     expect(() =>
       createStageBodySchema.parse({
@@ -89,8 +109,7 @@ describe('pipeline.http.contract', () => {
     expect(deleteStageHttpContract.path).toBe('/api/v1/pipelines/stages/:stageId');
   });
 
-  it('contracts do not include code or isActive', () => {
+  it('contracts do not include code', () => {
     expect(contractSource).not.toContain('code');
-    expect(contractSource).not.toContain('isActive');
   });
 });

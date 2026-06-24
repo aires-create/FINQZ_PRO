@@ -375,6 +375,40 @@ describe('pipelines routes', () => {
     });
   });
 
+  it.each([
+    [false, false],
+    [true, true],
+  ])('PUT /:pipelineId repasses isActive=%s to service', async (isActive, expected) => {
+    serviceMock.updatePipeline.mockResolvedValueOnce({
+      id: 'pipeline-1',
+    });
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        isActive,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Pipeline updated successfully',
+      data: { id: 'pipeline-1' },
+    });
+    expect(serviceMock.updatePipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      id: '11111111-1111-1111-1111-111111111111',
+      isActive: expected,
+    });
+  });
+
   it('DELETE /:pipelineId requires pipeline:delete and returns deleted id envelope', async () => {
     serviceMock.deactivatePipeline.mockResolvedValueOnce(undefined);
 
