@@ -11,6 +11,9 @@ vi.mock('../api/modules/pipelines.api', () => ({
     updatePipeline: vi.fn(),
     deletePipeline: vi.fn(),
     createStage: vi.fn(),
+    updateStage: vi.fn(),
+    deleteStage: vi.fn(),
+    reorderStages: vi.fn(),
   },
 }));
 

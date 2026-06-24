@@ -80,6 +80,25 @@ const extractSafeErrorMessage = (error: unknown): string | undefined => {
   return undefined;
 };
 
+const getStageActionErrorMessage = (error: unknown): string => {
+  const status = extractErrorStatus(error);
+  const message = extractSafeErrorMessage(error);
+
+  if (status === 403) {
+    return 'Você não tem permissão para arquivar etapa.';
+  }
+
+  if (status === 409) {
+    return message || 'Não foi possível arquivar a etapa.';
+  }
+
+  if (status === 400 || status === 422) {
+    return message || 'Falha de validação ao arquivar etapa.';
+  }
+
+  return message || 'Não foi possível arquivar a etapa.';
+};
+
 export const getPipelineActionErrorMessage = (
   error: unknown,
   operation: 'create' | 'update' | 'inactivate' | 'reactivate' | 'archive',
@@ -214,6 +233,15 @@ export const PipelinesPage: React.FC = () => {
   });
   const [editStageSubmitting, setEditStageSubmitting] = useState(false);
   const [editStageSubmitError, setEditStageSubmitError] = useState<string | null>(null);
+  const [showArchiveStageModal, setShowArchiveStageModal] = useState(false);
+  const [archivingStage, setArchivingStage] = useState<{
+    pipelineId: string;
+    pipelineName: string;
+    stageId: string;
+    stageName: string;
+  } | null>(null);
+  const [archiveStageSubmitting, setArchiveStageSubmitting] = useState(false);
+  const [archiveStageError, setArchiveStageError] = useState<string | null>(null);
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -608,6 +636,48 @@ export const PipelinesPage: React.FC = () => {
     }
   };
 
+  const openArchiveStageModal = (
+    pipeline: AdminPipelineViewModel,
+    stage: AdminPipelineViewModel['stages'][number],
+  ) => {
+    setArchivingStage({
+      pipelineId: pipeline.pipelineId,
+      pipelineName: pipeline.pipelineName,
+      stageId: stage.stageId,
+      stageName: stage.name,
+    });
+    setArchiveStageError(null);
+    setShowArchiveStageModal(true);
+  };
+
+  const closeArchiveStageModal = () => {
+    if (archiveStageSubmitting) return;
+    setShowArchiveStageModal(false);
+    setArchivingStage(null);
+    setArchiveStageError(null);
+  };
+
+  const handleArchiveStage = async () => {
+    if (!archivingStage) {
+      setArchiveStageError('Etapa selecionada nao encontrada.');
+      return;
+    }
+
+    setArchiveStageSubmitting(true);
+    setArchiveStageError(null);
+
+    try {
+      await pipelinesApi.deleteStage(archivingStage.stageId);
+      setShowArchiveStageModal(false);
+      setArchivingStage(null);
+      await loadPipelines();
+    } catch (archiveError) {
+      setArchiveStageError(getStageActionErrorMessage(archiveError));
+    } finally {
+      setArchiveStageSubmitting(false);
+    }
+  };
+
   const summary = useMemo(() => {
     const active = pipelines.filter((pipeline) => pipeline.active).length;
     const inactive = pipelines.filter((pipeline) => !pipeline.active).length;
@@ -789,13 +859,24 @@ export const PipelinesPage: React.FC = () => {
                               >
                                 Editar
                               </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                icon={<Trash2 size={12} />}
+                                onClick={() => openArchiveStageModal(pipeline, stage)}
+                                title={`Arquivar etapa ${stage.name}`}
+                                aria-label={`Arquivar etapa ${stage.name}`}
+                              >
+                                Arquivar
+                              </Button>
                               <Badge
                                 variant={stage.isActive ? 'success' : 'warning'}
                                 size="sm"
                                 className="uppercase tracking-wide"
                               >
-                              {stage.isActive ? 'Ativa' : 'Inativa'}
-                            </Badge>
+                                {stage.isActive ? 'Ativa' : 'Inativa'}
+                              </Badge>
                             {stage.isWon && (
                               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
                                 GANHO
@@ -1272,6 +1353,52 @@ export const PipelinesPage: React.FC = () => {
             </Button>
             <Button variant="primary" onClick={handleUpdateStage} disabled={editStageSubmitting}>
               {editStageSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showArchiveStageModal}
+        onClose={closeArchiveStageModal}
+        title="Arquivar Etapa"
+        size="md"
+      >
+        <div className="space-y-4">
+          {archiveStageError && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              {archiveStageError}
+            </div>
+          )}
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" size={18} />
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  Arquivar esta etapa?
+                </p>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Esta operação removerá a etapa do fluxo operacional.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Etapa selecionada</p>
+            <p className="mt-1">{archivingStage?.stageName ?? 'Etapa oficial'}</p>
+            <p className="mt-2 text-xs text-[var(--text-muted)]">
+              Caso existam Opportunities vinculadas ou esta seja a última Stage ativa, a operação será bloqueada pelo backend.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeArchiveStageModal} disabled={archiveStageSubmitting}>
+              Cancelar
+            </Button>
+            <Button variant="danger" onClick={handleArchiveStage} disabled={archiveStageSubmitting}>
+              {archiveStageSubmitting ? 'Arquivando...' : 'Confirmar arquivamento'}
             </Button>
           </div>
         </div>
