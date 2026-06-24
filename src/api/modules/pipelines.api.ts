@@ -64,13 +64,19 @@ export interface ReorderStagesPayload {
   }>;
 }
 
+export interface GetAllPipelinesOptions {
+  includeInactive?: boolean;
+}
+
 export const pipelinesApi = {
   /**
    * Lista pipelines oficiais.
    * Mantém o payload bruto retornado pelo backend para compatibilidade com telas legadas.
    */
-  async getAll(): Promise<any> {
-    return apiCall<any>(PIPELINES_BASE_PATH);
+  async getAll(options?: GetAllPipelinesOptions): Promise<any> {
+    const query = options?.includeInactive === true ? '?includeInactive=true' : '';
+
+    return apiCall<any>(`${PIPELINES_BASE_PATH}${query}`);
   },
 
   async createPipeline(payload: CreatePipelinePayload): Promise<any> {

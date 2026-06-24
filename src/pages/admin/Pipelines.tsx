@@ -203,7 +203,7 @@ export const PipelinesPage: React.FC = () => {
     setError(null);
 
     try {
-      const response: PipelineApiEnvelope = await pipelinesApi.getAll();
+      const response: PipelineApiEnvelope = await pipelinesApi.getAll({ includeInactive: true });
       const officialPipelines = extractOfficialPipelines(response);
       const mapped = mapOfficialPipelinesToAdminViewModels(officialPipelines as OfficialPipeline[]);
       setPipelines(mapped);
