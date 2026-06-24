@@ -4,7 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Pencil, RefreshCw, Trash2, TrendingUp } from 'lucide-react';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { Button, Input, Modal, TextArea, Toggle } from '../../components/ui';
+import { Badge, Button, Input, Modal, TextArea, Toggle } from '../../components/ui';
 import { ApiException } from '../../api/http';
 import { pipelinesApi } from '../../api/modules/pipelines.api';
 import {
@@ -668,6 +668,13 @@ export const PipelinesPage: React.FC = () => {
                               {stage.order}
                             </span>
                             <span>{stage.name}</span>
+                            <Badge
+                              variant={stage.isActive ? 'success' : 'warning'}
+                              size="sm"
+                              className="uppercase tracking-wide"
+                            >
+                              {stage.isActive ? 'Ativa' : 'Inativa'}
+                            </Badge>
                             {stage.isWon && (
                               <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
                                 GANHO

@@ -27,6 +27,7 @@ export interface AdminPipelineStageViewModel {
   order: number;
   isWon: boolean;
   isLost: boolean;
+  isActive: boolean;
   color: string;
   createdAt?: string;
   updatedAt?: string;
@@ -118,6 +119,7 @@ export const mapOfficialStageToAdminViewModel = (
   order: stage.order,
   isWon: stage.isWon,
   isLost: stage.isLost,
+  isActive: stage.isActive ?? true,
   color: normalizeColor(color, pickColor(stage.order - 1 >= 0 ? stage.order - 1 : 0)),
   createdAt: stage.createdAt,
   updatedAt: stage.updatedAt,
