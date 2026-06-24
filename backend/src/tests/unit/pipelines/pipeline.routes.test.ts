@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,6 +97,11 @@ vi.mock('../../../modules/pipelines/service.js', () => ({
 }));
 
 import { pipelinesRoutes } from '../../../modules/pipelines/routes.js';
+
+const routesSource = readFileSync(
+  resolve(process.cwd(), 'src/modules/pipelines/routes.ts'),
+  'utf8',
+);
 
 describe('pipelines routes', () => {
   let app: ReturnType<typeof Fastify>;
@@ -627,6 +634,18 @@ describe('pipelines routes', () => {
         },
       ],
     });
+  });
+
+  it('Swagger stage docs expose isActive only on update stage', () => {
+    const createStageDoc = routesSource
+      .split('* /api/v1/pipelines/{pipelineId}/stages:')[1]
+      ?.split('  app.put(')[0] ?? '';
+    const updateStageDoc = routesSource
+      .split('* /api/v1/pipelines/stages/{stageId}:')[1]
+      ?.split('  async (request, reply) => {')[0] ?? '';
+
+    expect(createStageDoc).not.toContain('*               isActive:');
+    expect(updateStageDoc).toContain('*               isActive:');
   });
 
   it('validation errors return 400', async () => {

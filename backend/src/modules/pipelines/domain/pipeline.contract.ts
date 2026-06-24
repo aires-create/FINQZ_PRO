@@ -8,7 +8,7 @@ export interface PipelineStageContract {
   order: number;
   isWon: boolean;
   isLost: boolean;
-  isActive?: boolean;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
