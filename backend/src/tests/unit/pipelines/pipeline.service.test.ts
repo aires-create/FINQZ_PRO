@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PipelineRepositoryContract } from '../../../modules/pipelines/domain/pipeline-repository.contract.js';
@@ -53,6 +54,22 @@ const serviceSource = readFileSync(
   'utf8',
 );
 
+const { prismaMock, txMock } = vi.hoisted(() => {
+  const txMock = {};
+
+  const prismaMock = {
+    $transaction: vi.fn(async (callback: (transaction: typeof txMock) => Promise<unknown>) =>
+      callback(txMock),
+    ),
+  };
+
+  return { prismaMock, txMock };
+});
+
+vi.mock('../../../core/prisma/client.js', () => ({
+  prisma: prismaMock,
+}));
+
 const basePipeline = {
   id: 'pipeline-1',
   tenantId: 'tenant-a',
@@ -88,6 +105,7 @@ describe('PipelinesService', () => {
     repository = createRepositoryMock();
     service = new PipelinesService(repository);
     vi.clearAllMocks();
+    prismaMock.$transaction.mockClear();
   });
 
   it('listActiveByTenant delegates to listActivePipelines', async () => {
@@ -341,17 +359,44 @@ describe('PipelinesService', () => {
     expect(repository.countActiveStagesByPipeline).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       pipelineId: 'pipeline-1',
-    });
+    }, txMock);
     expect(repository.hasLinkedOpportunitiesForStage).not.toHaveBeenCalled();
     expect(repository.updateStage).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       stageId: 'stage-1',
       isActive: false,
-    });
+    }, txMock);
     expect(result).toEqual({
       ...baseStage,
       isActive: false,
     });
+  });
+
+  it('updateStage uses a serializable transaction for lifecycle toggles', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: true,
+    });
+    repository.countActiveStagesByPipeline.mockResolvedValueOnce(2);
+    repository.updateStage.mockResolvedValueOnce(undefined);
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: false,
+    });
+
+    await service.updateStage({
+      id: 'stage-1',
+      tenantId: 'tenant-a',
+      isActive: false,
+      actorUserId: 'user-1',
+    });
+
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   });
 
   it('updateStage allows reactivation with isActive=true', async () => {
@@ -377,7 +422,7 @@ describe('PipelinesService', () => {
       tenantId: 'tenant-a',
       stageId: 'stage-1',
       isActive: true,
-    });
+    }, txMock);
     expect(result).toEqual({
       ...baseStage,
       isActive: true,
@@ -403,7 +448,7 @@ describe('PipelinesService', () => {
     expect(repository.countActiveStagesByPipeline).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       pipelineId: 'pipeline-1',
-    });
+    }, txMock);
     expect(repository.hasLinkedOpportunitiesForStage).not.toHaveBeenCalled();
     expect(repository.updateStage).not.toHaveBeenCalled();
   });
@@ -702,7 +747,29 @@ describe('PipelinesService', () => {
       tenantId: 'tenant-a',
       stageId: 'stage-1',
       actorUserId: 'user-1',
+    }, txMock);
+  });
+
+  it('deactivateStage uses a serializable transaction', async () => {
+    repository.findStageById.mockResolvedValueOnce({
+      ...baseStage,
+      isActive: false,
     });
+    repository.hasLinkedOpportunitiesForStage.mockResolvedValueOnce(false);
+    repository.softDeleteStage.mockResolvedValueOnce({ count: 1 });
+
+    await service.deactivateStage({
+      tenantId: 'tenant-a',
+      stageId: 'stage-1',
+      actorUserId: 'user-1',
+    });
+
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   });
 
   it('deactivateStage blocks when stage has linked opportunities', async () => {
@@ -723,7 +790,7 @@ describe('PipelinesService', () => {
     expect(repository.hasLinkedOpportunitiesForStage).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       stageId: 'stage-1',
-    });
+    }, txMock);
     expect(repository.softDeleteStage).not.toHaveBeenCalled();
   });
 
@@ -745,7 +812,7 @@ describe('PipelinesService', () => {
     expect(repository.countActiveStagesByPipeline).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       pipelineId: 'pipeline-1',
-    });
+    }, txMock);
     expect(repository.hasLinkedOpportunitiesForStage).not.toHaveBeenCalled();
     expect(repository.softDeleteStage).not.toHaveBeenCalled();
   });

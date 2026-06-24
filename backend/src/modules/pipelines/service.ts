@@ -1,3 +1,6 @@
+import { Prisma } from '@prisma/client';
+
+import { prisma } from '../../core/prisma/client.js';
 import { pipelinesRepository } from './repository.js';
 import { ConflictError } from '../../shared/errors/AppError.js';
 import type {
@@ -55,6 +58,41 @@ const validatePipelineWrite = (
   for (const stage of stages) {
     validateStageWrite(stage);
   }
+};
+
+type PipelinesRepositoryWithClient = PipelineRepositoryContract & {
+  findById(
+    input: Parameters<PipelineRepositoryContract['findById']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['findById']>;
+  findStageById(
+    input: Parameters<PipelineRepositoryContract['findStageById']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['findStageById']>;
+  updateStage(
+    input: Parameters<PipelineRepositoryContract['updateStage']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['updateStage']>;
+  softDeleteStage(
+    input: Parameters<PipelineRepositoryContract['softDeleteStage']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['softDeleteStage']>;
+  hasLinkedOpportunitiesForStage(
+    input: Parameters<PipelineRepositoryContract['hasLinkedOpportunitiesForStage']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['hasLinkedOpportunitiesForStage']>;
+  countActiveStagesByPipeline(
+    input: Parameters<PipelineRepositoryContract['countActiveStagesByPipeline']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['countActiveStagesByPipeline']>;
+};
+
+const runInSerializableTransaction = async <T>(
+  action: (transaction: Prisma.TransactionClient) => Promise<T>,
+) => {
+  return prisma.$transaction(action, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
 };
 
 export class PipelinesService implements PipelineServiceContract {
@@ -217,90 +255,119 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<PipelineContract['stages'][number]> {
     validateStageWrite(input);
 
-    const currentStage = await this.repository.findStageById({
-      tenantId: input.tenantId,
-      stageId: input.id,
-    });
+    return runInSerializableTransaction(async (transaction) => {
+      const repository = this.repository as PipelinesRepositoryWithClient;
 
-    if (!currentStage) {
-      throw new StageNotFoundError(input.id);
-    }
+      const currentStage = await repository.findStageById(
+        {
+          tenantId: input.tenantId,
+          stageId: input.id,
+        },
+        transaction,
+      );
 
-    if (input.isActive === false && currentStage.isActive !== false) {
-      const activeStagesCount = await this.repository.countActiveStagesByPipeline({
-        tenantId: input.tenantId,
-        pipelineId: currentStage.pipelineId,
-      });
-
-      if (activeStagesCount <= 1) {
-        throw new PipelineMustKeepOneActiveStageError(
-          'Pipeline must keep one active stage',
-        );
+      if (!currentStage) {
+        throw new StageNotFoundError(input.id);
       }
-    }
 
-    const payload = {
-      tenantId: input.tenantId,
-      stageId: input.id,
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.order !== undefined ? { order: input.order } : {}),
-      ...(input.isWon !== undefined ? { isWon: input.isWon } : {}),
-      ...(input.isLost !== undefined ? { isLost: input.isLost } : {}),
-      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-    };
+      if (input.isActive === false && currentStage.isActive !== false) {
+        const activeStagesCount = await repository.countActiveStagesByPipeline(
+          {
+            tenantId: input.tenantId,
+            pipelineId: currentStage.pipelineId,
+          },
+          transaction,
+        );
 
-    await this.repository.updateStage(payload);
+        if (activeStagesCount <= 1) {
+          throw new PipelineMustKeepOneActiveStageError(
+            'Pipeline must keep one active stage',
+          );
+        }
+      }
 
-    const stage = await this.repository.findStageById({
-      tenantId: input.tenantId,
-      stageId: input.id,
+      const payload = {
+        tenantId: input.tenantId,
+        stageId: input.id,
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.order !== undefined ? { order: input.order } : {}),
+        ...(input.isWon !== undefined ? { isWon: input.isWon } : {}),
+        ...(input.isLost !== undefined ? { isLost: input.isLost } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      };
+
+      await repository.updateStage(payload, transaction);
+
+      const stage = await repository.findStageById(
+        {
+          tenantId: input.tenantId,
+          stageId: input.id,
+        },
+        transaction,
+      );
+
+      if (!stage) {
+        throw new StageNotFoundError(input.id);
+      }
+
+      return stage;
     });
-
-    if (!stage) {
-      throw new StageNotFoundError(input.id);
-    }
-
-    return stage;
   }
 
   async deactivateStage(
     input: DeactivateStageServiceInput,
   ): Promise<void> {
-    const currentStage = await this.repository.findStageById({
-      tenantId: input.tenantId,
-      stageId: input.stageId,
-    });
+    await runInSerializableTransaction(async (transaction) => {
+      const repository = this.repository as PipelinesRepositoryWithClient;
 
-    if (!currentStage) {
-      throw new StageNotFoundError(input.stageId);
-    }
+      const currentStage = await repository.findStageById(
+        {
+          tenantId: input.tenantId,
+          stageId: input.stageId,
+        },
+        transaction,
+      );
 
-    if (currentStage.isActive) {
-      const activeStagesCount = await this.repository.countActiveStagesByPipeline({
-        tenantId: input.tenantId,
-        pipelineId: currentStage.pipelineId,
-      });
-
-      if (activeStagesCount <= 1) {
-        throw new PipelineMustKeepOneActiveStageError(
-          'Pipeline must keep one active stage',
-        );
+      if (!currentStage) {
+        throw new StageNotFoundError(input.stageId);
       }
-    }
 
-    const hasLinkedOpportunities = await this.repository.hasLinkedOpportunitiesForStage({
-      tenantId: input.tenantId,
-      stageId: input.stageId,
-    });
+      if (currentStage.isActive) {
+        const activeStagesCount = await repository.countActiveStagesByPipeline(
+          {
+            tenantId: input.tenantId,
+            pipelineId: currentStage.pipelineId,
+          },
+          transaction,
+        );
 
-    if (hasLinkedOpportunities) {
-      throw new StageInUseError(input.stageId);
-    }
+        if (activeStagesCount <= 1) {
+          throw new PipelineMustKeepOneActiveStageError(
+            'Pipeline must keep one active stage',
+          );
+        }
+      }
 
-    await this.repository.softDeleteStage({
-      tenantId: input.tenantId,
-      stageId: input.stageId,
-      actorUserId: input.actorUserId,
+      const hasLinkedOpportunities = await repository.hasLinkedOpportunitiesForStage(
+        {
+          tenantId: input.tenantId,
+          stageId: input.stageId,
+        },
+        transaction,
+      );
+
+      if (hasLinkedOpportunities) {
+        throw new StageInUseError(input.stageId);
+      }
+
+      await repository.softDeleteStage(
+        {
+          tenantId: input.tenantId,
+          stageId: input.stageId,
+          actorUserId: input.actorUserId,
+        },
+        transaction,
+      );
     });
   }
 
