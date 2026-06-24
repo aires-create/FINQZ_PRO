@@ -14,6 +14,9 @@ const { prismaMock, txMock } = vi.hoisted(() => {
       create: vi.fn(),
       updateMany: vi.fn(),
     },
+    opportunity: {
+      count: vi.fn(),
+    },
   };
 
   const prismaMock = {
@@ -31,6 +34,9 @@ const { prismaMock, txMock } = vi.hoisted(() => {
       findFirst: vi.fn(),
       create: vi.fn(),
       updateMany: vi.fn(),
+    },
+    opportunity: {
+      count: vi.fn(),
     },
   };
 
@@ -93,6 +99,42 @@ describe('pipelinesRepository', () => {
         deletedAt: true,
       }),
     });
+  });
+
+  it('hasLinkedOpportunitiesForPipeline checks linked active opportunities', async () => {
+    prismaMock.opportunity.count.mockResolvedValueOnce(2);
+
+    const result = await pipelinesRepository.hasLinkedOpportunitiesForPipeline({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+
+    expect(prismaMock.opportunity.count).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        deletedAt: null,
+      },
+    });
+    expect(result).toBe(true);
+  });
+
+  it('hasLinkedOpportunitiesForStage checks linked active opportunities', async () => {
+    prismaMock.opportunity.count.mockResolvedValueOnce(0);
+
+    const result = await pipelinesRepository.hasLinkedOpportunitiesForStage({
+      tenantId: 'tenant-a',
+      stageId: 'stage-1',
+    });
+
+    expect(prismaMock.opportunity.count).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        stageId: 'stage-1',
+        deletedAt: null,
+      },
+    });
+    expect(result).toBe(false);
   });
 
   it('createPipeline does not require code', async () => {

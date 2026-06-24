@@ -1,4 +1,5 @@
 import { pipelinesRepository } from './repository.js';
+import { ConflictError } from '../../shared/errors/AppError.js';
 import type {
   PipelineContract,
   CreatePipelineInput,
@@ -120,6 +121,15 @@ export class PipelinesService implements PipelineServiceContract {
   async deactivatePipeline(
     input: DeactivatePipelineServiceInput,
   ): Promise<void> {
+    const hasLinkedOpportunities = await this.repository.hasLinkedOpportunitiesForPipeline({
+      tenantId: input.tenantId,
+      pipelineId: input.pipelineId,
+    });
+
+    if (hasLinkedOpportunities) {
+      throw new PipelineInUseError(input.pipelineId);
+    }
+
     await this.repository.softDeletePipeline({
       tenantId: input.tenantId,
       pipelineId: input.pipelineId,
@@ -182,6 +192,15 @@ export class PipelinesService implements PipelineServiceContract {
   async deactivateStage(
     input: DeactivateStageServiceInput,
   ): Promise<void> {
+    const hasLinkedOpportunities = await this.repository.hasLinkedOpportunitiesForStage({
+      tenantId: input.tenantId,
+      stageId: input.stageId,
+    });
+
+    if (hasLinkedOpportunities) {
+      throw new StageInUseError(input.stageId);
+    }
+
     await this.repository.softDeleteStage({
       tenantId: input.tenantId,
       stageId: input.stageId,
@@ -233,6 +252,20 @@ export class StageNotFoundError extends Error {
   constructor(stageId: string) {
     super(`Stage ${stageId} not found`);
     this.name = 'StageNotFoundError';
+  }
+}
+
+export class PipelineInUseError extends ConflictError {
+  constructor(pipelineId: string) {
+    super(`Pipeline ${pipelineId} has linked opportunities`);
+    this.name = 'PipelineInUseError';
+  }
+}
+
+export class StageInUseError extends ConflictError {
+  constructor(stageId: string) {
+    super(`Stage ${stageId} has linked opportunities`);
+    this.name = 'StageInUseError';
   }
 }
 

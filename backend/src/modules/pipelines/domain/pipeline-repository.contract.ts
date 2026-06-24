@@ -19,6 +19,16 @@ export interface FindStageByIdInput {
   stageId: UUID;
 }
 
+export interface HasLinkedOpportunitiesForPipelineInput {
+  tenantId: UUID;
+  pipelineId: UUID;
+}
+
+export interface HasLinkedOpportunitiesForStageInput {
+  tenantId: UUID;
+  stageId: UUID;
+}
+
 export interface CreatePipelineRepositoryInput extends CreatePipelineInput {}
 
 export interface UpdatePipelineRepositoryInput {
@@ -67,6 +77,12 @@ export interface PipelineRepositoryContract {
   findActiveByTenant?(tenantId: UUID): Promise<PipelineContract[]>;
   findById(input: FindByIdInput): Promise<PipelineContract | null>;
   findStageById(input: FindStageByIdInput): Promise<PipelineContract['stages'][number] | null>;
+  hasLinkedOpportunitiesForPipeline(
+    input: HasLinkedOpportunitiesForPipelineInput,
+  ): Promise<boolean>;
+  hasLinkedOpportunitiesForStage(
+    input: HasLinkedOpportunitiesForStageInput,
+  ): Promise<boolean>;
   createPipeline(input: CreatePipelineRepositoryInput): Promise<PipelineContract>;
   updatePipeline(input: UpdatePipelineRepositoryInput): Promise<void>;
   softDeletePipeline(input: SoftDeletePipelineRepositoryInput): Promise<void>;

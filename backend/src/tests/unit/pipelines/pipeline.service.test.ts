@@ -5,14 +5,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PipelineRepositoryContract } from '../../../modules/pipelines/domain/pipeline-repository.contract.js';
 import {
   PipelineNotFoundError,
+  PipelineInUseError,
   PipelinesService,
   StageNotFoundError,
+  StageInUseError,
 } from '../../../modules/pipelines/service.js';
 
 type PipelineRepositoryMock = PipelineRepositoryContract & {
   listActiveByTenant: ReturnType<typeof vi.fn>;
   findById: ReturnType<typeof vi.fn>;
   findStageById: ReturnType<typeof vi.fn>;
+  hasLinkedOpportunitiesForPipeline: ReturnType<typeof vi.fn>;
+  hasLinkedOpportunitiesForStage: ReturnType<typeof vi.fn>;
   createPipeline: ReturnType<typeof vi.fn>;
   updatePipeline: ReturnType<typeof vi.fn>;
   softDeletePipeline: ReturnType<typeof vi.fn>;
@@ -27,6 +31,8 @@ const createRepositoryMock = (): PipelineRepositoryMock =>
     listActiveByTenant: vi.fn(),
     findById: vi.fn(),
     findStageById: vi.fn(),
+    hasLinkedOpportunitiesForPipeline: vi.fn(),
+    hasLinkedOpportunitiesForStage: vi.fn(),
     createPipeline: vi.fn(),
     updatePipeline: vi.fn(),
     softDeletePipeline: vi.fn(),
@@ -373,6 +379,7 @@ describe('PipelinesService', () => {
   });
 
   it('deactivatePipeline delegates tenantId/pipelineId/actorUserId', async () => {
+    repository.hasLinkedOpportunitiesForPipeline.mockResolvedValueOnce(false);
     repository.softDeletePipeline.mockResolvedValueOnce({ count: 1 });
 
     await service.deactivatePipeline({
@@ -388,7 +395,26 @@ describe('PipelinesService', () => {
     });
   });
 
+  it('deactivatePipeline blocks when pipeline has linked opportunities', async () => {
+    repository.hasLinkedOpportunitiesForPipeline.mockResolvedValueOnce(true);
+
+    await expect(
+      service.deactivatePipeline({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(PipelineInUseError);
+
+    expect(repository.hasLinkedOpportunitiesForPipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+    });
+    expect(repository.softDeletePipeline).not.toHaveBeenCalled();
+  });
+
   it('deactivateStage delegates tenantId/stageId/actorUserId', async () => {
+    repository.hasLinkedOpportunitiesForStage.mockResolvedValueOnce(false);
     repository.softDeleteStage.mockResolvedValueOnce({ count: 1 });
 
     await service.deactivateStage({
@@ -402,5 +428,23 @@ describe('PipelinesService', () => {
       stageId: 'stage-1',
       actorUserId: 'user-1',
     });
+  });
+
+  it('deactivateStage blocks when stage has linked opportunities', async () => {
+    repository.hasLinkedOpportunitiesForStage.mockResolvedValueOnce(true);
+
+    await expect(
+      service.deactivateStage({
+        tenantId: 'tenant-a',
+        stageId: 'stage-1',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toBeInstanceOf(StageInUseError);
+
+    expect(repository.hasLinkedOpportunitiesForStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      stageId: 'stage-1',
+    });
+    expect(repository.softDeleteStage).not.toHaveBeenCalled();
   });
 });

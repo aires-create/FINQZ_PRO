@@ -11,6 +11,8 @@ type PipelinesPrismaClient = typeof prisma | Prisma.TransactionClient;
 
 type FindByIdInput = { tenantId: string; pipelineId: string };
 type FindStageByIdInput = { tenantId: string; stageId: string };
+type HasLinkedOpportunitiesForPipelineInput = { tenantId: string; pipelineId: string };
+type HasLinkedOpportunitiesForStageInput = { tenantId: string; stageId: string };
 type UpdatePipelineRepositoryInput = {
   tenantId: string;
   pipelineId: string;
@@ -175,6 +177,36 @@ export const pipelinesRepository = {
       },
       select: stageReadSelect,
     });
+  },
+
+  async hasLinkedOpportunitiesForPipeline(
+    input: HasLinkedOpportunitiesForPipelineInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    const linkedCount = await client.opportunity.count({
+      where: {
+        tenantId: input.tenantId,
+        pipelineId: input.pipelineId,
+        deletedAt: null,
+      },
+    });
+
+    return linkedCount > 0;
+  },
+
+  async hasLinkedOpportunitiesForStage(
+    input: HasLinkedOpportunitiesForStageInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    const linkedCount = await client.opportunity.count({
+      where: {
+        tenantId: input.tenantId,
+        stageId: input.stageId,
+        deletedAt: null,
+      },
+    });
+
+    return linkedCount > 0;
   },
 
   createPipeline(
