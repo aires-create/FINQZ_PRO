@@ -40,7 +40,7 @@ describe('pipeline.contract', () => {
     expect('code' in pipeline).toBe(false);
   });
 
-  it('StageContract accepts official fields without code or isActive', () => {
+  it('StageContract accepts official fields without code', () => {
     const stage = {
       id: '33333333-3333-3333-3333-333333333333',
       tenantId: '22222222-2222-2222-2222-222222222222',
@@ -49,6 +49,7 @@ describe('pipeline.contract', () => {
       order: 1,
       isWon: false,
       isLost: false,
+      isActive: true,
       createdAt: new Date('2026-06-19T00:00:00.000Z'),
       updatedAt: new Date('2026-06-19T00:00:00.000Z'),
       deletedAt: null,
@@ -62,9 +63,9 @@ describe('pipeline.contract', () => {
       order: 1,
       isWon: false,
       isLost: false,
+      isActive: true,
     });
     expect('code' in stage).toBe(false);
-    expect('isActive' in stage).toBe(false);
   });
 
   it('validateWonLostFlags rejects isWon=true and isLost=true', () => {

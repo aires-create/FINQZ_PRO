@@ -89,6 +89,7 @@ export const updateStageBodySchema = z
     order: z.number().int().min(1).optional(),
     isWon: z.boolean().optional(),
     isLost: z.boolean().optional(),
+    isActive: z.boolean().optional(),
   })
   .strict()
   .superRefine((value, ctx) => {

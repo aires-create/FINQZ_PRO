@@ -10,6 +10,7 @@ import {
   reorderStagesBodySchema,
   stageIdParamsSchema,
   updatePipelineBodySchema,
+  updateStageBodySchema,
 } from '../../../modules/pipelines/validators/pipeline.http.schema.js';
 import {
   createPipelineHttpContract,
@@ -80,6 +81,40 @@ describe('pipeline.http.contract', () => {
       }),
     ).toEqual({
       isActive: true,
+    });
+  });
+
+  it('updateStageBodySchema accepts isActive flags', () => {
+    expect(
+      updateStageBodySchema.parse({
+        isActive: true,
+      }),
+    ).toEqual({
+      isActive: true,
+    });
+
+    expect(
+      updateStageBodySchema.parse({
+        isActive: false,
+      }),
+    ).toEqual({
+      isActive: false,
+    });
+  });
+
+  it('createStageBodySchema does not require isActive', () => {
+    expect(
+      createStageBodySchema.parse({
+        name: 'Novo Lead',
+        order: 1,
+        isWon: false,
+        isLost: false,
+      }),
+    ).toEqual({
+      name: 'Novo Lead',
+      order: 1,
+      isWon: false,
+      isLost: false,
     });
   });
 

@@ -8,6 +8,7 @@ export interface PipelineStageContract {
   order: number;
   isWon: boolean;
   isLost: boolean;
+  isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -43,6 +44,7 @@ export interface UpdateStageInput {
   order?: number;
   isWon?: boolean;
   isLost?: boolean;
+  isActive?: boolean;
 }
 
 export interface ReorderStagesInput {

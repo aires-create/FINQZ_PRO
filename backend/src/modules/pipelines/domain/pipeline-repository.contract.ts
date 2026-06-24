@@ -64,6 +64,7 @@ export interface UpdateStageRepositoryInput {
   order?: number;
   isWon?: boolean;
   isLost?: boolean;
+  isActive?: boolean;
 }
 
 export interface SoftDeleteStageRepositoryInput {
