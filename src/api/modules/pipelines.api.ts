@@ -56,6 +56,7 @@ export interface UpdateStagePayload {
   order?: number;
   isWon?: boolean;
   isLost?: boolean;
+  isActive?: boolean;
 }
 
 export interface ReorderStagesPayload {

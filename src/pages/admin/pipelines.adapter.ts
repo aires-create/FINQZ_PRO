@@ -59,6 +59,7 @@ export interface AdminStageDraft {
   order?: number;
   isWon?: boolean;
   isLost?: boolean;
+  isActive?: boolean;
 }
 
 const trimText = (value: string): string => value.trim();
@@ -251,6 +252,10 @@ export const buildUpdateStagePayload = (
 
   if (stageDraft.isLost !== undefined) {
     payload.isLost = stageDraft.isLost;
+  }
+
+  if (stageDraft.isActive !== undefined) {
+    payload.isActive = stageDraft.isActive;
   }
 
   return payload;

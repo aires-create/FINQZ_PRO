@@ -15,6 +15,7 @@ import {
   buildCreatePipelinePayload,
   buildUpdatePipelinePayload,
   buildCreateStagePayload,
+  buildUpdateStagePayload,
   mapOfficialPipelinesToAdminViewModels,
 } from './pipelines.adapter';
 
@@ -197,6 +198,22 @@ export const PipelinesPage: React.FC = () => {
   });
   const [stageSubmitting, setStageSubmitting] = useState(false);
   const [stageSubmitError, setStageSubmitError] = useState<string | null>(null);
+  const [showEditStageModal, setShowEditStageModal] = useState(false);
+  const [editingStage, setEditingStage] = useState<{
+    pipelineId: string;
+    pipelineName: string;
+    stageId: string;
+    stageName: string;
+  } | null>(null);
+  const [editStageFormData, setEditStageFormData] = useState<AdminStageDraft>({
+    name: '',
+    order: 1,
+    isWon: false,
+    isLost: false,
+    isActive: true,
+  });
+  const [editStageSubmitting, setEditStageSubmitting] = useState(false);
+  const [editStageSubmitError, setEditStageSubmitError] = useState<string | null>(null);
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -498,6 +515,99 @@ export const PipelinesPage: React.FC = () => {
     }
   };
 
+  const resetEditStageForm = () => {
+    setEditingStage(null);
+    setEditStageFormData({
+      name: '',
+      order: 1,
+      isWon: false,
+      isLost: false,
+      isActive: true,
+    });
+    setEditStageSubmitError(null);
+  };
+
+  const openEditStageModal = (
+    pipeline: AdminPipelineViewModel,
+    stage: AdminPipelineViewModel['stages'][number],
+  ) => {
+    setEditingStage({
+      pipelineId: pipeline.pipelineId,
+      pipelineName: pipeline.pipelineName,
+      stageId: stage.stageId,
+      stageName: stage.name,
+    });
+    setEditStageFormData({
+      name: stage.name,
+      order: stage.order,
+      isWon: stage.isWon,
+      isLost: stage.isLost,
+      isActive: stage.isActive,
+    });
+    setEditStageSubmitError(null);
+    setShowEditStageModal(true);
+  };
+
+  const closeEditStageModal = () => {
+    if (editStageSubmitting) return;
+    setShowEditStageModal(false);
+    resetEditStageForm();
+  };
+
+  const handleUpdateStage = async () => {
+    if (!editingStage) {
+      setEditStageSubmitError('Etapa selecionada nao encontrada.');
+      return;
+    }
+
+    const normalizedName = (editStageFormData.name ?? '').trim();
+    if (!normalizedName) {
+      setEditStageSubmitError('O nome da etapa é obrigatório.');
+      return;
+    }
+
+    const normalizedOrder = Number(editStageFormData.order);
+    if (!Number.isFinite(normalizedOrder) || normalizedOrder < 1) {
+      setEditStageSubmitError('A ordem da etapa deve ser maior ou igual a 1.');
+      return;
+    }
+
+    if (editStageFormData.isWon && editStageFormData.isLost) {
+      setEditStageSubmitError('Uma etapa não pode ser ganho e perdido ao mesmo tempo.');
+      return;
+    }
+
+    setEditStageSubmitting(true);
+    setEditStageSubmitError(null);
+
+    try {
+      const payload = buildUpdateStagePayload({
+        ...editStageFormData,
+        name: normalizedName,
+        order: normalizedOrder,
+        isActive: editStageFormData.isActive,
+      });
+
+      await pipelinesApi.updateStage(editingStage.stageId, payload);
+      setShowEditStageModal(false);
+      resetEditStageForm();
+      await loadPipelines();
+    } catch (updateError) {
+      const message = updateError instanceof Error ? updateError.message : 'Erro inesperado ao atualizar etapa.';
+      const lowered = message.toLowerCase();
+
+      if (lowered.includes('validation') || lowered.includes('nome') || lowered.includes('required') || lowered.includes('order')) {
+        setEditStageSubmitError(message || 'Falha de validação.');
+      } else if (lowered.includes('forbidden') || lowered.includes('unauthorized') || lowered.includes('acesso')) {
+        setEditStageSubmitError('Você não tem permissão para editar etapa.');
+      } else {
+        setEditStageSubmitError(message || 'Erro inesperado ao atualizar etapa.');
+      }
+    } finally {
+      setEditStageSubmitting(false);
+    }
+  };
+
   const summary = useMemo(() => {
     const active = pipelines.filter((pipeline) => pipeline.active).length;
     const inactive = pipelines.filter((pipeline) => !pipeline.active).length;
@@ -660,19 +770,30 @@ export const PipelinesPage: React.FC = () => {
                               borderColor: `${color}55`,
                               color,
                             }}
-                          >
-                            <span
-                              className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
-                              style={{ backgroundColor: color }}
                             >
-                              {stage.order}
-                            </span>
-                            <span>{stage.name}</span>
-                            <Badge
-                              variant={stage.isActive ? 'success' : 'warning'}
-                              size="sm"
-                              className="uppercase tracking-wide"
-                            >
+                              <span
+                                className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
+                                style={{ backgroundColor: color }}
+                              >
+                                {stage.order}
+                              </span>
+                              <span>{stage.name}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                icon={<Pencil size={12} />}
+                                onClick={() => openEditStageModal(pipeline, stage)}
+                                title={`Editar etapa ${stage.name}`}
+                                aria-label={`Editar etapa ${stage.name}`}
+                              >
+                                Editar
+                              </Button>
+                              <Badge
+                                variant={stage.isActive ? 'success' : 'warning'}
+                                size="sm"
+                                className="uppercase tracking-wide"
+                              >
                               {stage.isActive ? 'Ativa' : 'Inativa'}
                             </Badge>
                             {stage.isWon && (
@@ -1040,6 +1161,117 @@ export const PipelinesPage: React.FC = () => {
             </Button>
             <Button variant="primary" onClick={handleCreateStage} disabled={stageSubmitting}>
               {stageSubmitting ? 'Criando...' : 'Criar Etapa'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showEditStageModal}
+        onClose={closeEditStageModal}
+        title="Editar Etapa"
+        size="md"
+      >
+        <div className="space-y-4">
+          {editStageSubmitError && (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-300">
+              {editStageSubmitError}
+            </div>
+          )}
+
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+            <p className="font-medium text-[var(--text-primary)]">Pipeline selecionado</p>
+            <p className="mt-1">{editingStage?.pipelineName ?? 'Pipeline oficial'}</p>
+            <p className="mt-2 font-medium text-[var(--text-primary)]">Etapa selecionada</p>
+            <p className="mt-1">{editingStage?.stageName ?? 'Etapa oficial'}</p>
+          </div>
+
+          <Input
+            label="Nome"
+            value={editStageFormData.name ?? ''}
+            onChange={(e) =>
+              setEditStageFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            placeholder="Ex.: Qualificação"
+            required
+            disabled={editStageSubmitting}
+          />
+
+          <Input
+            label="Ordem"
+            type="number"
+            min={1}
+            value={editStageFormData.order ?? 1}
+            onChange={(e) =>
+              setEditStageFormData((prev) => ({
+                ...prev,
+                order: Number(e.target.value),
+              }))
+            }
+            disabled={editStageSubmitting}
+          />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Etapa ganho</p>
+                <p className="text-xs text-[var(--text-muted)]">Marca esta etapa como finalizada com sucesso.</p>
+              </div>
+              <Toggle
+                checked={Boolean(editStageFormData.isWon)}
+                onChange={(checked) =>
+                  setEditStageFormData((prev) => ({
+                    ...prev,
+                    isWon: checked,
+                    isLost: checked ? false : prev.isLost,
+                  }))
+                }
+                disabled={editStageSubmitting}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Etapa perdida</p>
+                <p className="text-xs text-[var(--text-muted)]">Marca esta etapa como encerramento perdido.</p>
+              </div>
+              <Toggle
+                checked={Boolean(editStageFormData.isLost)}
+                onChange={(checked) =>
+                  setEditStageFormData((prev) => ({
+                    ...prev,
+                    isLost: checked,
+                    isWon: checked ? false : prev.isWon,
+                  }))
+                }
+                disabled={editStageSubmitting}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] px-4 py-3 sm:col-span-2">
+              <div>
+                <p className="text-sm font-medium text-[var(--text-primary)]">Status da etapa</p>
+                <p className="text-xs text-[var(--text-muted)]">Ativa ou inativa no backend.</p>
+              </div>
+              <Toggle
+                checked={Boolean(editStageFormData.isActive)}
+                onChange={(checked) =>
+                  setEditStageFormData((prev) => ({
+                    ...prev,
+                    isActive: checked,
+                  }))
+                }
+                disabled={editStageSubmitting}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={closeEditStageModal} disabled={editStageSubmitting}>
+              Cancelar
+            </Button>
+            <Button variant="primary" onClick={handleUpdateStage} disabled={editStageSubmitting}>
+              {editStageSubmitting ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </div>
         </div>

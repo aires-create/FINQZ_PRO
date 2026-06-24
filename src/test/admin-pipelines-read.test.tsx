@@ -26,6 +26,7 @@ vi.mock('../components/layout/PageHeader', () => ({
 }));
 
 vi.mock('../components/ui', () => ({
+  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
