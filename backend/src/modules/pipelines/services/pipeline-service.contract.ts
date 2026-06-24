@@ -10,6 +10,7 @@ import type { PipelineContract } from '../domain/pipeline.contract.js';
 
 export interface ListActivePipelinesServiceInput {
   tenantId: UUID;
+  includeInactive?: boolean;
 }
 
 export interface CreatePipelineServiceInput extends CreatePipelineInput {

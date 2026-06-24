@@ -12,6 +12,7 @@ import {
 } from '../../../modules/pipelines/service.js';
 
 type PipelineRepositoryMock = PipelineRepositoryContract & {
+  listByTenant: ReturnType<typeof vi.fn>;
   listActiveByTenant: ReturnType<typeof vi.fn>;
   findById: ReturnType<typeof vi.fn>;
   findStageById: ReturnType<typeof vi.fn>;
@@ -28,6 +29,7 @@ type PipelineRepositoryMock = PipelineRepositoryContract & {
 
 const createRepositoryMock = (): PipelineRepositoryMock =>
   ({
+    listByTenant: vi.fn(),
     listActiveByTenant: vi.fn(),
     findById: vi.fn(),
     findStageById: vi.fn(),
@@ -84,33 +86,48 @@ describe('PipelinesService', () => {
   });
 
   it('listActiveByTenant delegates to listActivePipelines', async () => {
-    repository.listActiveByTenant.mockResolvedValueOnce([basePipeline]);
+    repository.listByTenant.mockResolvedValueOnce([basePipeline]);
     const spy = vi.spyOn(service, 'listActivePipelines');
 
     const result = await service.listActiveByTenant('tenant-a');
 
     expect(spy).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
-    expect(repository.listActiveByTenant).toHaveBeenCalledWith('tenant-a');
+    expect(repository.listByTenant).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
     expect(result).toEqual([basePipeline]);
   });
 
-  it('listActivePipelines uses repository.listActiveByTenant', async () => {
-    repository.listActiveByTenant.mockResolvedValueOnce([basePipeline]);
+  it('listActivePipelines uses repository.listByTenant', async () => {
+    repository.listByTenant.mockResolvedValueOnce([basePipeline]);
 
     const result = await service.listActivePipelines({ tenantId: 'tenant-a' });
 
-    expect(repository.listActiveByTenant).toHaveBeenCalledWith('tenant-a');
+    expect(repository.listByTenant).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
+    expect(result).toEqual([basePipeline]);
+  });
+
+  it('listActivePipelines passes includeInactive to repository.listByTenant', async () => {
+    repository.listByTenant.mockResolvedValueOnce([basePipeline]);
+
+    const result = await service.listActivePipelines({
+      tenantId: 'tenant-a',
+      includeInactive: true,
+    });
+
+    expect(repository.listByTenant).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      includeInactive: true,
+    });
     expect(result).toEqual([basePipeline]);
   });
 
   it('constructor injection works', async () => {
-    repository.listActiveByTenant.mockResolvedValueOnce([]);
+    repository.listByTenant.mockResolvedValueOnce([]);
 
     const injected = new PipelinesService(repository);
     const result = await injected.listActiveByTenant('tenant-a');
 
     expect(result).toEqual([]);
-    expect(repository.listActiveByTenant).toHaveBeenCalledWith('tenant-a');
+    expect(repository.listByTenant).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
   });
 
   it('does not depend on legacy adapter casts', () => {

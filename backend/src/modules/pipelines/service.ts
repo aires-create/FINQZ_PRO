@@ -70,7 +70,10 @@ export class PipelinesService implements PipelineServiceContract {
   async listActivePipelines(
     input: ListActivePipelinesServiceInput,
   ): Promise<PipelineContract[]> {
-    return this.repository.listActiveByTenant(input.tenantId);
+    return this.repository.listByTenant({
+      tenantId: input.tenantId,
+      ...(input.includeInactive !== undefined ? { includeInactive: input.includeInactive } : {}),
+    });
   }
 
   async createPipeline(

@@ -9,6 +9,11 @@ export interface ListActivePipelinesInput {
   tenantId: UUID;
 }
 
+export interface ListByTenantInput {
+  tenantId: UUID;
+  includeInactive?: boolean;
+}
+
 export interface FindByIdInput {
   tenantId: UUID;
   pipelineId: UUID;
@@ -73,6 +78,7 @@ export interface ReorderStagesRepositoryInput {
 }
 
 export interface PipelineRepositoryContract {
+  listByTenant(input: ListByTenantInput): Promise<PipelineContract[]>;
   listActiveByTenant(tenantId: UUID): Promise<PipelineContract[]>;
   findActiveByTenant?(tenantId: UUID): Promise<PipelineContract[]>;
   findById(input: FindByIdInput): Promise<PipelineContract | null>;

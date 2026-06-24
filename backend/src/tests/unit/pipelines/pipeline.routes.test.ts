@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictError } from '../../../shared/errors/AppError.js';
 
 const serviceMock = vi.hoisted(() => ({
+  listActivePipelines: vi.fn(),
   listActiveByTenant: vi.fn(),
   createPipeline: vi.fn(),
   updatePipeline: vi.fn(),
@@ -110,7 +111,7 @@ describe('pipelines routes', () => {
   });
 
   it('GET / returns success/data', async () => {
-    serviceMock.listActiveByTenant.mockResolvedValueOnce([{ id: 'pipeline-1' }]);
+    serviceMock.listActivePipelines.mockResolvedValueOnce([{ id: 'pipeline-1' }]);
 
     const response = await app.inject({
       method: 'GET',
@@ -126,11 +127,36 @@ describe('pipelines routes', () => {
       success: true,
       data: [{ id: 'pipeline-1' }],
     });
-    expect(serviceMock.listActiveByTenant).toHaveBeenCalledWith('tenant-1');
+    expect(serviceMock.listActivePipelines).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+    });
+  });
+
+  it('GET /?includeInactive=true returns success/data with includeInactive flag', async () => {
+    serviceMock.listActivePipelines.mockResolvedValueOnce([{ id: 'pipeline-1' }]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/pipelines?includeInactive=true',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      data: [{ id: 'pipeline-1' }],
+    });
+    expect(serviceMock.listActivePipelines).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      includeInactive: true,
+    });
   });
 
   it('TenantScopeViolationError returns 403', async () => {
-    serviceMock.listActiveByTenant.mockRejectedValueOnce(
+    serviceMock.listActivePipelines.mockRejectedValueOnce(
       new opportunitiesServiceMock.TenantScopeViolationError('tenant missing'),
     );
 
@@ -154,7 +180,7 @@ describe('pipelines routes', () => {
   });
 
   it('ZodError returns 400 if handled by route error handler', async () => {
-    serviceMock.listActiveByTenant.mockRejectedValueOnce(
+    serviceMock.listActivePipelines.mockRejectedValueOnce(
       new ZodError([
         {
           code: 'custom',
@@ -185,7 +211,7 @@ describe('pipelines routes', () => {
   });
 
   it('unexpected error returns 500', async () => {
-    serviceMock.listActiveByTenant.mockRejectedValueOnce(new Error('boom'));
+    serviceMock.listActivePipelines.mockRejectedValueOnce(new Error('boom'));
 
     const response = await app.inject({
       method: 'GET',
@@ -306,7 +332,7 @@ describe('pipelines routes', () => {
     });
 
     expect(response.statusCode).toBe(403);
-    expect(serviceMock.listActiveByTenant).not.toHaveBeenCalled();
+    expect(serviceMock.listActivePipelines).not.toHaveBeenCalled();
     expect(permission).toBeTruthy();
   });
 

@@ -13,10 +13,22 @@ const stageFlagsSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Stage cannot be won and lost at the same time',
-        path: ['isLost'],
+      path: ['isLost'],
       });
     }
   });
+
+const queryBooleanSchema = z.preprocess((value) => {
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return value;
+}, z.boolean());
 
 export const pipelineIdParamsSchema = z
   .object({
@@ -27,6 +39,12 @@ export const pipelineIdParamsSchema = z
 export const stageIdParamsSchema = z
   .object({
     stageId: uuidSchema,
+  })
+  .strict();
+
+export const listPipelinesQuerySchema = z
+  .object({
+    includeInactive: queryBooleanSchema.optional(),
   })
   .strict();
 
@@ -100,6 +118,7 @@ export const reorderStagesBodySchema = z
 
 export type PipelineIdParams = z.infer<typeof pipelineIdParamsSchema>;
 export type StageIdParams = z.infer<typeof stageIdParamsSchema>;
+export type ListPipelinesQuery = z.infer<typeof listPipelinesQuerySchema>;
 export type CreatePipelineBody = z.infer<typeof createPipelineBodySchema>;
 export type UpdatePipelineBody = z.infer<typeof updatePipelineBodySchema>;
 export type CreateStageBody = z.infer<typeof createStageBodySchema>;

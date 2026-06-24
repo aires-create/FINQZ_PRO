@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createPipelineBodySchema,
   createStageBodySchema,
+  listPipelinesQuerySchema,
   pipelineIdParamsSchema,
   reorderStagesBodySchema,
   stageIdParamsSchema,
@@ -38,6 +39,28 @@ describe('pipeline.http.contract', () => {
     ).toEqual({
       description: 'Updated description',
     });
+  });
+
+  it('listPipelinesQuerySchema accepts includeInactive=true', () => {
+    expect(
+      listPipelinesQuerySchema.parse({
+        includeInactive: 'true',
+      }),
+    ).toEqual({
+      includeInactive: true,
+    });
+  });
+
+  it('listPipelinesQuerySchema accepts includeInactive=false or omitted', () => {
+    expect(
+      listPipelinesQuerySchema.parse({
+        includeInactive: 'false',
+      }),
+    ).toEqual({
+      includeInactive: false,
+    });
+
+    expect(listPipelinesQuerySchema.parse({})).toEqual({});
   });
 
   it('updatePipelineBodySchema accepts isActive=false', () => {

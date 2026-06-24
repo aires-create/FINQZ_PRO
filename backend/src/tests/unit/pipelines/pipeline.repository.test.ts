@@ -101,6 +101,60 @@ describe('pipelinesRepository', () => {
     });
   });
 
+  it('listByTenant filters deletedAt null and isActive true by default', async () => {
+    prismaMock.pipeline.findMany.mockResolvedValueOnce([]);
+
+    await pipelinesRepository.listByTenant({
+      tenantId: 'tenant-a',
+    });
+
+    expect(prismaMock.pipeline.findMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        deletedAt: null,
+        isActive: true,
+      },
+      include: expect.objectContaining({
+        stages: expect.objectContaining({
+          where: {
+            deletedAt: null,
+          },
+        }),
+      }),
+      orderBy: [
+        { isDefault: 'desc' },
+        { createdAt: 'asc' },
+      ],
+    });
+  });
+
+  it('listByTenant includes inactive pipelines when requested', async () => {
+    prismaMock.pipeline.findMany.mockResolvedValueOnce([]);
+
+    await pipelinesRepository.listByTenant({
+      tenantId: 'tenant-a',
+      includeInactive: true,
+    });
+
+    expect(prismaMock.pipeline.findMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      include: expect.objectContaining({
+        stages: expect.objectContaining({
+          where: {
+            deletedAt: null,
+          },
+        }),
+      }),
+      orderBy: [
+        { isDefault: 'desc' },
+        { createdAt: 'asc' },
+      ],
+    });
+  });
+
   it('hasLinkedOpportunitiesForPipeline checks linked active opportunities', async () => {
     prismaMock.opportunity.count.mockResolvedValueOnce(2);
 

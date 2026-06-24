@@ -129,15 +129,15 @@ const clearOtherActiveDefaultPipelines = (
   });
 };
 
-const listActiveByTenant = (
-  tenantId: string,
+const listByTenant = (
+  input: { tenantId: string; includeInactive?: boolean },
   client: PipelinesPrismaClient = prisma,
 ) => {
   return client.pipeline.findMany({
     where: {
-      tenantId,
+      tenantId: input.tenantId,
       deletedAt: null,
-      isActive: true,
+      ...(input.includeInactive === true ? {} : { isActive: true }),
     },
     include: pipelineReadInclude,
     orderBy: [
@@ -148,8 +148,13 @@ const listActiveByTenant = (
 };
 
 export const pipelinesRepository = {
-  listActiveByTenant,
-  findActiveByTenant: listActiveByTenant,
+  listByTenant,
+  listActiveByTenant(tenantId: string, client: PipelinesPrismaClient = prisma) {
+    return listByTenant({ tenantId }, client);
+  },
+  findActiveByTenant(tenantId: string, client: PipelinesPrismaClient = prisma) {
+    return listByTenant({ tenantId }, client);
+  },
 
   findById(
     input: FindByIdInput,

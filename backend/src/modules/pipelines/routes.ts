@@ -14,6 +14,7 @@ import {
 import {
   createPipelineBodySchema,
   createStageBodySchema,
+  listPipelinesQuerySchema,
   pipelineIdParamsSchema,
   reorderStagesBodySchema,
   stageIdParamsSchema,
@@ -104,10 +105,37 @@ export async function pipelinesRoutes(app: FastifyInstance) {
   app.get(
     '/',
     { preHandler: [requirePermissions('pipeline:read')] },
+    /**
+     * @swagger
+     * /api/v1/pipelines:
+     *   get:
+     *     summary: List pipelines
+     *     tags: [Pipeline]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: query
+     *         name: includeInactive
+     *         schema:
+     *           type: boolean
+     *     responses:
+     *       200:
+     *         description: Pipelines listed successfully
+     *       401:
+     *         description: Unauthorized
+     *       403:
+     *         description: Forbidden
+     *       500:
+     *         description: Internal server error
+     */
     async (request, reply) => {
       try {
         const tenantId = getTenantId(request);
-        const data = await pipelinesService.listActiveByTenant(tenantId);
+        const query = listPipelinesQuerySchema.parse(request.query);
+        const data = await pipelinesService.listActivePipelines({
+          tenantId,
+          ...(query.includeInactive !== undefined ? { includeInactive: query.includeInactive } : {}),
+        });
 
         return reply.send({
           success: true,
