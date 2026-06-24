@@ -191,6 +191,23 @@ describe('pipelinesRepository', () => {
     expect(result).toBe(false);
   });
 
+  it('countActiveByTenant counts active non-deleted pipelines for tenant', async () => {
+    prismaMock.pipeline.count.mockResolvedValueOnce(3);
+
+    const result = await pipelinesRepository.countActiveByTenant({
+      tenantId: 'tenant-a',
+    });
+
+    expect(prismaMock.pipeline.count).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+    expect(result).toBe(3);
+  });
+
   it('createPipeline does not require code', async () => {
     txMock.pipeline.create.mockResolvedValueOnce({ id: 'pipeline-1' });
 

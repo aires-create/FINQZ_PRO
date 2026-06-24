@@ -34,6 +34,10 @@ export interface HasLinkedOpportunitiesForStageInput {
   stageId: UUID;
 }
 
+export interface CountActiveByTenantInput {
+  tenantId: UUID;
+}
+
 export interface CreatePipelineRepositoryInput extends CreatePipelineInput {}
 
 export interface UpdatePipelineRepositoryInput {
@@ -89,6 +93,7 @@ export interface PipelineRepositoryContract {
   hasLinkedOpportunitiesForStage(
     input: HasLinkedOpportunitiesForStageInput,
   ): Promise<boolean>;
+  countActiveByTenant(input: CountActiveByTenantInput): Promise<number>;
   createPipeline(input: CreatePipelineRepositoryInput): Promise<PipelineContract>;
   updatePipeline(input: UpdatePipelineRepositoryInput): Promise<void>;
   softDeletePipeline(input: SoftDeletePipelineRepositoryInput): Promise<void>;

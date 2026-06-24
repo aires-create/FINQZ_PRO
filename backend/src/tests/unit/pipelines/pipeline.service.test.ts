@@ -18,6 +18,7 @@ type PipelineRepositoryMock = PipelineRepositoryContract & {
   findStageById: ReturnType<typeof vi.fn>;
   hasLinkedOpportunitiesForPipeline: ReturnType<typeof vi.fn>;
   hasLinkedOpportunitiesForStage: ReturnType<typeof vi.fn>;
+  countActiveByTenant: ReturnType<typeof vi.fn>;
   createPipeline: ReturnType<typeof vi.fn>;
   updatePipeline: ReturnType<typeof vi.fn>;
   softDeletePipeline: ReturnType<typeof vi.fn>;
@@ -35,6 +36,7 @@ const createRepositoryMock = (): PipelineRepositoryMock =>
     findStageById: vi.fn(),
     hasLinkedOpportunitiesForPipeline: vi.fn(),
     hasLinkedOpportunitiesForStage: vi.fn(),
+    countActiveByTenant: vi.fn(),
     createPipeline: vi.fn(),
     updatePipeline: vi.fn(),
     softDeletePipeline: vi.fn(),
@@ -315,7 +317,6 @@ describe('PipelinesService', () => {
   });
 
   it('updatePipeline throws PipelineNotFoundError when record is missing', async () => {
-    repository.updatePipeline.mockResolvedValueOnce(undefined);
     repository.findById.mockResolvedValueOnce(null);
 
     await expect(
@@ -326,6 +327,113 @@ describe('PipelinesService', () => {
         actorUserId: 'user-1',
       }),
     ).rejects.toBeInstanceOf(PipelineNotFoundError);
+  });
+
+  it('updatePipeline blocks inactivation for default pipelines', async () => {
+    repository.findById.mockResolvedValueOnce({
+      ...basePipeline,
+      isDefault: true,
+    });
+
+    await expect(
+      service.updatePipeline({
+        id: 'pipeline-1',
+        tenantId: 'tenant-a',
+        isActive: false,
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Default pipeline cannot be inactivated');
+
+    expect(repository.countActiveByTenant).not.toHaveBeenCalled();
+    expect(repository.hasLinkedOpportunitiesForPipeline).not.toHaveBeenCalled();
+    expect(repository.updatePipeline).not.toHaveBeenCalled();
+  });
+
+  it('updatePipeline blocks inactivation for the last active pipeline', async () => {
+    repository.findById.mockResolvedValueOnce({
+      ...basePipeline,
+      isDefault: false,
+      isActive: true,
+    });
+    repository.countActiveByTenant.mockResolvedValueOnce(1);
+
+    await expect(
+      service.updatePipeline({
+        id: 'pipeline-1',
+        tenantId: 'tenant-a',
+        isActive: false,
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Tenant must keep one active pipeline');
+
+    expect(repository.countActiveByTenant).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+    });
+    expect(repository.hasLinkedOpportunitiesForPipeline).not.toHaveBeenCalled();
+    expect(repository.updatePipeline).not.toHaveBeenCalled();
+  });
+
+  it('updatePipeline allows inactivation when another active pipeline exists and target is not default', async () => {
+    repository.findById
+      .mockResolvedValueOnce({
+        ...basePipeline,
+        isDefault: false,
+        isActive: true,
+      })
+      .mockResolvedValueOnce({
+        ...basePipeline,
+        isDefault: false,
+        isActive: false,
+      });
+    repository.countActiveByTenant.mockResolvedValueOnce(2);
+    repository.updatePipeline.mockResolvedValueOnce(undefined);
+
+    const result = await service.updatePipeline({
+      id: 'pipeline-1',
+      tenantId: 'tenant-a',
+      isActive: false,
+      actorUserId: 'user-1',
+    });
+
+    expect(repository.countActiveByTenant).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+    });
+    expect(repository.hasLinkedOpportunitiesForPipeline).not.toHaveBeenCalled();
+    expect(repository.updatePipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+      isActive: false,
+    });
+    expect(result).toEqual({
+      ...basePipeline,
+      isDefault: false,
+      isActive: false,
+    });
+  });
+
+  it('updatePipeline does not query opportunities for inactivation', async () => {
+    repository.findById
+      .mockResolvedValueOnce({
+        ...basePipeline,
+        isDefault: false,
+        isActive: true,
+      })
+      .mockResolvedValueOnce({
+        ...basePipeline,
+        isDefault: false,
+        isActive: false,
+      });
+    repository.countActiveByTenant.mockResolvedValueOnce(2);
+    repository.updatePipeline.mockResolvedValueOnce(undefined);
+
+    await service.updatePipeline({
+      id: 'pipeline-1',
+      tenantId: 'tenant-a',
+      isActive: false,
+      actorUserId: 'user-1',
+    });
+
+    expect(repository.hasLinkedOpportunitiesForPipeline).not.toHaveBeenCalled();
   });
 
   it('updateStage throws StageNotFoundError when record is missing', async () => {
@@ -396,6 +504,12 @@ describe('PipelinesService', () => {
   });
 
   it('deactivatePipeline delegates tenantId/pipelineId/actorUserId', async () => {
+    repository.findById.mockResolvedValueOnce({
+      ...basePipeline,
+      isDefault: false,
+      isActive: true,
+    });
+    repository.countActiveByTenant.mockResolvedValueOnce(2);
     repository.hasLinkedOpportunitiesForPipeline.mockResolvedValueOnce(false);
     repository.softDeletePipeline.mockResolvedValueOnce({ count: 1 });
 
@@ -412,7 +526,55 @@ describe('PipelinesService', () => {
     });
   });
 
+  it('deactivatePipeline blocks default pipelines before softDelete', async () => {
+    repository.findById.mockResolvedValueOnce({
+      ...basePipeline,
+      isDefault: true,
+    });
+
+    await expect(
+      service.deactivatePipeline({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Default pipeline cannot be archived');
+
+    expect(repository.countActiveByTenant).not.toHaveBeenCalled();
+    expect(repository.hasLinkedOpportunitiesForPipeline).not.toHaveBeenCalled();
+    expect(repository.softDeletePipeline).not.toHaveBeenCalled();
+  });
+
+  it('deactivatePipeline blocks the last active pipeline before softDelete', async () => {
+    repository.findById.mockResolvedValueOnce({
+      ...basePipeline,
+      isDefault: false,
+      isActive: true,
+    });
+    repository.countActiveByTenant.mockResolvedValueOnce(1);
+
+    await expect(
+      service.deactivatePipeline({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Tenant must keep one active pipeline');
+
+    expect(repository.countActiveByTenant).toHaveBeenCalledWith({
+      tenantId: 'tenant-a',
+    });
+    expect(repository.hasLinkedOpportunitiesForPipeline).not.toHaveBeenCalled();
+    expect(repository.softDeletePipeline).not.toHaveBeenCalled();
+  });
+
   it('deactivatePipeline blocks when pipeline has linked opportunities', async () => {
+    repository.findById.mockResolvedValueOnce({
+      ...basePipeline,
+      isDefault: false,
+      isActive: true,
+    });
+    repository.countActiveByTenant.mockResolvedValueOnce(2);
     repository.hasLinkedOpportunitiesForPipeline.mockResolvedValueOnce(true);
 
     await expect(

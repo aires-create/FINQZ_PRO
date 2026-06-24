@@ -13,6 +13,7 @@ type FindByIdInput = { tenantId: string; pipelineId: string };
 type FindStageByIdInput = { tenantId: string; stageId: string };
 type HasLinkedOpportunitiesForPipelineInput = { tenantId: string; pipelineId: string };
 type HasLinkedOpportunitiesForStageInput = { tenantId: string; stageId: string };
+type CountActiveByTenantInput = { tenantId: string };
 type UpdatePipelineRepositoryInput = {
   tenantId: string;
   pipelineId: string;
@@ -212,6 +213,19 @@ export const pipelinesRepository = {
     });
 
     return linkedCount > 0;
+  },
+
+  async countActiveByTenant(
+    input: CountActiveByTenantInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.pipeline.count({
+      where: {
+        tenantId: input.tenantId,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
   },
 
   createPipeline(

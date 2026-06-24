@@ -98,6 +98,31 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<PipelineContract> {
     validatePipelineWrite(input);
 
+    const currentPipeline = await this.repository.findById({
+      tenantId: input.tenantId,
+      pipelineId: input.id,
+    });
+
+    if (!currentPipeline) {
+      throw new PipelineNotFoundError(input.id);
+    }
+
+    if (input.isActive === false) {
+      if (currentPipeline.isDefault) {
+        throw new PipelineDefaultLifecycleError('Default pipeline cannot be inactivated');
+      }
+
+      if (currentPipeline.isActive) {
+        const activeCount = await this.repository.countActiveByTenant({
+          tenantId: input.tenantId,
+        });
+
+        if (activeCount <= 1) {
+          throw new LastActivePipelineError('Tenant must keep one active pipeline');
+        }
+      }
+    }
+
     const payload = {
       tenantId: input.tenantId,
       pipelineId: input.id,
@@ -124,6 +149,29 @@ export class PipelinesService implements PipelineServiceContract {
   async deactivatePipeline(
     input: DeactivatePipelineServiceInput,
   ): Promise<void> {
+    const currentPipeline = await this.repository.findById({
+      tenantId: input.tenantId,
+      pipelineId: input.pipelineId,
+    });
+
+    if (!currentPipeline) {
+      throw new PipelineNotFoundError(input.pipelineId);
+    }
+
+    if (currentPipeline.isDefault) {
+      throw new PipelineDefaultLifecycleError('Default pipeline cannot be archived');
+    }
+
+    if (currentPipeline.isActive) {
+      const activeCount = await this.repository.countActiveByTenant({
+        tenantId: input.tenantId,
+      });
+
+      if (activeCount <= 1) {
+        throw new LastActivePipelineError('Tenant must keep one active pipeline');
+      }
+    }
+
     const hasLinkedOpportunities = await this.repository.hasLinkedOpportunitiesForPipeline({
       tenantId: input.tenantId,
       pipelineId: input.pipelineId,
@@ -262,6 +310,20 @@ export class PipelineInUseError extends ConflictError {
   constructor(pipelineId: string) {
     super(`Pipeline ${pipelineId} has linked opportunities`);
     this.name = 'PipelineInUseError';
+  }
+}
+
+export class PipelineDefaultLifecycleError extends ConflictError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PipelineDefaultLifecycleError';
+  }
+}
+
+export class LastActivePipelineError extends ConflictError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LastActivePipelineError';
   }
 }
 
