@@ -5,6 +5,7 @@ const { prismaMock, txMock } = vi.hoisted(() => {
     pipeline: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      count: vi.fn(),
       create: vi.fn(),
       updateMany: vi.fn(),
     },
@@ -22,6 +23,7 @@ const { prismaMock, txMock } = vi.hoisted(() => {
     pipeline: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      count: vi.fn(),
       create: vi.fn(),
       updateMany: vi.fn(),
     },
@@ -94,7 +96,7 @@ describe('pipelinesRepository', () => {
   });
 
   it('createPipeline does not require code', async () => {
-    prismaMock.pipeline.create.mockResolvedValueOnce({ id: 'pipeline-1' });
+    txMock.pipeline.create.mockResolvedValueOnce({ id: 'pipeline-1' });
 
     await pipelinesRepository.createPipeline({
       tenantId: 'tenant-a',
@@ -104,7 +106,8 @@ describe('pipelinesRepository', () => {
       isActive: true,
     });
 
-    expect(prismaMock.pipeline.create).toHaveBeenCalledWith({
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+    expect(txMock.pipeline.create).toHaveBeenCalledWith({
       data: {
         tenantId: 'tenant-a',
         name: 'Main Pipeline',
@@ -114,6 +117,99 @@ describe('pipelinesRepository', () => {
       },
       include: expect.any(Object),
     });
+    expect(txMock.pipeline.updateMany).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        deletedAt: null,
+        isActive: true,
+        isDefault: true,
+        id: {
+          not: 'pipeline-1',
+        },
+      },
+      data: {
+        isDefault: false,
+      },
+    });
+  });
+
+  it('updatePipeline keeps one active default per tenant when enabling default', async () => {
+    txMock.pipeline.findFirst.mockResolvedValueOnce({
+      id: 'pipeline-1',
+      isDefault: false,
+    });
+    txMock.pipeline.updateMany.mockResolvedValueOnce({ count: 1 });
+
+    await pipelinesRepository.updatePipeline({
+      tenantId: 'tenant-a',
+      pipelineId: 'pipeline-1',
+      name: 'Main Pipeline',
+      isDefault: true,
+    });
+
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+    expect(txMock.pipeline.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'pipeline-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isDefault: true,
+      },
+    });
+    expect(txMock.pipeline.updateMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        id: 'pipeline-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      data: {
+        name: 'Main Pipeline',
+        isDefault: true,
+      },
+    });
+    expect(txMock.pipeline.updateMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        tenantId: 'tenant-a',
+        deletedAt: null,
+        isActive: true,
+        isDefault: true,
+        id: {
+          not: 'pipeline-1',
+        },
+      },
+      data: {
+        isDefault: false,
+      },
+    });
+  });
+
+  it('updatePipeline blocks disabling the last active default', async () => {
+    txMock.pipeline.findFirst.mockResolvedValueOnce({
+      id: 'pipeline-1',
+      isDefault: true,
+    });
+    txMock.pipeline.count.mockResolvedValueOnce(1);
+
+    await expect(
+      pipelinesRepository.updatePipeline({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        isDefault: false,
+      }),
+    ).rejects.toThrow('Tenant must keep one active default pipeline');
+
+    expect(txMock.pipeline.count).toHaveBeenCalledWith({
+      where: {
+        tenantId: 'tenant-a',
+        deletedAt: null,
+        isActive: true,
+        isDefault: true,
+      },
+    });
+    expect(txMock.pipeline.updateMany).not.toHaveBeenCalled();
   });
 
   it('createStage does not use code or isActive', async () => {

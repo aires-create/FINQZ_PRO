@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
 import { logger } from '../../shared/logger.js';
+import { ConflictError } from '../../shared/errors/AppError.js';
 import { requirePermissions } from '../rbac/rbac.guard.js';
 import { TenantScopeViolationError } from '../opportunities/services/opportunities.service.js';
 import {
@@ -70,6 +71,16 @@ const handleRouteError = (error: unknown, reply: FastifyReply) => {
       success: false,
       error: {
         code: 'FORBIDDEN',
+        message: error.message,
+      },
+    });
+  }
+
+  if (error instanceof ConflictError) {
+    return reply.status(409).send({
+      success: false,
+      error: {
+        code: 'CONFLICT',
         message: error.message,
       },
     });

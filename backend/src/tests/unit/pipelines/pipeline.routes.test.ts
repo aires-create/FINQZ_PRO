@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import { ZodError } from 'zod';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError } from '../../../shared/errors/AppError.js';
 
 const serviceMock = vi.hoisted(() => ({
   listActiveByTenant: vi.fn(),
@@ -255,6 +256,33 @@ describe('pipelines routes', () => {
       error: {
         code: 'NOT_FOUND',
         message: 'Stage missing',
+      },
+    });
+  });
+
+  it('ConflictError returns 409', async () => {
+    serviceMock.updatePipeline.mockRejectedValueOnce(
+      new ConflictError('Tenant must keep one active default pipeline'),
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        isDefault: false,
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'CONFLICT',
+        message: 'Tenant must keep one active default pipeline',
       },
     });
   });

@@ -1,6 +1,7 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { prisma } from '../../core/prisma/client.js';
+import { ConflictError } from '../../shared/errors/AppError.js';
 import type {
   CreatePipelineInput,
 } from './domain/pipeline.contract.js';
@@ -89,6 +90,43 @@ const runInTransaction = async <T>(
   return action(client);
 };
 
+const runInSerializableTransaction = async <T>(
+  client: PipelinesPrismaClient,
+  action: (transaction: Prisma.TransactionClient) => Promise<T>,
+) => {
+  if (client === prisma) {
+    return prisma.$transaction(
+      (transaction) => action(transaction),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  }
+
+  return action(client);
+};
+
+const clearOtherActiveDefaultPipelines = (
+  transaction: Prisma.TransactionClient,
+  tenantId: string,
+  pipelineId: string,
+) => {
+  return transaction.pipeline.updateMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      isActive: true,
+      isDefault: true,
+      id: {
+        not: pipelineId,
+      },
+    },
+    data: {
+      isDefault: false,
+    },
+  });
+};
+
 const listActiveByTenant = (
   tenantId: string,
   client: PipelinesPrismaClient = prisma,
@@ -143,15 +181,38 @@ export const pipelinesRepository = {
     input: CreatePipelineInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    return client.pipeline.create({
-      data: {
-        tenantId: input.tenantId,
-        name: input.name,
-        description: input.description ?? null,
-        isDefault: input.isDefault ?? false,
-        isActive: input.isActive ?? true,
-      },
-      include: pipelineReadInclude,
+    if (input.isDefault !== true) {
+      return client.pipeline.create({
+        data: {
+          tenantId: input.tenantId,
+          name: input.name,
+          description: input.description ?? null,
+          isDefault: input.isDefault ?? false,
+          isActive: input.isActive ?? true,
+        },
+        include: pipelineReadInclude,
+      });
+    }
+
+    return runInSerializableTransaction(client, async (transaction) => {
+      const pipeline = await transaction.pipeline.create({
+        data: {
+          tenantId: input.tenantId,
+          name: input.name,
+          description: input.description ?? null,
+          isDefault: true,
+          isActive: input.isActive ?? true,
+        },
+        include: pipelineReadInclude,
+      });
+
+      await clearOtherActiveDefaultPipelines(
+        transaction,
+        input.tenantId,
+        pipeline.id,
+      );
+
+      return pipeline;
     });
   },
 
@@ -159,18 +220,76 @@ export const pipelinesRepository = {
     input: UpdatePipelineRepositoryInput,
     client: PipelinesPrismaClient = prisma,
   ) {
-    await client.pipeline.updateMany({
-      where: {
-        id: input.pipelineId,
-        tenantId: input.tenantId,
-        deletedAt: null,
-      },
-      data: {
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.description !== undefined ? { description: input.description } : {}),
-        ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
-        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-      },
+    if (input.isDefault === undefined) {
+      await client.pipeline.updateMany({
+        where: {
+          id: input.pipelineId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        },
+      });
+      return;
+    }
+
+    await runInSerializableTransaction(client, async (transaction) => {
+      const existingPipeline = await transaction.pipeline.findFirst({
+        where: {
+          id: input.pipelineId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          isDefault: true,
+        },
+      });
+
+      if (
+        input.isDefault === false &&
+        existingPipeline?.isDefault === true
+      ) {
+        const activeDefaultCount = await transaction.pipeline.count({
+          where: {
+            tenantId: input.tenantId,
+            deletedAt: null,
+            isActive: true,
+            isDefault: true,
+          },
+        });
+
+        if (activeDefaultCount <= 1) {
+          throw new ConflictError(
+            'Tenant must keep one active default pipeline',
+          );
+        }
+      }
+
+      await transaction.pipeline.updateMany({
+        where: {
+          id: input.pipelineId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        },
+      });
+
+      if (input.isDefault === true && existingPipeline) {
+        await clearOtherActiveDefaultPipelines(
+          transaction,
+          input.tenantId,
+          input.pipelineId,
+        );
+      }
     });
   },
 
