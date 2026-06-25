@@ -89,6 +89,7 @@ vi.mock('../components/ui', () => ({
 vi.mock('lucide-react', () => ({
   AlertTriangle: () => null,
   CheckCircle2: () => null,
+  GripVertical: () => null,
   Pencil: () => null,
   RefreshCw: () => null,
   Trash2: () => null,
