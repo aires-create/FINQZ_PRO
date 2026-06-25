@@ -95,6 +95,20 @@ vi.mock('lucide-react', () => ({
   TrendingUp: () => null,
 }));
 
+class ResizeObserverMock {
+  observe() {}
+
+  unobserve() {}
+
+  disconnect() {}
+}
+
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  configurable: true,
+  writable: true,
+  value: ResizeObserverMock,
+});
+
 import { PipelinesPage } from '../pages/admin/Pipelines';
 
 describe('admin pipelines stage reorder', () => {
@@ -124,13 +138,15 @@ describe('admin pipelines stage reorder', () => {
     );
     expect(initialRows[0]?.getAttribute('data-testid')).toBe('reorder-stage-row-stage-1');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Mover etapa Qualificação para baixo' }));
+    fireEvent.click(screen.getByLabelText('Mover etapa Qualificação para baixo'));
 
-    const movedRows = Array.from(
-      document.querySelectorAll('[data-testid^="reorder-stage-row-"]'),
-    );
-    expect(movedRows[0]?.getAttribute('data-testid')).toBe('reorder-stage-row-stage-2');
-    expect(movedRows[1]?.getAttribute('data-testid')).toBe('reorder-stage-row-stage-1');
+    await waitFor(() => {
+      const movedRows = Array.from(
+        document.querySelectorAll('[data-testid^="reorder-stage-row-"]'),
+      );
+      expect(movedRows[0]?.getAttribute('data-testid')).toBe('reorder-stage-row-stage-2');
+      expect(movedRows[1]?.getAttribute('data-testid')).toBe('reorder-stage-row-stage-1');
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Salvar ordem' }));
 
@@ -159,7 +175,7 @@ describe('admin pipelines stage reorder', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Reordenar etapas' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Mover etapa Qualificação para baixo' }));
+    fireEvent.click(screen.getByLabelText('Mover etapa Qualificação para baixo'));
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(reorderStagesMock).not.toHaveBeenCalled();
@@ -182,7 +198,7 @@ describe('admin pipelines stage reorder', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Reordenar etapas' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Mover etapa Qualificação para baixo' }));
+    fireEvent.click(screen.getByLabelText('Mover etapa Qualificação para baixo'));
     fireEvent.click(screen.getByRole('button', { name: 'Salvar ordem' }));
 
     await waitFor(() => {

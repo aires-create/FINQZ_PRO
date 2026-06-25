@@ -3,6 +3,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Pencil, RefreshCw, Trash2, TrendingUp } from 'lucide-react';
+import { DndContext, KeyboardSensor, PointerSensor, closestCenter, type DragEndEvent, useSensor, useSensors } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Badge, Button, Input, Modal, TextArea, Toggle } from '../../components/ui';
 import { ApiException } from '../../api/http';
@@ -211,6 +214,126 @@ const getReorderStagesErrorMessage = (error: unknown): string => {
   return message || 'Não foi possível reordenar as etapas.';
 };
 
+type SortableStageRowProps = {
+  stage: AdminPipelineViewModel['stages'][number];
+  color: string;
+  index: number;
+  total: number;
+  reorderSubmitting: boolean;
+  onMoveStage: (stageId: string, direction: -1 | 1) => void;
+};
+
+const SortableStageRow: React.FC<SortableStageRowProps> = ({
+  stage,
+  color,
+  index,
+  total,
+  reorderSubmitting,
+  onMoveStage,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: stage.stageId, disabled: reorderSubmitting });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      data-testid={`reorder-stage-row-${stage.stageId}`}
+      className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm ${
+        isDragging ? 'opacity-70 ring-2 ring-primary/40' : ''
+      }`}
+      style={{
+        ...style,
+        backgroundColor: `${color}14`,
+        borderColor: `${color}55`,
+        color,
+      }}
+    >
+      <button
+        type="button"
+        className="inline-flex h-8 w-8 cursor-grab items-center justify-center rounded-full border border-current/20 bg-white/20 text-current shadow-sm transition hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-primary/30 active:cursor-grabbing"
+        aria-label={`Arrastar etapa ${stage.name}`}
+        title={`Arrastar etapa ${stage.name}`}
+        disabled={reorderSubmitting}
+        {...attributes}
+        {...listeners}
+      >
+        <span aria-hidden="true" className="flex h-3.5 w-3.5 flex-col items-center justify-between">
+          <span className="h-0.5 w-3 rounded-full bg-current/80" />
+          <span className="h-0.5 w-3 rounded-full bg-current/80" />
+          <span className="h-0.5 w-3 rounded-full bg-current/80" />
+        </span>
+      </button>
+
+      <span
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs text-white"
+        style={{ backgroundColor: color }}
+      >
+        {stage.order}
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="truncate font-medium">{stage.name}</span>
+          <Badge
+            variant={stage.isActive ? 'success' : 'warning'}
+            size="sm"
+            className="uppercase tracking-wide"
+          >
+            {stage.isActive ? 'Ativa' : 'Inativa'}
+          </Badge>
+          {stage.isWon && (
+            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+              GANHO
+            </span>
+          )}
+          {stage.isLost && (
+            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+              PERDIDO
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[var(--text-muted)]">
+          {index + 1} de {total}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onMoveStage(stage.stageId, -1)}
+          disabled={index === 0 || reorderSubmitting}
+          aria-label={`Mover etapa ${stage.name} para cima`}
+        >
+          Subir
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onMoveStage(stage.stageId, 1)}
+          disabled={index === total - 1 || reorderSubmitting}
+          aria-label={`Mover etapa ${stage.name} para baixo`}
+        >
+          Descer
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export const PipelinesPage: React.FC = () => {
   const [pipelines, setPipelines] = useState<AdminPipelineViewModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -284,6 +407,16 @@ export const PipelinesPage: React.FC = () => {
   const [reorderSnapshotStages, setReorderSnapshotStages] = useState<AdminPipelineViewModel['stages']>([]);
   const [reorderSubmitting, setReorderSubmitting] = useState(false);
   const [reorderError, setReorderError] = useState<string | null>(null);
+  const reorderSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -796,6 +929,27 @@ export const PipelinesPage: React.FC = () => {
     }
   };
 
+  const handleReorderDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id || reorderSubmitting) {
+      return;
+    }
+
+    setReorderDraftStages((currentStages) => {
+      const oldIndex = currentStages.findIndex((stage) => stage.stageId === active.id);
+      const newIndex = currentStages.findIndex((stage) => stage.stageId === over.id);
+
+      if (oldIndex < 0 || newIndex < 0 || oldIndex === newIndex) {
+        return currentStages;
+      }
+
+      return normalizeReorderDraftStages(
+        arrayMove(currentStages, oldIndex, newIndex),
+      );
+    });
+  };
+
   const summary = useMemo(() => {
     const active = pipelines.filter((pipeline) => pipeline.active).length;
     const inactive = pipelines.filter((pipeline) => !pipeline.active).length;
@@ -808,6 +962,7 @@ export const PipelinesPage: React.FC = () => {
   }, [pipelines]);
 
   const exportRows = useMemo(() => buildExportRows(pipelines), [pipelines]);
+  const isAnyReorderActive = reorderPipelineId !== null;
 
   return (
     <div className="space-y-6">
@@ -927,7 +1082,7 @@ export const PipelinesPage: React.FC = () => {
                           <Button
                             variant="outline"
                             onClick={() => openReorderMode(pipeline)}
-                            disabled={loading || pipeline.stages.length < 2}
+                            disabled={loading || pipeline.stages.length < 2 || isAnyReorderActive}
                           >
                             Reordenar etapas
                           </Button>
@@ -936,14 +1091,14 @@ export const PipelinesPage: React.FC = () => {
                           variant="outline"
                           icon={<Pencil size={14} />}
                           onClick={() => openEditModal(pipeline)}
-                          disabled={loading || isReorderingPipeline}
+                          disabled={loading || isAnyReorderActive}
                         >
                           Editar
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => openCreateStageModal(pipeline)}
-                          disabled={loading || isReorderingPipeline}
+                          disabled={loading || isAnyReorderActive}
                         >
                           Adicionar etapa
                         </Button>
@@ -956,7 +1111,7 @@ export const PipelinesPage: React.FC = () => {
                               pipeline.active ? 'inactivate' : 'reactivate',
                             )
                           }
-                          disabled={loading || isReorderingPipeline}
+                          disabled={loading || isAnyReorderActive}
                           title={pipeline.active ? 'Inativar pipeline' : 'Reativar pipeline'}
                         >
                           {pipeline.active ? 'Inativar' : 'Reativar'}
@@ -965,7 +1120,7 @@ export const PipelinesPage: React.FC = () => {
                           variant="danger"
                           icon={<Trash2 size={14} />}
                           onClick={() => openArchiveModal(pipeline)}
-                          disabled={loading || isReorderingPipeline}
+                          disabled={loading || isAnyReorderActive}
                           title="Arquivar pipeline"
                         >
                           Arquivar
@@ -995,74 +1150,34 @@ export const PipelinesPage: React.FC = () => {
                         Etapas ({visibleStages.length}){hasPendingReorder ? ' - alterações pendentes' : ''}:
                       </p>
                       {isReorderingPipeline ? (
-                        <div className="space-y-2">
-                          {visibleStages.map((stage, index) => {
-                            const color = stage.color || pipeline.stageColors[index] || '#64748b';
+                        <DndContext
+                          sensors={reorderSensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleReorderDragEnd}
+                        >
+                          <SortableContext
+                            items={visibleStages.map((stage) => stage.stageId)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-2">
+                              {visibleStages.map((stage, index) => {
+                                const color = stage.color || pipeline.stageColors[index] || '#64748b';
 
-                            return (
-                              <div
-                                key={stage.stageId}
-                                data-testid={`reorder-stage-row-${stage.stageId}`}
-                                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm"
-                                style={{
-                                  backgroundColor: `${color}14`,
-                                  borderColor: `${color}55`,
-                                  color,
-                                }}
-                              >
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <span
-                                    className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
-                                    style={{ backgroundColor: color }}
-                                  >
-                                    {stage.order}
-                                  </span>
-                                  <span className="truncate font-medium">{stage.name}</span>
-                                  <Badge
-                                    variant={stage.isActive ? 'success' : 'warning'}
-                                    size="sm"
-                                    className="uppercase tracking-wide"
-                                  >
-                                    {stage.isActive ? 'Ativa' : 'Inativa'}
-                                  </Badge>
-                                  {stage.isWon && (
-                                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                      GANHO
-                                    </span>
-                                  )}
-                                  {stage.isLost && (
-                                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                      PERDIDO
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => moveReorderStage(stage.stageId, -1)}
-                                    disabled={index === 0 || reorderSubmitting}
-                                    aria-label={`Mover etapa ${stage.name} para cima`}
-                                  >
-                                    Subir
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => moveReorderStage(stage.stageId, 1)}
-                                    disabled={index === visibleStages.length - 1 || reorderSubmitting}
-                                    aria-label={`Mover etapa ${stage.name} para baixo`}
-                                  >
-                                    Descer
-                                  </Button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                                return (
+                                  <SortableStageRow
+                                    key={stage.stageId}
+                                    stage={stage}
+                                    color={color}
+                                    index={index}
+                                    total={visibleStages.length}
+                                    reorderSubmitting={reorderSubmitting}
+                                    onMoveStage={moveReorderStage}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {visibleStages.map((stage, index) => {
@@ -1093,7 +1208,7 @@ export const PipelinesPage: React.FC = () => {
                                   onClick={() => openEditStageModal(pipeline, stage)}
                                   title={`Editar etapa ${stage.name}`}
                                   aria-label={`Editar etapa ${stage.name}`}
-                                  disabled={isReorderingPipeline}
+                                  disabled={isAnyReorderActive}
                                 >
                                   Editar
                                 </Button>
@@ -1105,7 +1220,7 @@ export const PipelinesPage: React.FC = () => {
                                   onClick={() => openArchiveStageModal(pipeline, stage)}
                                   title={`Arquivar etapa ${stage.name}`}
                                   aria-label={`Arquivar etapa ${stage.name}`}
-                                  disabled={isReorderingPipeline}
+                                  disabled={isAnyReorderActive}
                                 >
                                   Arquivar
                                 </Button>
