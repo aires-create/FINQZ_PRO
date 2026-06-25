@@ -290,6 +290,8 @@ export class PartnerAcquisitionCommandHandler
           phone: command.phone ?? null,
           companyName: command.companyName ?? null,
           document: command.document ?? null,
+          sourceName: command.sourceName ?? null,
+          sourceReference: command.sourceReference ?? null,
         }, 'NEW');
       case 'CreatePartnerProspectCommand':
         return buildPlan(command, {
@@ -301,6 +303,8 @@ export class PartnerAcquisitionCommandHandler
           companyName: command.companyName ?? null,
           document: command.document ?? null,
           initialStatus: command.initialStatus ?? 'NEW',
+          sourceName: command.sourceName ?? null,
+          sourceReference: command.sourceReference ?? null,
         }, command.initialStatus ?? 'NEW');
       case 'QualifyPartnerProspectCommand':
         return buildPlan(command, {
@@ -407,8 +411,8 @@ export class PartnerAcquisitionCommandHandler
           channel: command.source,
           source: command.source,
           ...(command.references !== undefined ? { references: command.references } : {}),
-          sourceName: command.source,
-          sourceReference: command.references?.[0]?.refId ?? null,
+          sourceName: command.sourceName ?? null,
+          sourceReference: command.sourceReference ?? null,
           campaignId: command.metadata?.campaignId ?? null,
           hubContextId: command.metadata?.trace
             ? JSON.stringify(command.metadata.trace)
@@ -428,8 +432,8 @@ export class PartnerAcquisitionCommandHandler
           channel: command.source,
           source: command.source,
           ...(command.references !== undefined ? { references: command.references } : {}),
-          sourceName: command.source,
-          sourceReference: command.references?.[0]?.refId ?? null,
+          sourceName: command.sourceName ?? null,
+          sourceReference: command.sourceReference ?? null,
           campaignId: command.metadata?.campaignId ?? null,
           hubContextId: command.metadata?.trace
             ? JSON.stringify(command.metadata.trace)

@@ -164,9 +164,15 @@ describe('partner-acquisition.http.contract', () => {
         leadCode: 'lead-001',
         fullName: 'Parceiro Exemplo',
         source: 'CAMPAIGN',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
         email: 'parceiro@example.com',
       }),
-    ).toMatchObject({ leadCode: 'lead-001' });
+    ).toMatchObject({
+      leadCode: 'lead-001',
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
+    });
 
     expect(
       partnerAcquisitionProspectCreateBodySchema.parse({
@@ -174,9 +180,15 @@ describe('partner-acquisition.http.contract', () => {
         leadId: '11111111-1111-1111-1111-111111111111',
         fullName: 'Parceiro Exemplo',
         source: 'SDR_IA',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
         status: 'NEW',
       }),
-    ).toMatchObject({ prospectCode: 'prospect-001' });
+    ).toMatchObject({
+      prospectCode: 'prospect-001',
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
+    });
 
     expect(partnerAcquisitionQualifyBodySchema.parse({ expectedVersion: 1, score: 90 })).toMatchObject({ expectedVersion: 1 });
     expect(partnerAcquisitionDocumentationRequestBodySchema.parse({ expectedVersion: 1, requestedDocuments: ['CNPJ'] })).toMatchObject({ expectedVersion: 1 });

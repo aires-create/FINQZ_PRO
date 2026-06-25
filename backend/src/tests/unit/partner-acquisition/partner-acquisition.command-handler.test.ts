@@ -85,8 +85,8 @@ describe('partner-acquisition.command-handler', () => {
       companyName: null,
       document: null,
       channel: 'CAMPAIGN',
-      sourceName: null,
-      sourceReference: null,
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
       campaignId: null,
       hubContextId: null,
       ownerUserId: 'user-1',
@@ -129,6 +129,8 @@ describe('partner-acquisition.command-handler', () => {
       idempotencyKey: 'idem-1',
       requestedAt: '2026-06-25T00:00:00.000Z',
       source: 'CAMPAIGN',
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
       commandType: 'CreatePartnerLeadCommand',
       leadId: 'lead-1',
       fullName: 'Parceiro Exemplo',
@@ -147,6 +149,8 @@ describe('partner-acquisition.command-handler', () => {
       expect.objectContaining({
         tenantId: 'tenant-1',
         leadCode: 'lead-1',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
       }),
     );
     expect(service.appendEvent).toHaveBeenCalledWith(
@@ -165,6 +169,102 @@ describe('partner-acquisition.command-handler', () => {
     );
     expect(service.markCommandProcessed).toHaveBeenCalledTimes(1);
     expect(result.leadId).toBe('lead-1');
+  });
+
+  it('preserves source attribution fields for create prospect commands', async () => {
+    const service = createServiceMock();
+    service.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'CreatePartnerProspectCommand',
+      aggregateId: null,
+      aggregateType: 'PARTNER_PROSPECT',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-2',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      status: 'RECEIVED',
+    });
+    service.listEventsByAggregate.mockResolvedValue([]);
+    service.createProspect.mockResolvedValue({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'SDR_IA',
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'NEW',
+      pipelineCode: null,
+      stageCode: null,
+      score: null,
+      qualificationReason: null,
+      assignedUserId: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    service.appendEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: '11111111-1111-4111-8111-111111111111',
+      aggregateId: 'prospect-1',
+      aggregateType: 'PARTNER_PROSPECT',
+      eventType: 'PartnerProspectCreated',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-2',
+      occurredAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      version: 1,
+    });
+    service.enqueueOutboxEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: '11111111-1111-4111-8111-111111111111',
+      aggregateId: 'prospect-1',
+      aggregateType: 'PARTNER_PROSPECT',
+      eventType: 'PartnerProspectCreated',
+      availableAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+    });
+    service.markCommandProcessed.mockResolvedValue(null);
+
+    const handler = new PartnerAcquisitionCommandHandler(service);
+    const command: Extract<PartnerAcquisitionCommand, { commandType: 'CreatePartnerProspectCommand' }> = {
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-2',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'SDR_IA',
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
+      commandType: 'CreatePartnerProspectCommand',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      initialStatus: 'NEW',
+    };
+
+    const result = await handler.handle(command);
+
+    expect(service.createProspect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        prospectCode: 'prospect-1',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
+      }),
+    );
+    expect(result.prospectId).toBe('prospect-1');
   });
 
   it('short-circuits processed commands without repeating the operation', async () => {

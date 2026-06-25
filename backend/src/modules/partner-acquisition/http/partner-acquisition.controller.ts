@@ -277,6 +277,8 @@ const paginate = <T>(items: T[], page: number, limit: number): T[] => {
 const buildCommandEnvelope = (
   request: FastifyRequest,
   source: PartnerAcquisitionSource,
+  sourceName?: string | null,
+  sourceReference?: string | null,
   references?: PartnerAcquisitionReference[],
   metadata?: PartnerAcquisitionCommandMetadata,
 ) => ({
@@ -287,6 +289,8 @@ const buildCommandEnvelope = (
   idempotencyKey: getIdempotencyKey(request),
   requestedAt: new Date().toISOString(),
   source,
+  ...(sourceName !== undefined ? { sourceName } : {}),
+  ...(sourceReference !== undefined ? { sourceReference } : {}),
   ...(references !== undefined ? { references } : {}),
   ...(metadata !== undefined ? { metadata } : {}),
 });
@@ -523,6 +527,8 @@ export class PartnerAcquisitionController {
         ...buildCommandEnvelope(
           request,
           body.source,
+          body.sourceName ?? null,
+          body.sourceReference ?? null,
           normalizeReferences(body.references),
           normalizeCommandMetadata(body.metadata),
         ),
@@ -625,6 +631,8 @@ export class PartnerAcquisitionController {
         ...buildCommandEnvelope(
           request,
           body.source,
+          body.sourceName ?? null,
+          body.sourceReference ?? null,
           normalizeReferences(body.references),
           normalizeCommandMetadata(body.metadata),
         ),
@@ -739,6 +747,8 @@ export class PartnerAcquisitionController {
         ...buildCommandEnvelope(
           request,
           getProspectSource(prospect),
+          prospect.sourceName ?? null,
+          prospect.sourceReference ?? null,
           undefined,
           buildProspectMetadata(prospect),
         ),
@@ -817,6 +827,8 @@ export class PartnerAcquisitionController {
         ...buildCommandEnvelope(
           request,
           getProspectSource(prospect),
+          prospect.sourceName ?? null,
+          prospect.sourceReference ?? null,
           undefined,
           buildProspectMetadata(prospect),
         ),

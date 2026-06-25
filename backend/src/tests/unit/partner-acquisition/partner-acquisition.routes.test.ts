@@ -244,13 +244,15 @@ describe('partner-acquisition routes', () => {
       url: '/api/v1/partner-acquisition/leads',
       headers: {
         authorization: 'Bearer token',
-        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_prospect:convert',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_prospect:create,partner_prospect:convert',
         'idempotency-key': 'idem-1',
       },
       payload: {
         leadCode: 'lead-1',
         fullName: 'Parceiro Exemplo',
         source: 'CAMPAIGN',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
       },
     });
 
@@ -261,6 +263,65 @@ describe('partner-acquisition routes', () => {
         actorUserId: userId,
         idempotencyKey: 'idem-1',
         commandType: 'CreatePartnerLeadCommand',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
+      }),
+    );
+  });
+
+  it('creates a prospect preserving source attribution fields', async () => {
+    handlerMock.handle.mockResolvedValueOnce({
+      tenantId,
+      prospectId,
+      leadId,
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'SDR_IA',
+      sourceName: 'H16T Smoke',
+      sourceReference: 'h16t-smoke',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'NEW',
+      pipelineCode: null,
+      stageCode: null,
+      score: null,
+      qualificationReason: null,
+      assignedUserId: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/partner-acquisition/prospects',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_prospect:create,partner_prospect:convert',
+        'idempotency-key': 'idem-1',
+      },
+      payload: {
+        prospectCode: 'prospect-1',
+        leadId,
+        fullName: 'Parceiro Exemplo',
+        source: 'SDR_IA',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(handlerMock.handle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        actorUserId: userId,
+        idempotencyKey: 'idem-1',
+        commandType: 'CreatePartnerProspectCommand',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
       }),
     );
   });
@@ -329,7 +390,7 @@ describe('partner-acquisition routes', () => {
       url: `/api/v1/partner-acquisition/prospects/${prospectId}/convert`,
       headers: {
         authorization: 'Bearer token',
-        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_prospect:convert',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_prospect:create,partner_prospect:convert',
         'idempotency-key': 'idem-2',
       },
       payload: {

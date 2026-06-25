@@ -32,6 +32,8 @@ export interface PartnerAcquisitionCommandEnvelope {
   idempotencyKey: string;
   requestedAt: string;
   source: PartnerAcquisitionSource;
+  sourceName?: string | null;
+  sourceReference?: string | null;
   references?: PartnerAcquisitionReference[];
   metadata?: PartnerAcquisitionCommandMetadata;
 }
