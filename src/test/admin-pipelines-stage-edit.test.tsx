@@ -51,6 +51,7 @@ vi.mock('../pages/admin/pipelines.adapter', () => ({
     ...(draft.isLost !== undefined ? { isLost: draft.isLost } : {}),
     ...(draft.isActive !== undefined ? { isActive: draft.isActive } : {}),
   })),
+  buildReorderStagesPayload: vi.fn(),
 }));
 
 vi.mock('../components/layout/PageHeader', () => ({

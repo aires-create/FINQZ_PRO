@@ -45,6 +45,7 @@ vi.mock('../pages/admin/pipelines.adapter', () => ({
   buildUpdatePipelinePayload: vi.fn(),
   buildCreateStagePayload: vi.fn(),
   buildUpdateStagePayload: vi.fn(),
+  buildReorderStagesPayload: vi.fn(),
 }));
 
 vi.mock('../components/layout/PageHeader', () => ({

@@ -13,6 +13,7 @@ import {
   type AdminPipelineDraft,
   type AdminStageDraft,
   buildCreatePipelinePayload,
+  buildReorderStagesPayload,
   buildUpdatePipelinePayload,
   buildCreateStagePayload,
   buildUpdateStagePayload,
@@ -174,6 +175,42 @@ const buildExportRows = (pipelines: AdminPipelineViewModel[]) =>
     updatedAt: pipeline.updatedAt ?? '',
   }));
 
+const cloneStages = (
+  stages: AdminPipelineViewModel['stages'],
+): AdminPipelineViewModel['stages'] => stages.map((stage) => ({ ...stage }));
+
+const normalizeReorderDraftStages = (
+  stages: AdminPipelineViewModel['stages'],
+): AdminPipelineViewModel['stages'] =>
+  stages.map((stage, index) => ({
+    ...stage,
+    order: index + 1,
+  }));
+
+const areStageOrdersEqual = (
+  left: AdminPipelineViewModel['stages'],
+  right: AdminPipelineViewModel['stages'],
+): boolean => left.length === right.length && left.every((stage, index) => stage.stageId === right[index]?.stageId);
+
+const getReorderStagesErrorMessage = (error: unknown): string => {
+  const status = extractErrorStatus(error);
+  const message = extractSafeErrorMessage(error);
+
+  if (status === 403) {
+    return 'Você não tem permissão para reordenar etapas.';
+  }
+
+  if (status === 409) {
+    return message || 'Não foi possível reordenar as etapas.';
+  }
+
+  if (status === 400 || status === 422) {
+    return message || 'Falha de validação ao reordenar etapas.';
+  }
+
+  return message || 'Não foi possível reordenar as etapas.';
+};
+
 export const PipelinesPage: React.FC = () => {
   const [pipelines, setPipelines] = useState<AdminPipelineViewModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,6 +279,11 @@ export const PipelinesPage: React.FC = () => {
   } | null>(null);
   const [archiveStageSubmitting, setArchiveStageSubmitting] = useState(false);
   const [archiveStageError, setArchiveStageError] = useState<string | null>(null);
+  const [reorderPipelineId, setReorderPipelineId] = useState<string | null>(null);
+  const [reorderDraftStages, setReorderDraftStages] = useState<AdminPipelineViewModel['stages']>([]);
+  const [reorderSnapshotStages, setReorderSnapshotStages] = useState<AdminPipelineViewModel['stages']>([]);
+  const [reorderSubmitting, setReorderSubmitting] = useState(false);
+  const [reorderError, setReorderError] = useState<string | null>(null);
 
   const loadPipelines = async () => {
     setLoading(true);
@@ -678,6 +720,82 @@ export const PipelinesPage: React.FC = () => {
     }
   };
 
+  const closeReorderMode = () => {
+    if (reorderSubmitting) return;
+    setReorderPipelineId(null);
+    setReorderDraftStages([]);
+    setReorderSnapshotStages([]);
+    setReorderError(null);
+  };
+
+  const openReorderMode = (pipeline: AdminPipelineViewModel) => {
+    if (reorderSubmitting) return;
+
+    setReorderPipelineId(pipeline.pipelineId);
+    setReorderSnapshotStages(cloneStages(pipeline.stages));
+    setReorderDraftStages(normalizeReorderDraftStages(cloneStages(pipeline.stages)));
+    setReorderError(null);
+  };
+
+  const moveReorderStage = (stageId: string, direction: -1 | 1) => {
+    if (!reorderPipelineId || reorderSubmitting) return;
+
+    setReorderDraftStages((currentStages) => {
+      const currentIndex = currentStages.findIndex((stage) => stage.stageId === stageId);
+      const targetIndex = currentIndex + direction;
+
+      if (currentIndex < 0 || targetIndex < 0 || targetIndex >= currentStages.length) {
+        return currentStages;
+      }
+
+      const nextStages = [...currentStages];
+      const [movedStage] = nextStages.splice(currentIndex, 1);
+      nextStages.splice(targetIndex, 0, movedStage);
+
+      return normalizeReorderDraftStages(nextStages);
+    });
+  };
+
+  const cancelReorderChanges = () => {
+    if (reorderSubmitting) return;
+    closeReorderMode();
+  };
+
+  const saveReorderChanges = async () => {
+    if (!reorderPipelineId) {
+      setReorderError('Pipeline selecionado nao encontrado.');
+      return;
+    }
+
+    const targetPipeline = pipelines.find((pipeline) => pipeline.pipelineId === reorderPipelineId);
+    if (!targetPipeline) {
+      setReorderError('Pipeline selecionado nao encontrado.');
+      return;
+    }
+
+    setReorderSubmitting(true);
+    setReorderError(null);
+
+    try {
+      const payload = buildReorderStagesPayload(
+        normalizeReorderDraftStages(cloneStages(reorderDraftStages)).map((stage) => ({
+          stageId: stage.stageId,
+          order: stage.order,
+        })),
+      );
+
+      await pipelinesApi.reorderStages(targetPipeline.pipelineId, payload);
+      setReorderPipelineId(null);
+      setReorderDraftStages([]);
+      setReorderSnapshotStages([]);
+      await loadPipelines();
+    } catch (saveError) {
+      setReorderError(getReorderStagesErrorMessage(saveError));
+    } finally {
+      setReorderSubmitting(false);
+    }
+  };
+
   const summary = useMemo(() => {
     const active = pipelines.filter((pipeline) => pipeline.active).length;
     const inactive = pipelines.filter((pipeline) => !pipeline.active).length;
@@ -753,147 +871,270 @@ export const PipelinesPage: React.FC = () => {
 
           {!loading && !error && pipelines.length > 0 && (
             <div className="space-y-4">
-              {pipelines.map((pipeline) => (
-                <div
-                  key={pipeline.pipelineId}
-                  className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h4 className="truncate font-semibold text-[var(--text-primary)]">
-                        {pipeline.pipelineName}
-                      </h4>
-                      <p className="text-sm text-[var(--text-muted)]">
-                        ID: {pipeline.pipelineId} | Code: {pipeline.pipelineId}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          pipeline.active
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                            : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
-                        }`}
-                      >
-                        {pipeline.active ? 'Ativo' : 'Inativo'}
-                      </span>
-                      {pipeline.isDefault && (
-                        <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                          Padrão
+              {pipelines.map((pipeline) => {
+                const isReorderingPipeline = reorderPipelineId === pipeline.pipelineId;
+                const visibleStages = isReorderingPipeline ? reorderDraftStages : pipeline.stages;
+                const hasPendingReorder = isReorderingPipeline &&
+                  !areStageOrdersEqual(reorderDraftStages, reorderSnapshotStages);
+
+                return (
+                  <div
+                    key={pipeline.pipelineId}
+                    className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="truncate font-semibold text-[var(--text-primary)]">
+                          {pipeline.pipelineName}
+                        </h4>
+                        <p className="text-sm text-[var(--text-muted)]">
+                          ID: {pipeline.pipelineId} | Code: {pipeline.pipelineId}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            pipeline.active
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                              : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
+                          }`}
+                        >
+                          {pipeline.active ? 'Ativo' : 'Inativo'}
                         </span>
-                      )}
-                      <Button
-                        variant="outline"
-                        icon={<Pencil size={14} />}
-                        onClick={() => openEditModal(pipeline)}
-                        disabled={loading}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => openCreateStageModal(pipeline)}
-                        disabled={loading}
-                      >
-                        Adicionar etapa
-                      </Button>
-                      <Button
-                        variant={pipeline.active ? 'outline' : 'primary'}
-                        icon={pipeline.active ? <Trash2 size={14} /> : <RefreshCw size={14} />}
-                        onClick={() =>
-                          openLifecycleModal(
-                            pipeline,
-                            pipeline.active ? 'inactivate' : 'reactivate',
-                          )
-                        }
-                        disabled={loading}
-                        title={pipeline.active ? 'Inativar pipeline' : 'Reativar pipeline'}
-                      >
-                        {pipeline.active ? 'Inativar' : 'Reativar'}
-                      </Button>
-                      <Button
-                        variant="danger"
-                        icon={<Trash2 size={14} />}
-                        onClick={() => openArchiveModal(pipeline)}
-                        disabled={loading}
-                        title="Arquivar pipeline"
-                      >
-                        Arquivar
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">
-                      Etapas ({pipeline.stages.length}):
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {pipeline.stages.map((stage, index) => {
-                        const color = stage.color || pipeline.stageColors[index] || '#64748b';
-
-                        return (
-                          <div
-                            key={stage.stageId}
-                            className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
-                            style={{
-                              backgroundColor: `${color}18`,
-                              borderColor: `${color}55`,
-                              color,
-                            }}
+                        {pipeline.isDefault && (
+                          <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                            Padrão
+                          </span>
+                        )}
+                        {isReorderingPipeline ? (
+                          <>
+                            <Button
+                              variant="primary"
+                              onClick={saveReorderChanges}
+                              disabled={reorderSubmitting || !hasPendingReorder}
                             >
-                              <span
-                                className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
-                                style={{ backgroundColor: color }}
-                              >
-                                {stage.order}
-                              </span>
-                              <span>{stage.name}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                icon={<Pencil size={12} />}
-                                onClick={() => openEditStageModal(pipeline, stage)}
-                                title={`Editar etapa ${stage.name}`}
-                                aria-label={`Editar etapa ${stage.name}`}
-                              >
-                                Editar
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                icon={<Trash2 size={12} />}
-                                onClick={() => openArchiveStageModal(pipeline, stage)}
-                                title={`Arquivar etapa ${stage.name}`}
-                                aria-label={`Arquivar etapa ${stage.name}`}
-                              >
-                                Arquivar
-                              </Button>
-                              <Badge
-                                variant={stage.isActive ? 'success' : 'warning'}
-                                size="sm"
-                                className="uppercase tracking-wide"
-                              >
-                                {stage.isActive ? 'Ativa' : 'Inativa'}
-                              </Badge>
-                            {stage.isWon && (
-                              <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                                GANHO
-                              </span>
-                            )}
-                            {stage.isLost && (
-                              <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                PERDIDO
-                              </span>
-                            )}
+                              {reorderSubmitting ? 'Salvando...' : 'Salvar ordem'}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={cancelReorderChanges}
+                              disabled={reorderSubmitting}
+                            >
+                              Cancelar
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            onClick={() => openReorderMode(pipeline)}
+                            disabled={loading || pipeline.stages.length < 2}
+                          >
+                            Reordenar etapas
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          icon={<Pencil size={14} />}
+                          onClick={() => openEditModal(pipeline)}
+                          disabled={loading || isReorderingPipeline}
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => openCreateStageModal(pipeline)}
+                          disabled={loading || isReorderingPipeline}
+                        >
+                          Adicionar etapa
+                        </Button>
+                        <Button
+                          variant={pipeline.active ? 'outline' : 'primary'}
+                          icon={pipeline.active ? <Trash2 size={14} /> : <RefreshCw size={14} />}
+                          onClick={() =>
+                            openLifecycleModal(
+                              pipeline,
+                              pipeline.active ? 'inactivate' : 'reactivate',
+                            )
+                          }
+                          disabled={loading || isReorderingPipeline}
+                          title={pipeline.active ? 'Inativar pipeline' : 'Reativar pipeline'}
+                        >
+                          {pipeline.active ? 'Inativar' : 'Reativar'}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          icon={<Trash2 size={14} />}
+                          onClick={() => openArchiveModal(pipeline)}
+                          disabled={loading || isReorderingPipeline}
+                          title="Arquivar pipeline"
+                        >
+                          Arquivar
+                        </Button>
+                      </div>
+                    </div>
+
+                    {isReorderingPipeline && (
+                      <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-[var(--text-secondary)]">
+                        <p className="font-medium text-[var(--text-primary)]">
+                          Reordenação local ativa
+                        </p>
+                        <p className="mt-1">
+                          Ajuste a ordem com os controles da lista. Salvar envia a lista completa ao backend.
+                          Cancelar restaura a ordem original.
+                        </p>
+                        {reorderError && (
+                          <div className="mt-3 rounded-md border border-red-500/20 bg-red-500/10 p-2 text-sm text-red-600 dark:text-red-300">
+                            {reorderError}
                           </div>
-                        );
-                      })}
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-4">
+                      <p className="mb-2 text-sm font-medium text-[var(--text-secondary)]">
+                        Etapas ({visibleStages.length}){hasPendingReorder ? ' - alterações pendentes' : ''}:
+                      </p>
+                      {isReorderingPipeline ? (
+                        <div className="space-y-2">
+                          {visibleStages.map((stage, index) => {
+                            const color = stage.color || pipeline.stageColors[index] || '#64748b';
+
+                            return (
+                              <div
+                                key={stage.stageId}
+                                data-testid={`reorder-stage-row-${stage.stageId}`}
+                                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm"
+                                style={{
+                                  backgroundColor: `${color}14`,
+                                  borderColor: `${color}55`,
+                                  color,
+                                }}
+                              >
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
+                                    style={{ backgroundColor: color }}
+                                  >
+                                    {stage.order}
+                                  </span>
+                                  <span className="truncate font-medium">{stage.name}</span>
+                                  <Badge
+                                    variant={stage.isActive ? 'success' : 'warning'}
+                                    size="sm"
+                                    className="uppercase tracking-wide"
+                                  >
+                                    {stage.isActive ? 'Ativa' : 'Inativa'}
+                                  </Badge>
+                                  {stage.isWon && (
+                                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                                      GANHO
+                                    </span>
+                                  )}
+                                  {stage.isLost && (
+                                    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                      PERDIDO
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => moveReorderStage(stage.stageId, -1)}
+                                    disabled={index === 0 || reorderSubmitting}
+                                    aria-label={`Mover etapa ${stage.name} para cima`}
+                                  >
+                                    Subir
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => moveReorderStage(stage.stageId, 1)}
+                                    disabled={index === visibleStages.length - 1 || reorderSubmitting}
+                                    aria-label={`Mover etapa ${stage.name} para baixo`}
+                                  >
+                                    Descer
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {visibleStages.map((stage, index) => {
+                            const color = stage.color || pipeline.stageColors[index] || '#64748b';
+
+                            return (
+                              <div
+                                key={stage.stageId}
+                                className="flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
+                                style={{
+                                  backgroundColor: `${color}18`,
+                                  borderColor: `${color}55`,
+                                  color,
+                                }}
+                              >
+                                <span
+                                  className="flex h-5 w-5 items-center justify-center rounded-full text-xs text-white"
+                                  style={{ backgroundColor: color }}
+                                >
+                                  {stage.order}
+                                </span>
+                                <span>{stage.name}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={<Pencil size={12} />}
+                                  onClick={() => openEditStageModal(pipeline, stage)}
+                                  title={`Editar etapa ${stage.name}`}
+                                  aria-label={`Editar etapa ${stage.name}`}
+                                  disabled={isReorderingPipeline}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  icon={<Trash2 size={12} />}
+                                  onClick={() => openArchiveStageModal(pipeline, stage)}
+                                  title={`Arquivar etapa ${stage.name}`}
+                                  aria-label={`Arquivar etapa ${stage.name}`}
+                                  disabled={isReorderingPipeline}
+                                >
+                                  Arquivar
+                                </Button>
+                                <Badge
+                                  variant={stage.isActive ? 'success' : 'warning'}
+                                  size="sm"
+                                  className="uppercase tracking-wide"
+                                >
+                                  {stage.isActive ? 'Ativa' : 'Inativa'}
+                                </Badge>
+                                {stage.isWon && (
+                                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
+                                    GANHO
+                                  </span>
+                                )}
+                                {stage.isLost && (
+                                  <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                    PERDIDO
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
