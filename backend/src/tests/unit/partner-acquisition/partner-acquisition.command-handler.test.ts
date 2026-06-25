@@ -6,6 +6,10 @@ import type { PartnerAcquisitionCommand } from '../../../modules/partner-acquisi
 import { PartnerAcquisitionCommandHandler } from '../../../modules/partner-acquisition/handlers/partner-acquisition.command-handler.js';
 import type { PartnerAcquisitionServiceContract } from '../../../modules/partner-acquisition/services/partner-acquisition.service.contract.js';
 
+vi.mock('node:crypto', () => ({
+  randomUUID: vi.fn(() => '11111111-1111-4111-8111-111111111111'),
+}));
+
 const createServiceMock = () =>
   ({
     createLead: vi.fn(),
@@ -61,7 +65,7 @@ describe('partner-acquisition.command-handler', () => {
     service.recordCommand.mockResolvedValue({
       tenantId: 'tenant-1',
       commandType: 'CreatePartnerLeadCommand',
-      aggregateId: 'lead-1',
+      aggregateId: null,
       aggregateType: 'PARTNER_LEAD',
       actorUserId: 'user-1',
       requestId: 'req-1',
@@ -93,7 +97,7 @@ describe('partner-acquisition.command-handler', () => {
     });
     service.appendEvent.mockResolvedValue({
       tenantId: 'tenant-1',
-      eventId: 'idem-1',
+      eventId: '11111111-1111-4111-8111-111111111111',
       aggregateId: 'lead-1',
       aggregateType: 'PARTNER_LEAD',
       eventType: 'PartnerLeadCreated',
@@ -107,7 +111,7 @@ describe('partner-acquisition.command-handler', () => {
     });
     service.enqueueOutboxEvent.mockResolvedValue({
       tenantId: 'tenant-1',
-      eventId: 'idem-1',
+      eventId: '11111111-1111-4111-8111-111111111111',
       aggregateId: 'lead-1',
       aggregateType: 'PARTNER_LEAD',
       eventType: 'PartnerLeadCreated',
@@ -133,6 +137,12 @@ describe('partner-acquisition.command-handler', () => {
     const result = await handler.handle(command);
 
     expect(service.recordCommand).toHaveBeenCalledTimes(1);
+    expect(service.recordCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aggregateId: null,
+        idempotencyKey: 'idem-1',
+      }),
+    );
     expect(service.createLead).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
@@ -142,12 +152,15 @@ describe('partner-acquisition.command-handler', () => {
     expect(service.appendEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'PartnerLeadCreated',
-        eventId: 'idem-1',
+        eventId: '11111111-1111-4111-8111-111111111111',
+        aggregateId: 'lead-1',
       }),
     );
     expect(service.enqueueOutboxEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'PartnerLeadCreated',
+        eventId: '11111111-1111-4111-8111-111111111111',
+        aggregateId: 'lead-1',
       }),
     );
     expect(service.markCommandProcessed).toHaveBeenCalledTimes(1);
@@ -159,7 +172,7 @@ describe('partner-acquisition.command-handler', () => {
     service.recordCommand.mockResolvedValue({
       tenantId: 'tenant-1',
       commandType: 'CreatePartnerLeadCommand',
-      aggregateId: 'lead-1',
+      aggregateId: null,
       aggregateType: 'PARTNER_LEAD',
       actorUserId: 'user-1',
       requestId: 'req-1',
@@ -216,7 +229,7 @@ describe('partner-acquisition.command-handler', () => {
     service.recordCommand.mockResolvedValue({
       tenantId: 'tenant-1',
       commandType: 'CreatePartnerLeadCommand',
-      aggregateId: 'lead-1',
+      aggregateId: null,
       aggregateType: 'PARTNER_LEAD',
       actorUserId: 'user-1',
       requestId: 'req-1',

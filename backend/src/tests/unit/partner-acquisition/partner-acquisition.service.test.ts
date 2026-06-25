@@ -205,7 +205,7 @@ describe('partner-acquisition.service', () => {
     repository.recordCommand.mockResolvedValue({
       tenantId: 'tenant-1',
       commandType: 'CreatePartnerLeadCommand',
-      aggregateId: 'lead-1',
+      aggregateId: null,
       aggregateType: 'PARTNER_LEAD',
       actorUserId: 'user-1',
       requestId: 'req-1',
@@ -261,7 +261,7 @@ describe('partner-acquisition.service', () => {
     await service.recordCommand({
       tenantId: 'tenant-1',
       commandType: 'CreatePartnerLeadCommand',
-      aggregateId: 'lead-1',
+      aggregateId: null,
       aggregateType: 'PARTNER_LEAD',
       actorUserId: 'user-1',
       requestId: 'req-1',

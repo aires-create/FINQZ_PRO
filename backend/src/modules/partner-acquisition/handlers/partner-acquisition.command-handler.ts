@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type {
   PartnerAcquisitionCommand,
   ApprovePartnerProspectConversionCommand,
@@ -15,6 +17,7 @@ import type {
 } from '../domain/partner-acquisition.commands.js';
 import type {
   PartnerAcquisitionEventMetadata,
+  PartnerLead,
   PartnerProspectStatus,
 } from '../domain/partner-acquisition.contract.js';
 import type { PartnerAcquisitionCommandRecordInput } from '../repositories/partner-acquisition.repository.contract.js';
@@ -108,7 +111,8 @@ const buildPlan = (
   payload: Record<string, unknown>,
   nextStatus?: PartnerProspectStatus | null,
 ): PartnerAcquisitionCommandPlan => ({
-  aggregateId: getAggregateId(command),
+  aggregateId:
+    command.commandType === 'CreatePartnerLeadCommand' ? null : getAggregateId(command),
   aggregateType: getAggregateType(command),
   eventType: PARTNER_ACQUISITION_COMMAND_EVENT_TYPE_MAP[command.commandType],
   payload: {
@@ -122,7 +126,8 @@ const buildPlan = (
 const createInboxPayload = (command: PartnerAcquisitionCommand) => ({
   tenantId: command.tenantId,
   commandType: command.commandType,
-  aggregateId: getAggregateId(command),
+  aggregateId:
+    command.commandType === 'CreatePartnerLeadCommand' ? null : getAggregateId(command),
   aggregateType: getAggregateType(command),
   actorUserId: command.actorUserId,
   requestId: command.requestId,
@@ -136,11 +141,12 @@ const createEventRecordInput = async (
   service: PartnerAcquisitionServiceContract,
   command: PartnerAcquisitionCommand,
   plan: PartnerAcquisitionCommandPlan,
+  aggregateId: string,
   reason?: string | null,
 ) => {
   const events = await service.listEventsByAggregate({
     tenantId: command.tenantId,
-    aggregateId: plan.aggregateId,
+    aggregateId,
     aggregateType: plan.aggregateType,
   });
 
@@ -148,8 +154,8 @@ const createEventRecordInput = async (
 
   return {
     tenantId: command.tenantId,
-    eventId: command.idempotencyKey,
-    aggregateId: plan.aggregateId,
+    eventId: randomUUID(),
+    aggregateId,
     aggregateType: plan.aggregateType,
     eventType: plan.eventType,
     actorUserId: command.actorUserId,
@@ -166,10 +172,12 @@ const createEventRecordInput = async (
 const createOutboxRecordInput = (
   command: PartnerAcquisitionCommand,
   plan: PartnerAcquisitionCommandPlan,
+  aggregateId: string,
+  eventId: string,
 ) => ({
   tenantId: command.tenantId,
-  eventId: command.idempotencyKey,
-  aggregateId: plan.aggregateId,
+  eventId,
+  aggregateId,
   aggregateType: plan.aggregateType,
   eventType: plan.eventType,
   availableAt: command.requestedAt,
@@ -192,6 +200,14 @@ const buildProcessedResult = (
 const assertResult = <T>(value: T | null, message: string): T => {
   if (value === null) {
     throw new Error(message);
+  }
+
+  return value;
+};
+
+const assertAggregateId = (value: string | null, commandType: string): string => {
+  if (value === null) {
+    throw new Error(`Missing aggregateId for ${commandType}`);
   }
 
   return value;
@@ -224,15 +240,22 @@ export class PartnerAcquisitionCommandHandler
     try {
       const plan = this.buildPlan(command);
       const result = await this.execute(command);
+      const aggregateId =
+        command.commandType === 'CreatePartnerLeadCommand'
+          ? (result as PartnerLead).leadId
+          : assertAggregateId(plan.aggregateId, command.commandType);
       const event = await createEventRecordInput(
         this.service,
         command,
         plan,
+        aggregateId,
         this.getReason(command),
       );
 
       await this.service.appendEvent(event);
-      await this.service.enqueueOutboxEvent(createOutboxRecordInput(command, plan));
+      await this.service.enqueueOutboxEvent(
+        createOutboxRecordInput(command, plan, aggregateId, event.eventId),
+      );
       await this.service.markCommandProcessed({
         tenantId: command.tenantId,
         idempotencyKey: command.idempotencyKey,

@@ -24,7 +24,7 @@ export interface PartnerAcquisitionCommandHandlerContract {
 }
 
 export interface PartnerAcquisitionCommandPlan {
-  aggregateId: string;
+  aggregateId: string | null;
   aggregateType: 'PARTNER_LEAD' | 'PARTNER_PROSPECT';
   eventType: PartnerAcquisitionEventType;
   nextStatus?: PartnerProspectStatus | null;

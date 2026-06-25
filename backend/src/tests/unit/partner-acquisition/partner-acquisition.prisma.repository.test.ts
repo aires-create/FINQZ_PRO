@@ -483,7 +483,7 @@ describe('partner-acquisition.prisma.repository', () => {
     const command = await repository.recordCommand({
       tenantId: 'tenant-1',
       commandType: 'CreatePartnerLeadCommand',
-      aggregateId: 'lead-1',
+      aggregateId: null,
       aggregateType: 'PARTNER_LEAD',
       actorUserId: 'user-1',
       requestId: 'req-1',
