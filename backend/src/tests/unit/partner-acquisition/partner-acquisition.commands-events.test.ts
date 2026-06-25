@@ -185,6 +185,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'QualifyPartnerProspectCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       score: 87,
       qualificationReason: 'Perfil aderente',
     };
@@ -193,6 +194,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'DisqualifyPartnerProspectCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       reason: 'Sem aderência comercial',
     };
 
@@ -200,6 +202,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'MovePartnerProspectToNegotiationCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       negotiationReason: 'Avançar para proposta',
     };
 
@@ -207,6 +210,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'RequestPartnerProspectDocumentationCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       requestedDocuments: ['CNPJ', 'Contrato social'],
       dueAt: '2026-06-30T00:00:00.000Z',
     };
@@ -215,6 +219,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'MarkPartnerProspectDocumentationReceivedCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       receivedDocuments: ['CNPJ', 'Contrato social'],
     };
 
@@ -222,6 +227,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'RequestPartnerProspectContractCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       contractTemplateCode: 'PARTNER_STD',
       contractReference: 'ctr-1',
     };
@@ -230,6 +236,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'MarkPartnerProspectContractSignedCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       signedAt: '2026-06-25T00:00:00.000Z',
       contractReference: 'ctr-1',
       signatureProvider: 'clicksign',
@@ -239,6 +246,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'ApprovePartnerProspectConversionCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       approvalNotes: 'Conversão aprovada',
     };
 
@@ -246,6 +254,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'RejectPartnerProspectConversionCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       reason: 'Documentação inválida',
     };
 
@@ -253,6 +262,7 @@ describe('partner-acquisition.commands-events', () => {
       ...commandEnvelope,
       commandType: 'ConvertPartnerProspectToPartnerCommand',
       prospectId: 'prospect-1',
+      expectedVersion: 1,
       partnerId: 'partner-1',
       partnerCode: 'P-001',
       partnerName: 'Parceiro Exemplo LTDA',

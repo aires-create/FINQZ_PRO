@@ -1,0 +1,374 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
+
+import type { PartnerAcquisitionCommand } from '../../../modules/partner-acquisition/domain/partner-acquisition.commands.js';
+import { PartnerAcquisitionCommandHandler } from '../../../modules/partner-acquisition/handlers/partner-acquisition.command-handler.js';
+import type { PartnerAcquisitionServiceContract } from '../../../modules/partner-acquisition/services/partner-acquisition.service.contract.js';
+
+const createServiceMock = () =>
+  ({
+    createLead: vi.fn(),
+    findLeadById: vi.fn(),
+    findLeadByCode: vi.fn(),
+    listLeads: vi.fn(),
+    softDeleteLead: vi.fn(),
+    createProspect: vi.fn(),
+    findProspectById: vi.fn(),
+    findProspectByCode: vi.fn(),
+    listProspects: vi.fn(),
+    updateProspectLifecycle: vi.fn(),
+    linkProspectToPartner: vi.fn(),
+    softDeleteProspect: vi.fn(),
+    recordCommand: vi.fn(),
+    findCommandByIdempotencyKey: vi.fn(),
+    markCommandProcessed: vi.fn(),
+    markCommandFailed: vi.fn(),
+    appendEvent: vi.fn(),
+    listEventsByAggregate: vi.fn(),
+    findEventByEventId: vi.fn(),
+    enqueueOutboxEvent: vi.fn(),
+    listPendingOutboxEvents: vi.fn(),
+    markOutboxProcessed: vi.fn(),
+    markOutboxFailed: vi.fn(),
+    recordConversionDecision: vi.fn(),
+    findConversionDecisionByProspectId: vi.fn(),
+  }) satisfies PartnerAcquisitionServiceContract;
+
+const handlerPath = resolve(
+  process.cwd(),
+  'src/modules/partner-acquisition/handlers/partner-acquisition.command-handler.ts',
+);
+
+const handlerSource = readFileSync(handlerPath, 'utf8');
+
+describe('partner-acquisition.command-handler', () => {
+  it('maps every supported command to an official event type', () => {
+    const source = readFileSync(
+      resolve(
+        process.cwd(),
+        'src/modules/partner-acquisition/handlers/partner-acquisition.command-handler.contract.ts',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('CreatePartnerLeadCommand: \'PartnerLeadCreated\'');
+    expect(source).toContain('ConvertPartnerProspectToPartnerCommand: \'PartnerProspectConvertedToPartner\'');
+  });
+
+  it('processes a create lead command by recording inbox, calling service, appending event and enqueueing outbox', async () => {
+    const service = createServiceMock();
+    service.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'CreatePartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      status: 'RECEIVED',
+    });
+    service.listEventsByAggregate.mockResolvedValue([]);
+    service.createLead.mockResolvedValue({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: 'user-1',
+      status: 'NEW',
+      score: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    service.appendEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: 'idem-1',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      eventType: 'PartnerLeadCreated',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      occurredAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      version: 1,
+    });
+    service.enqueueOutboxEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: 'idem-1',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      eventType: 'PartnerLeadCreated',
+      availableAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+    });
+    service.markCommandProcessed.mockResolvedValue(null);
+
+    const handler = new PartnerAcquisitionCommandHandler(service);
+    const command: Extract<PartnerAcquisitionCommand, { commandType: 'CreatePartnerLeadCommand' }> = {
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'CAMPAIGN',
+      commandType: 'CreatePartnerLeadCommand',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+    };
+
+    const result = await handler.handle(command);
+
+    expect(service.recordCommand).toHaveBeenCalledTimes(1);
+    expect(service.createLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        leadCode: 'lead-1',
+      }),
+    );
+    expect(service.appendEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'PartnerLeadCreated',
+        eventId: 'idem-1',
+      }),
+    );
+    expect(service.enqueueOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'PartnerLeadCreated',
+      }),
+    );
+    expect(service.markCommandProcessed).toHaveBeenCalledTimes(1);
+    expect(result.leadId).toBe('lead-1');
+  });
+
+  it('short-circuits processed commands without repeating the operation', async () => {
+    const service = createServiceMock();
+    service.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'CreatePartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      status: 'PROCESSED',
+      result: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        fullName: 'Parceiro Exemplo',
+        email: null,
+        phone: null,
+        companyName: null,
+        document: null,
+        channel: 'CAMPAIGN',
+        sourceName: null,
+        sourceReference: null,
+        campaignId: null,
+        hubContextId: null,
+        ownerUserId: null,
+        status: 'NEW',
+        score: null,
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
+      },
+    });
+
+    const handler = new PartnerAcquisitionCommandHandler(service);
+    const command: Extract<PartnerAcquisitionCommand, { commandType: 'CreatePartnerLeadCommand' }> = {
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'CAMPAIGN',
+      commandType: 'CreatePartnerLeadCommand',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+    };
+
+    const result = await handler.handle(command);
+
+    expect(service.createLead).not.toHaveBeenCalled();
+    expect(service.appendEvent).not.toHaveBeenCalled();
+    expect(service.enqueueOutboxEvent).not.toHaveBeenCalled();
+    expect(result.leadId).toBe('lead-1');
+  });
+
+  it('returns a controlled error for failed commands', async () => {
+    const service = createServiceMock();
+    service.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'CreatePartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      status: 'FAILED',
+    });
+
+    const handler = new PartnerAcquisitionCommandHandler(service);
+    const command: Extract<PartnerAcquisitionCommand, { commandType: 'CreatePartnerLeadCommand' }> = {
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'CAMPAIGN',
+      commandType: 'CreatePartnerLeadCommand',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+    };
+
+    await expect(handler.handle(command)).rejects.toThrow(/already marked as failed/);
+  });
+
+  it('passes expectedVersion through lifecycle commands and does not create a Partner directly on conversion', async () => {
+    const service = createServiceMock();
+    service.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'ConvertPartnerProspectToPartnerCommand',
+      aggregateId: 'prospect-1',
+      aggregateType: 'PARTNER_PROSPECT',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-9',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      status: 'RECEIVED',
+    });
+    service.listEventsByAggregate.mockResolvedValue([
+      {
+        tenantId: 'tenant-1',
+        eventId: 'evt-1',
+        aggregateId: 'prospect-1',
+        aggregateType: 'PARTNER_PROSPECT',
+        eventType: 'PartnerProspectContractSigned',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-old',
+        occurredAt: '2026-06-24T00:00:00.000Z',
+        payload: {},
+        version: 1,
+      },
+    ] as never);
+    service.recordConversionDecision.mockResolvedValue({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      partnerId: 'partner-1',
+      approved: true,
+      decidedByUserId: 'user-1',
+      decidedAt: '2026-06-25T00:00:00.000Z',
+      reason: null,
+    });
+    service.updateProspectLifecycle.mockResolvedValue({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'CONVERTED',
+      pipelineCode: null,
+      stageCode: null,
+      score: null,
+      qualificationReason: null,
+      assignedUserId: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    service.appendEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: 'idem-9',
+      aggregateId: 'prospect-1',
+      aggregateType: 'PARTNER_PROSPECT',
+      eventType: 'PartnerProspectConvertedToPartner',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-9',
+      occurredAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+      version: 2,
+    });
+    service.enqueueOutboxEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: 'idem-9',
+      aggregateId: 'prospect-1',
+      aggregateType: 'PARTNER_PROSPECT',
+      eventType: 'PartnerProspectConvertedToPartner',
+      availableAt: '2026-06-25T00:00:00.000Z',
+      payload: {},
+    });
+    service.markCommandProcessed.mockResolvedValue(null);
+
+    const handler = new PartnerAcquisitionCommandHandler(service);
+    const command: Extract<PartnerAcquisitionCommand, { commandType: 'ConvertPartnerProspectToPartnerCommand' }> = {
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-9',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'SDR_IA',
+      commandType: 'ConvertPartnerProspectToPartnerCommand',
+      prospectId: 'prospect-1',
+      expectedVersion: 1,
+      partnerId: 'partner-1',
+      partnerCode: 'P-001',
+      partnerName: 'Parceiro Exemplo LTDA',
+      partnerType: 'COMPANY',
+      aggregateType: 'PARTNER_PROSPECT',
+    };
+
+    const result = await handler.handle(command);
+
+    expect(service.recordConversionDecision).toHaveBeenCalledTimes(1);
+    expect(service.updateProspectLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedVersion: 1,
+        status: 'CONVERTED',
+      }),
+    );
+    expect(service.linkProspectToPartner).not.toHaveBeenCalled();
+    expect(result.status).toBe('CONVERTED');
+  });
+
+  it('keeps handler source free from Opportunity, Prisma, Fastify and HTTP coupling', () => {
+    expect(handlerSource).not.toContain('Opportunity');
+    expect(handlerSource).not.toContain('PrismaClient');
+    expect(handlerSource).not.toContain('Fastify');
+    expect(handlerSource).not.toContain('HTTP');
+  });
+});
