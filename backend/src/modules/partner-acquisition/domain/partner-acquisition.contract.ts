@@ -25,6 +25,18 @@ export const PARTNER_LEAD_STATUSES = [
 
 export type PartnerLeadStatus = (typeof PARTNER_LEAD_STATUSES)[number];
 
+export const PARTNER_ACQUISITION_SOURCES = PARTNER_LEAD_CHANNELS;
+export type PartnerAcquisitionSource = PartnerLeadChannel;
+
+export const PARTNER_ACQUISITION_AGGREGATE_TYPES = [
+  'PARTNER_LEAD',
+  'PARTNER_PROSPECT',
+  'PARTNER',
+] as const;
+
+export type PartnerAcquisitionAggregateType =
+  (typeof PARTNER_ACQUISITION_AGGREGATE_TYPES)[number];
+
 export interface PartnerLeadIdentity {
   tenantId: string;
   leadId: string;
@@ -82,21 +94,18 @@ export const PARTNER_PROSPECT_STATUSES = [
 export type PartnerProspectStatus = (typeof PARTNER_PROSPECT_STATUSES)[number];
 
 export const PARTNER_ACQUISITION_EVENT_TYPES = [
-  'partner_acquisition.lead_registered',
-  'partner_acquisition.lead_enriched',
-  'partner_acquisition.prospect_created',
-  'partner_acquisition.prospect_contacted',
-  'partner_acquisition.prospect_qualified',
-  'partner_acquisition.prospect_moved',
-  'partner_acquisition.contract_requested',
-  'partner_acquisition.contract_generated',
-  'partner_acquisition.contract_sent',
-  'partner_acquisition.contract_signed',
-  'partner_acquisition.conversion_requested',
-  'partner_acquisition.conversion_approved',
-  'partner_acquisition.partner_created',
-  'partner_acquisition.prospect_lost',
-  'partner_acquisition.prospect_archived',
+  'PartnerLeadCreated',
+  'PartnerProspectCreated',
+  'PartnerProspectQualified',
+  'PartnerProspectDisqualified',
+  'PartnerProspectMovedToNegotiation',
+  'PartnerProspectDocumentationRequested',
+  'PartnerProspectDocumentationReceived',
+  'PartnerProspectContractRequested',
+  'PartnerProspectContractSigned',
+  'PartnerProspectConversionApproved',
+  'PartnerProspectConversionRejected',
+  'PartnerProspectConvertedToPartner',
 ] as const;
 
 export type PartnerAcquisitionEventType = (typeof PARTNER_ACQUISITION_EVENT_TYPES)[number];
@@ -117,6 +126,41 @@ export const PARTNER_ACQUISITION_PERMISSION_CODES = [
 ] as const;
 
 export type PartnerAcquisitionPermissionCode = (typeof PARTNER_ACQUISITION_PERMISSION_CODES)[number];
+
+export const PARTNER_ACQUISITION_REFERENCE_KINDS = [
+  'SOURCE',
+  'REFERENCE',
+  'SUBSTRATE',
+  'FEEDER',
+  'HANDLER',
+] as const;
+
+export type PartnerAcquisitionReferenceKind =
+  (typeof PARTNER_ACQUISITION_REFERENCE_KINDS)[number];
+
+export interface PartnerAcquisitionReference {
+  kind: PartnerAcquisitionReferenceKind;
+  refType: 'PIPELINE' | 'SDR_IA' | 'AUTOMATION' | 'CAMPAIGN' | 'MAILING' | 'BASE' | 'SOCIAL_MEDIA' | 'REFERRAL' | 'LANDING_PAGE' | 'MANUAL' | 'PARTNER_REFERRAL' | 'OUTBOUND' | 'EVENT' | 'OTHER';
+  refId: string;
+  refLabel?: string | null;
+}
+
+export interface PartnerAcquisitionCommandMetadata {
+  source?: PartnerAcquisitionSource;
+  references?: PartnerAcquisitionReference[];
+  pipelineCode?: string | null;
+  stageCode?: string | null;
+  sdrAgentId?: string | null;
+  automationCode?: string | null;
+  campaignId?: string | null;
+  trace?: Record<string, unknown>;
+}
+
+export interface PartnerAcquisitionEventMetadata extends PartnerAcquisitionCommandMetadata {
+  reason?: string | null;
+  previousStatus?: PartnerProspectStatus | null;
+  nextStatus?: PartnerProspectStatus | null;
+}
 
 export interface PartnerProspectIdentity {
   tenantId: string;
@@ -196,7 +240,7 @@ export interface PartnerAcquisitionAuditEvent {
   fromStatus?: PartnerProspectStatus | null;
   toStatus?: PartnerProspectStatus | null;
   occurredAt: string;
-  metadata?: Record<string, unknown>;
+  metadata?: PartnerAcquisitionEventMetadata;
 }
 
 export interface PartnerAcquisitionConversionDecision {
@@ -208,4 +252,3 @@ export interface PartnerAcquisitionConversionDecision {
   decidedByUserId: string | null;
   decidedAt: string;
 }
-

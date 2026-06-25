@@ -79,7 +79,7 @@ describe('partner-acquisition.contract', () => {
       correlationId: context.correlationId,
       requestId: context.requestId,
       idempotencyKey: context.idempotencyKey,
-      eventType: 'partner_acquisition.prospect_created',
+      eventType: 'PartnerProspectCreated',
       prospectId: 'prospect-1',
       leadId: 'lead-1',
       partnerId: null,
@@ -92,7 +92,7 @@ describe('partner-acquisition.contract', () => {
     expect(auditEvent).toMatchObject({
       tenantId: 'tenant-1',
       actorUserId: 'user-1',
-      eventType: 'partner_acquisition.prospect_created',
+      eventType: 'PartnerProspectCreated',
       fromStatus: 'NEW',
       toStatus: 'CONTACTED',
     });
@@ -184,8 +184,8 @@ describe('partner-acquisition.contract', () => {
   });
 
   it('exports the official event and RBAC codes for the future runtime contract', () => {
-    expect(PARTNER_ACQUISITION_EVENT_TYPES).toContain('partner_acquisition.contract_signed');
-    expect(PARTNER_ACQUISITION_EVENT_TYPES).toContain('partner_acquisition.partner_created');
+    expect(PARTNER_ACQUISITION_EVENT_TYPES).toContain('PartnerProspectContractSigned');
+    expect(PARTNER_ACQUISITION_EVENT_TYPES).toContain('PartnerProspectConvertedToPartner');
     expect(PARTNER_ACQUISITION_PERMISSION_CODES).toContain('partner_acquisition:convert');
     expect(PARTNER_ACQUISITION_PERMISSION_CODES).toContain('partner_prospect:transition');
   });
