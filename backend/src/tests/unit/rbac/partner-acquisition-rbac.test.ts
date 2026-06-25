@@ -43,6 +43,11 @@ import { permissionsService } from '../../../modules/permissions/service.js';
 
 const seedPath = resolve(process.cwd(), 'prisma/seed.ts');
 const seedSource = readFileSync(seedPath, 'utf8');
+const catalogPath = resolve(
+  process.cwd(),
+  'src/modules/permissions/partner-acquisition-rbac.catalog.ts',
+);
+const catalogSource = readFileSync(catalogPath, 'utf8');
 
 describe('partner-acquisition RBAC foundation', () => {
   beforeEach(() => {
@@ -77,15 +82,16 @@ describe('partner-acquisition RBAC foundation', () => {
   });
 
   it('keeps the official seed aligned with super-admin and the new permission set', () => {
-    expect(seedSource).toContain("slug: 'partner_acquisition:read'");
-    expect(seedSource).toContain("slug: 'partner_acquisition:create'");
-    expect(seedSource).toContain("slug: 'partner_acquisition:approve'");
-    expect(seedSource).toContain("slug: 'partner_prospect:read'");
-    expect(seedSource).toContain("slug: 'partner_prospect:create'");
-    expect(seedSource).toContain("slug: 'partner_prospect:transition'");
-    expect(seedSource).toContain("slug: 'partner_prospect:convert'");
-    expect(seedSource).toContain("roleSlug: 'super-admin'");
+    expect(seedSource).toContain('PARTNER_ACQUISITION_RBAC_PERMISSIONS');
     expect(seedSource).toContain('Object.keys(permissions)');
+    expect(catalogSource).toContain("slug: 'partner_acquisition:read'");
+    expect(catalogSource).toContain("slug: 'partner_acquisition:create'");
+    expect(catalogSource).toContain("slug: 'partner_acquisition:approve'");
+    expect(catalogSource).toContain("slug: 'partner_prospect:read'");
+    expect(catalogSource).toContain("slug: 'partner_prospect:create'");
+    expect(catalogSource).toContain("slug: 'partner_prospect:transition'");
+    expect(catalogSource).toContain("slug: 'partner_prospect:convert'");
+    expect(seedSource).toContain("roleSlug: 'super-admin'");
     expect(seedSource).toContain("'partner:create'");
     expect(seedSource).toContain("'partner:read'");
     expect(seedSource).toContain("'partner:update'");
