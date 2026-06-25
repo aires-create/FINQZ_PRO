@@ -41,6 +41,7 @@ import { operationRoutes } from '../../modules/operation/presentation/http/opera
 import { masterCatalogRoutes } from '../../modules/master-catalog/presentation/http/master-catalog.routes.js';
 import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
 import { partnerRoutes } from '../../modules/partners/presentation/http/partner.routes.js';
+import { partnerAcquisitionRoutes } from '../../modules/partner-acquisition/http/partner-acquisition.routes.js';
 
 import {
   applyRequestSanitization,
@@ -602,6 +603,9 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
 
   await app.register(pipelinesRoutes, { prefix: '/api/v1/pipelines' });
   await app.register(partnerRoutes, { prefix: '/api/v1/partners' });
+  await app.register(partnerAcquisitionRoutes, {
+    prefix: '/api/v1/partner-acquisition',
+  });
   await app.register(opportunitiesRoutes, { prefix: '/api/v1/opportunities' });
   await app.register(operationRoutes, { prefix: '/api/v1/operations' });
   await app.register(masterCatalogRoutes, { prefix: '/api/v1/master-catalog' });
