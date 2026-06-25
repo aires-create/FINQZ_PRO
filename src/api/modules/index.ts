@@ -20,3 +20,4 @@ export * from './commercial.api';
 export * from './master-catalog.api';
 export * from './integrations.api';
 export * from './provider-operations.api';
+export * from './partner-acquisition.api';
