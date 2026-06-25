@@ -144,6 +144,40 @@ describe('pipeline.http.contract', () => {
     expect(() => reorderStagesBodySchema.parse({ stages: [] })).toThrow();
   });
 
+  it('reorderStagesBodySchema rejects duplicate stage ids', () => {
+    expect(() =>
+      reorderStagesBodySchema.parse({
+        stages: [
+          {
+            stageId: '11111111-1111-1111-1111-111111111111',
+            order: 1,
+          },
+          {
+            stageId: '11111111-1111-1111-1111-111111111111',
+            order: 2,
+          },
+        ],
+      }),
+    ).toThrow('Stage ids must be unique');
+  });
+
+  it('reorderStagesBodySchema rejects duplicate orders', () => {
+    expect(() =>
+      reorderStagesBodySchema.parse({
+        stages: [
+          {
+            stageId: '11111111-1111-1111-1111-111111111111',
+            order: 1,
+          },
+          {
+            stageId: '22222222-2222-2222-2222-222222222222',
+            order: 1,
+          },
+        ],
+      }),
+    ).toThrow('Stage orders must be unique');
+  });
+
   it('pipelineIdParamsSchema rejects invalid uuid', () => {
     expect(() => pipelineIdParamsSchema.parse({ pipelineId: 'not-a-uuid' })).toThrow();
   });

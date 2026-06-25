@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { ZodError } from 'zod';
 
 import { prisma } from '../../core/prisma/client.js';
 import { pipelinesRepository } from './repository.js';
@@ -60,6 +61,72 @@ const validatePipelineWrite = (
   }
 };
 
+const createReorderValidationError = (message: string) => {
+  return new ZodError([
+    {
+      code: 'custom',
+      message,
+      path: ['stages'],
+    },
+  ]);
+};
+
+const validateReorderStagesPayload = (
+  stages: ReorderStagesInput['stages'],
+  currentStages: PipelineContract['stages'],
+) => {
+  if (stages.length !== currentStages.length) {
+    throw createReorderValidationError(
+      'Reorder payload must include every non-archived stage exactly once',
+    );
+  }
+
+  const currentStageIds = new Set(currentStages.map((stage) => stage.id));
+  const seenStageIds = new Set<string>();
+  const seenOrders = new Set<number>();
+
+  for (const stage of stages) {
+    if (!currentStageIds.has(stage.id)) {
+      throw createReorderValidationError(
+        'Reorder payload contains a stage that does not belong to the pipeline or is archived',
+      );
+    }
+
+    if (seenStageIds.has(stage.id)) {
+      throw createReorderValidationError('Stage ids must be unique');
+    }
+
+    if (seenOrders.has(stage.order)) {
+      throw createReorderValidationError('Stage orders must be unique');
+    }
+
+    seenStageIds.add(stage.id);
+    seenOrders.add(stage.order);
+  }
+
+  for (const stageId of currentStageIds) {
+    if (!seenStageIds.has(stageId)) {
+      throw createReorderValidationError(
+        'Reorder payload must include every non-archived stage exactly once',
+      );
+    }
+  }
+
+  const expectedOrders = new Set(
+    Array.from({ length: currentStages.length }, (_, index) => index + 1),
+  );
+
+  if (seenOrders.size !== expectedOrders.size) {
+    throw createReorderValidationError('Stage orders must be contiguous integers starting at 1');
+  }
+
+  for (const order of seenOrders) {
+    if (!expectedOrders.has(order)) {
+      throw createReorderValidationError('Stage orders must be contiguous integers starting at 1');
+    }
+  }
+};
+
 type PipelinesRepositoryWithClient = PipelineRepositoryContract & {
   findById(
     input: Parameters<PipelineRepositoryContract['findById']>[0],
@@ -85,6 +152,10 @@ type PipelinesRepositoryWithClient = PipelineRepositoryContract & {
     input: Parameters<PipelineRepositoryContract['countActiveStagesByPipeline']>[0],
     client?: Prisma.TransactionClient,
   ): ReturnType<PipelineRepositoryContract['countActiveStagesByPipeline']>;
+  reorderStages(
+    input: Parameters<PipelineRepositoryContract['reorderStages']>[0],
+    client?: Prisma.TransactionClient,
+  ): ReturnType<PipelineRepositoryContract['reorderStages']>;
 };
 
 const runInSerializableTransaction = async <T>(
@@ -374,33 +445,56 @@ export class PipelinesService implements PipelineServiceContract {
   async reorderStages(
     input: ReorderStagesServiceInput,
   ): Promise<PipelineContract['stages']> {
-    if (!input.stages.length) {
-      throw new Error('At least one stage is required');
-    }
+    return runInSerializableTransaction(async (transaction) => {
+      const repository = this.repository as PipelinesRepositoryWithClient;
 
-    for (const stage of input.stages) {
-      validateStageOrder(stage.order);
-    }
+      const pipeline = await repository.findById(
+        {
+          tenantId: input.tenantId,
+          pipelineId: input.pipelineId,
+        },
+        transaction,
+      );
 
-    await this.repository.reorderStages({
-      tenantId: input.tenantId,
-      pipelineId: input.pipelineId,
-      stages: input.stages.map((stage) => ({
-        stageId: stage.id,
-        order: stage.order,
-      })),
+      if (!pipeline) {
+        throw new PipelineNotFoundError(input.pipelineId);
+      }
+
+      validateReorderStagesPayload(input.stages, pipeline.stages);
+
+      const normalizedStages = [...input.stages]
+        .sort((left, right) => {
+          if (left.order !== right.order) return left.order - right.order;
+          return left.id.localeCompare(right.id);
+        })
+        .map((stage) => ({
+          stageId: stage.id,
+          order: stage.order,
+        }));
+
+      await repository.reorderStages(
+        {
+          tenantId: input.tenantId,
+          pipelineId: input.pipelineId,
+          stages: normalizedStages,
+        },
+        transaction,
+      );
+
+      const updatedPipeline = await repository.findById(
+        {
+          tenantId: input.tenantId,
+          pipelineId: input.pipelineId,
+        },
+        transaction,
+      );
+
+      if (!updatedPipeline) {
+        throw new PipelineNotFoundError(input.pipelineId);
+      }
+
+      return updatedPipeline.stages;
     });
-
-    const pipeline = await this.repository.findById({
-      tenantId: input.tenantId,
-      pipelineId: input.pipelineId,
-    });
-
-    if (!pipeline) {
-      throw new PipelineNotFoundError(input.pipelineId);
-    }
-
-    return pipeline.stages;
   }
 }
 

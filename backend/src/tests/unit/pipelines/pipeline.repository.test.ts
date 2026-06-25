@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError } from '../../../shared/errors/AppError.js';
 
 const { prismaMock, txMock } = vi.hoisted(() => {
   const txMock = {
@@ -440,7 +441,7 @@ describe('pipelinesRepository', () => {
     });
   });
 
-  it('reorderStages uses tenantId and pipelineId on every update', async () => {
+  it('reorderStages uses tenantId and pipelineId on every update without unique collisions', async () => {
     txMock.stage.updateMany.mockResolvedValue({ count: 1 });
 
     await pipelinesRepository.reorderStages({
@@ -461,7 +462,7 @@ describe('pipelinesRepository', () => {
         deletedAt: null,
       },
       data: {
-        order: 2,
+        order: -3,
       },
     });
     expect(txMock.stage.updateMany).toHaveBeenNthCalledWith(2, {
@@ -472,9 +473,46 @@ describe('pipelinesRepository', () => {
         deletedAt: null,
       },
       data: {
+        order: -4,
+      },
+    });
+    expect(txMock.stage.updateMany).toHaveBeenNthCalledWith(3, {
+      where: {
+        id: 'stage-1',
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        deletedAt: null,
+      },
+      data: {
+        order: 2,
+      },
+    });
+    expect(txMock.stage.updateMany).toHaveBeenNthCalledWith(4, {
+      where: {
+        id: 'stage-2',
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        deletedAt: null,
+      },
+      data: {
         order: 1,
       },
     });
+  });
+
+  it('reorderStages throws when a stage no longer matches the pipeline', async () => {
+    txMock.stage.updateMany.mockResolvedValueOnce({ count: 0 });
+
+    await expect(
+      pipelinesRepository.reorderStages({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        stages: [
+          { stageId: 'stage-1', order: 2 },
+          { stageId: 'stage-2', order: 1 },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
   });
 
   it('findActiveByTenant continues working', async () => {

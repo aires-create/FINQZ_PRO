@@ -437,21 +437,38 @@ export const pipelinesRepository = {
     client: PipelinesPrismaClient = prisma,
   ) {
     await runInTransaction(client, async (transaction) => {
-      const updates = input.stages.map((stage) =>
-        transaction.stage.updateMany({
+      const ensureUpdated = async (stageId: string, order: number) => {
+        const result = await transaction.stage.updateMany({
           where: {
-            id: stage.stageId,
+            id: stageId,
             tenantId: input.tenantId,
             pipelineId: input.pipelineId,
             deletedAt: null,
           },
           data: {
-            order: stage.order,
+            order,
           },
-        }),
-      );
+        });
 
-      return Promise.all(updates);
+        if (result.count !== 1) {
+          throw new ConflictError(
+            'Unable to reorder stages because one or more stages no longer belong to the pipeline',
+          );
+        }
+      };
+
+      const temporaryOrders = input.stages.map((stage, index) => ({
+        stageId: stage.stageId,
+        order: -(input.stages.length + index + 1),
+      }));
+
+      for (const stage of temporaryOrders) {
+        await ensureUpdated(stage.stageId, stage.order);
+      }
+
+      for (const stage of input.stages) {
+        await ensureUpdated(stage.stageId, stage.order);
+      }
     });
   },
 } satisfies PipelineRepositoryContract;

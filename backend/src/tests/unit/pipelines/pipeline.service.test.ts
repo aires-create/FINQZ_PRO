@@ -97,6 +97,25 @@ const baseStage = {
   deletedAt: null,
 };
 
+const reorderStageTwo = {
+  ...baseStage,
+  id: 'stage-2',
+  name: 'Qualification',
+  order: 2,
+};
+
+const reorderStageThree = {
+  ...baseStage,
+  id: 'stage-3',
+  name: 'Proposal',
+  order: 3,
+};
+
+const reorderablePipeline = {
+  ...basePipeline,
+  stages: [baseStage, reorderStageTwo, reorderStageThree],
+};
+
 describe('PipelinesService', () => {
   let repository: PipelineRepositoryMock;
   let service: PipelinesService;
@@ -588,6 +607,8 @@ describe('PipelinesService', () => {
   });
 
   it('reorderStages rejects empty list', async () => {
+    repository.findById.mockResolvedValueOnce(reorderablePipeline);
+
     await expect(
       service.reorderStages({
         tenantId: 'tenant-a',
@@ -595,7 +616,7 @@ describe('PipelinesService', () => {
         stages: [],
         actorUserId: 'user-1',
       }),
-    ).rejects.toThrow('At least one stage is required');
+    ).rejects.toThrow('Reorder payload must include every non-archived stage exactly once');
 
     expect(repository.reorderStages).not.toHaveBeenCalled();
   });
@@ -603,41 +624,134 @@ describe('PipelinesService', () => {
   it('reorderStages delegates when valid', async () => {
     repository.reorderStages.mockResolvedValueOnce([{ count: 1 }]);
     repository.findById.mockResolvedValueOnce({
-      ...basePipeline,
-      stages: [baseStage],
+      ...reorderablePipeline,
+    });
+    repository.findById.mockResolvedValueOnce({
+      ...reorderablePipeline,
+      stages: [
+        { ...reorderStageTwo, order: 1 },
+        { ...baseStage, order: 2 },
+        { ...reorderStageThree, order: 3 },
+      ],
     });
 
     const result = await service.reorderStages({
       tenantId: 'tenant-a',
       pipelineId: 'pipeline-1',
-      stages: [{ id: 'stage-1', order: 2 }],
+      stages: [
+        { id: 'stage-3', order: 3 },
+        { id: 'stage-1', order: 2 },
+        { id: 'stage-2', order: 1 },
+      ],
       actorUserId: 'user-1',
     });
 
     expect(repository.reorderStages).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       pipelineId: 'pipeline-1',
-      stages: [{ stageId: 'stage-1', order: 2 }],
-    });
+      stages: [
+        { stageId: 'stage-2', order: 1 },
+        { stageId: 'stage-1', order: 2 },
+        { stageId: 'stage-3', order: 3 },
+      ],
+    }, txMock);
     expect(repository.findById).toHaveBeenCalledWith({
       tenantId: 'tenant-a',
       pipelineId: 'pipeline-1',
-    });
-    expect(result).toEqual([baseStage]);
+    }, txMock);
+    expect(result).toEqual([
+      { ...reorderStageTwo, order: 1 },
+      { ...baseStage, order: 2 },
+      { ...reorderStageThree, order: 3 },
+    ]);
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   });
 
   it('reorderStages throws PipelineNotFoundError when pipeline is missing', async () => {
-    repository.reorderStages.mockResolvedValueOnce([{ count: 1 }]);
     repository.findById.mockResolvedValueOnce(null);
 
     await expect(
       service.reorderStages({
         tenantId: 'tenant-a',
         pipelineId: 'pipeline-1',
-        stages: [{ id: 'stage-1', order: 2 }],
+        stages: [{ id: 'stage-1', order: 1 }],
         actorUserId: 'user-1',
       }),
     ).rejects.toBeInstanceOf(PipelineNotFoundError);
+  });
+
+  it('reorderStages rejects partial payloads', async () => {
+    repository.findById.mockResolvedValueOnce(reorderablePipeline);
+
+    await expect(
+      service.reorderStages({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        stages: [
+          { id: 'stage-1', order: 1 },
+          { id: 'stage-2', order: 2 },
+        ],
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Reorder payload must include every non-archived stage exactly once');
+
+    expect(repository.reorderStages).not.toHaveBeenCalled();
+  });
+
+  it('reorderStages rejects duplicate stage ids', async () => {
+    repository.findById.mockResolvedValueOnce(reorderablePipeline);
+
+    await expect(
+      service.reorderStages({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        stages: [
+          { id: 'stage-1', order: 1 },
+          { id: 'stage-1', order: 2 },
+          { id: 'stage-3', order: 3 },
+        ],
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Stage ids must be unique');
+  });
+
+  it('reorderStages rejects duplicate orders', async () => {
+    repository.findById.mockResolvedValueOnce(reorderablePipeline);
+
+    await expect(
+      service.reorderStages({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        stages: [
+          { id: 'stage-1', order: 1 },
+          { id: 'stage-2', order: 1 },
+          { id: 'stage-3', order: 3 },
+        ],
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('Stage orders must be unique');
+  });
+
+  it('reorderStages rejects stages from another pipeline or archived stages', async () => {
+    repository.findById.mockResolvedValueOnce(reorderablePipeline);
+
+    await expect(
+      service.reorderStages({
+        tenantId: 'tenant-a',
+        pipelineId: 'pipeline-1',
+        stages: [
+          { id: 'stage-1', order: 1 },
+          { id: 'archived-stage-1', order: 2 },
+          { id: 'stage-3', order: 3 },
+        ],
+        actorUserId: 'user-1',
+      }),
+    ).rejects.toThrow('does not belong to the pipeline or is archived');
   });
 
   it('deactivatePipeline delegates tenantId/pipelineId/actorUserId', async () => {

@@ -102,7 +102,7 @@ export const updateStageBodySchema = z
     }
   });
 
-export const reorderStagesBodySchema = z
+const reorderStagesBodySchemaBase = z
   .object({
     stages: z
       .array(
@@ -116,6 +116,33 @@ export const reorderStagesBodySchema = z
       .min(1),
   })
   .strict();
+
+export const reorderStagesBodySchema = reorderStagesBodySchemaBase.superRefine((value, ctx) => {
+  const seenStageIds = new Set<string>();
+  const seenOrders = new Set<number>();
+
+  value.stages.forEach((stage, index) => {
+    if (seenStageIds.has(stage.stageId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Stage ids must be unique',
+        path: ['stages', index, 'stageId'],
+      });
+    } else {
+      seenStageIds.add(stage.stageId);
+    }
+
+    if (seenOrders.has(stage.order)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Stage orders must be unique',
+        path: ['stages', index, 'order'],
+      });
+    } else {
+      seenOrders.add(stage.order);
+    }
+  });
+});
 
 export type PipelineIdParams = z.infer<typeof pipelineIdParamsSchema>;
 export type StageIdParams = z.infer<typeof stageIdParamsSchema>;
