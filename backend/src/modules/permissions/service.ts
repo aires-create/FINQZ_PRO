@@ -209,6 +209,17 @@ export class PermissionsService {
         { name: 'Update Lead', slug: 'lead:update', resource: 'leads', action: 'UPDATE' as PermissionAction },
         { name: 'Delete Lead', slug: 'lead:delete', resource: 'leads', action: 'DELETE' as PermissionAction },
 
+        // Partner Acquisition permissions
+        { name: 'Read Partner Acquisition', slug: 'partner_acquisition:read', resource: 'partner_acquisition', action: 'READ' as PermissionAction },
+        { name: 'Create Partner Acquisition', slug: 'partner_acquisition:create', resource: 'partner_acquisition', action: 'CREATE' as PermissionAction },
+        { name: 'Approve Partner Acquisition', slug: 'partner_acquisition:approve', resource: 'partner_acquisition', action: 'APPROVE' as PermissionAction },
+
+        // Partner Prospect permissions
+        { name: 'Read Partner Prospect', slug: 'partner_prospect:read', resource: 'partner_prospect', action: 'READ' as PermissionAction },
+        { name: 'Create Partner Prospect', slug: 'partner_prospect:create', resource: 'partner_prospect', action: 'CREATE' as PermissionAction },
+        { name: 'Transition Partner Prospect', slug: 'partner_prospect:transition', resource: 'partner_prospect', action: 'UPDATE' as PermissionAction },
+        { name: 'Convert Partner Prospect', slug: 'partner_prospect:convert', resource: 'partner_prospect', action: 'APPROVE' as PermissionAction },
+
         // Report permissions
         { name: 'Read Report', slug: 'report:read', resource: 'reports', action: 'READ' as PermissionAction },
         { name: 'Export Report', slug: 'report:export', resource: 'reports', action: 'EXPORT' as PermissionAction },
