@@ -29,30 +29,36 @@ model Tenant {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  users           User[]
-  organizations   Organization[]
-  memberships     Membership[]
-  roles           Role[]
-  partners        Partner[]
-  leads           Lead[]
-  customers       Customer[]
-  pipelines       Pipeline[]
-  stages          Stage[]
-  opportunities   Opportunity[]
-  operations      Operation[]
-  activities      Activity[]
-  bankProposals   BankProposal[]
-  commissions     Commission[]
-  commercialTables CommercialTable[]
-  commercialConditions CommercialCondition[]
-  masterCatalogSegments   MasterCatalogSegment[]
-  masterCatalogProducts   MasterCatalogProduct[]
-  masterCatalogSubproducts MasterCatalogSubproduct[]
-  masterCatalogModalities  MasterCatalogModality[]
-  rolePermissions RolePermission[]
-  userRoles       UserRole[]
-  auditLogs       AuditLog[]
-  securityEventLogs SecurityEventLog[]
+  users                                 User[]
+  organizations                         Organization[]
+  memberships                           Membership[]
+  roles                                 Role[]
+  partners                              Partner[]
+  leads                                 Lead[]
+  customers                             Customer[]
+  pipelines                             Pipeline[]
+  stages                                Stage[]
+  opportunities                         Opportunity[]
+  operations                            Operation[]
+  activities                            Activity[]
+  bankProposals                         BankProposal[]
+  commissions                           Commission[]
+  partnerAcquisitionLeads               PartnerAcquisitionLead[]
+  partnerAcquisitionProspects           PartnerAcquisitionProspect[]
+  partnerAcquisitionCommandInboxes      PartnerAcquisitionCommandInbox[]
+  partnerAcquisitionEvents              PartnerAcquisitionEvent[]
+  partnerAcquisitionOutboxes            PartnerAcquisitionOutbox[]
+  partnerAcquisitionConversionDecisions PartnerAcquisitionConversionDecision[]
+  commercialTables                      CommercialTable[]
+  commercialConditions                  CommercialCondition[]
+  masterCatalogSegments                 MasterCatalogSegment[]
+  masterCatalogProducts                 MasterCatalogProduct[]
+  masterCatalogSubproducts              MasterCatalogSubproduct[]
+  masterCatalogModalities               MasterCatalogModality[]
+  rolePermissions                       RolePermission[]
+  userRoles                             UserRole[]
+  auditLogs                             AuditLog[]
+  securityEventLogs                     SecurityEventLog[]
 
   @@index([domain])
   @@index([isActive])
@@ -146,12 +152,14 @@ model Partner {
   parent   Partner?  @relation("PartnerHierarchy", fields: [parentId], references: [id])
   children Partner[] @relation("PartnerHierarchy")
 
-  users         User[]
-  customers     Customer[]
-  leads         Lead[]
-  opportunities Opportunity[]
-  bankProposals BankProposal[]
-  commissions   Commission[]
+  users                                 User[]
+  customers                             Customer[]
+  leads                                 Lead[]
+  opportunities                         Opportunity[]
+  bankProposals                         BankProposal[]
+  commissions                           Commission[]
+  partnerAcquisitionProspects           PartnerAcquisitionProspect[]
+  partnerAcquisitionConversionDecisions PartnerAcquisitionConversionDecision[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -322,18 +330,18 @@ model User {
   partner   Partner? @relation(fields: [partnerId], references: [id])
 
   userRoles          UserRole[]
-  createdLeads       Lead[]         @relation("LeadCreatedBy")
-  ownedLeads         Lead[]         @relation("LeadOwner")
-  ownedOpportunities Opportunity[]  @relation("OpportunityOwner")
-  createdProposals   BankProposal[] @relation("ProposalCreatedBy")
-  createdOperations  Operation[]    @relation("OperationCreatedBy")
+  createdLeads       Lead[]             @relation("LeadCreatedBy")
+  ownedLeads         Lead[]             @relation("LeadOwner")
+  ownedOpportunities Opportunity[]      @relation("OpportunityOwner")
+  createdProposals   BankProposal[]     @relation("ProposalCreatedBy")
+  createdOperations  Operation[]        @relation("OperationCreatedBy")
   activities         Activity[]
   commissions        Commission[]
   auditLogs          AuditLog[]
   securityEventLogs  SecurityEventLog[]
   refreshTokens      RefreshToken[]
   memberships        Membership[]
-  invitedMemberships Membership[]   @relation("MembershipInvitedBy")
+  invitedMemberships Membership[]       @relation("MembershipInvitedBy")
 
   @@unique([tenantId, emailNormalized])
   @@index([tenantId])
@@ -400,36 +408,36 @@ model Lead {
 }
 
 model Customer {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customerCode    String
-  firstName       String
-  lastName        String
-  email           String
-  emailNormalized String
-  phone           String?
-  cpf             String
-  birthDate       DateTime?
-  monthlyIncome   Float?
-  annualIncome    Float?
-  profession        String?
-  maritalStatus     String?
-  gender            String?
-  documentType      String?
-  address           Json?
-  bankData          Json?
-  notes             String?
-  rdStatus          String?   @default("nao_consultado")
-  rdConsultedAt     DateTime?
-  rdNotes           String?
-  doNotCallStatus   String?   @default("nao_consultado")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerCode         String
+  firstName            String
+  lastName             String
+  email                String
+  emailNormalized      String
+  phone                String?
+  cpf                  String
+  birthDate            DateTime?
+  monthlyIncome        Float?
+  annualIncome         Float?
+  profession           String?
+  maritalStatus        String?
+  gender               String?
+  documentType         String?
+  address              Json?
+  bankData             Json?
+  notes                String?
+  rdStatus             String?   @default("nao_consultado")
+  rdConsultedAt        DateTime?
+  rdNotes              String?
+  doNotCallStatus      String?   @default("nao_consultado")
   doNotCallConsultedAt DateTime?
-  kycStatus       String    @default("pending")
-  kycVerifiedAt   DateTime?
-  riskLevel       String    @default("medium")
-  isActive        Boolean   @default(true)
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  kycStatus            String    @default("pending")
+  kycVerifiedAt        DateTime?
+  riskLevel            String    @default("medium")
+  isActive             Boolean   @default(true)
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -473,8 +481,9 @@ model Pipeline {
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  stages        Stage[]
-  opportunities Opportunity[]
+  stages                      Stage[]
+  opportunities               Opportunity[]
+  partnerAcquisitionProspects PartnerAcquisitionProspect[]
 
   @@index([tenantId])
   @@index([isDefault])
@@ -499,7 +508,8 @@ model Stage {
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  opportunities Opportunity[]
+  opportunities               Opportunity[]
+  partnerAcquisitionProspects PartnerAcquisitionProspect[]
 
   @@unique([pipelineId, order])
   @@index([pipelineId])
@@ -556,6 +566,209 @@ model Opportunity {
   @@index([partnerId])
   @@index([deletedAt])
   @@map("opportunities")
+}
+
+model PartnerAcquisitionLead {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadCode        String
+  fullName        String
+  email           String?
+  phone           String?
+  companyName     String?
+  document        String?
+  channel         String
+  sourceName      String?
+  sourceReference String?
+  campaignId      String?
+  hubContextId    String?
+  ownerUserId     String?   @db.Uuid
+  status          String    @default("NEW")
+  score           Int?
+  version         Int       @default(0)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  partnerAcquisitionProspects PartnerAcquisitionProspect[]
+
+  @@unique([tenantId, leadCode])
+  @@unique([tenantId, sourceReference])
+  @@index([tenantId])
+  @@index([tenantId, channel])
+  @@index([tenantId, status])
+  @@index([tenantId, ownerUserId])
+  @@index([tenantId, deletedAt])
+  @@map("partner_acquisition_leads")
+}
+
+model PartnerAcquisitionProspect {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospectCode        String
+  leadId              String    @db.Uuid
+  fullName            String
+  email               String?
+  phone               String?
+  companyName         String?
+  document            String?
+  channel             String
+  sourceName          String?
+  sourceReference     String?
+  campaignId          String?
+  hubContextId        String?
+  sdrAgentId          String?
+  status              String    @default("NEW")
+  pipelineId          String?   @db.Uuid
+  stageId             String?   @db.Uuid
+  pipelineCode        String?
+  stageCode           String?
+  score               Int?
+  qualificationReason String?
+  assignedUserId      String?   @db.Uuid
+  nextActionAt        DateTime?
+  signedAt            DateTime?
+  convertedAt         DateTime?
+  partnerId           String?   @db.Uuid
+  version             Int       @default(0)
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  lead     PartnerAcquisitionLead @relation(fields: [leadId], references: [id])
+  partner  Partner?               @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  pipeline Pipeline?              @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  stage    Stage?                 @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  conversionDecisions PartnerAcquisitionConversionDecision[]
+
+  @@unique([tenantId, prospectCode])
+  @@unique([tenantId, leadId])
+  @@unique([tenantId, partnerId])
+  @@unique([tenantId, sourceReference])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, pipelineCode])
+  @@index([tenantId, stageCode])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId, signedAt])
+  @@index([tenantId, convertedAt])
+  @@index([tenantId, deletedAt])
+  @@map("partner_acquisition_prospects")
+}
+
+model PartnerAcquisitionCommandInbox {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commandType    String
+  aggregateId    String?   @db.Uuid
+  aggregateType  String
+  actorUserId    String    @db.Uuid
+  requestId      String
+  correlationId  String
+  idempotencyKey String
+  status         String    @default("RECEIVED")
+  receivedAt     DateTime  @default(now())
+  processedAt    DateTime?
+  payload        Json
+  result         Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId])
+  @@index([tenantId, commandType])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, receivedAt])
+  @@map("partner_acquisition_command_inbox")
+}
+
+model PartnerAcquisitionEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId        String   @db.Uuid
+  aggregateId    String   @db.Uuid
+  aggregateType  String
+  eventType      String
+  actorUserId    String   @db.Uuid
+  requestId      String
+  correlationId  String
+  idempotencyKey String
+  occurredAt     DateTime
+  payload        Json
+  metadata       Json?
+  version        Int
+  createdAt      DateTime @default(now())
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, eventType])
+  @@index([tenantId, occurredAt])
+  @@map("partner_acquisition_events")
+}
+
+model PartnerAcquisitionOutbox {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId       String    @db.Uuid
+  aggregateId   String    @db.Uuid
+  aggregateType String
+  eventType     String
+  status        String    @default("PENDING")
+  attemptCount  Int       @default(0)
+  availableAt   DateTime
+  processedAt   DateTime?
+  lastError     String?
+  payload       Json
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, availableAt])
+  @@index([tenantId, eventType])
+  @@map("partner_acquisition_outbox")
+}
+
+model PartnerAcquisitionConversionDecision {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospectId      String   @db.Uuid
+  partnerId       String?  @db.Uuid
+  approved        Boolean
+  decidedByUserId String   @db.Uuid
+  decidedAt       DateTime
+  reason          String?
+  version         Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  prospect PartnerAcquisitionProspect @relation(fields: [prospectId], references: [id])
+  partner  Partner?                   @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, prospectId])
+  @@unique([tenantId, partnerId])
+  @@index([tenantId])
+  @@index([tenantId, approved])
+  @@index([tenantId, decidedAt])
+  @@map("partner_acquisition_conversion_decisions")
 }
 
 model Activity {
@@ -679,10 +892,10 @@ model Operation {
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  opportunity  Opportunity  @relation(fields: [opportunityId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity  Opportunity   @relation(fields: [opportunityId], references: [id])
   bankProposal BankProposal? @relation(fields: [bankProposalId], references: [id])
-  creator      User         @relation("OperationCreatedBy", fields: [createdById], references: [id])
+  creator      User          @relation("OperationCreatedBy", fields: [createdById], references: [id])
 
   @@unique([tenantId, operationNumber])
   @@unique([tenantId, year, sequence])
@@ -750,12 +963,12 @@ model CommercialRequest {
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
 
+  @@unique([tenantId, requestNumber])
+  @@unique([tenantId, year, sequence])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, requestedByUserId])
   @@index([tenantId, requestedAt])
-  @@unique([tenantId, requestNumber])
-  @@unique([tenantId, year, sequence])
   @@map("commercial_requests")
 }
 
@@ -868,18 +1081,18 @@ model MasterCatalogSegment {
 }
 
 model MasterCatalogProduct {
-  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String                   @db.Uuid
-  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String        @db.Uuid
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   code         String
   name         String
-  status       CatalogStatus            @default(ACTIVE)
-  displayOrder Int                      @default(0)
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
+  status       CatalogStatus @default(ACTIVE)
+  displayOrder Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   deletedAt    DateTime?
 
-  subproducts  MasterCatalogSubproduct[]
+  subproducts MasterCatalogSubproduct[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -889,20 +1102,20 @@ model MasterCatalogProduct {
 }
 
 model MasterCatalogSubproduct {
-  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String                   @db.Uuid
-  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  productId    String                   @db.Uuid
-  product      MasterCatalogProduct     @relation(fields: [productId], references: [id], onDelete: Restrict)
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String               @db.Uuid
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId    String               @db.Uuid
+  product      MasterCatalogProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
   code         String
   name         String
-  status       CatalogStatus            @default(ACTIVE)
-  displayOrder Int                      @default(0)
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
+  status       CatalogStatus        @default(ACTIVE)
+  displayOrder Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
   deletedAt    DateTime?
 
-  modalities   MasterCatalogModality[]
+  modalities MasterCatalogModality[]
 
   @@unique([tenantId, productId, code])
   @@index([tenantId])
@@ -913,17 +1126,17 @@ model MasterCatalogSubproduct {
 }
 
 model MasterCatalogModality {
-  id           String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String                   @db.Uuid
-  tenant       Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  subproductId String                   @db.Uuid
-  subproduct   MasterCatalogSubproduct  @relation(fields: [subproductId], references: [id], onDelete: Restrict)
+  id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String                  @db.Uuid
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subproductId String                  @db.Uuid
+  subproduct   MasterCatalogSubproduct @relation(fields: [subproductId], references: [id], onDelete: Restrict)
   code         String
   name         String
-  status       CatalogStatus            @default(ACTIVE)
-  displayOrder Int                      @default(0)
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
+  status       CatalogStatus           @default(ACTIVE)
+  displayOrder Int                     @default(0)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
   deletedAt    DateTime?
 
   @@unique([tenantId, subproductId, code])
@@ -979,7 +1192,7 @@ model AuditLog {
 }
 
 model SecurityEventLog {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   eventType String
   severity  String
   outcome   String
