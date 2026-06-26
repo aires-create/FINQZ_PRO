@@ -29,11 +29,10 @@ const formatDateTime = (value?: string | null): string => {
 const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     NEW: "Novo",
+    ENRICHED: "Enriquecido",
     CONTACTED: "Contatado",
     QUALIFIED: "Qualificado",
-    DISQUALIFIED: "Desqualificado",
-    CONVERTED: "Convertido",
-    ARCHIVED: "Arquivado",
+    DISCARDED: "Descartado",
   };
 
   return labels[status] ?? status;
@@ -92,9 +91,9 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
   const summary = useMemo(() => {
     const total = leads.length;
     const newLeads = leads.filter((lead) => lead.status === "NEW").length;
-    const converted = leads.filter((lead) => lead.status === "CONVERTED").length;
+    const discarded = leads.filter((lead) => lead.status === "DISCARDED").length;
 
-    return { total, newLeads, converted };
+    return { total, newLeads, discarded };
   }, [leads]);
 
   return (
@@ -119,7 +118,7 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
       <div className="grid gap-4 md:grid-cols-3">
         <KpiCard label="Leads" value={summary.total} icon={<UserPlus2 size={20} />} />
         <KpiCard label="Novos" value={summary.newLeads} icon={<UserPlus2 size={20} />} />
-        <KpiCard label="Convertidos" value={summary.converted} icon={<UserPlus2 size={20} />} />
+        <KpiCard label="Descartados" value={summary.discarded} icon={<UserPlus2 size={20} />} />
       </div>
 
       {isLoading ? (

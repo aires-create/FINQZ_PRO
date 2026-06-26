@@ -4,7 +4,7 @@ const PARTNER_ACQUISITION_BASE_PATH = '/api/v1/partner-acquisition';
 
 export type PartnerAcquisitionSource = 'MANUAL' | 'HUB' | 'CAMPAIGN' | 'IMPORT' | 'REFERRAL' | 'OTHER';
 
-export type PartnerAcquisitionLeadStatus = 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'DISQUALIFIED' | 'CONVERTED' | 'ARCHIVED';
+export type PartnerAcquisitionLeadStatus = 'NEW' | 'ENRICHED' | 'CONTACTED' | 'QUALIFIED' | 'DISCARDED';
 
 export type PartnerProspectStatus =
   | 'NEW'

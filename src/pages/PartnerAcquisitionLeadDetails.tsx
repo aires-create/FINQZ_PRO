@@ -20,11 +20,10 @@ const formatDateTime = (value?: string | null): string => {
 const getStatusLabel = (status: string): string => {
   const statusLabels: Record<string, string> = {
     NEW: "Novo",
+    ENRICHED: "Enriquecido",
     CONTACTED: "Contatado",
     QUALIFIED: "Qualificado",
-    DISQUALIFIED: "Desqualificado",
-    CONVERTED: "Convertido",
-    ARCHIVED: "Arquivado",
+    DISCARDED: "Descartado",
   };
 
   return statusLabels[status] ?? status;
