@@ -181,10 +181,6 @@ export const partnerAcquisitionProspectCreateBodySchema = z
 export const partnerAcquisitionPromoteLeadToProspectBodySchema = z
   .object({
     source: partnerAcquisitionSourceSchema,
-    sourceName: optionalTextSchema(120),
-    sourceReference: optionalTextSchema(120),
-    metadata: partnerAcquisitionCommandMetadataSchema.optional(),
-    references: z.array(partnerAcquisitionReferenceSchema).optional(),
   })
   .strict();
 

@@ -210,23 +210,9 @@ describe('partner-acquisition.http.contract', () => {
     expect(
       partnerAcquisitionPromoteLeadToProspectBodySchema.parse({
         source: 'CAMPAIGN',
-        sourceName: 'H16T Smoke',
-        sourceReference: 'h16t-smoke',
-        metadata: {
-          source: 'CAMPAIGN',
-          pipelineCode: 'parceiros_comerciais',
-        },
-        references: [
-          {
-            kind: 'SOURCE',
-            refType: 'CAMPAIGN',
-            refId: 'camp-1',
-          },
-        ],
       }),
     ).toMatchObject({
       source: 'CAMPAIGN',
-      sourceName: 'H16T Smoke',
     });
   });
 

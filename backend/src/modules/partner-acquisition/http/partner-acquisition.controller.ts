@@ -563,14 +563,13 @@ export class PartnerAcquisitionController {
       ) as PartnerAcquisitionPromoteLeadToProspectBody;
       const params = partnerAcquisitionLeadIdParamsSchema.parse(request.params);
       const command = {
-        ...buildCommandEnvelope(
-          request,
-          body.source,
-          body.sourceName ?? null,
-          body.sourceReference ?? null,
-          normalizeReferences(body.references),
-          normalizeCommandMetadata(body.metadata),
-        ),
+        tenantId: getTenantId(request),
+        actorUserId: getActorUserId(request),
+        requestId: getRequestId(request),
+        correlationId: getCorrelationId(request),
+        idempotencyKey: getIdempotencyKey(request),
+        requestedAt: new Date().toISOString(),
+        source: body.source,
         commandType: 'PromotePartnerLeadToProspectCommand' as const,
         leadId: params.leadId,
       };

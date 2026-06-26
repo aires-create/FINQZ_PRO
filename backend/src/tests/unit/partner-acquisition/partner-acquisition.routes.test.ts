@@ -365,18 +365,6 @@ describe('partner-acquisition routes', () => {
       },
       payload: {
         source: 'CAMPAIGN',
-        sourceName: 'H16T Smoke',
-        sourceReference: 'h16t-smoke',
-        metadata: {
-          source: 'CAMPAIGN',
-        },
-        references: [
-          {
-            kind: 'SOURCE',
-            refType: 'CAMPAIGN',
-            refId: 'camp-1',
-          },
-        ],
       },
     });
 
@@ -389,8 +377,6 @@ describe('partner-acquisition routes', () => {
         commandType: 'PromotePartnerLeadToProspectCommand',
         leadId,
         source: 'CAMPAIGN',
-        sourceName: 'H16T Smoke',
-        sourceReference: 'h16t-smoke',
       }),
     );
     expect(handlerMock.handle).not.toHaveBeenCalled();

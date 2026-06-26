@@ -38,18 +38,6 @@ describe('partner-acquisition.controller', () => {
       },
       body: {
         source: 'CAMPAIGN',
-        sourceName: 'H16T Smoke',
-        sourceReference: 'h16t-smoke',
-        metadata: {
-          source: 'CAMPAIGN',
-        },
-        references: [
-          {
-            kind: 'SOURCE',
-            refType: 'CAMPAIGN',
-            refId: 'camp-1',
-          },
-        ],
       },
     } as never;
     const reply = {
@@ -77,8 +65,6 @@ describe('partner-acquisition.controller', () => {
         commandType: 'PromotePartnerLeadToProspectCommand',
         leadId,
         source: 'CAMPAIGN',
-        sourceName: 'H16T Smoke',
-        sourceReference: 'h16t-smoke',
       }),
     );
     expect(commandHandler.handle).not.toHaveBeenCalled();
