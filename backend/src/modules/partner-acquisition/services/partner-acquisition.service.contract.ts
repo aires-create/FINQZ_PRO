@@ -17,6 +17,7 @@ import type {
   PartnerAcquisitionOutboxProgressInput,
   PartnerAcquisitionOutboxRecordInput,
   PartnerAcquisitionProspectCodeLookup,
+  PartnerAcquisitionProspectByLeadLookup,
   PartnerAcquisitionProspectCreateInput,
   PartnerAcquisitionProspectLifecycleUpdateInput,
   PartnerAcquisitionProspectLinkToPartnerInput,
@@ -29,6 +30,10 @@ import type {
   PartnerLead,
   PartnerProspect,
 } from '../domain/partner-acquisition.contract.js';
+import type {
+  PromotePartnerLeadToProspectCommand,
+  PromotePartnerLeadToProspectResult,
+} from '../domain/partner-lead-prospect-handoff.contract.js';
 
 export interface PartnerAcquisitionServiceContract {
   createLead(input: PartnerAcquisitionLeadCreateInput): Promise<PartnerLead>;
@@ -37,8 +42,14 @@ export interface PartnerAcquisitionServiceContract {
   listLeads(input: PartnerAcquisitionLeadListQuery): Promise<PartnerLead[]>;
   softDeleteLead(input: PartnerAcquisitionLeadSoftDeleteInput): Promise<PartnerLead | null>;
 
+  promoteLeadToProspect(
+    input: PromotePartnerLeadToProspectCommand,
+  ): Promise<PromotePartnerLeadToProspectResult>;
   createProspect(input: PartnerAcquisitionProspectCreateInput): Promise<PartnerProspect>;
   findProspectById(input: PartnerAcquisitionProspectLookup): Promise<PartnerProspect | null>;
+  findProspectByTenantAndLead(
+    input: PartnerAcquisitionProspectByLeadLookup,
+  ): Promise<PartnerProspect | null>;
   findProspectByCode(
     input: PartnerAcquisitionProspectCodeLookup,
   ): Promise<PartnerProspect | null>;

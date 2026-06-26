@@ -17,6 +17,7 @@ import type {
   PartnerAcquisitionOutboxProgressInput,
   PartnerAcquisitionOutboxRecordInput,
   PartnerAcquisitionProspectCodeLookup,
+  PartnerAcquisitionProspectByLeadLookup,
   PartnerAcquisitionProspectCreateInput,
   PartnerAcquisitionProspectLifecycleUpdateInput,
   PartnerAcquisitionProspectLinkToPartnerInput,
@@ -30,8 +31,63 @@ import type {
   PartnerLead,
   PartnerProspect,
 } from '../domain/partner-acquisition.contract.js';
+import {
+  canPromotePartnerLeadToProspect,
+  type PromotePartnerLeadToProspectCommand,
+  type PromotePartnerLeadToProspectResult,
+} from '../domain/partner-lead-prospect-handoff.contract.js';
 import { partnerAcquisitionPrismaRepository } from '../repositories/partner-acquisition.prisma.repository.js';
 import type { PartnerAcquisitionServiceContract } from './partner-acquisition.service.contract.js';
+import { BadRequestError, ConflictError, NotFoundError } from '../../../shared/errors/AppError.js';
+
+const buildPromotionPayload = (
+  command: PromotePartnerLeadToProspectCommand,
+): Record<string, unknown> => ({
+  commandType: command.commandType,
+  leadId: command.leadId,
+  source: command.source,
+  ...(command.sourceName !== undefined ? { sourceName: command.sourceName } : {}),
+  ...(command.sourceReference !== undefined ? { sourceReference: command.sourceReference } : {}),
+  ...(command.references !== undefined ? { references: command.references } : {}),
+  ...(command.metadata !== undefined ? { metadata: command.metadata } : {}),
+});
+
+const isSamePayload = (
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+): boolean => JSON.stringify(left) === JSON.stringify(right);
+
+const requireTenantContext = (tenantId: string): string => {
+  if (!tenantId.trim()) {
+    throw new BadRequestError('Missing tenant context');
+  }
+
+  return tenantId;
+};
+
+const requireActorUserId = (actorUserId: string): string => {
+  if (!actorUserId.trim()) {
+    throw new BadRequestError('Missing actor user context');
+  }
+
+  return actorUserId;
+};
+
+const toPromotionResult = (
+  tenantId: string,
+  leadId: string,
+  prospectId: string,
+  created: boolean,
+  replayed: boolean,
+): PromotePartnerLeadToProspectResult => ({
+  tenantId,
+  leadId,
+  prospectId,
+  leadStatus: 'QUALIFIED',
+  prospectStatus: 'NEW',
+  created,
+  replayed,
+});
 
 export class PartnerAcquisitionService implements PartnerAcquisitionServiceContract {
   constructor(
@@ -60,6 +116,108 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
     return this.repository.softDeleteLead(input);
   }
 
+  async promoteLeadToProspect(
+    command: PromotePartnerLeadToProspectCommand,
+  ): Promise<PromotePartnerLeadToProspectResult> {
+    const tenantId = requireTenantContext(command.tenantId);
+    requireActorUserId(command.actorUserId);
+    const commandType = command.commandType as unknown as PartnerAcquisitionCommandRecordInput['commandType'];
+    const payload = buildPromotionPayload(command);
+
+    const commandRecord = await this.repository.recordCommand({
+      tenantId,
+      commandType,
+      aggregateId: command.leadId,
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: command.actorUserId,
+      requestId: command.requestId,
+      correlationId: command.correlationId,
+      idempotencyKey: command.idempotencyKey,
+      receivedAt: command.requestedAt,
+      payload,
+    });
+
+    if (!isSamePayload(commandRecord.payload, payload)) {
+      throw new ConflictError('Partner acquisition idempotency payload mismatch');
+    }
+
+    if (commandRecord.status === 'PROCESSED') {
+      if (!commandRecord.result) {
+        throw new ConflictError('Partner acquisition replay is missing stored result');
+      }
+
+      return commandRecord.result as unknown as PromotePartnerLeadToProspectResult;
+    }
+
+    if (commandRecord.status === 'FAILED') {
+      throw new ConflictError('Partner acquisition command already failed');
+    }
+
+    const lead = await this.repository.findLeadById({
+      tenantId,
+      leadId: command.leadId,
+    });
+
+    if (!lead) {
+      throw new NotFoundError('Partner lead not found');
+    }
+
+    if (!canPromotePartnerLeadToProspect(lead.status)) {
+      throw new ConflictError(`Partner lead cannot be promoted from status ${lead.status}`);
+    }
+
+    const prospectLookup = await this.repository.findProspectByTenantAndLead({
+      tenantId,
+      leadId: command.leadId,
+    });
+
+    if (prospectLookup) {
+      const replayResult = toPromotionResult(
+        tenantId,
+        command.leadId,
+        prospectLookup.prospectId,
+        false,
+        true,
+      );
+
+      await this.repository.markCommandProcessed({
+        tenantId,
+        idempotencyKey: command.idempotencyKey,
+        processedAt: command.requestedAt,
+        result: replayResult as unknown as Record<string, unknown>,
+      });
+
+      return replayResult;
+    }
+
+    const prospect = await this.repository.promoteLeadToProspectInTransaction({
+      tenantId,
+      leadId: command.leadId,
+      prospectCode: command.leadId,
+    });
+
+    if (!prospect) {
+      throw new NotFoundError('Partner lead not found');
+    }
+
+    const result = toPromotionResult(
+      tenantId,
+      command.leadId,
+      prospect.prospectId,
+      true,
+      false,
+    );
+
+    await this.repository.markCommandProcessed({
+      tenantId,
+      idempotencyKey: command.idempotencyKey,
+      processedAt: command.requestedAt,
+      result: result as unknown as Record<string, unknown>,
+    });
+
+    return result;
+  }
+
   createProspect(input: PartnerAcquisitionProspectCreateInput): Promise<PartnerProspect> {
     return this.repository.createProspect(input);
   }
@@ -68,6 +226,12 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
     input: PartnerAcquisitionProspectLookup,
   ): Promise<PartnerProspect | null> {
     return this.repository.findProspectById(input);
+  }
+
+  findProspectByTenantAndLead(
+    input: PartnerAcquisitionProspectByLeadLookup,
+  ): Promise<PartnerProspect | null> {
+    return this.repository.findProspectByTenantAndLead(input);
   }
 
   findProspectByCode(

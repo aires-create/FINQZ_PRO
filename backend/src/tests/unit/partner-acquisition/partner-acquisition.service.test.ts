@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PartnerAcquisitionService } from '../../../modules/partner-acquisition/services/partner-acquisition.service.js';
 import type { PartnerAcquisitionRepositoryContract } from '../../../modules/partner-acquisition/repositories/partner-acquisition.repository.contract.js';
+import { ConflictError, NotFoundError } from '../../../shared/errors/AppError.js';
 
 const createRepositoryMock = () =>
   ({
@@ -358,5 +359,333 @@ describe('partner-acquisition.service', () => {
     expect(serviceSource).not.toContain('PrismaClient');
     expect(serviceSource).not.toContain('Fastify');
     expect(serviceSource).not.toContain('HTTP');
+  });
+
+  it('promotes a qualified lead through the transactional repository and returns a canonical result', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'CAMPAIGN',
+      },
+      status: 'RECEIVED',
+    });
+    repository.findLeadById.mockResolvedValue({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status: 'QUALIFIED',
+      score: 87,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    repository.findProspectByTenantAndLead.mockResolvedValue(null);
+    repository.promoteLeadToProspectInTransaction.mockResolvedValue({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'NEW',
+      pipelineCode: null,
+      stageCode: null,
+      score: 87,
+      qualificationReason: null,
+      assignedUserId: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    repository.markCommandProcessed.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'CAMPAIGN',
+      },
+      status: 'PROCESSED',
+      result: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        prospectId: 'prospect-1',
+        leadStatus: 'QUALIFIED',
+        prospectStatus: 'NEW',
+        created: true,
+        replayed: false,
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+    const result = await service.promoteLeadToProspect({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'CAMPAIGN',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      leadId: 'lead-1',
+    });
+
+    expect(repository.recordCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        idempotencyKey: 'idem-1',
+        aggregateId: 'lead-1',
+      }),
+    );
+    expect(repository.findLeadById).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+    });
+    expect(repository.findProspectByTenantAndLead).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+    });
+    expect(repository.promoteLeadToProspectInTransaction).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectCode: 'lead-1',
+    });
+    expect(repository.markCommandProcessed).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectId: 'prospect-1',
+      leadStatus: 'QUALIFIED',
+      prospectStatus: 'NEW',
+      created: true,
+      replayed: false,
+    });
+  });
+
+  it.each(['NEW', 'ENRICHED', 'CONTACTED', 'DISCARDED'] as const)(
+    'rejects non-qualifying lead status %s',
+    async (status) => {
+      const repository = createRepositoryMock();
+      repository.recordCommand.mockResolvedValue({
+        tenantId: 'tenant-1',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        aggregateId: 'lead-1',
+        aggregateType: 'PARTNER_LEAD',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        receivedAt: '2026-06-25T00:00:00.000Z',
+        payload: {
+          commandType: 'PromotePartnerLeadToProspectCommand',
+          leadId: 'lead-1',
+          source: 'CAMPAIGN',
+        },
+        status: 'RECEIVED',
+      });
+      repository.findLeadById.mockResolvedValue({
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        fullName: 'Parceiro Exemplo',
+        email: null,
+        phone: null,
+        companyName: null,
+        document: null,
+        channel: 'CAMPAIGN',
+        sourceName: null,
+        sourceReference: null,
+        campaignId: null,
+        hubContextId: null,
+        ownerUserId: null,
+        status,
+        score: null,
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
+      });
+
+      const service = new PartnerAcquisitionService(repository);
+
+      await expect(
+        service.promoteLeadToProspect({
+          tenantId: 'tenant-1',
+          actorUserId: 'user-1',
+          requestId: 'req-1',
+          correlationId: 'corr-1',
+          idempotencyKey: 'idem-1',
+          requestedAt: '2026-06-25T00:00:00.000Z',
+          source: 'CAMPAIGN',
+          commandType: 'PromotePartnerLeadToProspectCommand',
+          leadId: 'lead-1',
+        }),
+      ).rejects.toBeInstanceOf(ConflictError);
+      expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it('throws not found when the lead does not exist or is not visible in the tenant scope', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'CAMPAIGN',
+      },
+      status: 'RECEIVED',
+    });
+    repository.findLeadById.mockResolvedValue(null);
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.promoteLeadToProspect({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        source: 'CAMPAIGN',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+  });
+
+  it('returns the stored replay result when the idempotency key was already processed', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'CAMPAIGN',
+      },
+      status: 'PROCESSED',
+      result: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        prospectId: 'prospect-1',
+        leadStatus: 'QUALIFIED',
+        prospectStatus: 'NEW',
+        created: true,
+        replayed: false,
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+    const result = await service.promoteLeadToProspect({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'CAMPAIGN',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      leadId: 'lead-1',
+    });
+
+    expect(result).toEqual({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectId: 'prospect-1',
+      leadStatus: 'QUALIFIED',
+      prospectStatus: 'NEW',
+      created: true,
+      replayed: false,
+    });
+    expect(repository.findLeadById).not.toHaveBeenCalled();
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+  });
+
+  it('fails fast on divergent payload for the same idempotency key', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'SDR_IA',
+      },
+      status: 'RECEIVED',
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.promoteLeadToProspect({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        source: 'CAMPAIGN',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(repository.findLeadById).not.toHaveBeenCalled();
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
   });
 });
