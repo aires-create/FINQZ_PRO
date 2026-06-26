@@ -52,10 +52,50 @@ const buildPromotionPayload = (
   ...(command.metadata !== undefined ? { metadata: command.metadata } : {}),
 });
 
-const isSamePayload = (
-  left: Record<string, unknown>,
-  right: Record<string, unknown>,
-): boolean => JSON.stringify(left) === JSON.stringify(right);
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export const isSamePayload = (left: unknown, right: unknown): boolean => {
+  if (left === right) {
+    return true;
+  }
+
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((item, index) => isSamePayload(item, right[index]));
+  }
+
+  if (isPlainObject(left) || isPlainObject(right)) {
+    if (!isPlainObject(left) || !isPlainObject(right)) {
+      return false;
+    }
+
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+
+    if (leftKeys.length !== rightKeys.length) {
+      return false;
+    }
+
+    return leftKeys.every((key, index) => {
+      const rightKey = rightKeys[index];
+      if (key !== rightKey) {
+        return false;
+      }
+
+      return isSamePayload(left[key], right[rightKey]);
+    });
+  }
+
+  return false;
+};
 
 const getStoredCommandFailureMessage = (
   commandRecord: PartnerAcquisitionCommandRecordInput,

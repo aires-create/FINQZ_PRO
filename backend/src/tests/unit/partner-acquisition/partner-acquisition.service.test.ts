@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { PartnerAcquisitionService } from '../../../modules/partner-acquisition/services/partner-acquisition.service.js';
+import { PartnerAcquisitionService, isSamePayload } from '../../../modules/partner-acquisition/services/partner-acquisition.service.js';
 import type { PartnerAcquisitionRepositoryContract } from '../../../modules/partner-acquisition/repositories/partner-acquisition.repository.contract.js';
 import { ConflictError, NotFoundError } from '../../../shared/errors/AppError.js';
 
@@ -45,6 +45,25 @@ const servicePath = resolve(
 const serviceSource = readFileSync(servicePath, 'utf8');
 
 describe('partner-acquisition.service', () => {
+  it('compares JSON-like payloads semantically regardless of object key order', () => {
+    expect(isSamePayload(
+      { leadId: 'lead-1', source: 'CAMPAIGN', commandType: 'PromotePartnerLeadToProspectCommand' },
+      { commandType: 'PromotePartnerLeadToProspectCommand', source: 'CAMPAIGN', leadId: 'lead-1' },
+    )).toBe(true);
+    expect(isSamePayload(
+      { leadId: 'lead-1', source: 'CAMPAIGN' },
+      { leadId: 'lead-1', source: 'MANUAL' },
+    )).toBe(false);
+    expect(isSamePayload(
+      { leadId: 'lead-1', source: 'CAMPAIGN' },
+      { leadId: 'lead-1', source: 'CAMPAIGN', extra: true },
+    )).toBe(false);
+    expect(isSamePayload(
+      { steps: ['A', 'B'] },
+      { steps: ['B', 'A'] },
+    )).toBe(false);
+  });
+
   it('delegates lead operations to the repository using tenant-scoped inputs', async () => {
     const repository = createRepositoryMock();
     repository.createLead.mockResolvedValue({
@@ -374,9 +393,9 @@ describe('partner-acquisition.service', () => {
       idempotencyKey: 'idem-1',
       receivedAt: '2026-06-25T00:00:00.000Z',
       payload: {
-        commandType: 'PromotePartnerLeadToProspectCommand',
-        leadId: 'lead-1',
         source: 'CAMPAIGN',
+        leadId: 'lead-1',
+        commandType: 'PromotePartnerLeadToProspectCommand',
       },
       status: 'RECEIVED',
     });
@@ -485,6 +504,59 @@ describe('partner-acquisition.service', () => {
       prospectCode: 'lead-1',
     });
     expect(repository.markCommandProcessed).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectId: 'prospect-1',
+      leadStatus: 'QUALIFIED',
+      prospectStatus: 'NEW',
+      created: true,
+      replayed: false,
+    });
+  });
+
+  it('accepts semantically equal promotion payloads even when the inbox JSON key order differs', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        source: 'CAMPAIGN',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+      },
+      status: 'PROCESSED',
+      result: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        prospectId: 'prospect-1',
+        leadStatus: 'QUALIFIED',
+        prospectStatus: 'NEW',
+        created: true,
+        replayed: false,
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+    const result = await service.promoteLeadToProspect({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'CAMPAIGN',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      leadId: 'lead-1',
+    });
+
     expect(result).toEqual({
       tenantId: 'tenant-1',
       leadId: 'lead-1',
