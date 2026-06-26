@@ -26,6 +26,7 @@ import type {
   PartnerAcquisitionLeadCreateInput,
   PartnerAcquisitionLeadListQuery,
   PartnerAcquisitionLeadLookup,
+  PartnerAcquisitionLeadProspectPromotionInput,
   PartnerAcquisitionLeadSoftDeleteInput,
   PartnerAcquisitionOutboxPendingQuery,
   PartnerAcquisitionOutboxProgressInput,
@@ -33,6 +34,7 @@ import type {
   PartnerAcquisitionOutboxRecordInput,
   PartnerAcquisitionProspectCodeLookup,
   PartnerAcquisitionProspectCreateInput,
+  PartnerAcquisitionProspectByLeadLookup,
   PartnerAcquisitionProspectLifecycleUpdateInput,
   PartnerAcquisitionProspectLinkToPartnerInput,
   PartnerAcquisitionProspectListQuery,
@@ -65,13 +67,43 @@ const DEFAULT_PENDING_OUTBOX_STATUS: Extract<
 > = 'PENDING';
 
 const toDate = (value: string): Date => new Date(value);
+const UNIQUE_CONSTRAINT_CODE = 'P2002';
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
+};
+
+const isStringArray = (value: unknown): value is string[] => {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+};
+
+const isUniqueConstraintError = (error: unknown): boolean => {
+  if (!isRecord(error) || error.code !== UNIQUE_CONSTRAINT_CODE) {
+    return false;
+  }
+
+  const meta = isRecord(error.meta) ? error.meta : undefined;
+  const target = meta?.target;
+
+  if (typeof target === 'string') {
+    return target.includes('tenantId') && target.includes('leadId');
+  }
+
+  if (!isStringArray(target)) {
+    return false;
+  }
+
+  const targetFields = new Set(target);
+
+  return targetFields.has('tenantId') && targetFields.has('leadId');
+};
 
 const runInTransaction = async <T>(
   client: PartnerAcquisitionPrismaClient,
   action: (transaction: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> => {
-  if (client === prisma) {
-    return prisma.$transaction((transaction) => action(transaction));
+  if (typeof (client as typeof prisma).$transaction === 'function') {
+    return (client as typeof prisma).$transaction((transaction) => action(transaction));
   }
 
   return action(client);
@@ -357,6 +389,20 @@ const findProspectByTenantAndId = (
   });
 };
 
+const findProspectByTenantAndLeadRow = (
+  client: PartnerAcquisitionPrismaClient,
+  tenantId: string,
+  leadId: string,
+) => {
+  return client.partnerAcquisitionProspect.findFirst({
+    where: {
+      leadId,
+      ...tenantFilter(tenantId),
+      deletedAt: null,
+    },
+  });
+};
+
 export class PartnerAcquisitionPrismaRepository
   implements PartnerAcquisitionRepositoryContract
 {
@@ -449,6 +495,18 @@ export class PartnerAcquisitionPrismaRepository
       this.client,
       input.tenantId,
       input.prospectId,
+    );
+
+    return prospect ? toProspectModel(prospect) : null;
+  }
+
+  async findProspectByTenantAndLead(
+    input: PartnerAcquisitionProspectByLeadLookup,
+  ): Promise<PartnerProspect | null> {
+    const prospect = await findProspectByTenantAndLeadRow(
+      this.client,
+      input.tenantId,
+      input.leadId,
     );
 
     return prospect ? toProspectModel(prospect) : null;
@@ -613,6 +671,67 @@ export class PartnerAcquisitionPrismaRepository
       );
 
       return prospect ? toProspectModel(prospect) : null;
+    });
+  }
+
+  async promoteLeadToProspectInTransaction(
+    input: PartnerAcquisitionLeadProspectPromotionInput,
+  ): Promise<PartnerProspect | null> {
+    return runInTransaction(this.client, async (transaction) => {
+      const lead = await findLeadByTenantAndId(transaction, input.tenantId, input.leadId);
+
+      if (!lead) {
+        return null;
+      }
+
+      const existingProspect = await findProspectByTenantAndLeadRow(
+        transaction,
+        input.tenantId,
+        input.leadId,
+      );
+
+      if (existingProspect) {
+        return toProspectModel(existingProspect);
+      }
+
+      const prospectData = buildProspectCreateData({
+        tenantId: input.tenantId,
+        prospectCode: input.prospectCode,
+        leadId: input.leadId,
+        fullName: lead.fullName,
+        email: lead.email,
+        phone: lead.phone,
+        companyName: lead.companyName,
+        document: lead.document,
+        channel: lead.channel,
+        sourceName: lead.sourceName,
+        sourceReference: lead.sourceReference,
+        campaignId: lead.campaignId,
+        hubContextId: lead.hubContextId,
+        ownerUserId: lead.ownerUserId,
+        status: 'NEW',
+        score: lead.score,
+      } as PartnerAcquisitionProspectCreateInput);
+
+      try {
+        const prospect = await transaction.partnerAcquisitionProspect.create({
+          data: prospectData,
+        });
+
+        return toProspectModel(prospect);
+      } catch (error) {
+        if (!isUniqueConstraintError(error)) {
+          throw error;
+        }
+
+        const existing = await findProspectByTenantAndLeadRow(
+          transaction,
+          input.tenantId,
+          input.leadId,
+        );
+
+        return existing ? toProspectModel(existing) : null;
+      }
     });
   }
 

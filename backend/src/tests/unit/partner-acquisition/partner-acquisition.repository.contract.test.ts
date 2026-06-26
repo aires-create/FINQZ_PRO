@@ -15,10 +15,12 @@ import type {
   PartnerAcquisitionLeadCodeLookup,
   PartnerAcquisitionLeadCreateInput,
   PartnerAcquisitionLeadLookup,
+  PartnerAcquisitionLeadProspectPromotionInput,
   PartnerAcquisitionOutboxPendingQuery,
   PartnerAcquisitionOutboxProgressInput,
   PartnerAcquisitionOutboxRecordInput,
   PartnerAcquisitionProspectCodeLookup,
+  PartnerAcquisitionProspectByLeadLookup,
   PartnerAcquisitionProspectCreateInput,
   PartnerAcquisitionProspectLifecycleUpdateInput,
   PartnerAcquisitionProspectLinkToPartnerInput,
@@ -45,11 +47,13 @@ const repositoryContractShape = {
   softDeleteLead: async (_input) => null,
   createProspect: async (_input) => null as never,
   findProspectById: async (_input) => null,
+  findProspectByTenantAndLead: async (_input) => null,
   findProspectByCode: async (_input) => null,
   listProspects: async (_input) => [],
   updateProspectLifecycle: async (_input) => null,
   linkProspectToPartner: async (_input) => null,
   softDeleteProspect: async (_input) => null,
+  promoteLeadToProspectInTransaction: async (_input) => null,
   recordCommand: async (input) => input,
   findCommandByIdempotencyKey: async (_input) => null,
   markCommandProcessed: async (_input) => null,
@@ -75,11 +79,13 @@ describe('partner-acquisition.repository.contract', () => {
       'softDeleteLead',
       'createProspect',
       'findProspectById',
+      'findProspectByTenantAndLead',
       'findProspectByCode',
       'listProspects',
       'updateProspectLifecycle',
       'linkProspectToPartner',
       'softDeleteProspect',
+      'promoteLeadToProspectInTransaction',
       'recordCommand',
       'findCommandByIdempotencyKey',
       'markCommandProcessed',
@@ -132,10 +138,21 @@ describe('partner-acquisition.repository.contract', () => {
       prospectId: 'prospect-1',
     } satisfies PartnerAcquisitionProspectLookup;
 
+    const prospectByLeadLookup = {
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+    } satisfies PartnerAcquisitionProspectByLeadLookup;
+
     const prospectCodeLookup = {
       tenantId: 'tenant-1',
       prospectCode: 'prospect-1',
     } satisfies PartnerAcquisitionProspectCodeLookup;
+
+    const promotionInput = {
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectCode: 'prospect-1',
+    } satisfies PartnerAcquisitionLeadProspectPromotionInput;
 
     const prospectListQuery = {
       tenantId: 'tenant-1',
@@ -148,7 +165,9 @@ describe('partner-acquisition.repository.contract', () => {
     expect(leadListQuery.tenantId).toBe('tenant-1');
     expect(prospectCreateInput.tenantId).toBe('tenant-1');
     expect(prospectLookup.tenantId).toBe('tenant-1');
+    expect(prospectByLeadLookup.tenantId).toBe('tenant-1');
     expect(prospectCodeLookup.tenantId).toBe('tenant-1');
+    expect(promotionInput.tenantId).toBe('tenant-1');
     expect(prospectListQuery.tenantId).toBe('tenant-1');
   });
 

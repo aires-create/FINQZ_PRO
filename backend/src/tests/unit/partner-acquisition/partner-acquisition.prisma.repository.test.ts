@@ -12,7 +12,7 @@ const repositoryPath = resolve(
 const repositorySource = readFileSync(repositoryPath, 'utf8');
 
 const createMockClient = () => {
-  return {
+  const client = {
     partnerAcquisitionLead: {
       create: vi.fn(),
       findFirst: vi.fn(),
@@ -45,8 +45,11 @@ const createMockClient = () => {
       upsert: vi.fn(),
       findFirst: vi.fn(),
     },
-    $transaction: vi.fn(async (action: (tx: unknown) => Promise<unknown>) => action(mockClient)),
-  } as const;
+  } as any;
+
+  client.$transaction = vi.fn(async (action: (tx: unknown) => Promise<unknown>) => action(client));
+
+  return client;
 };
 
 const mockClient = createMockClient();
@@ -305,6 +308,333 @@ describe('partner-acquisition.prisma.repository', () => {
         }),
       }),
     );
+  });
+
+  it('finds prospects by tenant and lead while respecting tenant isolation and soft delete', async () => {
+    const client = createMockClient();
+    client.partnerAcquisitionProspect.findFirst.mockResolvedValueOnce({
+      id: 'prospect-1',
+      tenantId: 'tenant-1',
+      prospectCode: 'prospect-001',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'NEW',
+      pipelineId: null,
+      stageId: null,
+      pipelineCode: null,
+      stageCode: null,
+      score: null,
+      qualificationReason: null,
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: null,
+      partnerId: null,
+      version: 0,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+
+    const repository = new PartnerAcquisitionPrismaRepository(client as never);
+
+    const prospect = await repository.findProspectByTenantAndLead({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+    });
+
+    expect(client.partnerAcquisitionProspect.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          leadId: 'lead-1',
+          deletedAt: null,
+        }),
+      }),
+    );
+    expect(prospect?.prospectId).toBe('prospect-1');
+
+    client.partnerAcquisitionProspect.findFirst.mockResolvedValueOnce(null);
+    const missing = await repository.findProspectByTenantAndLead({
+      tenantId: 'tenant-2',
+      leadId: 'lead-1',
+    });
+
+    expect(missing).toBeNull();
+  });
+
+  it('promotes a lead to a prospect in a transaction and replays the existing prospect on duplicates', async () => {
+    const client = createMockClient();
+    client.partnerAcquisitionLead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      tenantId: 'tenant-1',
+      leadCode: 'lead-001',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: 'Campanha Junho',
+      sourceReference: 'campaign-2026-06',
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: 'user-1',
+      status: 'QUALIFIED',
+      score: 87,
+      version: 0,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+    client.partnerAcquisitionProspect.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'prospect-1',
+        tenantId: 'tenant-1',
+        prospectCode: 'prospect-001',
+        leadId: 'lead-1',
+        fullName: 'Parceiro Exemplo',
+        email: 'partner@example.com',
+        phone: null,
+        companyName: null,
+        document: null,
+        channel: 'CAMPAIGN',
+        sourceName: 'Campanha Junho',
+        sourceReference: 'campaign-2026-06',
+        campaignId: null,
+        hubContextId: null,
+        sdrAgentId: null,
+        status: 'NEW',
+        pipelineId: null,
+        stageId: null,
+        pipelineCode: null,
+        stageCode: null,
+        score: 87,
+        qualificationReason: null,
+        assignedUserId: null,
+        nextActionAt: null,
+        signedAt: null,
+        convertedAt: null,
+        partnerId: null,
+        version: 0,
+        deletedAt: null,
+        createdAt: new Date('2026-06-25T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+      });
+    client.partnerAcquisitionProspect.create.mockResolvedValue({
+      id: 'prospect-1',
+      tenantId: 'tenant-1',
+      prospectCode: 'prospect-001',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: 'Campanha Junho',
+      sourceReference: 'campaign-2026-06',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'NEW',
+      pipelineId: null,
+      stageId: null,
+      pipelineCode: null,
+      stageCode: null,
+      score: 87,
+      qualificationReason: null,
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: null,
+      partnerId: null,
+      version: 0,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+
+    const repository = new PartnerAcquisitionPrismaRepository(client as never);
+
+    const created = await repository.promoteLeadToProspectInTransaction({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectCode: 'prospect-001',
+    });
+
+    expect(client.$transaction).toHaveBeenCalledTimes(1);
+    expect(client.partnerAcquisitionLead.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          id: 'lead-1',
+          deletedAt: null,
+        }),
+      }),
+    );
+    expect(client.partnerAcquisitionProspect.create).toHaveBeenCalledTimes(1);
+    expect(created?.prospectId).toBe('prospect-1');
+  });
+
+  it('reuses an existing prospect without creating a duplicate', async () => {
+    const client = createMockClient();
+    client.partnerAcquisitionLead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      tenantId: 'tenant-1',
+      leadCode: 'lead-001',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: 'Campanha Junho',
+      sourceReference: 'campaign-2026-06',
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: 'user-1',
+      status: 'QUALIFIED',
+      score: 87,
+      version: 0,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+    client.partnerAcquisitionProspect.findFirst.mockResolvedValue({
+      id: 'prospect-1',
+      tenantId: 'tenant-1',
+      prospectCode: 'prospect-001',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: 'Campanha Junho',
+      sourceReference: 'campaign-2026-06',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'NEW',
+      pipelineId: null,
+      stageId: null,
+      pipelineCode: null,
+      stageCode: null,
+      score: 87,
+      qualificationReason: null,
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: null,
+      partnerId: null,
+      version: 0,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+
+    const repository = new PartnerAcquisitionPrismaRepository(client as never);
+
+    const prospect = await repository.promoteLeadToProspectInTransaction({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectCode: 'prospect-001',
+    });
+
+    expect(client.partnerAcquisitionProspect.create).not.toHaveBeenCalled();
+    expect(prospect?.prospectId).toBe('prospect-1');
+  });
+
+  it('recovers from a unique constraint collision by re-reading the prospect', async () => {
+    const client = createMockClient();
+    client.partnerAcquisitionLead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      tenantId: 'tenant-1',
+      leadCode: 'lead-001',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: 'Campanha Junho',
+      sourceReference: 'campaign-2026-06',
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: 'user-1',
+      status: 'QUALIFIED',
+      score: 87,
+      version: 0,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+    client.partnerAcquisitionProspect.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'prospect-1',
+        tenantId: 'tenant-1',
+        prospectCode: 'prospect-001',
+        leadId: 'lead-1',
+        fullName: 'Parceiro Exemplo',
+        email: 'partner@example.com',
+        phone: null,
+        companyName: null,
+        document: null,
+        channel: 'CAMPAIGN',
+        sourceName: 'Campanha Junho',
+        sourceReference: 'campaign-2026-06',
+        campaignId: null,
+        hubContextId: null,
+        sdrAgentId: null,
+        status: 'NEW',
+        pipelineId: null,
+        stageId: null,
+        pipelineCode: null,
+        stageCode: null,
+        score: 87,
+        qualificationReason: null,
+        assignedUserId: null,
+        nextActionAt: null,
+        signedAt: null,
+        convertedAt: null,
+        partnerId: null,
+        version: 0,
+        deletedAt: null,
+        createdAt: new Date('2026-06-25T00:00:00.000Z'),
+        updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+      });
+    client.partnerAcquisitionProspect.create.mockRejectedValueOnce({
+      name: 'PrismaClientKnownRequestError',
+      code: 'P2002',
+      meta: {
+        target: ['tenantId', 'leadId'],
+      },
+    });
+
+    const repository = new PartnerAcquisitionPrismaRepository(client as never);
+
+    const prospect = await repository.promoteLeadToProspectInTransaction({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      prospectCode: 'prospect-001',
+    });
+
+    expect(client.partnerAcquisitionProspect.create).toHaveBeenCalledTimes(1);
+    expect(prospect?.prospectId).toBe('prospect-1');
   });
 
   it('manages command inbox, event log, outbox and conversion decision independently', async () => {

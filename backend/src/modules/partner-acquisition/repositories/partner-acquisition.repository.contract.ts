@@ -108,6 +108,11 @@ export interface PartnerAcquisitionProspectLookup {
   prospectId: string;
 }
 
+export interface PartnerAcquisitionProspectByLeadLookup {
+  tenantId: string;
+  leadId: string;
+}
+
 export interface PartnerAcquisitionProspectCodeLookup {
   tenantId: string;
   prospectCode: string;
@@ -152,6 +157,12 @@ export interface PartnerAcquisitionProspectSoftDeleteInput {
   prospectId: string;
   deletedAt: string;
   expectedVersion?: number;
+}
+
+export interface PartnerAcquisitionLeadProspectPromotionInput {
+  tenantId: string;
+  leadId: string;
+  prospectCode: string;
 }
 
 export interface PartnerAcquisitionCommandRecordInput {
@@ -269,6 +280,9 @@ export interface PartnerAcquisitionRepositoryContract {
 
   createProspect(input: PartnerAcquisitionProspectCreateInput): Promise<PartnerProspect>;
   findProspectById(input: PartnerAcquisitionProspectLookup): Promise<PartnerProspect | null>;
+  findProspectByTenantAndLead(
+    input: PartnerAcquisitionProspectByLeadLookup,
+  ): Promise<PartnerProspect | null>;
   findProspectByCode(input: PartnerAcquisitionProspectCodeLookup): Promise<PartnerProspect | null>;
   listProspects(input: PartnerAcquisitionProspectListQuery): Promise<PartnerProspect[]>;
   updateProspectLifecycle(
@@ -278,6 +292,9 @@ export interface PartnerAcquisitionRepositoryContract {
     input: PartnerAcquisitionProspectLinkToPartnerInput,
   ): Promise<PartnerProspect | null>;
   softDeleteProspect(input: PartnerAcquisitionProspectSoftDeleteInput): Promise<PartnerProspect | null>;
+  promoteLeadToProspectInTransaction(
+    input: PartnerAcquisitionLeadProspectPromotionInput,
+  ): Promise<PartnerProspect | null>;
 
   recordCommand(
     input: PartnerAcquisitionCommandRecordInput,
