@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
+import { Prisma, type Partner } from '@prisma/client';
+
 import type {
+  ConvertPartnerProspectToPartnerCommand,
   PartnerAcquisitionCommandFailureInput,
   PartnerAcquisitionCommandLookup,
   PartnerAcquisitionCommandProgressInput,
@@ -44,8 +47,13 @@ import type {
   TransitionPartnerLeadCommand,
 } from '../domain/partner-acquisition.commands.js';
 import { partnerAcquisitionPrismaRepository } from '../repositories/partner-acquisition.prisma.repository.js';
+import { PartnerAcquisitionPrismaRepository } from '../repositories/partner-acquisition.prisma.repository.js';
 import type { PartnerAcquisitionServiceContract } from './partner-acquisition.service.contract.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../../shared/errors/AppError.js';
+import { prisma } from '../../../core/prisma/client.js';
+import { PartnerPrismaRepository } from '../../partners/repositories/partner.prisma.repository.js';
+import { PartnerService } from '../../partners/services/partner.service.js';
+import { PartnerNotFoundError } from '../../partners/services/partner.errors.js';
 
 const buildPromotionPayload = (
   command: PromotePartnerLeadToProspectCommand,
@@ -182,9 +190,15 @@ const buildLeadTransitionEventPayload = (
   ...(reason !== undefined && reason !== null ? { reason } : {}),
 });
 
+type TransactionRunner = <T>(
+  action: (transaction: Prisma.TransactionClient) => Promise<T>,
+) => Promise<T>;
+
 export class PartnerAcquisitionService implements PartnerAcquisitionServiceContract {
   constructor(
     private readonly repository: PartnerAcquisitionRepositoryContract = partnerAcquisitionPrismaRepository,
+    private readonly runInTransaction: TransactionRunner = (action) =>
+      prisma.$transaction(action),
   ) {}
 
   createLead(input: PartnerAcquisitionLeadCreateInput): Promise<PartnerLead> {
@@ -500,6 +514,141 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
     input: PartnerAcquisitionProspectSoftDeleteInput,
   ): Promise<PartnerProspect | null> {
     return this.repository.softDeleteProspect(input);
+  }
+
+  async convertProspectToPartner(
+    input: ConvertPartnerProspectToPartnerCommand,
+  ): Promise<PartnerProspect> {
+    const tenantId = requireTenantContext(input.tenantId);
+    requireActorUserId(input.actorUserId);
+
+    return this.runInTransaction(async (transaction) => {
+      const acquisitionService = new PartnerAcquisitionService(
+        new PartnerAcquisitionPrismaRepository(transaction),
+        this.runInTransaction,
+      );
+      const partnerService = new PartnerService(
+        new PartnerPrismaRepository(transaction),
+      );
+
+      const prospect = await acquisitionService.findProspectById({
+        tenantId,
+        prospectId: input.prospectId,
+      });
+
+      if (!prospect) {
+        throw new NotFoundError('Partner prospect not found for conversion');
+      }
+
+      const normalizedRequestedPartnerId = input.partnerId.trim();
+      if (
+        prospect.partnerId !== null &&
+        prospect.partnerId !== undefined &&
+        prospect.partnerId !== normalizedRequestedPartnerId
+      ) {
+        throw new ConflictError(
+          'Partner prospect already linked to a different partner',
+        );
+      }
+
+      let partner: Partner | null = null;
+      const materializedPartnerId = prospect.partnerId ?? null;
+
+      if (materializedPartnerId) {
+        partner = await partnerService.getPartnerById({
+          tenantId,
+          partnerId: materializedPartnerId,
+        });
+      } else {
+        let partnerByRequestedId: Partner | null = null;
+        if (normalizedRequestedPartnerId) {
+          try {
+            partnerByRequestedId = await partnerService.getPartnerById({
+              tenantId,
+              partnerId: normalizedRequestedPartnerId,
+            });
+          } catch (error) {
+            if (!(error instanceof PartnerNotFoundError)) {
+              throw error;
+            }
+          }
+        }
+
+        if (partnerByRequestedId) {
+          partner = partnerByRequestedId;
+        } else {
+          let partnerByCode: Partner | null = null;
+          try {
+            partnerByCode = await partnerService.getPartnerByCode({
+              tenantId,
+              code: input.partnerCode,
+            });
+          } catch (error) {
+            if (!(error instanceof PartnerNotFoundError)) {
+              throw error;
+            }
+          }
+
+          partner =
+            partnerByCode ??
+            (await partnerService.createPartner({
+              tenantId,
+              actorUserId: input.actorUserId,
+              correlationId: input.correlationId,
+              code: input.partnerCode,
+              name: input.partnerName,
+              type: input.partnerType,
+              document: prospect.document ?? null,
+              email: prospect.email ?? null,
+              phone: prospect.phone ?? null,
+              status: 'ativo',
+            }));
+        }
+      }
+
+      if (!partner) {
+        throw new NotFoundError('Partner not found for conversion');
+      }
+
+      const effectivePartnerId = partner.id;
+
+      if (prospect.partnerId !== effectivePartnerId) {
+        const linkedProspect = await acquisitionService.linkProspectToPartner({
+          tenantId,
+          prospectId: input.prospectId,
+          expectedVersion: input.expectedVersion,
+          partnerId: effectivePartnerId,
+        });
+
+        if (!linkedProspect) {
+          throw new NotFoundError('Partner prospect not found for conversion');
+        }
+      }
+
+      await acquisitionService.recordConversionDecision({
+        tenantId,
+        prospectId: input.prospectId,
+        partnerId: effectivePartnerId,
+        approved: true,
+        decidedByUserId: input.actorUserId,
+        decidedAt: input.conversionApprovedAt ?? input.requestedAt,
+        reason: null,
+      });
+
+      const convertedProspect = await acquisitionService.updateProspectLifecycle({
+        tenantId,
+        prospectId: input.prospectId,
+        expectedVersion: input.expectedVersion,
+        status: 'CONVERTED',
+        convertedAt: input.conversionApprovedAt ?? input.requestedAt,
+      });
+
+      if (!convertedProspect) {
+        throw new NotFoundError('Partner prospect not found for conversion');
+      }
+
+      return convertedProspect;
+    });
   }
 
   recordCommand(

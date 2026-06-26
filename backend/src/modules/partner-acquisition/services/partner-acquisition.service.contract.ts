@@ -35,6 +35,7 @@ import type {
   PromotePartnerLeadToProspectResult,
 } from '../domain/partner-lead-prospect-handoff.contract.js';
 import type {
+  ConvertPartnerProspectToPartnerCommand,
   TransitionPartnerLeadCommand,
 } from '../domain/partner-acquisition.commands.js';
 
@@ -69,6 +70,9 @@ export interface PartnerAcquisitionServiceContract {
   softDeleteProspect(
     input: PartnerAcquisitionProspectSoftDeleteInput,
   ): Promise<PartnerProspect | null>;
+  convertProspectToPartner(
+    input: ConvertPartnerProspectToPartnerCommand,
+  ): Promise<PartnerProspect>;
 
   recordCommand(
     input: PartnerAcquisitionCommandRecordInput,

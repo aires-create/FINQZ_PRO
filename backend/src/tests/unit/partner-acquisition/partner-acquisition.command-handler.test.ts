@@ -25,6 +25,7 @@ const createServiceMock = () =>
     updateProspectLifecycle: vi.fn(),
     linkProspectToPartner: vi.fn(),
     softDeleteProspect: vi.fn(),
+    convertProspectToPartner: vi.fn(),
     promoteLeadToProspect: vi.fn(),
     recordCommand: vi.fn(),
     findCommandByIdempotencyKey: vi.fn(),
@@ -359,7 +360,7 @@ describe('partner-acquisition.command-handler', () => {
     await expect(handler.handle(command)).rejects.toThrow(/already marked as failed/);
   });
 
-  it('passes expectedVersion through lifecycle commands and does not create a Partner directly on conversion', async () => {
+  it('delegates conversion materialization to the acquisition service', async () => {
     const service = createServiceMock();
     service.recordCommand.mockResolvedValue({
       tenantId: 'tenant-1',
@@ -374,32 +375,7 @@ describe('partner-acquisition.command-handler', () => {
       payload: {},
       status: 'RECEIVED',
     });
-    service.listEventsByAggregate.mockResolvedValue([
-      {
-        tenantId: 'tenant-1',
-        eventId: 'evt-1',
-        aggregateId: 'prospect-1',
-        aggregateType: 'PARTNER_PROSPECT',
-        eventType: 'PartnerProspectContractSigned',
-        actorUserId: 'user-1',
-        requestId: 'req-1',
-        correlationId: 'corr-1',
-        idempotencyKey: 'idem-old',
-        occurredAt: '2026-06-24T00:00:00.000Z',
-        payload: {},
-        version: 1,
-      },
-    ] as never);
-    service.recordConversionDecision.mockResolvedValue({
-      tenantId: 'tenant-1',
-      prospectId: 'prospect-1',
-      partnerId: 'partner-1',
-      approved: true,
-      decidedByUserId: 'user-1',
-      decidedAt: '2026-06-25T00:00:00.000Z',
-      reason: null,
-    });
-    service.updateProspectLifecycle.mockResolvedValue({
+    service.convertProspectToPartner.mockResolvedValue({
       tenantId: 'tenant-1',
       prospectId: 'prospect-1',
       leadId: 'lead-1',
@@ -422,29 +398,6 @@ describe('partner-acquisition.command-handler', () => {
       assignedUserId: null,
       createdAt: '2026-06-25T00:00:00.000Z',
       updatedAt: '2026-06-25T00:00:00.000Z',
-    });
-    service.appendEvent.mockResolvedValue({
-      tenantId: 'tenant-1',
-      eventId: 'idem-9',
-      aggregateId: 'prospect-1',
-      aggregateType: 'PARTNER_PROSPECT',
-      eventType: 'PartnerProspectConvertedToPartner',
-      actorUserId: 'user-1',
-      requestId: 'req-1',
-      correlationId: 'corr-1',
-      idempotencyKey: 'idem-9',
-      occurredAt: '2026-06-25T00:00:00.000Z',
-      payload: {},
-      version: 2,
-    });
-    service.enqueueOutboxEvent.mockResolvedValue({
-      tenantId: 'tenant-1',
-      eventId: 'idem-9',
-      aggregateId: 'prospect-1',
-      aggregateType: 'PARTNER_PROSPECT',
-      eventType: 'PartnerProspectConvertedToPartner',
-      availableAt: '2026-06-25T00:00:00.000Z',
-      payload: {},
     });
     service.markCommandProcessed.mockResolvedValue(null);
 
@@ -469,14 +422,13 @@ describe('partner-acquisition.command-handler', () => {
 
     const result = await handler.handle(command);
 
-    expect(service.recordConversionDecision).toHaveBeenCalledTimes(1);
-    expect(service.updateProspectLifecycle).toHaveBeenCalledWith(
+    expect(service.convertProspectToPartner).toHaveBeenCalledTimes(1);
+    expect(service.convertProspectToPartner).toHaveBeenCalledWith(
       expect.objectContaining({
+        prospectId: 'prospect-1',
         expectedVersion: 1,
-        status: 'CONVERTED',
       }),
     );
-    expect(service.linkProspectToPartner).not.toHaveBeenCalled();
     expect(result.status).toBe('CONVERTED');
   });
 

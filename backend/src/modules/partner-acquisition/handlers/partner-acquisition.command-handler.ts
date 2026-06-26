@@ -556,26 +556,7 @@ export class PartnerAcquisitionCommandHandler
           'Partner prospect not found for conversion rejection',
         );
       case 'ConvertPartnerProspectToPartnerCommand':
-        await this.service.recordConversionDecision({
-          tenantId: command.tenantId,
-          prospectId: command.prospectId,
-          partnerId: command.partnerId,
-          approved: true,
-          decidedByUserId: command.actorUserId,
-          decidedAt: command.conversionApprovedAt ?? command.requestedAt,
-          reason: null,
-        });
-
-        return assertResult(
-          await this.service.updateProspectLifecycle({
-            tenantId: command.tenantId,
-            prospectId: command.prospectId,
-            expectedVersion: command.expectedVersion,
-            status: 'CONVERTED',
-            convertedAt: command.conversionApprovedAt ?? command.requestedAt,
-          }),
-          'Partner prospect not found for conversion',
-        );
+        return this.service.convertProspectToPartner(command);
     }
   }
 }
