@@ -39,6 +39,8 @@ import {
   partnerAcquisitionLeadIdParamsSchema,
   partnerAcquisitionLeadListQuerySchema,
   partnerAcquisitionNegotiationBodySchema,
+  partnerAcquisitionPromoteLeadToProspectBodySchema,
+  partnerAcquisitionPromoteLeadToProspectResponseDtoSchema,
   partnerAcquisitionProspectCreateBodySchema,
   partnerAcquisitionProspectDtoSchema,
   partnerAcquisitionProspectIdParamsSchema,
@@ -51,6 +53,8 @@ import {
   type PartnerAcquisitionLeadListQuery,
   type PartnerAcquisitionProspectCreateBody,
   type PartnerAcquisitionProspectListQuery,
+  type PartnerAcquisitionPromoteLeadToProspectBody,
+  type PartnerAcquisitionPromoteLeadToProspectResponseDto,
 } from './validators/partner-acquisition.http.validator.js';
 import { partnerAcquisitionCommandHandler } from '../handlers/partner-acquisition.command-handler.js';
 import type { PartnerAcquisitionCommandHandlerContract } from '../handlers/partner-acquisition.command-handler.contract.js';
@@ -546,6 +550,38 @@ export class PartnerAcquisitionController {
       reply.status(201).send({
         success: true,
         data: toLeadDto(lead as PartnerLead),
+      });
+    } catch (error) {
+      handleControllerError(error, reply);
+    }
+  };
+
+  promoteLeadToProspect = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    try {
+      const body = partnerAcquisitionPromoteLeadToProspectBodySchema.parse(
+        request.body,
+      ) as PartnerAcquisitionPromoteLeadToProspectBody;
+      const params = partnerAcquisitionLeadIdParamsSchema.parse(request.params);
+      const command = {
+        ...buildCommandEnvelope(
+          request,
+          body.source,
+          body.sourceName ?? null,
+          body.sourceReference ?? null,
+          normalizeReferences(body.references),
+          normalizeCommandMetadata(body.metadata),
+        ),
+        commandType: 'PromotePartnerLeadToProspectCommand' as const,
+        leadId: params.leadId,
+      };
+
+      const result = await this.service.promoteLeadToProspect(command);
+
+      reply.status(result.created ? 201 : 200).send({
+        success: true,
+        data: partnerAcquisitionPromoteLeadToProspectResponseDtoSchema.parse(
+          result,
+        ) as PartnerAcquisitionPromoteLeadToProspectResponseDto,
       });
     } catch (error) {
       handleControllerError(error, reply);

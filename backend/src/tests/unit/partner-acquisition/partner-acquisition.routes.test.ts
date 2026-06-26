@@ -7,6 +7,7 @@ const serviceMock = vi.hoisted(() => ({
   findLeadByCode: vi.fn(),
   listLeads: vi.fn(),
   softDeleteLead: vi.fn(),
+  promoteLeadToProspect: vi.fn(),
   createProspect: vi.fn(),
   findProspectById: vi.fn(),
   findProspectByCode: vi.fn(),
@@ -139,6 +140,23 @@ describe('partner-acquisition routes', () => {
       payload: {
         leadCode: 'lead-403',
         fullName: 'Parceiro Sem Permissão',
+        source: 'CAMPAIGN',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('rejects promote requests without the dedicated permission with 403', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/promote-to-prospect`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create',
+        'idempotency-key': 'idem-promote-403',
+      },
+      payload: {
         source: 'CAMPAIGN',
       },
     });
@@ -324,6 +342,104 @@ describe('partner-acquisition routes', () => {
         sourceReference: 'h16t-smoke',
       }),
     );
+  });
+
+  it('promotes a lead to prospect through the service with tenant and idempotency context', async () => {
+    serviceMock.promoteLeadToProspect.mockResolvedValueOnce({
+      tenantId,
+      leadId,
+      prospectId,
+      leadStatus: 'QUALIFIED',
+      prospectStatus: 'NEW',
+      created: true,
+      replayed: false,
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/promote-to-prospect`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_acquisition:promote',
+        'idempotency-key': 'idem-promote-1',
+      },
+      payload: {
+        source: 'CAMPAIGN',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
+        metadata: {
+          source: 'CAMPAIGN',
+        },
+        references: [
+          {
+            kind: 'SOURCE',
+            refType: 'CAMPAIGN',
+            refId: 'camp-1',
+          },
+        ],
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(serviceMock.promoteLeadToProspect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        actorUserId: userId,
+        idempotencyKey: 'idem-promote-1',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId,
+        source: 'CAMPAIGN',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
+      }),
+    );
+    expect(handlerMock.handle).not.toHaveBeenCalled();
+    expect(response.json()).toEqual({
+      success: true,
+      data: {
+        tenantId,
+        leadId,
+        prospectId,
+        leadStatus: 'QUALIFIED',
+        prospectStatus: 'NEW',
+        created: true,
+        replayed: false,
+      },
+    });
+  });
+
+  it('rejects promote requests without idempotency-key', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/promote-to-prospect`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_acquisition:promote',
+      },
+      payload: {
+        source: 'CAMPAIGN',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects promote requests with invalid payload', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/promote-to-prospect`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_acquisition:promote',
+        'idempotency-key': 'idem-promote-invalid',
+      },
+      payload: {
+        source: 'CAMPAIGN',
+        unexpectedField: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it('converts a prospect and returns the conversion decision envelope', async () => {

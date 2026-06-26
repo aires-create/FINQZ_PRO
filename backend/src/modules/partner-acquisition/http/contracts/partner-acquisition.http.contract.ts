@@ -18,6 +18,8 @@ import type {
   PartnerAcquisitionLeadListQuery,
   PartnerAcquisitionNegotiationBody,
   PartnerAcquisitionPageMeta,
+  PartnerAcquisitionPromoteLeadToProspectBody,
+  PartnerAcquisitionPromoteLeadToProspectResponseDto,
   PartnerAcquisitionProspectCreateBody,
   PartnerAcquisitionProspectDto,
   PartnerAcquisitionProspectIdParams,
@@ -60,6 +62,7 @@ export type PartnerAcquisitionHttpPermissionMap = {
   listLeads: 'partner_acquisition:read';
   getLeadById: 'partner_acquisition:read';
   createLead: 'partner_acquisition:create';
+  promoteLeadToProspect: 'partner_acquisition:promote';
   listProspects: 'partner_prospect:read';
   getProspectById: 'partner_prospect:read';
   createProspect: 'partner_prospect:create';
@@ -105,6 +108,17 @@ export type PartnerAcquisitionHttpRouteContract =
       successStatusCode: 201;
       errorStatusCodes: readonly PartnerAcquisitionHttpStatusCode[];
       response: PartnerAcquisitionHttpSuccessEnvelope<PartnerAcquisitionLeadDto>;
+    }
+  | {
+      method: 'POST';
+      path: '/partner-acquisition/leads/:leadId/promote-to-prospect';
+      permission: PartnerAcquisitionHttpPermissionMap['promoteLeadToProspect'];
+      params: PartnerAcquisitionLeadIdParams;
+      headers: PartnerAcquisitionHttpMutatingHeadersContract;
+      body: PartnerAcquisitionPromoteLeadToProspectBody;
+      successStatusCode: 201;
+      errorStatusCodes: readonly PartnerAcquisitionHttpStatusCode[];
+      response: PartnerAcquisitionHttpSuccessEnvelope<PartnerAcquisitionPromoteLeadToProspectResponseDto>;
     }
   | {
       method: 'GET';
@@ -266,6 +280,11 @@ export const PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY = [
     method: 'POST',
     path: '/partner-acquisition/leads',
     permission: 'partner_acquisition:create',
+  },
+  {
+    method: 'POST',
+    path: '/partner-acquisition/leads/:leadId/promote-to-prospect',
+    permission: 'partner_acquisition:promote',
   },
   {
     method: 'GET',

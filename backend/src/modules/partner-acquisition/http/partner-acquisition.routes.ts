@@ -18,6 +18,7 @@ import {
   partnerAcquisitionLeadIdParamsSchema,
   partnerAcquisitionLeadListQuerySchema,
   partnerAcquisitionNegotiationBodySchema,
+  partnerAcquisitionPromoteLeadToProspectBodySchema,
   partnerAcquisitionProspectCreateBodySchema,
   partnerAcquisitionProspectIdParamsSchema,
   partnerAcquisitionProspectListQuerySchema,
@@ -120,6 +121,20 @@ export async function partnerAcquisitionRoutes(app: FastifyInstance): Promise<vo
       ],
     },
     partnerAcquisitionController.createLead,
+  );
+
+  app.post(
+    '/leads/:leadId/promote-to-prospect',
+    {
+      preHandler: [
+        requirePermissions('partner_acquisition:promote'),
+        validateTenantAndActor,
+        requireIdempotencyKey,
+        validate(partnerAcquisitionLeadIdParamsSchema, 'params'),
+        validate(partnerAcquisitionPromoteLeadToProspectBodySchema, 'body'),
+      ],
+    },
+    partnerAcquisitionController.promoteLeadToProspect,
   );
 
   app.get(

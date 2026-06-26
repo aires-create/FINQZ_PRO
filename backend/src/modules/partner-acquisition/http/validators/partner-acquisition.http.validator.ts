@@ -178,6 +178,16 @@ export const partnerAcquisitionProspectCreateBodySchema = z
   })
   .strict();
 
+export const partnerAcquisitionPromoteLeadToProspectBodySchema = z
+  .object({
+    source: partnerAcquisitionSourceSchema,
+    sourceName: optionalTextSchema(120),
+    sourceReference: optionalTextSchema(120),
+    metadata: partnerAcquisitionCommandMetadataSchema.optional(),
+    references: z.array(partnerAcquisitionReferenceSchema).optional(),
+  })
+  .strict();
+
 const partnerAcquisitionExpectedVersionSchema = z.number().int().min(0);
 
 export const partnerAcquisitionQualifyBodySchema = z
@@ -335,6 +345,18 @@ export const partnerAcquisitionConversionResponseDtoSchema = z
   })
   .strict();
 
+export const partnerAcquisitionPromoteLeadToProspectResponseDtoSchema = z
+  .object({
+    tenantId: uuidSchema,
+    leadId: uuidSchema,
+    prospectId: uuidSchema,
+    leadStatus: z.literal('QUALIFIED'),
+    prospectStatus: z.literal('NEW'),
+    created: z.boolean(),
+    replayed: z.boolean(),
+  })
+  .strict();
+
 export const partnerAcquisitionPageMetaSchema = z
   .object({
     page: z.number().int().min(1),
@@ -426,6 +448,9 @@ export type PartnerAcquisitionLeadCreateBody = z.infer<
 export type PartnerAcquisitionProspectCreateBody = z.infer<
   typeof partnerAcquisitionProspectCreateBodySchema
 >;
+export type PartnerAcquisitionPromoteLeadToProspectBody = z.infer<
+  typeof partnerAcquisitionPromoteLeadToProspectBodySchema
+>;
 export type PartnerAcquisitionQualifyBody = z.infer<
   typeof partnerAcquisitionQualifyBodySchema
 >;
@@ -465,6 +490,9 @@ export type PartnerAcquisitionConversionDecisionDto = z.infer<
 >;
 export type PartnerAcquisitionConversionResponseDto = z.infer<
   typeof partnerAcquisitionConversionResponseDtoSchema
+>;
+export type PartnerAcquisitionPromoteLeadToProspectResponseDto = z.infer<
+  typeof partnerAcquisitionPromoteLeadToProspectResponseDtoSchema
 >;
 export type PartnerAcquisitionPageMeta = z.infer<typeof partnerAcquisitionPageMetaSchema>;
 export type PartnerAcquisitionErrorEnvelope = z.infer<typeof partnerAcquisitionErrorSchema>;

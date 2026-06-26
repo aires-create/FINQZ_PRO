@@ -21,6 +21,8 @@ import {
   partnerAcquisitionLeadListQuerySchema,
   partnerAcquisitionLeadIdParamsSchema,
   partnerAcquisitionNegotiationBodySchema,
+  partnerAcquisitionPromoteLeadToProspectBodySchema,
+  partnerAcquisitionPromoteLeadToProspectResponseDtoSchema,
   partnerAcquisitionProspectCreateBodySchema,
   partnerAcquisitionProspectDtoSchema,
   partnerAcquisitionProspectIdParamsSchema,
@@ -43,11 +45,12 @@ const validatorSource = readFileSync(validatorPath, 'utf8');
 
 describe('partner-acquisition.http.contract', () => {
   it('defines the complete HTTP route inventory and RBAC matrix', () => {
-    expect(PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY).toHaveLength(16);
+    expect(PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY).toHaveLength(17);
     expect(PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY.map((route) => `${route.method} ${route.path}`)).toEqual([
       'GET /partner-acquisition/leads',
       'GET /partner-acquisition/leads/:leadId',
       'POST /partner-acquisition/leads',
+      'POST /partner-acquisition/leads/:leadId/promote-to-prospect',
       'GET /partner-acquisition/prospects',
       'GET /partner-acquisition/prospects/:prospectId',
       'POST /partner-acquisition/prospects',
@@ -66,6 +69,7 @@ describe('partner-acquisition.http.contract', () => {
       'partner_acquisition:read',
       'partner_acquisition:read',
       'partner_acquisition:create',
+      'partner_acquisition:promote',
       'partner_prospect:read',
       'partner_prospect:read',
       'partner_prospect:create',
@@ -201,7 +205,29 @@ describe('partner-acquisition.http.contract', () => {
       partnerCode: 'P-001',
       partnerName: 'Parceiro Exemplo LTDA',
       partnerType: 'COMPANY',
-    })).toMatchObject({ partnerCode: 'P-001' });
+      })).toMatchObject({ partnerCode: 'P-001' });
+
+    expect(
+      partnerAcquisitionPromoteLeadToProspectBodySchema.parse({
+        source: 'CAMPAIGN',
+        sourceName: 'H16T Smoke',
+        sourceReference: 'h16t-smoke',
+        metadata: {
+          source: 'CAMPAIGN',
+          pipelineCode: 'parceiros_comerciais',
+        },
+        references: [
+          {
+            kind: 'SOURCE',
+            refType: 'CAMPAIGN',
+            refId: 'camp-1',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      source: 'CAMPAIGN',
+      sourceName: 'H16T Smoke',
+    });
   });
 
   it('validates response DTOs and error envelopes', () => {
@@ -269,6 +295,21 @@ describe('partner-acquisition.http.contract', () => {
       conversionDecision: {
         approved: true,
       },
+    });
+
+    expect(
+      partnerAcquisitionPromoteLeadToProspectResponseDtoSchema.parse({
+        tenantId: '11111111-1111-1111-1111-111111111111',
+        leadId: '22222222-2222-2222-2222-222222222222',
+        prospectId: '33333333-3333-3333-3333-333333333333',
+        leadStatus: 'QUALIFIED',
+        prospectStatus: 'NEW',
+        created: true,
+        replayed: false,
+      }),
+    ).toMatchObject({
+      leadStatus: 'QUALIFIED',
+      created: true,
     });
 
     expect(

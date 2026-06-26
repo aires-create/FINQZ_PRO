@@ -24,6 +24,13 @@ export const PARTNER_ACQUISITION_RBAC_PERMISSIONS: readonly RbacPermissionDefini
     action: PermissionAction.CREATE,
   },
   {
+    name: 'Promote Partner Acquisition Lead',
+    slug: 'partner_acquisition:promote',
+    description: 'Promote qualified partner acquisition leads to prospects',
+    resource: 'partner_acquisition',
+    action: PermissionAction.UPDATE,
+  },
+  {
     name: 'Approve Partner Acquisition',
     slug: 'partner_acquisition:approve',
     description: 'Approve partner acquisition conversions',
