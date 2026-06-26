@@ -552,6 +552,13 @@ describe('partner-acquisition.service', () => {
           leadId: 'lead-1',
         }),
       ).rejects.toBeInstanceOf(ConflictError);
+      expect(repository.markCommandFailed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 'tenant-1',
+          idempotencyKey: 'idem-1',
+          error: `Partner lead cannot be promoted from status ${status}`,
+        }),
+      );
       expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
     },
   );
@@ -592,6 +599,97 @@ describe('partner-acquisition.service', () => {
         leadId: 'lead-1',
       }),
     ).rejects.toBeInstanceOf(NotFoundError);
+    expect(repository.markCommandFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        idempotencyKey: 'idem-1',
+        error: 'Partner lead not found',
+      }),
+    );
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+  });
+
+  it('replays a failed command with the stored not found error', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'CAMPAIGN',
+      },
+      status: 'FAILED',
+      result: {
+        error: 'Partner lead not found',
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.promoteLeadToProspect({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        source: 'CAMPAIGN',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(repository.findLeadById).not.toHaveBeenCalled();
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+  });
+
+  it('replays a failed command with the stored conflict error', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'PromotePartnerLeadToProspectCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+        source: 'CAMPAIGN',
+      },
+      status: 'FAILED',
+      result: {
+        error: 'Partner lead cannot be promoted from status NEW',
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.promoteLeadToProspect({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        source: 'CAMPAIGN',
+        commandType: 'PromotePartnerLeadToProspectCommand',
+        leadId: 'lead-1',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(repository.findLeadById).not.toHaveBeenCalled();
     expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
   });
 
@@ -687,5 +785,6 @@ describe('partner-acquisition.service', () => {
     ).rejects.toBeInstanceOf(ConflictError);
     expect(repository.findLeadById).not.toHaveBeenCalled();
     expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+    expect(repository.markCommandFailed).not.toHaveBeenCalled();
   });
 });

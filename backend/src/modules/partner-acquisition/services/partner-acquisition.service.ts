@@ -57,6 +57,31 @@ const isSamePayload = (
   right: Record<string, unknown>,
 ): boolean => JSON.stringify(left) === JSON.stringify(right);
 
+const getStoredCommandFailureMessage = (
+  commandRecord: PartnerAcquisitionCommandRecordInput,
+): string | null => {
+  const error = commandRecord.result?.error;
+
+  if (typeof error !== 'string' || !error.trim()) {
+    return null;
+  }
+
+  return error.trim();
+};
+
+const throwStoredCommandFailure = (
+  commandRecord: PartnerAcquisitionCommandRecordInput,
+): never => {
+  const message =
+    getStoredCommandFailureMessage(commandRecord) ?? 'Partner acquisition command already failed';
+
+  if (message.toLowerCase().includes('not found')) {
+    throw new NotFoundError(message);
+  }
+
+  throw new ConflictError(message);
+};
+
 const requireTenantContext = (tenantId: string): string => {
   if (!tenantId.trim()) {
     throw new BadRequestError('Missing tenant context');
@@ -150,72 +175,85 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
     }
 
     if (commandRecord.status === 'FAILED') {
-      throw new ConflictError('Partner acquisition command already failed');
+      throwStoredCommandFailure(commandRecord);
     }
 
-    const lead = await this.repository.findLeadById({
-      tenantId,
-      leadId: command.leadId,
-    });
+    try {
+      const lead = await this.repository.findLeadById({
+        tenantId,
+        leadId: command.leadId,
+      });
 
-    if (!lead) {
-      throw new NotFoundError('Partner lead not found');
-    }
+      if (!lead) {
+        throw new NotFoundError('Partner lead not found');
+      }
 
-    if (!canPromotePartnerLeadToProspect(lead.status)) {
-      throw new ConflictError(`Partner lead cannot be promoted from status ${lead.status}`);
-    }
+      if (!canPromotePartnerLeadToProspect(lead.status)) {
+        throw new ConflictError(`Partner lead cannot be promoted from status ${lead.status}`);
+      }
 
-    const prospectLookup = await this.repository.findProspectByTenantAndLead({
-      tenantId,
-      leadId: command.leadId,
-    });
+      const prospectLookup = await this.repository.findProspectByTenantAndLead({
+        tenantId,
+        leadId: command.leadId,
+      });
 
-    if (prospectLookup) {
-      const replayResult = toPromotionResult(
+      if (prospectLookup) {
+        const replayResult = toPromotionResult(
+          tenantId,
+          command.leadId,
+          prospectLookup.prospectId,
+          false,
+          true,
+        );
+
+        await this.repository.markCommandProcessed({
+          tenantId,
+          idempotencyKey: command.idempotencyKey,
+          processedAt: command.requestedAt,
+          result: replayResult as unknown as Record<string, unknown>,
+        });
+
+        return replayResult;
+      }
+
+      const prospect = await this.repository.promoteLeadToProspectInTransaction({
+        tenantId,
+        leadId: command.leadId,
+        prospectCode: command.leadId,
+      });
+
+      if (!prospect) {
+        throw new NotFoundError('Partner lead not found');
+      }
+
+      const result = toPromotionResult(
         tenantId,
         command.leadId,
-        prospectLookup.prospectId,
-        false,
+        prospect.prospectId,
         true,
+        false,
       );
 
       await this.repository.markCommandProcessed({
         tenantId,
         idempotencyKey: command.idempotencyKey,
         processedAt: command.requestedAt,
-        result: replayResult as unknown as Record<string, unknown>,
+        result: result as unknown as Record<string, unknown>,
       });
 
-      return replayResult;
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof ConflictError) {
+        await this.repository.markCommandFailed({
+          tenantId,
+          idempotencyKey: command.idempotencyKey,
+          failedAt: command.requestedAt,
+          error: error.message,
+        });
+      }
+
+      throw error;
     }
-
-    const prospect = await this.repository.promoteLeadToProspectInTransaction({
-      tenantId,
-      leadId: command.leadId,
-      prospectCode: command.leadId,
-    });
-
-    if (!prospect) {
-      throw new NotFoundError('Partner lead not found');
-    }
-
-    const result = toPromotionResult(
-      tenantId,
-      command.leadId,
-      prospect.prospectId,
-      true,
-      false,
-    );
-
-    await this.repository.markCommandProcessed({
-      tenantId,
-      idempotencyKey: command.idempotencyKey,
-      processedAt: command.requestedAt,
-      result: result as unknown as Record<string, unknown>,
-    });
-
-    return result;
   }
 
   createProspect(input: PartnerAcquisitionProspectCreateInput): Promise<PartnerProspect> {
