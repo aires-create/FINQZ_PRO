@@ -101,7 +101,7 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
       <PageHeader
         title="Aquisição de Parceiros"
         subtitle="Leads somente leitura da esteira de aquisição"
-        icon={UserPlus2}
+        icon={<UserPlus2 size={20} />}
         onRefresh={() => void loadLeads({ refreshing: true })}
         onSearch={setSearch}
         showFilter={false}
@@ -116,9 +116,9 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
       />
 
       <div className="grid gap-4 md:grid-cols-3">
-        <KpiCard title="Leads" value={summary.total} icon={UserPlus2} />
-        <KpiCard title="Novos" value={summary.newLeads} icon={UserPlus2} />
-        <KpiCard title="Convertidos" value={summary.converted} icon={UserPlus2} />
+        <KpiCard title="Leads" value={summary.total} icon={<UserPlus2 size={20} />} />
+        <KpiCard title="Novos" value={summary.newLeads} icon={<UserPlus2 size={20} />} />
+        <KpiCard title="Convertidos" value={summary.converted} icon={<UserPlus2 size={20} />} />
       </div>
 
       {isLoading ? (
@@ -143,7 +143,7 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
         <EmptyState
           title="Nenhum lead encontrado"
           description="Ainda não há leads de aquisição de parceiros para exibir."
-          icon={UserPlus2}
+          icon={<UserPlus2 size={20} />}
         />
       ) : (
         <Card className="overflow-hidden">
