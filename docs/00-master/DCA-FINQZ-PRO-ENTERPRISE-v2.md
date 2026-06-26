@@ -181,14 +181,14 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 ### 4.9 Partner Acquisition
 - Responsabilidade: [placeholder]
 - Owner: [placeholder]
-- Status: [placeholder]
+- Status: Production Ready with Restrictions
 - APIs: [placeholder]
 - Frontend: [placeholder]
 - Dependencias: [placeholder]
 - Consumers: [placeholder]
 - Producers: [placeholder]
 - Legados relacionados: [placeholder]
-- Proximas fases: [placeholder]
+- Proximas fases: harmonizacao documental DCA/ARCH, cobertura de testes de contrato e ajuste fino de UX/estado ENRICHED
 
 ### 4.10 Master Catalog
 - Responsabilidade: [placeholder]
@@ -323,7 +323,7 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 | Commercial Coverage | GO |
 | Partner Core | GO WITH RESTRICTIONS |
 | Partner Form Audit | Pending |
-| Partner Acquisition | GO, listagem e detalhe read-only aprovados ate H17C |
+| Partner Acquisition | Production Ready with Restrictions - Lead e Prospect runtime, listagem, detalhe e workflow oficial integrados |
 | Commercial Tables | Architecture / Pending Runtime |
 | Simulator | Pending Runtime |
 | RBAC / Permissions | GO WITH RESTRICTIONS |
@@ -400,6 +400,46 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 - Restricoes: manter somente refinamentos de UX.
 - Proxima fase: [placeholder]
 
+#### H18A
+- Objetivo: Partner Prospect Frontend Read-Only Runtime Foundation.
+- Decisao: aprovado runtime read-only para Prospects.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: build, arch:check e test aprovados.
+- Resultado: listagem e detalhe de Prospect disponiveis.
+- Restricoes: sem workflow, sem conversao, sem Partner.
+- Proxima fase: H18B.
+
+#### H18B
+- Objetivo: Prospect Workflow Action Readiness Audit e resolucao de contrato RBAC.
+- Decisao: arquitetura validada com restricoes; ARCH-073 consolidado como fonte canonica de RBAC para Prospect Runtime.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: auditoria tecnica em modo leitura.
+- Resultado: prontidao confirmada para H18C.
+- Restricoes: harmonizar divergencias documentais remanescentes.
+- Proxima fase: H18C.
+
+#### H18C
+- Objetivo: Partner Prospect Workflow Runtime Integration.
+- Decisao: workflow oficial integrado no detalhe do Prospect.
+- Arquivos: [`src/pages/PartnerAcquisitionProspectDetails.tsx`](../../src/pages/PartnerAcquisitionProspectDetails.tsx) [placeholder]
+- Commits: [placeholder]
+- Validacoes: build, arch:check e test aprovados.
+- Resultado: acoes oficiais com idempotencia, loading, erro, sucesso e refresh pos-sucesso.
+- Restricoes: acoes apenas no detalhe; listagem permanece read-only.
+- Proxima fase: H18D.
+
+#### H18D
+- Objetivo: Partner Acquisition Production Readiness Audit.
+- Decisao: GO WITH RESTRICTIONS.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: build, arch:check e test aprovados.
+- Resultado: modulo considerado pronto com restricoes operacionais.
+- Restricoes: divergencia documental residual; cobertura adicional de contrato e validacao de estado ENRICHED.
+- Proxima fase: harmonizacao documental e endurecimento de testes.
+
 ---
 
 ## 7. Ownership Matrix
@@ -448,6 +488,8 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 
 - `/app/operacoes/partner-acquisition/leads`
 - `/app/operacoes/partner-acquisition/leads/:leadId`
+- `/app/operacoes/partner-acquisition/prospects`
+- `/app/operacoes/partner-acquisition/prospects/:prospectId`
 
 ---
 
@@ -523,7 +565,7 @@ Antes de qualquer nova fase:
 
 ### Proxima fase imediata
 
-- H17D - Partner Acquisition UX Polish & Navigation
+- Harmonizacao documental do Partner Acquisition e consolidacao de testes de contrato para Prospect Runtime
 
 ---
 
@@ -597,11 +639,11 @@ Antes de qualquer nova fase:
 - Validacoes: [placeholder]
 
 ### 16.2 Wave H18
-- Status: [placeholder]
-- Objetivo: [placeholder]
-- Escopo: [placeholder]
-- Restrições: [placeholder]
-- Validacoes: [placeholder]
+- Status: em consolidacao
+- Objetivo: fechar runtime de Prospect, preparar endurecimento de contrato e harmonizar docs.
+- Escopo: Prospect list, detail, workflow, RBAC oficial, contratos e auditoria de prontidao.
+- Restrições: manter backend intacto; evitar fontes paralelas; seguir ARCH-073 para RBAC de Prospect.
+- Validacoes: build, arch:check, test e auditoria H18D.
 
 ### 16.3 Wave H19
 - Status: [placeholder]
@@ -615,4 +657,3 @@ Antes de qualquer nova fase:
 ## 17. Nota de Governanca
 
 Este skeleton e intencionalmente estruturado para continuidade. O preenchimento completo de historico, decisoes, matrizes e waves futuras deve ser feito somente por fases aprovadas.
-
