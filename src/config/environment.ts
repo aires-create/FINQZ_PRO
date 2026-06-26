@@ -114,17 +114,6 @@ export const ENDPOINTS = {
     DOCUMENTOS: (id: number) => getEndpoint('/api/documentos', id),
   },
   
-  // Parceiros
-  PARCEIROS: {
-    LIST: '/api/parceiros',
-    GET: (id: number) => getEndpoint('/api/parceiros', id),
-    CREATE: '/api/parceiros',
-    UPDATE: (id: number) => getEndpoint('/api/parceiros', id),
-    DELETE: (id: number) => getEndpoint('/api/parceiros', id),
-    RESET_SENHA: (id: number) => `${getEndpoint('/api/parceiros', id)}/reset-senha`,
-    TOGGLE_STATUS: (id: number) => `${getEndpoint('/api/parceiros', id)}/toggle-status`,
-  },
-  
   // Usuários
   USUARIOS: {
     // TODO(legacy-cleanup): manter alinhado ao endpoint oficial Fastify.
