@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, UserPlus2 } from "lucide-react";
+import { ArrowLeft, Loader2, UserPlus2 } from "lucide-react";
 import { Badge, Card, EmptyState, LoadingState } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import {
@@ -54,6 +54,15 @@ const getSourceLabel = (source: string): string => {
   return sourceLabels[source] ?? source;
 };
 
+const createIdempotencyKey = (action: string, prospectId: string): string => {
+  const randomValue =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  return `partner-acquisition:${action}:${prospectId}:${randomValue}`;
+};
+
 const BackButton: React.FC<{ label: string }> = ({ label }) => {
   const navigate = useNavigate();
 
@@ -82,11 +91,41 @@ const ProspectFieldRow: React.FC<{ label: string; value?: React.ReactNode }> = (
   <FieldRow label={label} value={value} />
 );
 
+type ProspectActionKey =
+  | "qualify"
+  | "disqualify"
+  | "negotiation"
+  | "documentation_requested"
+  | "documentation_received"
+  | "contract_requested"
+  | "contract_signed"
+  | "approve_conversion"
+  | "reject_conversion"
+  | "convert";
+
+type ProspectActionState = ProspectActionKey | null;
+
+type ProspectActionDefinition = {
+  key: ProspectActionKey;
+  label: string;
+  handler: () => Promise<void>;
+};
+
 const PartnerAcquisitionProspectDetailsPage: React.FC = () => {
   const { prospectId } = useParams<{ prospectId: string }>();
   const [prospect, setProspect] = useState<PartnerProspectRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<ProspectActionState>(null);
+
+  const refreshProspect = async (): Promise<void> => {
+    if (!prospectId) return;
+
+    const response = await partnerAcquisitionApi.getProspectById(prospectId);
+    setProspect(response.data ?? null);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -134,6 +173,382 @@ const PartnerAcquisitionProspectDetailsPage: React.FC = () => {
   }, [prospectId]);
 
   const sourceLabel = useMemo(() => (prospect ? getSourceLabel(prospect.source) : "-"), [prospect]);
+  const prospectActions = useMemo<ProspectActionDefinition[]>(() => {
+    if (!prospect) return [];
+
+    const runAction = async (
+      key: ProspectActionKey,
+      message: string,
+      request: () => Promise<unknown>,
+    ): Promise<void> => {
+      if (!prospectId) return;
+
+      setActiveAction(key);
+      setActionError(null);
+      setActionSuccess(null);
+
+      try {
+        await request();
+        await refreshProspect();
+        setActionSuccess(message);
+      } catch (caughtError) {
+        setActionError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Não foi possível executar a ação solicitada.",
+        );
+      } finally {
+        setActiveAction(null);
+      }
+    };
+
+    const actionFactories: Record<string, ProspectActionDefinition[]> = {
+      NEW: [
+        {
+          key: "qualify",
+          label: "Qualificar",
+          handler: () =>
+            runAction(
+              "qualify",
+              "Prospect qualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.qualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("qualify", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      CONTACTED: [
+        {
+          key: "qualify",
+          label: "Qualificar",
+          handler: () =>
+            runAction(
+              "qualify",
+              "Prospect qualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.qualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("qualify", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "negotiation",
+          label: "Mover para negociação",
+          handler: () =>
+            runAction(
+              "negotiation",
+              "Prospect movido para negociação com sucesso.",
+              () =>
+                partnerAcquisitionApi.moveProspectToNegotiation(
+                  prospect.prospectId,
+                  createIdempotencyKey("negotiation", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      QUALIFIED: [
+        {
+          key: "negotiation",
+          label: "Mover para negociação",
+          handler: () =>
+            runAction(
+              "negotiation",
+              "Prospect movido para negociação com sucesso.",
+              () =>
+                partnerAcquisitionApi.moveProspectToNegotiation(
+                  prospect.prospectId,
+                  createIdempotencyKey("negotiation", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "documentation_requested",
+          label: "Solicitar documentação",
+          handler: () =>
+            runAction(
+              "documentation-request",
+              "Documentação solicitada com sucesso.",
+              () =>
+                partnerAcquisitionApi.requestProspectDocumentation(
+                  prospect.prospectId,
+                  createIdempotencyKey("documentation-request", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      NEGOTIATING: [
+        {
+          key: "documentation_requested",
+          label: "Solicitar documentação",
+          handler: () =>
+            runAction(
+              "documentation-request",
+              "Documentação solicitada com sucesso.",
+              () =>
+                partnerAcquisitionApi.requestProspectDocumentation(
+                  prospect.prospectId,
+                  createIdempotencyKey("documentation-request", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "contract_requested",
+          label: "Solicitar contrato",
+          handler: () =>
+            runAction(
+              "contract-request",
+              "Contrato solicitado com sucesso.",
+              () =>
+                partnerAcquisitionApi.requestProspectContract(
+                  prospect.prospectId,
+                  createIdempotencyKey("contract-request", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      DOCUMENTATION: [
+        {
+          key: "documentation_received",
+          label: "Confirmar documentação recebida",
+          handler: () =>
+            runAction(
+              "documentation-received",
+              "Documentação recebida confirmada com sucesso.",
+              () =>
+                partnerAcquisitionApi.markProspectDocumentationReceived(
+                  prospect.prospectId,
+                  createIdempotencyKey("documentation-received", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "contract_requested",
+          label: "Solicitar contrato",
+          handler: () =>
+            runAction(
+              "contract-request",
+              "Contrato solicitado com sucesso.",
+              () =>
+                partnerAcquisitionApi.requestProspectContract(
+                  prospect.prospectId,
+                  createIdempotencyKey("contract-request", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      CONTRACT_PENDING: [
+        {
+          key: "contract_signed",
+          label: "Confirmar contrato assinado",
+          handler: () =>
+            runAction(
+              "contract-signed",
+              "Contrato assinado confirmado com sucesso.",
+              () =>
+                partnerAcquisitionApi.markProspectContractSigned(
+                  prospect.prospectId,
+                  createIdempotencyKey("contract-signed", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      AWAITING_SIGNATURE: [
+        {
+          key: "contract_signed",
+          label: "Confirmar contrato assinado",
+          handler: () =>
+            runAction(
+              "contract-signed",
+              "Contrato assinado confirmado com sucesso.",
+              () =>
+                partnerAcquisitionApi.markProspectContractSigned(
+                  prospect.prospectId,
+                  createIdempotencyKey("contract-signed", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      SIGNED: [
+        {
+          key: "approve_conversion",
+          label: "Aprovar conversão",
+          handler: () =>
+            runAction(
+              "conversion-approve",
+              "Conversão aprovada com sucesso.",
+              () =>
+                partnerAcquisitionApi.approveProspectConversion(
+                  prospect.prospectId,
+                  createIdempotencyKey("conversion-approve", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "reject_conversion",
+          label: "Rejeitar conversão",
+          handler: () =>
+            runAction(
+              "conversion-reject",
+              "Conversão rejeitada com sucesso.",
+              () =>
+                partnerAcquisitionApi.rejectProspectConversion(
+                  prospect.prospectId,
+                  createIdempotencyKey("conversion-reject", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "disqualify",
+          label: "Desqualificar",
+          handler: () =>
+            runAction(
+              "disqualify",
+              "Prospect desqualificado com sucesso.",
+              () =>
+                partnerAcquisitionApi.disqualifyProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("disqualify", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+      CONVERSION_PENDING: [
+        {
+          key: "convert",
+          label: "Converter Prospect",
+          handler: () =>
+            runAction(
+              "convert",
+              "Prospect convertido com sucesso.",
+              () =>
+                partnerAcquisitionApi.convertProspect(
+                  prospect.prospectId,
+                  createIdempotencyKey("convert", prospect.prospectId),
+                ),
+            ),
+        },
+        {
+          key: "reject_conversion",
+          label: "Rejeitar conversão",
+          handler: () =>
+            runAction(
+              "conversion-reject",
+              "Conversão rejeitada com sucesso.",
+              () =>
+                partnerAcquisitionApi.rejectProspectConversion(
+                  prospect.prospectId,
+                  createIdempotencyKey("conversion-reject", prospect.prospectId),
+                ),
+            ),
+        },
+      ],
+    };
+
+    return actionFactories[prospect.status] ?? [];
+  }, [prospect, prospectId]);
+
+  const isActionRunning = activeAction !== null;
 
   if (isLoading) {
     return (
@@ -210,6 +625,66 @@ const PartnerAcquisitionProspectDetailsPage: React.FC = () => {
         showFilter={false}
         actions={<BackButton label="Voltar" />}
       />
+
+      {(actionError || actionSuccess) && (
+        <Card
+          className={`border ${
+            actionError
+              ? "border-red-500/30 bg-red-500/5"
+              : "border-emerald-500/30 bg-emerald-500/5"
+          } p-4`}
+        >
+          <div
+            className={`text-sm font-medium ${
+              actionError ? "text-red-600" : "text-emerald-700"
+            }`}
+          >
+            {actionError ?? actionSuccess}
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">Ações de workflow</h2>
+              <p className="text-sm text-[var(--text-secondary)]">
+                Somente ações oficiais compatíveis com o status atual do Prospect.
+              </p>
+            </div>
+            {isActionRunning ? (
+              <span className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                <Loader2 size={16} className="animate-spin" />
+                Processando
+              </span>
+            ) : null}
+          </div>
+
+          {prospectActions.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-4 text-sm text-[var(--text-secondary)]">
+              Sem ações disponíveis para o status atual.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {prospectActions.map((action) => (
+                <button
+                  key={action.key}
+                  type="button"
+                  onClick={() => void action.handler()}
+                  disabled={isActionRunning}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isActionRunning && activeAction === action.key ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : null}
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
