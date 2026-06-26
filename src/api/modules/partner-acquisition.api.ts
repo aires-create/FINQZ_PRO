@@ -8,17 +8,19 @@ export type PartnerAcquisitionLeadStatus = 'NEW' | 'ENRICHED' | 'CONTACTED' | 'Q
 
 export type PartnerProspectStatus =
   | 'NEW'
+  | 'ENRICHED'
+  | 'CONTACTED'
   | 'QUALIFIED'
-  | 'DISQUALIFIED'
-  | 'NEGOTIATION'
-  | 'DOCUMENTATION_REQUESTED'
-  | 'DOCUMENTATION_RECEIVED'
-  | 'CONTRACT_REQUESTED'
-  | 'CONTRACT_SIGNED'
-  | 'CONVERSION_APPROVED'
-  | 'CONVERSION_REJECTED'
+  | 'NEGOTIATING'
+  | 'DOCUMENTATION'
+  | 'CONTRACT_PENDING'
+  | 'AWAITING_SIGNATURE'
+  | 'SIGNED'
+  | 'CONVERSION_PENDING'
   | 'CONVERTED'
-  | 'ARCHIVED';
+  | 'LOST'
+  | 'ARCHIVED'
+  | 'REJECTED';
 
 export interface PartnerAcquisitionMeta {
   page: number;
