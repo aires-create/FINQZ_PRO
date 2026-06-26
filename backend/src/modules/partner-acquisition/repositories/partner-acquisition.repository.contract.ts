@@ -72,6 +72,12 @@ export interface PartnerAcquisitionLeadSoftDeleteInput {
   deletedAt: string;
 }
 
+export interface PartnerAcquisitionLeadLifecycleUpdateInput {
+  tenantId: string;
+  leadId: string;
+  status: PartnerLeadStatus;
+}
+
 export interface PartnerAcquisitionProspectCreateInput {
   tenantId: string;
   prospectCode: string;
@@ -277,6 +283,9 @@ export interface PartnerAcquisitionRepositoryContract {
   findLeadByCode(input: PartnerAcquisitionLeadCodeLookup): Promise<PartnerLead | null>;
   listLeads(input: PartnerAcquisitionLeadListQuery): Promise<PartnerLead[]>;
   softDeleteLead(input: PartnerAcquisitionLeadSoftDeleteInput): Promise<PartnerLead | null>;
+  updateLeadLifecycle(
+    input: PartnerAcquisitionLeadLifecycleUpdateInput,
+  ): Promise<PartnerLead | null>;
 
   createProspect(input: PartnerAcquisitionProspectCreateInput): Promise<PartnerProspect>;
   findProspectById(input: PartnerAcquisitionProspectLookup): Promise<PartnerProspect | null>;

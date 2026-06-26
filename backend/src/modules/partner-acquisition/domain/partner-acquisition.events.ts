@@ -10,6 +10,7 @@ import type {
 
 export const PARTNER_ACQUISITION_EVENT_NAMES = [
   'PartnerLeadCreated',
+  'PartnerLeadStatusChanged',
   'PartnerProspectCreated',
   'PartnerProspectQualified',
   'PartnerProspectDisqualified',
@@ -49,6 +50,15 @@ export interface PartnerLeadCreatedEvent extends PartnerAcquisitionEventEnvelope
   leadStatus: PartnerLeadStatus;
   channel: PartnerLeadChannel;
   fullName: string;
+}
+
+export interface PartnerLeadStatusChangedEvent extends PartnerAcquisitionEventEnvelope {
+  eventType: 'PartnerLeadStatusChanged';
+  aggregateType: 'PARTNER_LEAD';
+  leadId: string;
+  previousStatus: PartnerLeadStatus;
+  nextStatus: PartnerLeadStatus;
+  reason?: string | null;
 }
 
 export interface PartnerProspectCreatedEvent extends PartnerAcquisitionEventEnvelope {
@@ -167,6 +177,7 @@ export interface PartnerProspectConvertedToPartnerEvent
 
 export type PartnerAcquisitionEvent =
   | PartnerLeadCreatedEvent
+  | PartnerLeadStatusChangedEvent
   | PartnerProspectCreatedEvent
   | PartnerProspectQualifiedEvent
   | PartnerProspectDisqualifiedEvent
@@ -178,4 +189,3 @@ export type PartnerAcquisitionEvent =
   | PartnerProspectConversionApprovedEvent
   | PartnerProspectConversionRejectedEvent
   | PartnerProspectConvertedToPartnerEvent;
-

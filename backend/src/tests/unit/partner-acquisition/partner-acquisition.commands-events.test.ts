@@ -15,6 +15,7 @@ import {
 } from '../../../modules/partner-acquisition/domain/partner-acquisition.contract.js';
 import {
   PARTNER_ACQUISITION_COMMAND_TYPES,
+  PARTNER_LEAD_LIFECYCLE_COMMAND_TYPES,
   type ApprovePartnerProspectConversionCommand,
   type ConvertPartnerProspectToPartnerCommand,
   type CreatePartnerLeadCommand,
@@ -27,10 +28,12 @@ import {
   type RejectPartnerProspectConversionCommand,
   type RequestPartnerProspectContractCommand,
   type RequestPartnerProspectDocumentationCommand,
+  type TransitionPartnerLeadCommand,
 } from '../../../modules/partner-acquisition/domain/partner-acquisition.commands.js';
 import {
   PARTNER_ACQUISITION_EVENT_NAMES,
   type PartnerLeadCreatedEvent,
+  type PartnerLeadStatusChangedEvent,
   type PartnerProspectContractSignedEvent,
   type PartnerProspectConvertedToPartnerEvent,
   type PartnerProspectCreatedEvent,
@@ -146,6 +149,7 @@ describe('partner-acquisition.commands-events', () => {
   it('exports the complete event type union', () => {
     expect(PARTNER_ACQUISITION_EVENT_NAMES).toEqual([
       'PartnerLeadCreated',
+      'PartnerLeadStatusChanged',
       'PartnerProspectCreated',
       'PartnerProspectQualified',
       'PartnerProspectDisqualified',
@@ -157,6 +161,12 @@ describe('partner-acquisition.commands-events', () => {
       'PartnerProspectConversionApproved',
       'PartnerProspectConversionRejected',
       'PartnerProspectConvertedToPartner',
+    ]);
+  });
+
+  it('exports the lead lifecycle command surface', () => {
+    expect(PARTNER_LEAD_LIFECYCLE_COMMAND_TYPES).toEqual([
+      'TransitionPartnerLeadCommand',
     ]);
   });
 
@@ -271,6 +281,19 @@ describe('partner-acquisition.commands-events', () => {
       conversionApprovedAt: '2026-06-25T00:00:00.000Z',
     };
 
+    const transition: TransitionPartnerLeadCommand = {
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      commandType: 'TransitionPartnerLeadCommand',
+      leadId: 'lead-1',
+      nextStatus: 'QUALIFIED',
+      reason: 'Smoke qualification',
+    };
+
     const commands = [
       createLead,
       createProspect,
@@ -284,6 +307,7 @@ describe('partner-acquisition.commands-events', () => {
       approve,
       reject,
       convert,
+      transition,
     ];
 
     for (const command of commands) {
@@ -296,6 +320,7 @@ describe('partner-acquisition.commands-events', () => {
     }
 
     expect(convert.aggregateType).toBe('PARTNER_PROSPECT');
+    expect(transition.nextStatus).toBe('QUALIFIED');
   });
 
   it('requires event envelopes to carry ids, correlation and tenant scope', () => {
@@ -308,6 +333,17 @@ describe('partner-acquisition.commands-events', () => {
       leadStatus: 'NEW',
       channel: 'CAMPAIGN',
       fullName: 'Parceiro Exemplo',
+    };
+
+    const leadStatusChanged: PartnerLeadStatusChangedEvent = {
+      ...eventEnvelope,
+      eventType: 'PartnerLeadStatusChanged',
+      aggregateType: 'PARTNER_LEAD',
+      aggregateId: 'lead-1',
+      leadId: 'lead-1',
+      previousStatus: 'NEW',
+      nextStatus: 'QUALIFIED',
+      reason: 'Smoke qualification',
     };
 
     const prospectCreated: PartnerProspectCreatedEvent = {
@@ -440,6 +476,7 @@ describe('partner-acquisition.commands-events', () => {
 
     const events = [
       created,
+      leadStatusChanged,
       prospectCreated,
       qualified,
       disqualified,
@@ -463,6 +500,7 @@ describe('partner-acquisition.commands-events', () => {
 
     expect(new Set(events.map((event) => event.aggregateId))).toEqual(new Set(['lead-1', 'prospect-1']));
     expect(converted.partnerId).toBe('partner-1');
+    expect(leadStatusChanged.nextStatus).toBe('QUALIFIED');
   });
 
   it('keeps Opportunity out of the aggregate type surface', () => {

@@ -15,6 +15,7 @@ import type {
   PartnerAcquisitionLeadCodeLookup,
   PartnerAcquisitionLeadCreateInput,
   PartnerAcquisitionLeadLookup,
+  PartnerAcquisitionLeadLifecycleUpdateInput,
   PartnerAcquisitionLeadProspectPromotionInput,
   PartnerAcquisitionOutboxPendingQuery,
   PartnerAcquisitionOutboxProgressInput,
@@ -45,6 +46,7 @@ const repositoryContractShape = {
   findLeadByCode: async (_input) => null,
   listLeads: async (_input) => [],
   softDeleteLead: async (_input) => null,
+  updateLeadLifecycle: async (_input) => null,
   createProspect: async (_input) => null as never,
   findProspectById: async (_input) => null,
   findProspectByTenantAndLead: async (_input) => null,
@@ -77,6 +79,7 @@ describe('partner-acquisition.repository.contract', () => {
       'findLeadByCode',
       'listLeads',
       'softDeleteLead',
+      'updateLeadLifecycle',
       'createProspect',
       'findProspectById',
       'findProspectByTenantAndLead',
@@ -311,6 +314,12 @@ describe('partner-acquisition.repository.contract', () => {
       deletedAt: '2026-06-25T00:00:00.000Z',
     } satisfies PartnerAcquisitionLeadSoftDeleteInput;
 
+    const leadLifecycleUpdate = {
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      status: 'QUALIFIED',
+    } satisfies PartnerAcquisitionLeadLifecycleUpdateInput;
+
     const softDeleteProspect = {
       tenantId: 'tenant-1',
       prospectId: 'prospect-1',
@@ -321,6 +330,7 @@ describe('partner-acquisition.repository.contract', () => {
     expect(lifecycleUpdate.expectedVersion).toBe(3);
     expect(linkInput.partnerId).toBe('partner-1');
     expect(softDeleteLead.leadId).toBe('lead-1');
+    expect(leadLifecycleUpdate.status).toBe('QUALIFIED');
     expect(softDeleteProspect.expectedVersion).toBe(5);
   });
 

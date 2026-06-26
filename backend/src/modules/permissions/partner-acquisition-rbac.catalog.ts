@@ -24,6 +24,13 @@ export const PARTNER_ACQUISITION_RBAC_PERMISSIONS: readonly RbacPermissionDefini
     action: PermissionAction.CREATE,
   },
   {
+    name: 'Transition Partner Acquisition Lead',
+    slug: 'partner_acquisition:transition',
+    description: 'Transition partner acquisition leads through lifecycle stages',
+    resource: 'partner_acquisition',
+    action: PermissionAction.UPDATE,
+  },
+  {
     name: 'Promote Partner Acquisition Lead',
     slug: 'partner_acquisition:promote',
     description: 'Promote qualified partner acquisition leads to prospects',

@@ -20,6 +20,8 @@ import {
   partnerAcquisitionLeadDtoSchema,
   partnerAcquisitionLeadListQuerySchema,
   partnerAcquisitionLeadIdParamsSchema,
+  partnerAcquisitionLeadTransitionBodySchema,
+  partnerAcquisitionLeadTransitionResponseDtoSchema,
   partnerAcquisitionNegotiationBodySchema,
   partnerAcquisitionPromoteLeadToProspectBodySchema,
   partnerAcquisitionPromoteLeadToProspectResponseDtoSchema,
@@ -45,11 +47,12 @@ const validatorSource = readFileSync(validatorPath, 'utf8');
 
 describe('partner-acquisition.http.contract', () => {
   it('defines the complete HTTP route inventory and RBAC matrix', () => {
-    expect(PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY).toHaveLength(17);
+    expect(PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY).toHaveLength(18);
     expect(PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY.map((route) => `${route.method} ${route.path}`)).toEqual([
       'GET /partner-acquisition/leads',
       'GET /partner-acquisition/leads/:leadId',
       'POST /partner-acquisition/leads',
+      'POST /partner-acquisition/leads/:leadId/transition',
       'POST /partner-acquisition/leads/:leadId/promote-to-prospect',
       'GET /partner-acquisition/prospects',
       'GET /partner-acquisition/prospects/:prospectId',
@@ -69,6 +72,7 @@ describe('partner-acquisition.http.contract', () => {
       'partner_acquisition:read',
       'partner_acquisition:read',
       'partner_acquisition:create',
+      'partner_acquisition:transition',
       'partner_acquisition:promote',
       'partner_prospect:read',
       'partner_prospect:read',
@@ -214,6 +218,15 @@ describe('partner-acquisition.http.contract', () => {
     ).toMatchObject({
       source: 'CAMPAIGN',
     });
+
+    expect(
+      partnerAcquisitionLeadTransitionBodySchema.parse({
+        nextStatus: 'QUALIFIED',
+        reason: 'Smoke qualification',
+      }),
+    ).toMatchObject({
+      nextStatus: 'QUALIFIED',
+    });
   });
 
   it('validates response DTOs and error envelopes', () => {
@@ -296,6 +309,22 @@ describe('partner-acquisition.http.contract', () => {
     ).toMatchObject({
       leadStatus: 'QUALIFIED',
       created: true,
+    });
+
+    expect(
+      partnerAcquisitionLeadTransitionResponseDtoSchema.parse({
+        tenantId: '11111111-1111-1111-1111-111111111111',
+        leadId: '22222222-2222-2222-2222-222222222222',
+        leadCode: 'lead-001',
+        fullName: 'Parceiro Exemplo',
+        source: 'CAMPAIGN',
+        status: 'QUALIFIED',
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
+      }),
+    ).toMatchObject({
+      leadId: '22222222-2222-2222-2222-222222222222',
+      status: 'QUALIFIED',
     });
 
     expect(

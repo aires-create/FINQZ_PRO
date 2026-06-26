@@ -7,6 +7,7 @@ const serviceMock = vi.hoisted(() => ({
   findLeadByCode: vi.fn(),
   listLeads: vi.fn(),
   softDeleteLead: vi.fn(),
+  transitionLead: vi.fn(),
   promoteLeadToProspect: vi.fn(),
   createProspect: vi.fn(),
   findProspectById: vi.fn(),
@@ -158,6 +159,23 @@ describe('partner-acquisition routes', () => {
       },
       payload: {
         source: 'CAMPAIGN',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('rejects transition requests without the dedicated permission with 403', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/transition`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create',
+        'idempotency-key': 'idem-transition-403',
+      },
+      payload: {
+        nextStatus: 'QUALIFIED',
       },
     });
 
@@ -392,6 +410,114 @@ describe('partner-acquisition routes', () => {
         replayed: false,
       },
     });
+  });
+
+  it('transitions a lead through the service with tenant and idempotency context', async () => {
+    serviceMock.transitionLead.mockResolvedValueOnce({
+      tenantId,
+      leadId,
+      leadCode: leadId,
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      source: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status: 'QUALIFIED',
+      score: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/transition`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_acquisition:transition',
+        'idempotency-key': 'idem-transition-1',
+      },
+      payload: {
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(serviceMock.transitionLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        actorUserId: userId,
+        idempotencyKey: 'idem-transition-1',
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId,
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      }),
+    );
+    expect(handlerMock.handle).not.toHaveBeenCalled();
+    expect(response.json()).toEqual({
+      success: true,
+      data: {
+        tenantId,
+        leadId,
+        leadCode: leadId,
+        fullName: 'Parceiro Exemplo',
+        email: null,
+        phone: null,
+        companyName: null,
+        document: null,
+        source: 'CAMPAIGN',
+        sourceName: null,
+        sourceReference: null,
+        campaignId: null,
+        hubContextId: null,
+        ownerUserId: null,
+        status: 'QUALIFIED',
+        score: null,
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
+      },
+    });
+  });
+
+  it('rejects transition requests without idempotency-key', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/transition`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_acquisition:transition',
+      },
+      payload: {
+        nextStatus: 'QUALIFIED',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('rejects transition requests with invalid payload', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/v1/partner-acquisition/leads/${leadId}/transition`,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'partner_acquisition:read,partner_acquisition:create,partner_acquisition:transition',
+        'idempotency-key': 'idem-transition-invalid',
+      },
+      payload: {
+        nextStatus: 'QUALIFIED',
+        unexpectedField: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
   });
 
   it('rejects promote requests without idempotency-key', async () => {

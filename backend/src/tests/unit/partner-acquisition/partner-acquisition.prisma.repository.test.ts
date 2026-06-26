@@ -163,6 +163,56 @@ describe('partner-acquisition.prisma.repository', () => {
     );
   });
 
+  it('updates lead lifecycle status in a tenant-scoped transaction', async () => {
+    const client = createMockClient();
+    client.partnerAcquisitionLead.updateMany.mockResolvedValue({ count: 1 });
+    client.partnerAcquisitionLead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      tenantId: 'tenant-1',
+      leadCode: 'lead-001',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status: 'QUALIFIED',
+      score: null,
+      version: 1,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+
+    const repository = new PartnerAcquisitionPrismaRepository(client as never);
+
+    const lead = await repository.updateLeadLifecycle({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      status: 'QUALIFIED',
+    });
+
+    expect(client.partnerAcquisitionLead.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: 'tenant-1',
+          id: 'lead-1',
+          deletedAt: null,
+        }),
+        data: expect.objectContaining({
+          status: 'QUALIFIED',
+          version: { increment: 1 },
+        }),
+      }),
+    );
+    expect(lead?.status).toBe('QUALIFIED');
+  });
+
   it('creates and updates prospects with optimistic locking and partner linking', async () => {
     const client = createMockClient();
     client.partnerAcquisitionProspect.create.mockResolvedValue({

@@ -184,6 +184,13 @@ export const partnerAcquisitionPromoteLeadToProspectBodySchema = z
   })
   .strict();
 
+export const partnerAcquisitionLeadTransitionBodySchema = z
+  .object({
+    nextStatus: partnerAcquisitionLeadStatusSchema,
+    reason: optionalTextSchema(255),
+  })
+  .strict();
+
 const partnerAcquisitionExpectedVersionSchema = z.number().int().min(0);
 
 export const partnerAcquisitionQualifyBodySchema = z
@@ -353,6 +360,8 @@ export const partnerAcquisitionPromoteLeadToProspectResponseDtoSchema = z
   })
   .strict();
 
+export const partnerAcquisitionLeadTransitionResponseDtoSchema = partnerAcquisitionLeadDtoSchema;
+
 export const partnerAcquisitionPageMetaSchema = z
   .object({
     page: z.number().int().min(1),
@@ -447,6 +456,9 @@ export type PartnerAcquisitionProspectCreateBody = z.infer<
 export type PartnerAcquisitionPromoteLeadToProspectBody = z.infer<
   typeof partnerAcquisitionPromoteLeadToProspectBodySchema
 >;
+export type PartnerAcquisitionLeadTransitionBody = z.infer<
+  typeof partnerAcquisitionLeadTransitionBodySchema
+>;
 export type PartnerAcquisitionQualifyBody = z.infer<
   typeof partnerAcquisitionQualifyBodySchema
 >;
@@ -489,6 +501,9 @@ export type PartnerAcquisitionConversionResponseDto = z.infer<
 >;
 export type PartnerAcquisitionPromoteLeadToProspectResponseDto = z.infer<
   typeof partnerAcquisitionPromoteLeadToProspectResponseDtoSchema
+>;
+export type PartnerAcquisitionLeadTransitionResponseDto = z.infer<
+  typeof partnerAcquisitionLeadTransitionResponseDtoSchema
 >;
 export type PartnerAcquisitionPageMeta = z.infer<typeof partnerAcquisitionPageMetaSchema>;
 export type PartnerAcquisitionErrorEnvelope = z.infer<typeof partnerAcquisitionErrorSchema>;

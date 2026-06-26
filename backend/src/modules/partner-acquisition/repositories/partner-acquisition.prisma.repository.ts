@@ -26,6 +26,7 @@ import type {
   PartnerAcquisitionLeadCreateInput,
   PartnerAcquisitionLeadListQuery,
   PartnerAcquisitionLeadLookup,
+  PartnerAcquisitionLeadLifecycleUpdateInput,
   PartnerAcquisitionLeadProspectPromotionInput,
   PartnerAcquisitionLeadSoftDeleteInput,
   PartnerAcquisitionOutboxPendingQuery,
@@ -476,6 +477,34 @@ export class PartnerAcquisitionPrismaRepository
     const lead = await findLeadByTenantAndId(this.client, input.tenantId, input.leadId);
 
     return lead ? toLeadModel(lead) : null;
+  }
+
+  async updateLeadLifecycle(
+    input: PartnerAcquisitionLeadLifecycleUpdateInput,
+  ): Promise<PartnerLead | null> {
+    return runInTransaction(this.client, async (transaction) => {
+      const updated = await transaction.partnerAcquisitionLead.updateMany({
+        where: {
+          id: input.leadId,
+          ...tenantFilter(input.tenantId),
+          deletedAt: null,
+        },
+        data: {
+          status: input.status,
+          version: {
+            increment: 1,
+          },
+        },
+      });
+
+      if (updated.count !== 1) {
+        return null;
+      }
+
+      const lead = await findLeadByTenantAndId(transaction, input.tenantId, input.leadId);
+
+      return lead ? toLeadModel(lead) : null;
+    });
   }
 
   async createProspect(

@@ -34,6 +34,9 @@ import type {
   PromotePartnerLeadToProspectCommand,
   PromotePartnerLeadToProspectResult,
 } from '../domain/partner-lead-prospect-handoff.contract.js';
+import type {
+  TransitionPartnerLeadCommand,
+} from '../domain/partner-acquisition.commands.js';
 
 export interface PartnerAcquisitionServiceContract {
   createLead(input: PartnerAcquisitionLeadCreateInput): Promise<PartnerLead>;
@@ -41,6 +44,9 @@ export interface PartnerAcquisitionServiceContract {
   findLeadByCode(input: PartnerAcquisitionLeadCodeLookup): Promise<PartnerLead | null>;
   listLeads(input: PartnerAcquisitionLeadListQuery): Promise<PartnerLead[]>;
   softDeleteLead(input: PartnerAcquisitionLeadSoftDeleteInput): Promise<PartnerLead | null>;
+  transitionLead(
+    input: TransitionPartnerLeadCommand,
+  ): Promise<PartnerLead>;
 
   promoteLeadToProspect(
     input: PromotePartnerLeadToProspectCommand,

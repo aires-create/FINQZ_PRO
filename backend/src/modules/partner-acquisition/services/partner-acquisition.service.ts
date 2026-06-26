@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type {
   PartnerAcquisitionCommandFailureInput,
   PartnerAcquisitionCommandLookup,
@@ -28,6 +30,7 @@ import type {
 } from '../repositories/partner-acquisition.repository.contract.js';
 import type {
   PartnerAcquisitionConversionDecision,
+  PartnerAcquisitionEventMetadata,
   PartnerLead,
   PartnerProspect,
 } from '../domain/partner-acquisition.contract.js';
@@ -36,6 +39,10 @@ import {
   type PromotePartnerLeadToProspectCommand,
   type PromotePartnerLeadToProspectResult,
 } from '../domain/partner-lead-prospect-handoff.contract.js';
+import { canTransitionPartnerLead } from '../domain/partner-lead-lifecycle.contract.js';
+import type {
+  TransitionPartnerLeadCommand,
+} from '../domain/partner-acquisition.commands.js';
 import { partnerAcquisitionPrismaRepository } from '../repositories/partner-acquisition.prisma.repository.js';
 import type { PartnerAcquisitionServiceContract } from './partner-acquisition.service.contract.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../../../shared/errors/AppError.js';
@@ -50,6 +57,15 @@ const buildPromotionPayload = (
   ...(command.sourceReference !== undefined ? { sourceReference: command.sourceReference } : {}),
   ...(command.references !== undefined ? { references: command.references } : {}),
   ...(command.metadata !== undefined ? { metadata: command.metadata } : {}),
+});
+
+const buildLeadTransitionPayload = (
+  command: TransitionPartnerLeadCommand,
+): Record<string, unknown> => ({
+  commandType: command.commandType,
+  leadId: command.leadId,
+  nextStatus: command.nextStatus,
+  ...(command.reason !== undefined ? { reason: command.reason } : {}),
 });
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -154,6 +170,18 @@ const toPromotionResult = (
   replayed,
 });
 
+const buildLeadTransitionEventPayload = (
+  leadId: string,
+  previousStatus: string,
+  nextStatus: string,
+  reason?: string | null,
+): Record<string, unknown> => ({
+  leadId,
+  previousStatus,
+  nextStatus,
+  ...(reason !== undefined && reason !== null ? { reason } : {}),
+});
+
 export class PartnerAcquisitionService implements PartnerAcquisitionServiceContract {
   constructor(
     private readonly repository: PartnerAcquisitionRepositoryContract = partnerAcquisitionPrismaRepository,
@@ -179,6 +207,138 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
 
   softDeleteLead(input: PartnerAcquisitionLeadSoftDeleteInput): Promise<PartnerLead | null> {
     return this.repository.softDeleteLead(input);
+  }
+
+  async transitionLead(command: TransitionPartnerLeadCommand): Promise<PartnerLead> {
+    const tenantId = requireTenantContext(command.tenantId);
+    requireActorUserId(command.actorUserId);
+    const commandType = command.commandType as unknown as PartnerAcquisitionCommandRecordInput['commandType'];
+    const payload = buildLeadTransitionPayload(command);
+
+    const commandRecord = await this.repository.recordCommand({
+      tenantId,
+      commandType,
+      aggregateId: command.leadId,
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: command.actorUserId,
+      requestId: command.requestId,
+      correlationId: command.correlationId,
+      idempotencyKey: command.idempotencyKey,
+      receivedAt: command.requestedAt,
+      payload,
+    });
+
+    if (!isSamePayload(commandRecord.payload, payload)) {
+      throw new ConflictError('Partner acquisition idempotency payload mismatch');
+    }
+
+    if (commandRecord.status === 'PROCESSED') {
+      const result =
+        commandRecord.result && typeof commandRecord.result === 'object'
+          ? (commandRecord.result as unknown as PartnerLead)
+          : null;
+
+      if (!result) {
+        throw new ConflictError('Partner acquisition replay is missing stored result');
+      }
+
+      return result;
+    }
+
+    if (commandRecord.status === 'FAILED') {
+      throwStoredCommandFailure(commandRecord);
+    }
+
+    try {
+      const lead = await this.repository.findLeadById({
+        tenantId,
+        leadId: command.leadId,
+      });
+
+      if (!lead) {
+        throw new NotFoundError('Partner lead not found');
+      }
+
+      if (!canTransitionPartnerLead(lead.status, command.nextStatus)) {
+        throw new ConflictError(
+          `Partner lead cannot transition from status ${lead.status} to ${command.nextStatus}`,
+        );
+      }
+
+      const updatedLead = await this.repository.updateLeadLifecycle({
+        tenantId,
+        leadId: command.leadId,
+        status: command.nextStatus,
+      });
+
+      if (!updatedLead) {
+        throw new NotFoundError('Partner lead not found');
+      }
+
+      const events = await this.repository.listEventsByAggregate({
+        tenantId,
+        aggregateId: command.leadId,
+        aggregateType: 'PARTNER_LEAD',
+      });
+      const version = (events.at(-1)?.version ?? 0) + 1;
+      const eventId = randomUUID();
+      const eventPayload = buildLeadTransitionEventPayload(
+        command.leadId,
+        lead.status,
+        command.nextStatus,
+        command.reason ?? null,
+      );
+      const metadata: PartnerAcquisitionEventMetadata = {
+        source: lead.channel,
+        previousStatus: lead.status as never,
+        nextStatus: command.nextStatus as never,
+        ...(command.reason !== undefined && command.reason !== null ? { reason: command.reason } : {}),
+      };
+
+      await this.repository.appendEvent({
+        tenantId,
+        eventId,
+        aggregateId: command.leadId,
+        aggregateType: 'PARTNER_LEAD',
+        eventType: 'PartnerLeadStatusChanged',
+        actorUserId: command.actorUserId,
+        requestId: command.requestId,
+        correlationId: command.correlationId,
+        idempotencyKey: command.idempotencyKey,
+        occurredAt: command.requestedAt,
+        payload: eventPayload,
+        metadata,
+        version,
+      });
+      await this.repository.enqueueOutboxEvent({
+        tenantId,
+        eventId,
+        aggregateId: command.leadId,
+        aggregateType: 'PARTNER_LEAD',
+        eventType: 'PartnerLeadStatusChanged',
+        availableAt: command.requestedAt,
+        payload: eventPayload,
+      });
+      await this.repository.markCommandProcessed({
+        tenantId,
+        idempotencyKey: command.idempotencyKey,
+        processedAt: command.requestedAt,
+        result: updatedLead as unknown as Record<string, unknown>,
+      });
+
+      return updatedLead;
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof ConflictError) {
+        await this.repository.markCommandFailed({
+          tenantId,
+          idempotencyKey: command.idempotencyKey,
+          failedAt: command.requestedAt,
+          error: error.message,
+        });
+      }
+
+      throw error;
+    }
   }
 
   async promoteLeadToProspect(

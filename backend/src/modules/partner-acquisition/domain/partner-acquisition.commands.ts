@@ -3,6 +3,7 @@ import type {
   PartnerAcquisitionCommandMetadata,
   PartnerAcquisitionReference,
   PartnerAcquisitionSource,
+  PartnerLeadStatus,
   PartnerProspectStatus,
 } from './partner-acquisition.contract.js';
 
@@ -23,6 +24,13 @@ export const PARTNER_ACQUISITION_COMMAND_TYPES = [
 
 export type PartnerAcquisitionCommandType =
   (typeof PARTNER_ACQUISITION_COMMAND_TYPES)[number];
+
+export const PARTNER_LEAD_LIFECYCLE_COMMAND_TYPES = [
+  'TransitionPartnerLeadCommand',
+] as const;
+
+export type PartnerLeadLifecycleCommandType =
+  (typeof PARTNER_LEAD_LIFECYCLE_COMMAND_TYPES)[number];
 
 export interface PartnerAcquisitionCommandEnvelope {
   tenantId: string;
@@ -146,6 +154,19 @@ export interface ConvertPartnerProspectToPartnerCommand
   partnerType: 'COMPANY' | 'FRANQUIA' | 'FRANQUEADO';
   aggregateType: Extract<PartnerAcquisitionAggregateType, 'PARTNER_PROSPECT' | 'PARTNER'>;
   conversionApprovedAt?: string | null;
+}
+
+export interface TransitionPartnerLeadCommand {
+  tenantId: string;
+  actorUserId: string;
+  requestId: string;
+  correlationId: string;
+  idempotencyKey: string;
+  requestedAt: string;
+  commandType: 'TransitionPartnerLeadCommand';
+  leadId: string;
+  nextStatus: PartnerLeadStatus;
+  reason?: string | null;
 }
 
 export type PartnerAcquisitionCommand =

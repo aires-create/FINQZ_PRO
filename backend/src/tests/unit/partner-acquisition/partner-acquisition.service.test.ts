@@ -13,6 +13,7 @@ const createRepositoryMock = () =>
     findLeadByCode: vi.fn(),
     listLeads: vi.fn(),
     softDeleteLead: vi.fn(),
+    updateLeadLifecycle: vi.fn(),
     createProspect: vi.fn(),
     findProspectById: vi.fn(),
     findProspectByTenantAndLead: vi.fn(),
@@ -378,6 +379,408 @@ describe('partner-acquisition.service', () => {
     expect(serviceSource).not.toContain('PrismaClient');
     expect(serviceSource).not.toContain('Fastify');
     expect(serviceSource).not.toContain('HTTP');
+  });
+
+  it.each([
+    ['NEW', 'ENRICHED'],
+    ['NEW', 'QUALIFIED'],
+    ['ENRICHED', 'CONTACTED'],
+    ['CONTACTED', 'QUALIFIED'],
+    ['QUALIFIED', 'DISCARDED'],
+  ] as const)('transitions lead from %s to %s and records the command lifecycle', async (status, nextStatus) => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'TransitionPartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus,
+        reason: 'H17S smoke qualification',
+      },
+      status: 'RECEIVED',
+    });
+    repository.findLeadById.mockResolvedValue({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status,
+      score: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    repository.updateLeadLifecycle.mockResolvedValue({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status: nextStatus,
+      score: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    repository.listEventsByAggregate.mockResolvedValue([]);
+    repository.appendEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: 'event-1',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      eventType: 'PartnerLeadStatusChanged',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      occurredAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        leadId: 'lead-1',
+        previousStatus: status,
+        nextStatus,
+        reason: 'H17S smoke qualification',
+      },
+      metadata: null,
+      version: 1,
+    });
+    repository.enqueueOutboxEvent.mockResolvedValue({
+      tenantId: 'tenant-1',
+      eventId: 'event-1',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      eventType: 'PartnerLeadStatusChanged',
+      availableAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        leadId: 'lead-1',
+        previousStatus: status,
+        nextStatus,
+        reason: 'H17S smoke qualification',
+      },
+    });
+    repository.markCommandProcessed.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'TransitionPartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus,
+        reason: 'H17S smoke qualification',
+      },
+      status: 'PROCESSED',
+      result: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        fullName: 'Parceiro Exemplo',
+        email: null,
+        phone: null,
+        companyName: null,
+        document: null,
+        channel: 'CAMPAIGN',
+        sourceName: null,
+        sourceReference: null,
+        campaignId: null,
+        hubContextId: null,
+        ownerUserId: null,
+        status: nextStatus,
+        score: null,
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+    const result = await service.transitionLead({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      commandType: 'TransitionPartnerLeadCommand',
+      leadId: 'lead-1',
+      nextStatus,
+      reason: 'H17S smoke qualification',
+    });
+
+    expect(repository.recordCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        idempotencyKey: 'idem-1',
+        aggregateId: 'lead-1',
+      }),
+    );
+    expect(repository.findLeadById).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+    });
+    expect(repository.updateLeadLifecycle).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      status: nextStatus,
+    });
+    expect(repository.appendEvent).toHaveBeenCalledTimes(1);
+    expect(repository.enqueueOutboxEvent).toHaveBeenCalledTimes(1);
+    expect(repository.markCommandProcessed).toHaveBeenCalledTimes(1);
+    expect(repository.createProspect).not.toHaveBeenCalled();
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+    expect(result.status).toBe(nextStatus);
+  });
+
+  it.each([
+    ['DISCARDED', 'QUALIFIED'],
+    ['QUALIFIED', 'NEW'],
+  ] as const)('blocks invalid lead transitions from %s to %s and marks the inbox failed', async (status, nextStatus) => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'TransitionPartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus,
+        reason: 'H17S smoke qualification',
+      },
+      status: 'RECEIVED',
+    });
+    repository.findLeadById.mockResolvedValue({
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status,
+      score: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.transitionLead({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus,
+        reason: 'H17S smoke qualification',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    expect(repository.updateLeadLifecycle).not.toHaveBeenCalled();
+    expect(repository.appendEvent).not.toHaveBeenCalled();
+    expect(repository.markCommandFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        idempotencyKey: 'idem-1',
+        error: `Partner lead cannot transition from status ${status} to ${nextStatus}`,
+      }),
+    );
+    expect(repository.createProspect).not.toHaveBeenCalled();
+    expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
+  });
+
+  it('marks the inbox failed when the lead does not exist', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'TransitionPartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      },
+      status: 'RECEIVED',
+    });
+    repository.findLeadById.mockResolvedValue(null);
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.transitionLead({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError);
+
+    expect(repository.updateLeadLifecycle).not.toHaveBeenCalled();
+    expect(repository.appendEvent).not.toHaveBeenCalled();
+    expect(repository.markCommandFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        idempotencyKey: 'idem-1',
+        error: 'Partner lead not found',
+      }),
+    );
+  });
+
+  it('replays a processed transition command without touching lead state again', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'TransitionPartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      },
+      status: 'PROCESSED',
+      result: {
+        tenantId: 'tenant-1',
+        leadId: 'lead-1',
+        fullName: 'Parceiro Exemplo',
+        email: null,
+        phone: null,
+        companyName: null,
+        document: null,
+        channel: 'CAMPAIGN',
+        sourceName: null,
+        sourceReference: null,
+        campaignId: null,
+        hubContextId: null,
+        ownerUserId: null,
+        status: 'QUALIFIED',
+        score: null,
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
+      },
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+    const result = await service.transitionLead({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      commandType: 'TransitionPartnerLeadCommand',
+      leadId: 'lead-1',
+      nextStatus: 'QUALIFIED',
+      reason: 'H17S smoke qualification',
+    });
+
+    expect(result.status).toBe('QUALIFIED');
+    expect(repository.findLeadById).not.toHaveBeenCalled();
+    expect(repository.updateLeadLifecycle).not.toHaveBeenCalled();
+    expect(repository.appendEvent).not.toHaveBeenCalled();
+    expect(repository.enqueueOutboxEvent).not.toHaveBeenCalled();
+  });
+
+  it('returns payload mismatch when the idempotency command payload changes', async () => {
+    const repository = createRepositoryMock();
+    repository.recordCommand.mockResolvedValue({
+      tenantId: 'tenant-1',
+      commandType: 'TransitionPartnerLeadCommand',
+      aggregateId: 'lead-1',
+      aggregateType: 'PARTNER_LEAD',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      receivedAt: '2026-06-25T00:00:00.000Z',
+      payload: {
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus: 'ENRICHED',
+        reason: 'H17S smoke qualification',
+      },
+      status: 'RECEIVED',
+    });
+
+    const service = new PartnerAcquisitionService(repository);
+
+    await expect(
+      service.transitionLead({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        requestId: 'req-1',
+        correlationId: 'corr-1',
+        idempotencyKey: 'idem-1',
+        requestedAt: '2026-06-25T00:00:00.000Z',
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId: 'lead-1',
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+
+    expect(repository.findLeadById).not.toHaveBeenCalled();
+    expect(repository.updateLeadLifecycle).not.toHaveBeenCalled();
+    expect(repository.markCommandFailed).not.toHaveBeenCalled();
   });
 
   it('promotes a qualified lead through the transactional repository and returns a canonical result', async () => {

@@ -17,6 +17,7 @@ import {
   partnerAcquisitionLeadCreateBodySchema,
   partnerAcquisitionLeadIdParamsSchema,
   partnerAcquisitionLeadListQuerySchema,
+  partnerAcquisitionLeadTransitionBodySchema,
   partnerAcquisitionNegotiationBodySchema,
   partnerAcquisitionPromoteLeadToProspectBodySchema,
   partnerAcquisitionProspectCreateBodySchema,
@@ -121,6 +122,20 @@ export async function partnerAcquisitionRoutes(app: FastifyInstance): Promise<vo
       ],
     },
     partnerAcquisitionController.createLead,
+  );
+
+  app.post(
+    '/leads/:leadId/transition',
+    {
+      preHandler: [
+        requirePermissions('partner_acquisition:transition'),
+        validateTenantAndActor,
+        requireIdempotencyKey,
+        validate(partnerAcquisitionLeadIdParamsSchema, 'params'),
+        validate(partnerAcquisitionLeadTransitionBodySchema, 'body'),
+      ],
+    },
+    partnerAcquisitionController.transitionLead,
   );
 
   app.post(

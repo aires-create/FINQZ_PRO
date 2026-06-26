@@ -11,6 +11,7 @@ const userId = '44444444-4444-4444-4444-444444444444';
 const createServiceMock = () =>
   ({
     promoteLeadToProspect: vi.fn(),
+    transitionLead: vi.fn(),
   }) as unknown as PartnerAcquisitionServiceContract;
 
 describe('partner-acquisition.controller', () => {
@@ -79,6 +80,99 @@ describe('partner-acquisition.controller', () => {
         prospectStatus: 'NEW',
         created: true,
         replayed: false,
+      },
+    });
+  });
+
+  it('transitions a lead through the service only', async () => {
+    const service = createServiceMock();
+    const commandHandler = { handle: vi.fn() };
+    const controller = new PartnerAcquisitionController(service, commandHandler as never);
+    const request = {
+      id: 'req-2',
+      requestId: 'req-2',
+      correlationId: 'corr-2',
+      headers: {
+        'idempotency-key': 'idem-transition-1',
+      },
+      currentTenant: {
+        tenantId,
+        userId,
+      },
+      currentUser: {
+        userId,
+        tenantId,
+      },
+      params: {
+        leadId,
+      },
+      body: {
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      },
+    } as never;
+    const reply = {
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn(),
+    } as never;
+
+    service.transitionLead = vi.fn().mockResolvedValue({
+      tenantId,
+      leadId,
+      leadCode: leadId,
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      source: 'CAMPAIGN',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      ownerUserId: null,
+      status: 'QUALIFIED',
+      score: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+
+    await controller.transitionLead(request, reply);
+
+    expect(service.transitionLead).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        actorUserId: userId,
+        idempotencyKey: 'idem-transition-1',
+        commandType: 'TransitionPartnerLeadCommand',
+        leadId,
+        nextStatus: 'QUALIFIED',
+        reason: 'H17S smoke qualification',
+      }),
+    );
+    expect(commandHandler.handle).not.toHaveBeenCalled();
+    expect(reply.status).toHaveBeenCalledWith(200);
+    expect(reply.send).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        tenantId,
+        leadId,
+        leadCode: leadId,
+        fullName: 'Parceiro Exemplo',
+        email: null,
+        phone: null,
+        companyName: null,
+        document: null,
+        source: 'CAMPAIGN',
+        sourceName: null,
+        sourceReference: null,
+        campaignId: null,
+        hubContextId: null,
+        ownerUserId: null,
+        status: 'QUALIFIED',
+        score: null,
+        createdAt: '2026-06-25T00:00:00.000Z',
+        updatedAt: '2026-06-25T00:00:00.000Z',
       },
     });
   });

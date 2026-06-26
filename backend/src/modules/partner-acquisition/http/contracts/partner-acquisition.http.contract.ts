@@ -16,6 +16,8 @@ import type {
   PartnerAcquisitionLeadDto,
   PartnerAcquisitionLeadIdParams,
   PartnerAcquisitionLeadListQuery,
+  PartnerAcquisitionLeadTransitionBody,
+  PartnerAcquisitionLeadTransitionResponseDto,
   PartnerAcquisitionNegotiationBody,
   PartnerAcquisitionPageMeta,
   PartnerAcquisitionPromoteLeadToProspectBody,
@@ -62,6 +64,7 @@ export type PartnerAcquisitionHttpPermissionMap = {
   listLeads: 'partner_acquisition:read';
   getLeadById: 'partner_acquisition:read';
   createLead: 'partner_acquisition:create';
+  transitionLead: 'partner_acquisition:transition';
   promoteLeadToProspect: 'partner_acquisition:promote';
   listProspects: 'partner_prospect:read';
   getProspectById: 'partner_prospect:read';
@@ -108,6 +111,17 @@ export type PartnerAcquisitionHttpRouteContract =
       successStatusCode: 201;
       errorStatusCodes: readonly PartnerAcquisitionHttpStatusCode[];
       response: PartnerAcquisitionHttpSuccessEnvelope<PartnerAcquisitionLeadDto>;
+    }
+  | {
+      method: 'POST';
+      path: '/partner-acquisition/leads/:leadId/transition';
+      permission: PartnerAcquisitionHttpPermissionMap['transitionLead'];
+      params: PartnerAcquisitionLeadIdParams;
+      headers: PartnerAcquisitionHttpMutatingHeadersContract;
+      body: PartnerAcquisitionLeadTransitionBody;
+      successStatusCode: 200;
+      errorStatusCodes: readonly PartnerAcquisitionHttpStatusCode[];
+      response: PartnerAcquisitionHttpSuccessEnvelope<PartnerAcquisitionLeadTransitionResponseDto>;
     }
   | {
       method: 'POST';
@@ -280,6 +294,11 @@ export const PARTNER_ACQUISITION_HTTP_ROUTE_INVENTORY = [
     method: 'POST',
     path: '/partner-acquisition/leads',
     permission: 'partner_acquisition:create',
+  },
+  {
+    method: 'POST',
+    path: '/partner-acquisition/leads/:leadId/transition',
+    permission: 'partner_acquisition:transition',
   },
   {
     method: 'POST',

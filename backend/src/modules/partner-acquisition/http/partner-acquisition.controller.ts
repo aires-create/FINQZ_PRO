@@ -38,6 +38,7 @@ import {
   partnerAcquisitionLeadDtoSchema,
   partnerAcquisitionLeadIdParamsSchema,
   partnerAcquisitionLeadListQuerySchema,
+  partnerAcquisitionLeadTransitionBodySchema,
   partnerAcquisitionNegotiationBodySchema,
   partnerAcquisitionPromoteLeadToProspectBodySchema,
   partnerAcquisitionPromoteLeadToProspectResponseDtoSchema,
@@ -51,6 +52,7 @@ import {
   partnerAcquisitionContractSignedBodySchema,
   type PartnerAcquisitionLeadCreateBody,
   type PartnerAcquisitionLeadListQuery,
+  type PartnerAcquisitionLeadTransitionBody,
   type PartnerAcquisitionProspectCreateBody,
   type PartnerAcquisitionProspectListQuery,
   type PartnerAcquisitionPromoteLeadToProspectBody,
@@ -550,6 +552,36 @@ export class PartnerAcquisitionController {
       reply.status(201).send({
         success: true,
         data: toLeadDto(lead as PartnerLead),
+      });
+    } catch (error) {
+      handleControllerError(error, reply);
+    }
+  };
+
+  transitionLead = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    try {
+      const body = partnerAcquisitionLeadTransitionBodySchema.parse(
+        request.body,
+      ) as PartnerAcquisitionLeadTransitionBody;
+      const params = partnerAcquisitionLeadIdParamsSchema.parse(request.params);
+      const command = {
+        tenantId: getTenantId(request),
+        actorUserId: getActorUserId(request),
+        requestId: getRequestId(request),
+        correlationId: getCorrelationId(request),
+        idempotencyKey: getIdempotencyKey(request),
+        requestedAt: new Date().toISOString(),
+        commandType: 'TransitionPartnerLeadCommand' as const,
+        leadId: params.leadId,
+        nextStatus: body.nextStatus,
+        ...(body.reason !== undefined ? { reason: body.reason } : {}),
+      };
+
+      const result = await this.service.transitionLead(command);
+
+      reply.status(200).send({
+        success: true,
+        data: partnerAcquisitionLeadDtoSchema.parse(result),
       });
     } catch (error) {
       handleControllerError(error, reply);
