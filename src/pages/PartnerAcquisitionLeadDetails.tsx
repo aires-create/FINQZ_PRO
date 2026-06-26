@@ -189,7 +189,7 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
     <div className="space-y-6">
       <PageHeader
         title={lead.fullName}
-        subtitle={`Lead ${lead.leadCode}`}
+        subtitle={`Aquisição de Parceiros / Lead ${lead.leadCode}`}
         icon={UserPlus2}
         showSearch={false}
         showFilter={false}
@@ -223,11 +223,10 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
             <FieldRow label="Telefone" value={lead.phone || "-"} />
             <FieldRow label="Empresa" value={lead.companyName || "-"} />
             <FieldRow label="Documento" value={lead.document || "-"} />
-            <FieldRow label="Source Reference" value={lead.sourceReference || "-"} />
-            <FieldRow label="Source Name" value={lead.sourceName || "-"} />
-            <FieldRow label="Campaign ID" value={lead.campaignId || "-"} />
-            <FieldRow label="Hub Context ID" value={lead.hubContextId || "-"} />
-            <FieldRow label="Owner User ID" value={lead.ownerUserId || "-"} />
+            <FieldRow label="Referência da origem" value={lead.sourceReference || "-"} />
+            <FieldRow label="Nome da origem" value={lead.sourceName || "-"} />
+            <FieldRow label="Campanha" value={lead.campaignId || "-"} />
+            <FieldRow label="Contexto Hub" value={lead.hubContextId || "-"} />
             <FieldRow label="Score" value={lead.score ?? "-"} />
           </div>
         </Card>
@@ -262,8 +261,17 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
               </div>
             </div>
 
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Responsável interno
+              </div>
+              <div className="mt-2 break-all text-sm text-[var(--text-primary)]">
+                {lead.ownerUserId || "-"}
+              </div>
+            </div>
+
             <div className="rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-4 text-sm text-[var(--text-secondary)]">
-              Detalhe somente leitura da esteira oficial de Aquisição de Parceiros.
+              Visualização somente leitura da esteira oficial de Aquisição de Parceiros. Alterações, conversão e workflows permanecem fora desta etapa.
             </div>
           </div>
         </Card>
