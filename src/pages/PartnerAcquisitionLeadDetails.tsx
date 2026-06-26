@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, UserPlus2 } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, UserPlus2 } from "lucide-react";
 import { Badge, Card, EmptyState, LoadingState } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import { partnerAcquisitionApi, type PartnerAcquisitionLeadRecord } from "../api/modules";
+import {
+  partnerAcquisitionApi,
+  type PartnerAcquisitionLeadRecord,
+} from "../api/modules";
 
 const formatDateTime = (value?: string | null): string => {
   if (!value) return "-";
@@ -42,14 +45,21 @@ const getSourceLabel = (source: string): string => {
   return sourceLabels[source] ?? source;
 };
 
+const createIdempotencyKey = (action: string, leadId: string): string => {
+  const randomValue =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  return `partner-acquisition:${action}:${leadId}:${randomValue}`;
+};
+
 const FieldRow: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
   <div className="space-y-1">
     <div className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
       {label}
     </div>
-    <div className="break-words text-sm text-[var(--text-primary)]">
-      {value ?? "-"}
-    </div>
+    <div className="break-words text-sm text-[var(--text-primary)]">{value ?? "-"}</div>
   </div>
 );
 
@@ -73,11 +83,22 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
   const [lead, setLead] = useState<PartnerAcquisitionLeadRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  const refreshLead = async (): Promise<void> => {
+    if (!leadId) return;
+
+    const response = await partnerAcquisitionApi.getLeadById(leadId);
+    setLead(response.data ?? null);
+  };
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadLead = async () => {
+    const loadLead = async (): Promise<void> => {
       if (!leadId) {
         if (isMounted) {
           setIsLoading(false);
@@ -89,6 +110,8 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
       if (isMounted) {
         setIsLoading(true);
         setError(null);
+        setActionError(null);
+        setActionSuccess(null);
       }
 
       try {
@@ -100,7 +123,9 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
         if (!isMounted) return;
 
         setLead(null);
-        setError(caughtError instanceof Error ? caughtError.message : "Não foi possível carregar o lead.");
+        setError(
+          caughtError instanceof Error ? caughtError.message : "Não foi possível carregar o lead.",
+        );
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -116,6 +141,61 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
   }, [leadId]);
 
   const sourceLabel = useMemo(() => (lead ? getSourceLabel(lead.source) : "-"), [lead]);
+
+  const handleQualifyLead = async (): Promise<void> => {
+    if (!leadId) return;
+
+    setIsTransitioning(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      await partnerAcquisitionApi.transitionLead(
+        leadId,
+        {
+          nextStatus: "QUALIFIED",
+          reason: "Frontend qualification",
+        },
+        createIdempotencyKey("transition-qualified", leadId),
+      );
+
+      await refreshLead();
+      setActionSuccess("Lead qualificado com sucesso.");
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error ? caughtError.message : "Não foi possível qualificar o lead.",
+      );
+    } finally {
+      setIsTransitioning(false);
+    }
+  };
+
+  const handlePromoteLeadToProspect = async (): Promise<void> => {
+    if (!leadId) return;
+
+    setIsPromoting(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      await partnerAcquisitionApi.promoteLeadToProspect(
+        leadId,
+        { source: "MANUAL" },
+        createIdempotencyKey("promote-to-prospect", leadId),
+      );
+
+      await refreshLead();
+      setActionSuccess("Lead promovido para prospect com sucesso.");
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Não foi possível promover o lead para prospect.",
+      );
+    } finally {
+      setIsPromoting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -151,9 +231,7 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
             </h2>
             <p className="text-sm text-[var(--text-secondary)]">{error}</p>
             <div>
-              <div>
-                <BackButton label="Voltar para a lista" />
-              </div>
+              <BackButton label="Voltar para a lista" />
             </div>
           </div>
         </Card>
@@ -192,8 +270,48 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
         icon={UserPlus2}
         showSearch={false}
         showFilter={false}
-        actions={<BackButton label="Voltar" />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleQualifyLead()}
+              disabled={isTransitioning || isPromoting}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-default)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isTransitioning ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              Qualificar Lead
+            </button>
+            <button
+              type="button"
+              onClick={() => void handlePromoteLeadToProspect()}
+              disabled={isTransitioning || isPromoting}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isPromoting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus2 size={16} />}
+              Promover para Prospect
+            </button>
+            <BackButton label="Voltar" />
+          </div>
+        }
       />
+
+      {(actionError || actionSuccess) && (
+        <Card
+          className={`border ${
+            actionError
+              ? "border-red-500/30 bg-red-500/5"
+              : "border-emerald-500/30 bg-emerald-500/5"
+          } p-4`}
+        >
+          <div
+            className={`text-sm font-medium ${
+              actionError ? "text-red-600" : "text-emerald-700"
+            }`}
+          >
+            {actionError ?? actionSuccess}
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -209,9 +327,7 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
               <div className="mt-1 text-sm font-medium text-[var(--text-primary)]">
                 {sourceLabel}
               </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                {lead.sourceName || "-"}
-              </div>
+              <div className="text-xs text-[var(--text-muted)]">{lead.sourceName || "-"}</div>
             </div>
           </div>
 
@@ -270,7 +386,8 @@ const PartnerAcquisitionLeadDetailsPage: React.FC = () => {
             </div>
 
             <div className="rounded-xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface-hover)] p-4 text-sm text-[var(--text-secondary)]">
-              Visualização somente leitura da esteira oficial de Aquisição de Parceiros. Alterações, conversão e workflows permanecem fora desta etapa.
+              Visualização somente leitura da esteira oficial de Aquisição de Parceiros. Alterações,
+              conversão e workflows permanecem fora desta etapa.
             </div>
           </div>
         </Card>

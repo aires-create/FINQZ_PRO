@@ -139,6 +139,30 @@ export interface CreatePartnerAcquisitionLeadPayload {
   references?: Array<Record<string, unknown>>;
 }
 
+export interface TransitionPartnerAcquisitionLeadPayload {
+  nextStatus: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'DISQUALIFIED' | 'CONVERTED' | 'ARCHIVED';
+  reason?: string;
+}
+
+export interface PromotePartnerAcquisitionLeadToProspectPayload {
+  source: 'MANUAL';
+}
+
+export interface PromotePartnerAcquisitionLeadToProspectResult {
+  tenantId: string;
+  leadId: string;
+  prospectId: string;
+  leadStatus: string;
+  prospectStatus: string;
+  created: boolean;
+  replayed: boolean;
+}
+
+export interface PromotePartnerAcquisitionLeadToProspectResponse {
+  success: boolean;
+  data: PromotePartnerAcquisitionLeadToProspectResult;
+}
+
 export interface CreatePartnerProspectPayload {
   prospectCode?: string;
   leadId?: string;
@@ -190,6 +214,36 @@ export const partnerAcquisitionApi = {
     });
   },
 
+async transitionLead(
+  leadId: string,
+  payload: TransitionPartnerAcquisitionLeadPayload,
+  idempotencyKey: string,
+): Promise<PartnerAcquisitionLeadResponse> {
+  return apiCall<PartnerAcquisitionLeadResponse>(
+    `${PARTNER_ACQUISITION_BASE_PATH}/leads/${leadId}/transition`,
+    {
+      method: 'POST',
+      headers: withIdempotencyKey(idempotencyKey),
+      body: JSON.stringify(payload),
+    },
+  );
+},
+
+async promoteLeadToProspect(
+  leadId: string,
+  payload: PromotePartnerAcquisitionLeadToProspectPayload,
+  idempotencyKey: string,
+): Promise<PromotePartnerAcquisitionLeadToProspectResponse> {
+  return apiCall<PromotePartnerAcquisitionLeadToProspectResponse>(
+    `${PARTNER_ACQUISITION_BASE_PATH}/leads/${leadId}/promote-to-prospect`,
+    {
+      method: 'POST',
+      headers: withIdempotencyKey(idempotencyKey),
+      body: JSON.stringify(payload),
+    },
+  );
+},
+  
   async getProspects(params?: ListPartnerProspectsParams): Promise<ListPartnerProspectsResponse> {
     const query = params ? buildQueryString(params as Record<string, unknown>) : '';
     return apiCall<ListPartnerProspectsResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects${query}`);
