@@ -11,6 +11,7 @@ const ContaCorrentePage = lazy(() => import("../pages/ContaCorrente"));
 const RelatoriosPage = lazy(() => import("../pages/Relatorios"));
 const TabelasComerciaisPage = lazy(() => import("../pages/TabelasComerciais"));
 const PartnerAcquisitionLeadsPage = lazy(() => import("../pages/PartnerAcquisitionLeads"));
+const PartnerAcquisitionLeadDetailsPage = lazy(() => import("../pages/PartnerAcquisitionLeadDetails"));
 
 export const operacoesRoutes = (
   <>
@@ -119,6 +120,14 @@ export const operacoesRoutes = (
       element={
         <ProtectedRoute requiredPermission="partner_acquisition:read">
           <PartnerAcquisitionLeadsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="operacoes/partner-acquisition/leads/:leadId"
+      element={
+        <ProtectedRoute requiredPermission="partner_acquisition:read">
+          <PartnerAcquisitionLeadDetailsPage />
         </ProtectedRoute>
       }
     />

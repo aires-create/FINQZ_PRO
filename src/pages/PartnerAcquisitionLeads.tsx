@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { RefreshCw, UserPlus2 } from "lucide-react";
 import {
   Badge,
@@ -172,7 +173,12 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
                 {leads.map((lead) => (
                   <tr key={lead.leadId} className="hover:bg-[var(--bg-surface-hover)]">
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-[var(--text-primary)]">{lead.fullName}</div>
+                      <Link
+                        to={`/app/operacoes/partner-acquisition/leads/${lead.leadId}`}
+                        className="font-semibold text-[var(--text-primary)] transition-colors hover:text-primary hover:underline"
+                      >
+                        {lead.fullName}
+                      </Link>
                       <div className="text-xs text-[var(--text-muted)]">{lead.leadCode}</div>
                     </td>
                     <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">
