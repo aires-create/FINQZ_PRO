@@ -3,8 +3,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, X, Building2, Store, User, ToggleLeft, ToggleRight, UserCheck, UserX, Grid, List, Upload, Copy, Check, FileText, Image, File, Handshake, Shield } from "lucide-react";
 import useAppStore from "../store";
 import type { Parceiro } from "../types";
-import { partnersApi } from "../api/modules";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
+import { partnersApi, type PartnerCorePayload, type PartnerRecord, type PartnerStatus, type PartnerType } from "../api/modules";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { API_BASE_URL } from "../config/environment";
 import { useTenantFilter } from "../hooks/useTenantFilter";
@@ -96,6 +96,366 @@ const mapPartnerRecordToLegacyParceiro = (partner: Awaited<ReturnType<typeof par
   };
 };
 
+type PartnerFormState = {
+  code: string;
+  name: string;
+  type: PartnerType;
+  status: PartnerStatus;
+  document: string;
+  email: string;
+  phone: string;
+  parentId: string;
+};
+
+const EMPTY_PARTNER_FORM: PartnerFormState = {
+  code: "",
+  name: "",
+  type: "COMPANY",
+  status: "prospect",
+  document: "",
+  email: "",
+  phone: "",
+  parentId: "",
+};
+
+const partnerTypeLabel: Record<PartnerType, string> = {
+  COMPANY: "Company",
+  FRANQUIA: "Franquia",
+  FRANQUEADO: "Franqueado",
+};
+
+const partnerStatusVariant: Record<PartnerStatus, "default" | "primary" | "success" | "warning" | "danger" | "info"> = {
+  prospect: "warning",
+  contato: "primary",
+  negociacao: "info",
+  ativo: "success",
+  inativo: "danger",
+};
+
+export const ParceirosPage: React.FC = () => {
+  const [partners, setPartners] = useState<PartnerRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PartnerStatus | "">("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<PartnerRecord | null>(null);
+  const [form, setForm] = useState<PartnerFormState>(EMPTY_PARTNER_FORM);
+
+  const loadPartners = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await partnersApi.getAll();
+      setPartners(response.data ?? []);
+    } catch (loadError) {
+      console.error("Erro ao carregar partners:", loadError);
+      setPartners([]);
+      setError("Nao foi possivel carregar os partners oficiais.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadPartners();
+  }, []);
+
+  const filteredPartners = partners.filter((partner) => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const matchesSearch =
+      !normalizedSearch ||
+      partner.code.toLowerCase().includes(normalizedSearch) ||
+      partner.name.toLowerCase().includes(normalizedSearch) ||
+      (partner.email ?? "").toLowerCase().includes(normalizedSearch) ||
+      (partner.document ?? "").toLowerCase().includes(normalizedSearch);
+    const matchesStatus = !statusFilter || partner.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const openCreateForm = () => {
+    setEditingPartner(null);
+    setForm(EMPTY_PARTNER_FORM);
+    setSuccessMessage(null);
+    setError(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditForm = (partner: PartnerRecord) => {
+    setEditingPartner(partner);
+    setForm({
+      code: partner.code,
+      name: partner.name,
+      type: partner.type,
+      status: partner.status,
+      document: partner.document ?? "",
+      email: partner.email ?? "",
+      phone: partner.phone ?? "",
+      parentId: partner.parentId ?? "",
+    });
+    setSuccessMessage(null);
+    setError(null);
+    setIsFormOpen(true);
+  };
+
+  const closeForm = () => {
+    setIsFormOpen(false);
+    setEditingPartner(null);
+    setForm(EMPTY_PARTNER_FORM);
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    const payload: PartnerCorePayload = {
+      code: form.code.trim(),
+      name: form.name.trim(),
+      type: form.type,
+      status: form.status,
+      ...(form.document.trim() ? { document: form.document.trim() } : {}),
+      ...(form.email.trim() ? { email: form.email.trim() } : {}),
+      ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
+      ...(form.parentId.trim() ? { parentId: form.parentId.trim() } : {}),
+    };
+
+    try {
+      if (editingPartner) {
+        await partnersApi.update(editingPartner.id, payload);
+        setSuccessMessage("Partner atualizado com sucesso.");
+      } else {
+        await partnersApi.create(payload);
+        setSuccessMessage("Partner criado com sucesso.");
+      }
+
+      await loadPartners();
+      closeForm();
+    } catch (submitError) {
+      console.error("Erro ao salvar partner:", submitError);
+      setError("Nao foi possivel salvar o partner no runtime oficial.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (partner: PartnerRecord) => {
+    if (!window.confirm(`Excluir o partner ${partner.name}?`)) {
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await partnersApi.delete(partner.id);
+      setSuccessMessage("Partner excluido com sucesso.");
+      await loadPartners();
+    } catch (deleteError) {
+      console.error("Erro ao excluir partner:", deleteError);
+      setError("Nao foi possivel excluir o partner no runtime oficial.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Parceiros"
+        subtitle="Runtime oficial de Partner via /api/v1/partners"
+        icon={Handshake}
+        onCreate={openCreateForm}
+        onRefresh={() => void loadPartners()}
+        createLabel="Novo parceiro"
+      />
+
+      {successMessage && (
+        <Card padding="sm" className="border border-emerald-500/20 bg-emerald-500/5">
+          <p className="text-sm text-emerald-700 dark:text-emerald-200">{successMessage}</p>
+        </Card>
+      )}
+
+      {error && (
+        <Card padding="sm" className="border border-red-500/20 bg-red-500/5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => void loadPartners()}>
+              Tentar novamente
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por codigo, nome, email ou documento"
+              leftIcon={<Search className="h-4 w-4" />}
+            />
+            <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as PartnerStatus | "")}>
+              <option value="">Todos os status</option>
+              <option value="prospect">Prospect</option>
+              <option value="contato">Contato</option>
+              <option value="negociacao">Negociacao</option>
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+            </Select>
+          </div>
+
+          {isLoading ? (
+            <LoadingState text="Carregando partners oficiais..." />
+          ) : filteredPartners.length === 0 ? (
+            <EmptyState
+              title="Nenhum partner encontrado"
+              description="A lista oficial esta vazia ou os filtros nao retornaram resultados."
+              action={{ label: "Criar partner", onClick: openCreateForm }}
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-[var(--border-muted)]">
+              <table className="min-w-full divide-y divide-[var(--border-muted)]">
+                <thead className="bg-[var(--bg-surface-hover)]">
+                  <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-muted)]">
+                    <th className="px-4 py-3">Codigo</th>
+                    <th className="px-4 py-3">Nome</th>
+                    <th className="px-4 py-3">Tipo</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Contato</th>
+                    <th className="px-4 py-3">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--border-muted)]">
+                  {filteredPartners.map((partner) => (
+                    <tr key={partner.id} className="bg-[var(--bg-primary)]">
+                      <td className="px-4 py-4 text-sm font-medium text-[var(--text-primary)]">{partner.code}</td>
+                      <td className="px-4 py-4">
+                        <div className="text-sm font-medium text-[var(--text-primary)]">{partner.name}</div>
+                        <div className="text-xs text-[var(--text-muted)]">{partner.tenantId}</div>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-[var(--text-secondary)]">
+                        {partnerTypeLabel[partner.type]}
+                      </td>
+                      <td className="px-4 py-4">
+                        <Badge variant={partnerStatusVariant[partner.status]}>{partner.status}</Badge>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-[var(--text-secondary)]">
+                        <div>{partner.email || "-"}</div>
+                        <div>{partner.phone || "-"}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openEditForm(partner)} icon={<Edit className="h-4 w-4" />}>
+                            Editar
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => void handleDelete(partner)}
+                            loading={isSaving}
+                            icon={<Trash2 className="h-4 w-4" />}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {isFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle>{editingPartner ? "Editar Partner" : "Novo Partner"}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+                <Input
+                  label="Codigo"
+                  value={form.code}
+                  onChange={(e) => setForm((current) => ({ ...current, code: e.target.value }))}
+                  required
+                />
+                <Input
+                  label="Nome"
+                  value={form.name}
+                  onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))}
+                  required
+                />
+                <Select
+                  label="Tipo"
+                  value={form.type}
+                  onChange={(e) => setForm((current) => ({ ...current, type: e.target.value as PartnerType }))}
+                >
+                  <option value="COMPANY">Company</option>
+                  <option value="FRANQUIA">Franquia</option>
+                  <option value="FRANQUEADO">Franqueado</option>
+                </Select>
+                <Select
+                  label="Status"
+                  value={form.status}
+                  onChange={(e) => setForm((current) => ({ ...current, status: e.target.value as PartnerStatus }))}
+                >
+                  <option value="prospect">Prospect</option>
+                  <option value="contato">Contato</option>
+                  <option value="negociacao">Negociacao</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                </Select>
+                <Input
+                  label="Documento"
+                  value={form.document}
+                  onChange={(e) => setForm((current) => ({ ...current, document: e.target.value }))}
+                />
+                <Input
+                  label="Email"
+                  value={form.email}
+                  onChange={(e) => setForm((current) => ({ ...current, email: e.target.value }))}
+                />
+                <Input
+                  label="Telefone"
+                  value={form.phone}
+                  onChange={(e) => setForm((current) => ({ ...current, phone: e.target.value }))}
+                />
+                <Input
+                  label="Parent ID"
+                  value={form.parentId}
+                  onChange={(e) => setForm((current) => ({ ...current, parentId: e.target.value }))}
+                />
+                <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="outline" onClick={closeForm}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" loading={isSaving}>
+                    {editingPartner ? "Salvar" : "Criar"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ParceirosPage;
+
+/*
 export const ParceirosPage: React.FC = () => {
   const { addParceiro } = useAppStore();
   const [apiParceiros, setApiParceiros] = useState<PartnerUiRecord[]>([]);
@@ -872,7 +1232,7 @@ export const ParceirosPage: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      {/* Header Padronizado */}
+      {/* Header Padronizado * /}
       <PageHeader
         onSearch={setSearch}
         showSearch={true}
@@ -935,7 +1295,7 @@ export const ParceirosPage: React.FC = () => {
         }
       />
 
-      {/* KPI Cards */}
+      {/* KPI Cards * /}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3 lg:gap-4">
         <KpiCard
           label="Total"
@@ -963,7 +1323,7 @@ export const ParceirosPage: React.FC = () => {
         />
       </div>
 
-      {/* Partners List - Apenas Lista */}
+      {/* Partners List - Apenas Lista * /}
       <div className="table-container hidden md:block overflow-x-auto">
         <div className="min-w-full overflow-x-auto">
           <table className="w-full min-w-[1100px]">
@@ -1047,7 +1407,7 @@ export const ParceirosPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Cards View */}
+      {/* Mobile Cards View * /}
       <div className="md:hidden space-y-3 sm:space-y-4">
         {filteredParceiros.map((parceiro) => (
           <div key={parceiro.id} className="finqz-card p-3 sm:p-4">
@@ -1141,7 +1501,7 @@ export const ParceirosPage: React.FC = () => {
         />
       )}
 
-      {/* Modal de Credenciais */}
+      {/* Modal de Credenciais * /}
       {showCredentials && generatedCredentials && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="finqz-card w-full max-w-md overflow-y-auto p-4 sm:p-6 max-h-[90vh]">
@@ -1204,7 +1564,7 @@ export const ParceirosPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal * /}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-sm sm:p-4">
           <div className="finqz-card w-full max-w-3xl max-h-[95vh] overflow-y-auto p-4 sm:max-h-[90vh] sm:p-6">
@@ -1401,7 +1761,7 @@ export const ParceirosPage: React.FC = () => {
                   </>
                 )}
                 
-                {/* Seção de Endereço */}
+                {/* Seção de Endereço * /}
                 <div className="sm:col-span-2 mt-2 sm:mt-4">
                   <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 pb-2 border-b border-[#1f2937]">Endereço</h4>
                 </div>
@@ -1497,7 +1857,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
                 
-                {/* Seção de Dados Bancários */}
+                {/* Seção de Dados Bancários * /}
                 <div className="sm:col-span-2 mt-2 sm:mt-4">
                   <h4 className="text-xs sm:text-sm font-semibold text-white mb-2 sm:mb-3 pb-2 border-b border-[#1f2937]">Dados Bancários</h4>
                 </div>
@@ -1576,7 +1936,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Seção PIX */}
+                {/* Seção PIX * /}
                 <div className="sm:col-span-2 mt-2">
                   <h5 className="text-xs sm:text-sm font-semibold text-slate-300 mb-2 pb-1 border-b border-gray-100">Chave PIX</h5>
                 </div>
@@ -1610,7 +1970,7 @@ export const ParceirosPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Seção de Documentos */}
+                {/* Seção de Documentos * /}
                 <div className="sm:col-span-2 mt-2 sm:mt-4">
                   <label className="block text-xs sm:text-sm font-medium text-slate-300 mb-1 sm:mb-2">
                     Documentos (PDF, JPG, PNG)
@@ -1660,7 +2020,7 @@ export const ParceirosPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botão de Reset de Senha - apenas quando editando */}
+              {/* Botão de Reset de Senha - apenas quando editando * /}
               {editingParceiro && (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-[#111827]/50 rounded-xl border border-[#1f2937] mt-2 sm:mt-4 gap-3">
                   <div>
@@ -1677,14 +2037,14 @@ export const ParceirosPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Compliance e Consultas */}
+              {/* Compliance e Consultas * /}
               <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#1f2937]">
                 <h4 className="text-xs sm:text-sm font-medium text-slate-400 mb-3 sm:mb-4 flex items-center gap-2">
                   <Shield size={16} />
                   Compliance e Consultas
                 </h4>
                 <div className="space-y-2 sm:space-y-3">
-                  {/* Restrição de Crédito */}
+                  {/* Restrição de Crédito * /}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-[#111827]/50 rounded-lg border border-[#1f2937] gap-2">
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-slate-300">Restrição de Crédito</p>
@@ -1702,7 +2062,7 @@ export const ParceirosPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Não Perturbe */}
+                  {/* Não Perturbe * /}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-[#111827]/50 rounded-lg border border-[#1f2937] gap-2">
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-slate-300">Não Perturbe</p>
@@ -1744,7 +2104,7 @@ export const ParceirosPage: React.FC = () => {
 
       {/* ============================================
       🔲 DRAWER DE FILTROS (Parceiros)
-      ============================================ */}
+      ============================================ * /}
       {openFilterDrawer && (
         <div className="fixed inset-0 z-50 flex">
           <div 
@@ -1835,7 +2195,7 @@ export const ParceirosPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de importação */}
+      {/* Modal de importação * /}
       <ImportModal
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
@@ -1850,3 +2210,4 @@ export const ParceirosPage: React.FC = () => {
 };
 
 export default ParceirosPage;
+*/
