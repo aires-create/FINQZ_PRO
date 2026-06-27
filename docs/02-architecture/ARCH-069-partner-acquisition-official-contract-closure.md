@@ -14,6 +14,8 @@ Date: 2026-06-25
 This document closes the official domain contract for `Partner Acquisition` and `Partner Prospect`.
 It authorizes pure contracts and contract tests only.
 
+For implemented runtime HTTP and RBAC details, ARCH-073 is the canonical surface reference.
+
 It does **not** authorize:
 
 - runtime changes,
@@ -366,6 +368,12 @@ The expected RBAC surface is:
 - conversion requires an explicit permission,
 - audit-only access must be separable from write access.
 
+### Runtime RBAC note
+
+ARCH-069 remains the historical domain closure for acquisition semantics.
+
+When resolving the implemented Prospect Runtime permissions, route inventory, and HTTP surface behavior, defer to ARCH-073 as the canonical source.
+
 ---
 
 ## 12. Audit Expectations
@@ -533,4 +541,3 @@ The next phase is:
 - no route exposure,
 - no menu exposure,
 - no legacy source of truth.
-

@@ -188,7 +188,7 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 - Consumers: [placeholder]
 - Producers: [placeholder]
 - Legados relacionados: [placeholder]
-- Proximas fases: harmonizacao documental DCA/ARCH, cobertura de testes de contrato e ajuste fino de UX/estado ENRICHED
+- Proximas fases: H19.1A harmonizacao documental DCA/ARCH concluida; H19.1B contract test hardening concluida; ajuste fino de UX/estado ENRICHED permanece como refinamento futuro
 
 ### 4.10 Master Catalog
 - Responsabilidade: [placeholder]
@@ -323,7 +323,7 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 | Commercial Coverage | GO |
 | Partner Core | GO WITH RESTRICTIONS |
 | Partner Form Audit | Pending |
-| Partner Acquisition | Production Ready with Restrictions - Lead e Prospect runtime, listagem, detalhe e workflow oficial integrados |
+| Partner Acquisition | Production Ready with Restrictions - Lead e Prospect runtime, listagem, detalhe e workflow oficial integrados; H19.1A e H19.1B concluídas |
 | Commercial Tables | Architecture / Pending Runtime |
 | Simulator | Pending Runtime |
 | RBAC / Permissions | GO WITH RESTRICTIONS |
@@ -565,7 +565,7 @@ Antes de qualquer nova fase:
 
 ### Proxima fase imediata
 
-- Harmonizacao documental do Partner Acquisition e consolidacao de testes de contrato para Prospect Runtime
+- CRM
 
 ---
 
@@ -646,11 +646,28 @@ Antes de qualquer nova fase:
 - Validacoes: build, arch:check, test e auditoria H18D.
 
 ### 16.3 Wave H19
-- Status: [placeholder]
-- Objetivo: [placeholder]
-- Escopo: [placeholder]
-- Restrições: [placeholder]
-- Validacoes: [placeholder]
+- Status: concluida
+- Objetivo: consolidar Partner runtime, materializar Partner via convertProspect, migrar Parceiros para o runtime oficial e homologar a prontidao de producao.
+- Escopo: Partner materialization, runtime oficial `/api/v1/partners`, frontend Parceiros oficial, cleanup legado ativo e homologacao final da Wave.
+- Restrições: manter backend, schema, migrations e seed intactos; evitar fontes paralelas; preservar tenant scope, RBAC, audit trail, idempotencia e replay.
+- Validacoes: `npm run build`, `npm run arch:check`, `npm test` e homologacao H19-HOM aprovados.
+- H19-HOM: homologacao aprovada e gate concluido, sem criar wave separada.
+
+### 16.4 Wave H19.1A
+- Status: concluida
+- Objetivo: harmonizar DCA e ARCH com o estado real do runtime apos H19.
+- Escopo: ajustes documentais, referencias canônicas, backlog arquitetural e clarificacao de legados.
+- Restrições: documentacao apenas; sem impacto em contrato ou comportamento.
+- Validacoes: report de harmonizacao aprovado.
+- Referencia: [H19.1A-DCA-ARCH-HARMONIZATION-REPORT.md](C:/Projects/FINQZ_PRO/docs/02-architecture/H19.1A-DCA-ARCH-HARMONIZATION-REPORT.md)
+
+### 16.5 Wave H19.1B
+- Status: concluida
+- Objetivo: Contract Test Hardening do runtime oficial de Partner.
+- Escopo: endurecer testes de contrato e replay sem alterar o comportamento funcional.
+- Restrições: sem runtime novo; sem alterar backend ou frontend.
+- Validacoes: suite de testes de contrato e regressao.
+- Referencia: [H19.1B-CONTRACT-TEST-HARDENING-REPORT.md](C:/Projects/FINQZ_PRO/docs/02-architecture/H19.1B-CONTRACT-TEST-HARDENING-REPORT.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # ARCH-073 - Partner Acquisition HTTP Surface Architecture
 
-Status: DRAFT
+Status: APPROVED WITH RESTRICTIONS
 Type: HTTP Surface Architecture / Contract Definition
 Scope: Partner Acquisition / HTTP Contracts / Validation / RBAC / Swagger Readiness
 Date: 2026-06-25
@@ -11,7 +11,7 @@ Date: 2026-06-25
 
 **GO WITH RESTRICTIONS**
 
-The Partner Acquisition HTTP surface is now fully defined as a contract-only layer.
+The Partner Acquisition HTTP surface is now fully defined as a canonical contract layer and is the reference for the implemented Prospect Runtime.
 
 This architecture approves:
 
@@ -38,6 +38,8 @@ This architecture does **not** authorize:
 The only allowed flow remains:
 
 `HTTP -> Command Handler -> Application Service -> Repository`
+
+The runtime implementation later aligned to this contract in H18C/H19; this document remains the canonical HTTP/RBAC reference for Prospect Runtime.
 
 ---
 
@@ -406,6 +408,19 @@ H16R may begin only if:
 - Fastify adapter design,
 - request/response mapping layer,
 - authentication/authorization wiring.
+
+## 17. Runtime Alignment Note
+
+The HTTP surface defined here is no longer a future-only design artifact.
+
+It now matches the implemented Partner Acquisition Prospect runtime used by H18C/H19 and remains the canonical source for:
+
+- route inventory,
+- DTO shape,
+- validation boundaries,
+- RBAC mapping.
+
+Any future runtime changes must preserve this contract first.
 
 ## 16. Scope Forbidden for H16R
 
