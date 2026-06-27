@@ -4,7 +4,7 @@ import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Cale
 import { clientesApi } from "../api/modules/clientes.api";
 import { useLocation } from "react-router-dom";
 import type { Cliente } from "../types";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, ErrorState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 
 // Função utilitária para formatar código do cliente no padrão #C-0000
@@ -33,6 +33,7 @@ export const ClientesPage: React.FC = () => {
   
   const [clientes, setClientesLocal] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState(() => new URLSearchParams(location.search).get("search") ?? "");
   // Lista apenas - sem Kanban
   const [showModal, setShowModal] = useState(false);
@@ -114,6 +115,7 @@ export const ClientesPage: React.FC = () => {
 
   const loadClientes = async () => {
     try {
+      setLoadError(null);
       setLoading(true);
       const clientesData = await clientesApi.getAll({ search });
 
@@ -156,9 +158,9 @@ export const ClientesPage: React.FC = () => {
       });
 
       setClientesLocal(normalizedClientes);
-      setClientes(normalizedClientes);
     } catch (error) {
       console.error("Error loading clientes:", error);
+      setLoadError("Não foi possível carregar a lista de clientes a partir da API oficial.");
     } finally {
       setLoading(false);
     }
@@ -1181,6 +1183,17 @@ export const ClientesPage: React.FC = () => {
       <div className="table-container mt-5 overflow-hidden">
         {loading ? (
           <LoadingState text="Carregando clientes..." />
+        ) : loadError ? (
+          <ErrorState
+            title="Falha ao carregar clientes"
+            message={loadError}
+            action={{
+              label: "Tentar novamente",
+              onClick: () => {
+                void loadClientes();
+              },
+            }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px]">
