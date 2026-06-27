@@ -1,14 +1,11 @@
 // FINQZ PRO - Clientes Page
 import React, { useEffect, useState, useMemo } from "react";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Clock, Shield, Upload } from "lucide-react";
-import api from "../api/client";
 import { clientesApi } from "../api/modules/clientes.api";
 import { useLocation } from "react-router-dom";
-import useAppStore from "../store";
 import type { Cliente } from "../types";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import { useTenantFilter } from "../hooks/useTenantFilter";
 
 // Função utilitária para formatar código do cliente no padrão #C-0000
 const formatClientCode = (cliente: Cliente | undefined, index: number): string => {
@@ -32,7 +29,6 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
 };
 
 export const ClientesPage: React.FC = () => {
-  const { clientes: storeClientes, setClientes } = useAppStore();
   const location = useLocation();
   
   const [clientes, setClientesLocal] = useState<Cliente[]>([]);
@@ -283,7 +279,6 @@ export const ClientesPage: React.FC = () => {
 
     // Adicionar ao estado
     const updatedClientes = [...safeClientes, ...newClientes];
-    setClientes(updatedClientes as any);
     setClientesLocal(updatedClientes);
     
     alert(`${newClientes.length} cliente(s) importado(s) com sucesso!`);
@@ -299,12 +294,10 @@ export const ClientesPage: React.FC = () => {
   };
 
   // Função para filtrar clientes
-  // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
   const safeClientes = Array.isArray(clientes) ? clientes : [];
-  const tenantFilteredClientes = useTenantFilter(safeClientes);
   
   // Depois aplica os filtros de UI
-  const filteredClientes = tenantFilteredClientes.filter((cliente, index) => {
+  const filteredClientes = safeClientes.filter((cliente, index) => {
     const searchTerm = (search || '').trim().toLowerCase();
     if (searchTerm) {
       const digits = searchTerm.replace(/\D/g, "");
@@ -750,13 +743,10 @@ export const ClientesPage: React.FC = () => {
     setHistoryCliente(cliente);
     setShowHistory(true);
     try {
-      const response = await api.getAuditLogs({
-        entity: "Customer",
+      const logs = await clientesApi.getAuditLogs({
         entityId: String(cliente.id),
         limit: 20,
       });
-
-      const logs = Array.isArray(response?.data) ? response.data : [];
 
       const mappedHistory = logs.map((log: any) => {
         const changedFields = Array.isArray(log?.metadata?.changedFields)

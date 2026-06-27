@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Search, Play, Pause, Trash2, X, Send, Clock, CheckCircle, XCircle, AlertCircle, Eye, BarChart3 } from "lucide-react";
 import api from "../api/client";
+import { clientesApi } from "../api/modules/clientes.api";
 import useAppStore from "../store";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EmptyState, LoadingState, Modal, TextArea } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -99,9 +100,8 @@ export default function Campanhas() {
 
   const loadClientes = async () => {
     try {
-      // TODO(operational-migration): manter consumo no namespace CRM oficial enquanto campanhas segue em legado.
-      const response = await api.get("/crm/clientes");
-      setClientes(response.data.clientes || []);
+      const clientesData = await clientesApi.getAll();
+      setClientes(Array.isArray(clientesData) ? clientesData : []);
     } catch (error) {
       console.error("Erro ao carregar clientes:", error);
     }

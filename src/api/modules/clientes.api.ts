@@ -15,6 +15,11 @@ export interface ClienteFilters {
   estado?: string;
 }
 
+export interface ClienteAuditLogParams {
+  entityId: string;
+  limit?: number;
+}
+
 export interface CreateClientePayload {
   nome: string;
   cpf_cnpj?: string;
@@ -99,6 +104,26 @@ export const clientesApi = {
    */
   async search(query: string): Promise<any[]> {
     return this.getAll({ search: query });
+  },
+
+  /**
+   * Get audit logs for a cliente using the official audit surface
+   */
+  async getAuditLogs(params: ClienteAuditLogParams): Promise<any[]> {
+    const query = new URLSearchParams();
+    query.set('entity', 'Customer');
+    query.set('entityId', params.entityId);
+    query.set('limit', String(params.limit ?? 20));
+
+    const response = await apiCall<any>(`/api/v1/audit/logs?${query.toString()}`, {
+      preserveApiPrefix: true,
+    });
+
+    return Array.isArray(response?.logs)
+      ? response.logs
+      : Array.isArray(response?.data)
+        ? response.data
+        : [];
   },
 };
 
