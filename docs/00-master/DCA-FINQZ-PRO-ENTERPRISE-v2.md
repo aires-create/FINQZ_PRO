@@ -131,40 +131,40 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 - Proximas fases: [placeholder]
 
 ### 4.5 CRM Clientes
-- Responsabilidade: [placeholder]
-- Owner: [placeholder]
-- Status: [placeholder]
-- APIs: [placeholder]
-- Frontend: [placeholder]
-- Dependencias: [placeholder]
-- Consumers: [placeholder]
-- Producers: [placeholder]
-- Legados relacionados: [placeholder]
-- Proximas fases: [placeholder]
+- Responsabilidade: runtime oficial de clientes CRM, com listagem, criacao, edicao, exclusao, busca e sincronizacao oficial
+- Owner: Backend CRM / Clientes
+- Status: Production Ready
+- APIs: `/api/v1/clientes`
+- Frontend: `src/pages/Clientes.tsx`
+- Dependencias: Tenant Scoped, RBAC Driven, audit trail, persistencia oficial, refetch apos mutacoes
+- Consumers: CRM, campanhas, operacoes comerciais
+- Producers: backend oficial de Clientes e frontend consumidor
+- Legados relacionados: `src/api/client.ts`, `src/api/dataService.ts` permanecem apenas como compatibilidade historica fora do runtime oficial
+- Proximas fases: evolucao de cobertura funcional e consolidacao do ecossistema CRM
 
 ### 4.6 Pipeline
-- Responsabilidade: [placeholder]
-- Owner: [placeholder]
-- Status: [placeholder]
-- APIs: [placeholder]
-- Frontend: [placeholder]
-- Dependencias: [placeholder]
-- Consumers: [placeholder]
-- Producers: [placeholder]
-- Legados relacionados: [placeholder]
-- Proximas fases: [placeholder]
+- Responsabilidade: fluxo oficial de pipeline e stages para o dominio comercial
+- Owner: Backend oficial de Pipeline
+- Status: Production Ready
+- APIs: `/api/v1/pipelines`
+- Frontend: `src/pages/Oportunidades.tsx`, `src/pages/Configuracoes.tsx`, `src/pages/admin/Pipelines.tsx`
+- Dependencias: Opportunity, Tenant Scoped, RBAC Driven, reorder oficial, audit trail, soft delete
+- Consumers: Opportunity, esteira/kanban, configuracoes administrativas
+- Producers: backend oficial de pipelines e stages
+- Legados relacionados: `config/pipelines.ts` e heuristicas historicas permanecem apenas como compatibilidade, sem governar runtime
+- Proximas fases: cobertura de evolucao do dominio comercial remanescente e consolidacao documental
 
 ### 4.7 Opportunity
-- Responsabilidade: [placeholder]
-- Owner: [placeholder]
-- Status: [placeholder]
-- APIs: [placeholder]
-- Frontend: [placeholder]
-- Dependencias: [placeholder]
-- Consumers: [placeholder]
-- Producers: [placeholder]
-- Legados relacionados: [placeholder]
-- Proximas fases: [placeholder]
+- Responsabilidade: runtime oficial de oportunidades, incluindo lifecycle, Kanban operacional e persistencia oficial via move/update/delete
+- Owner: Backend oficial de Opportunity
+- Status: Production Ready
+- APIs: `/api/v1/opportunities`
+- Frontend: `src/pages/Oportunidades.tsx`
+- Dependencias: CRM Clientes, Pipeline, Tenant Scoped, RBAC Driven, audit trail, refetch pos-mudanca
+- Consumers: esteira/kanban, simulador, pipeline, CRM operacional
+- Producers: backend oficial de opportunities
+- Legados relacionados: `useAppStore` permanece apenas como compatibilidade de UI/usuarios/permissoes; nao governa o runtime oficial
+- Proximas fases: evolucao de cobertura de fluxo comercial e endurecimento residual de compatibilidade
 
 ### 4.8 Partner
 - Responsabilidade: [placeholder]
@@ -316,9 +316,10 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 
 | Dominio | Status oficial |
 |---|---|
-| CRM Clientes | GO WITH RESTRICTIONS |
-| Pipeline | GO WITH RESTRICTIONS / backend KEEP |
-| Opportunity | GO WITH RESTRICTIONS |
+| CRM Clientes | Production Ready |
+| Pipeline | Production Ready |
+| Opportunity | Production Ready |
+| Kanban / Esteira | Production Ready |
 | Master Catalog | GO |
 | Commercial Coverage | GO |
 | Partner Core | GO WITH RESTRICTIONS |
@@ -440,6 +441,96 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 - Restricoes: divergencia documental residual; cobertura adicional de contrato e validacao de estado ENRICHED.
 - Proxima fase: harmonizacao documental e endurecimento de testes.
 
+#### H20A
+- Objetivo: CRM Domain Reality Audit.
+- Decisao: diagnostico tecnico do dominio CRM, Pipeline, Opportunity e Kanban.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: auditoria em modo leitura.
+- Resultado: fotografia real do dominio CRM registrada.
+- Restricoes: runtime ainda misto no inicio da wave, com remanescentes de compatibilidade a enderecar.
+- Proxima fase: H20B.1.
+
+#### H20B.1
+- Objetivo: CRM Clientes Homologation Audit.
+- Decisao: clientes aptos a evoluir para produção com restricoes residuais.
+- Arquivos: [`src/pages/Clientes.tsx`](../../src/pages/Clientes.tsx) [placeholder]
+- Commits: [placeholder]
+- Validacoes: homologacao funcional do dominio Clientes.
+- Resultado: dominio Clientes preparado para hardening.
+- Restricoes: remanescentes de store e surfaces legadas.
+- Proxima fase: H20B.1A.
+
+#### H20B.1A
+- Objetivo: CRM Clientes Production Hardening.
+- Decisao: endurecimento controlado da runtime de Clientes.
+- Arquivos: [`src/pages/Clientes.tsx`](../../src/pages/Clientes.tsx), [`src/api/modules/clientes.api.ts`](../../src/api/modules/clientes.api.ts) [placeholder]
+- Commits: `c85198a`
+- Validacoes: build, testes e arch:check aprovados.
+- Resultado: Clientes Production Ready.
+- Restricoes: compatibilidade historica isolada fora do runtime oficial.
+- Proxima fase: H20B.2.
+
+#### H20B.2
+- Objetivo: Pipeline + Opportunity + Kanban Production Homologation Audit.
+- Decisao: runtime operacional validado para consolidacao final.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: auditoria tecnica em modo leitura.
+- Resultado: gaps mapeados e prontos para consolidacao.
+- Restricoes: resquicios de ownership hibrido identificados no frontend.
+- Proxima fase: H20B.2A.
+
+#### H20B.2A
+- Objetivo: Pipeline Runtime Consolidation.
+- Decisao: owner operacional consolidado no backend.
+- Arquivos: [`src/pages/Oportunidades.tsx`](../../src/pages/Oportunidades.tsx), [`src/pages/Configuracoes.tsx`](../../src/pages/Configuracoes.tsx) [placeholder]
+- Commits: `792288b`
+- Validacoes: build, testes e arch:check aprovados.
+- Resultado: Pipeline e Kanban passaram a refletir apenas o runtime oficial.
+- Restricoes: consolidacao adicional de Opportunity e remanescentes operacionais.
+- Proxima fase: H20B.2B.
+
+#### H20B.2B
+- Objetivo: Pipeline + Opportunity + Kanban Production Certification Audit.
+- Decisao: certificacao tecnica do dominio operacional.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: auditoria tecnica em modo leitura.
+- Resultado: runtime oficial e SSOT backend confirmados.
+- Restricoes: resquicios de compatibilidade ainda mapeados antes da finalizacao.
+- Proxima fase: H20B.2C.
+
+#### H20B.2C
+- Objetivo: Opportunity Runtime Finalization.
+- Decisao: ownership operacional de Opportunity finalizado no backend.
+- Arquivos: [`src/pages/Oportunidades.tsx`](../../src/pages/Oportunidades.tsx) [placeholder]
+- Commits: `2a2a579`
+- Validacoes: build, testes e arch:check aprovados.
+- Resultado: Opportunity passou a persistir exclusivamente via APIs oficiais.
+- Restricoes: apenas compatibilidade historica fora do runtime oficial.
+- Proxima fase: H20B.2D.
+
+#### H20B.2D
+- Objetivo: Pipeline + Opportunity + Kanban Final Production Certification.
+- Decisao: dominio operacional certificado como Production Ready.
+- Arquivos: [placeholder]
+- Commits: [placeholder]
+- Validacoes: build, testes e arch:check mantidos verdes.
+- Resultado: Pipeline + Opportunity + Kanban homologados em producao.
+- Restricoes: nenhuma restricao bloqueante de HML.
+- Proxima fase: encerramento documental da H20 e avancar para a proxima prioridade oficial.
+
+#### H20
+- Objetivo: consolidar CRM, Clientes, Pipeline, Opportunity e Kanban como runtime oficial.
+- Decisao: wave encerrada e reconhecida como Production Ready.
+- Arquivos: [placeholder]
+- Commits: `c85198a`, `792288b`, `2a2a579`
+- Validacoes: build, testes e arch:check aprovados nas waves de implementacao e certificacao.
+- Resultado: CRM encerrado como dominio Production Ready.
+- Restricoes: apenas compatibilidade historica fora do runtime oficial.
+- Proxima fase: Coverage Comercial.
+
 ---
 
 ## 7. Ownership Matrix
@@ -558,6 +649,12 @@ Antes de qualquer nova fase:
 4. Commercial Tables
 5. Simulator
 6. Permissions / RBAC
+
+### Prioridade oficial atual
+
+- CRM: concluido
+- Pipeline / Opportunity / Kanban: concluido
+- Proxima prioridade oficial: Coverage Comercial
 7. Partner Form Audit
 8. CSV Parceiros
 9. Partner Acquisition incremental
