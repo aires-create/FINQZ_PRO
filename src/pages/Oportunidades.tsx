@@ -17,6 +17,39 @@ import { KanbanColumn, formatCurrency } from "../components/pipeline";
 import { getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, emitOpportunityEvent, createOpportunityEventPayload } from "../data/catalogRepository";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
+const mapKanbanOpportunityToCreateIntakePayload = (formData: any, oportunidade: any, selectedPipelineId: string, selectedStageId: string) => {
+  const name = String(formData?.nome || oportunidade?.nome || oportunidade?.cliente_nome || "Sem nome").trim();
+  const amount = Number(formData?.valor ?? oportunidade?.valor ?? oportunidade?.amount ?? 0);
+  const customerNameParts = name.split(" ").filter(Boolean);
+  const firstName = customerNameParts[0] || name || "Cliente";
+  const lastName = customerNameParts.slice(1).join(" ") || "Não informado";
+
+  return {
+    customer: {
+      id: oportunidade?.cliente_id ?? oportunidade?.customerId ?? null,
+      firstName,
+      lastName,
+      email: String(formData?.email || oportunidade?.email || ""),
+      cpfCnpj: String(formData?.cpf_cnpj || oportunidade?.cpf_cnpj || "").replace(/\D/g, ""),
+      phone: String(formData?.telefone || formData?.celular || oportunidade?.telefone || oportunidade?.celular || ""),
+      birthDate: formData?.data_nascimento || null,
+      documentType: formData?.tipoPessoa || null,
+    },
+    opportunity: {
+      title: name,
+      amount,
+      pipelineId: String(selectedPipelineId || oportunidade?.pipelineId || oportunidade?.backendPipelineId || ""),
+      stageId: String(selectedStageId || oportunidade?.stageId || oportunidade?.backendStageId || ""),
+      ownerId: formData?.responsavel_id || oportunidade?.ownerId || null,
+      description: String(formData?.observacoes || oportunidade?.observacoes || oportunidade?.description || ""),
+    },
+    options: {
+      allowCreateCustomer: true,
+      updateExistingCustomer: true,
+    },
+  };
+};
+
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
 const normalizeKey = (value: any): string => {
   return String(value || "")
@@ -619,9 +652,6 @@ const dedupeOportunidades = (items: any[]): any[] => {
 const OportunidadesPageInner = () => {
   const navigate = useNavigate();
   const { 
-    addOportunidade,
-    updateOportunidade,
-    deleteOportunidade,
     usuarios,
     user,
     theme,
@@ -1486,24 +1516,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setSimulationResult({ ...simuladorResultado });
     setShowFaseSelector(true);
     
-    // Atualizar localmente no store
-    updateOportunidade(String(selectedLead.id), { 
-      valor: novoValor, 
-      simulationStatus: 'aceita',
-      simulationAcceptedAt: now,
-      simulationResult: simuladorResultado
-    });
-    
-    // Atualizar selectedLead para refletir na UI
-    setSelectedLead((prev: any) => prev ? ({ 
-      ...prev, 
-      valor: novoValor, 
-      simulationStatus: 'aceita',
-      simulationAcceptedAt: now,
-      simulationResult: simuladorResultado
-    }) : null);
-    
-    // Persistir no backend oficial (apenas valor da oportunidade)
     try {
       const opportunityId = String(getCanonicalOpportunityId(selectedLead) ?? "");
       if (!opportunityId) {
@@ -1513,6 +1525,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       await opportunitiesApi.update(opportunityId, {
         amount: novoValor,
       });
+      setApiReadReloadKey((prev) => prev + 1);
     } catch (error) {
       console.error('Erro ao atualizar valor da oportunidade:', error);
     }
@@ -1728,14 +1741,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       
       // Atualiza a oportunidade com o ID do envelope
       if (editingOportunidade) {
-        updateOportunidade(editingOportunidade.id, {
-          envelopeId: resultado.id,
-          envelopeStatus: resultado.status,
-          envelopeUrl: resultado.urlAssinatura,
-          envelopeProvider: selectedProvider
-        });
+        const envelopeOpportunityId = String(getCanonicalOpportunityId(editingOportunidade) ?? editingOportunidade.id ?? "");
+        if (envelopeOpportunityId) {
+          await opportunitiesApi.update(envelopeOpportunityId, {
+            envelopeId: resultado.id,
+            envelopeStatus: resultado.status,
+            envelopeUrl: resultado.urlAssinatura,
+            envelopeProvider: selectedProvider
+          });
+        }
       }
       
+      setApiReadReloadKey((prev) => prev + 1);
       alert(`Assinatura enviada com sucesso! ID: ${resultado.id}`);
     } catch (error) {
       console.error('Erro ao iniciar assinatura:', error);
@@ -1762,15 +1779,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       dataAssinatura: new Date().toISOString()
     };
     setEnvelopeStatus(novoStatus);
-    
-    // Atualizar oportunidade
-    updateOportunidade(oportunidade.id, {
-      envelopeStatus: 'assinado',
-      etapa_id: 'ativo',
-      etapa: 'ativo',
-      status: 'ganho',
-      dataAssinatura: novoStatus.dataAssinatura
-    });
     
     // Preparar dados para automação
     const oportunidadeAssinada: OportunidadeAssinada = {
@@ -2488,92 +2496,55 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   // Create oportunidade
   // Handle Import de dados
-  const handleImport = (data: any[]) => {
-    const novasOportunidades = data.map((item, index) => {
-      // Normalizar tipoPessoa
-      let tipoPessoa: "CPF" | "CNPJ" = "CPF"
-      if (item.tipoPessoa) {
-        const tp = item.tipoPessoa.toUpperCase()
-        if (tp === 'PJ' || tp === 'CNPJ') tipoPessoa = "CNPJ"
-      }
-      
-      // Normalizar etapa
-      let etapa_id = "novo_lead"
-      if (item.etapa) {
-        const etapaNormalizada = item.etapa.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s/g, '_')
-        const etapaValida = OFICIAL_ETAPAS.find(e => 
-          e.key === etapaNormalizada || 
-          e.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s/g, '_') === etapaNormalizada
-        )
-        if (etapaValida) {
-          etapa_id = etapaValida.key
-        }
-      }
-      
-      // Normalizar telefone/celular (só números)
-      const celular = item.celular?.replace(/\D/g, '') || ''
-      const telefone = item.telefone?.replace(/\D/g, '') || ''
-      const cpfCnpj = item.cpfCnpj?.replace(/\D/g, '') || ''
-      
-      // Encontrar responsável pelo nome
-      let responsavel_id: string | null = null
-      let responsavel_nome = ''
-      if (item.responsavel) {
-        const usuario = safeUsuarios.find((u: any) => 
-          u.nome?.toLowerCase().includes(item.responsavel.toLowerCase())
-        )
-        if (usuario) {
-          responsavel_id = usuario.id
-          responsavel_nome = usuario.nome
-        }
-      }
-      
-      // Encontrar produto
-      let produto_id: number | null = null
-      if (item.produto) {
-        const produtoNormalizado = normalizeKey(item.produto);
-        const produto = catalogProductOptions.find((p) => {
-          const nomeNormalizado = normalizeKey(p.name);
-          return (
-            nomeNormalizado === produtoNormalizado ||
-            nomeNormalizado.includes(produtoNormalizado) ||
-            produtoNormalizado.includes(nomeNormalizado)
-          );
+  const handleImport = async (data: any[]) => {
+    const pipelineIdParaImportacao = String(selectedPipelineId || currentPipelineConfig?.id || officialPipelines[0]?.id || "");
+    const stageIdParaImportacao = String(etapasNovaOportunidade[0]?.id || "");
+    let importedCount = 0;
+
+    for (const item of data) {
+      const telefone = String(item?.telefone || "").replace(/\D/g, "");
+      const celular = String(item?.celular || "").replace(/\D/g, "");
+      const cpfCnpj = String(item?.cpfCnpj || "").replace(/\D/g, "");
+      const nome = String(item?.nomeCompleto || item?.nome || "Sem nome");
+
+      try {
+        await opportunitiesApi.createIntake({
+          customer: {
+            id: null,
+            firstName: nome.split(" ").filter(Boolean)[0] || nome,
+            lastName: nome.split(" ").filter(Boolean).slice(1).join(" ") || "Não informado",
+            email: String(item?.email || ""),
+            cpfCnpj,
+            phone: celular || telefone || null,
+            birthDate: null,
+            documentType: String(item?.tipoPessoa || "").toUpperCase() === "CNPJ" || String(item?.tipoPessoa || "").toUpperCase() === "PJ" ? "CNPJ" : "CPF",
+            address: null,
+            bankData: null,
+            profession: null,
+            maritalStatus: null,
+            gender: null,
+          },
+          opportunity: {
+            title: nome,
+            amount: Number(item?.valor) || 0,
+            pipelineId: pipelineIdParaImportacao,
+            stageId: stageIdParaImportacao,
+            ownerId: null,
+            description: String(item?.observacoes || ""),
+          },
+          options: {
+            allowCreateCustomer: true,
+            updateExistingCustomer: true,
+          },
         });
-        if (produto) {
-          const parsedId = Number.parseInt(String(produto.id).replace(/\D/g, ""), 10);
-          produto_id = Number.isFinite(parsedId) ? parsedId : null;
-        }
+        importedCount += 1;
+      } catch (error) {
+        console.error("[Oportunidades] Falha ao importar oportunidade via API oficial:", error);
       }
-      
-      return {
-        id: generateId("lead"),
-        nome: item.nomeCompleto || item.nome || "Sem nome",
-        tipoPessoa,
-        cpf_cnpj: cpfCnpj,
-        celular,
-        telefone,
-        email: item.email || "",
-        produto: item.produto || "",
-        produto_id,
-        etapa_id,
-        etapa: etapa_id,
-        valor: Number(item.valor) || 0,
-        status: "ativo",
-        cliente_nome: item.nomeCompleto || item.nome || "Sem nome",
-        responsavel_id,
-        responsavel_nome,
-        observacoes: item.observacoes || "",
-        rdStatus: item.rdStatus || "nao_consultado",
-        rdConsultedAt: item.rdConsultedAt || "",
-        rdNotes: item.rdNotes || "",
-        tags: [],
-        createdAt: new Date().toISOString()
-      }
-    })
-    
-    novasOportunidades.forEach(op => addOportunidade(op))
-    alert(`Importadas ${novasOportunidades.length} oportunidades com sucesso!`)
+    }
+
+    setApiReadReloadKey((prev) => prev + 1);
+    alert(`Importadas ${importedCount} oportunidades com sucesso!`);
   }
 
   // Funções de Consulta de Compliance
@@ -2971,19 +2942,7 @@ if (
   }
 
   try {
-    const updatedResponse = await opportunitiesApi.update(idToUpdate, payloadBackend);
-    const updatedFromApi = updatedResponse?.data && "title" in updatedResponse.data
-      ? mapApiOpportunityToKanbanShape(updatedResponse.data)
-      : null;
-
-    if (updatedFromApi) {
-      setSelectedLead((prev: any) => (prev ? { ...prev, ...updatedFromApi } : updatedFromApi));
-    } else {
-      setSelectedLead({
-        ...lead,
-        ...payload,
-      });
-    }
+    await opportunitiesApi.update(idToUpdate, payloadBackend);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro ao atualizar oportunidade";
     console.error("[Oportunidades] Falha ao atualizar oportunidade na API oficial:", {
@@ -3196,7 +3155,21 @@ if (
   const handleDelete = (id: string) => {
     if (!can('oportunidades', 'delete')) return;
     if (confirm("Tem certeza que deseja excluir esta oportunidade?")) {
-      deleteOportunidade(id);
+      void (async () => {
+        try {
+          const opportunityId = String(id || "").trim();
+          if (!opportunityId) {
+            throw new Error("Oportunidade sem identificador para exclusão.");
+          }
+
+          await opportunitiesApi.delete(opportunityId);
+          setApiReadReloadKey((prev) => prev + 1);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Erro ao excluir oportunidade";
+          console.error("[Oportunidades] Falha ao excluir oportunidade na API oficial:", message);
+          alert(`Erro ao excluir oportunidade: ${message}`);
+        }
+      })();
     }
   };
 
