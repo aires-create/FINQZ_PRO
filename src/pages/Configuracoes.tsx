@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 import { Settings, Palette, Bell, Shield, Database, Save, Upload, X, Plus, Minus, Trash2, Edit, Users, Zap, ChevronDown, ChevronRight, Check, Mail, Key, ExternalLink } from "lucide-react";
 import useAppStore from "../store";
 import { MODULE_PERMISSIONS, PROFILE_PERMISSIONS, USER_PROFILES, Pipeline, Etapa } from "../types";
-import { pipelines as initialPipelines, setPipelines } from "../config/pipelines";
+import { pipelinesApi } from "../api/modules/pipelines.api";
 import { CAMPOS_SISTEMA, CAMPOS_POR_CATEGORIA } from "../config/campos";
 import { TAGS_SISTEMA, listarTags, criarTag, editarTag, excluirTag, CORES_DISPONIVEIS, Tag } from "../config/tags";
 import { AUTOMAÇÕES_BASE, getConfigPipeline, salvarConfigPipeline, toggleAutomacaoPipeline, getPipelinesComAutomacao, getTipoPipelineLabel, getCorTipoPipeline, resetarConfigPipeline, ConfigAutomacaoPipeline } from "../config/configAutomacoes";
@@ -45,7 +45,9 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
       setActiveTab(newTab);
     }
   }, [location.pathname]);
-  const [pipelines, setPipelines] = useState<Pipeline[]>(initialPipelines);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [pipelinesLoading, setPipelinesLoading] = useState(false);
+  const [pipelinesError, setPipelinesError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -79,6 +81,49 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [tagForm, setTagForm] = useState({ nome: "", cor: "#ef4444" });
   const [tagError, setTagError] = useState("");
+
+  const normalizeOfficialPipeline = (pipeline: any): Pipeline => {
+    const rawStages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+
+    return {
+      id: String(pipeline?.id ?? ""),
+      nome: String(pipeline?.name ?? pipeline?.nome ?? "Pipeline"),
+      ativo: pipeline?.isActive !== undefined ? Boolean(pipeline.isActive) : pipeline?.ativo !== undefined ? Boolean(pipeline.ativo) : true,
+      produto: String(pipeline?.description ?? pipeline?.descricao ?? ""),
+      colunas: [],
+      etapas: rawStages.map((stage: any, index: number) => ({
+        id: String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? `stage-${index}`),
+        nome: String(stage?.name ?? stage?.nome ?? stage?.label ?? stage?.id ?? stage?.key ?? "Etapa"),
+        ordem: Number.isFinite(Number(stage?.order)) ? Number(stage.order) : index + 1,
+        cor: stage?.cor ? String(stage.cor) : undefined,
+        ativo: stage?.isActive !== undefined ? Boolean(stage.isActive) : true,
+        obrigatorios: stage?.obrigatorios ?? {},
+        tags: Array.isArray(stage?.tags) ? stage.tags : [],
+        bloqueiaAvanco: Boolean(stage?.bloqueiaAvanco),
+      })),
+    };
+  };
+
+  const loadPipelines = async () => {
+    setPipelinesLoading(true);
+    setPipelinesError(null);
+
+    try {
+      const response = await pipelinesApi.getAll({ includeInactive: true });
+      const rawItems = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+      setPipelines(rawItems.map(normalizeOfficialPipeline));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao carregar pipelines oficiais";
+      setPipelinesError(message);
+      setPipelines([]);
+    } finally {
+      setPipelinesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadPipelines();
+  }, []);
 
   // Tag functions
   const handleCriarTag = () => {
@@ -141,28 +186,25 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
   };
 
   // Save stage edits
-  const saveStage = () => {
+  const saveStage = async () => {
     if (!editingStage) return;
-    
-    setPipelines(pipelines.map(p => {
-      if (p.id !== editingStage.pipelineId || !p.etapas) return p;
-      return {
-        ...p,
-        etapas: p.etapas.map(e => 
-          e.id === editingStage.etapa.id 
-            ? { 
-                ...e, 
-                nome: stageForm.nome,
-                cor: stageForm.cor,
-                obrigatorios: stageForm.obrigatorios,
-                tags: stageForm.tags ? stageForm.tags.split(",").map(s => s.trim()).filter(Boolean) : [],
-              } 
-            : e
-        )
-      };
-    }));
-    
-    setEditingStage(null);
+
+    try {
+      setSaving(true);
+      await pipelinesApi.updateStage(editingStage.etapa.id, {
+        name: stageForm.nome,
+        isWon: Boolean((editingStage.etapa as any).isWon),
+        isLost: Boolean((editingStage.etapa as any).isLost),
+        isActive: Boolean((editingStage.etapa as any).ativo ?? true),
+      });
+
+      setEditingStage(null);
+    } catch (error) {
+      console.error("[Configuracoes] Falha ao salvar etapa oficial:", error);
+    } finally {
+      setSaving(false);
+      void loadPipelines();
+    }
   };
 
   // Handle drag start
@@ -177,7 +219,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
   };
 
   // Handle drop - reorder stages
-  const handleDrop = (e: React.DragEvent, targetPipelineId: string, targetEtapaId: string) => {
+  const handleDrop = async (e: React.DragEvent, targetPipelineId: string, targetEtapaId: string) => {
     e.preventDefault();
     
     if (!draggedStage || draggedStage.pipelineId !== targetPipelineId) {
@@ -192,29 +234,40 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
       return;
     }
 
-    // Reorder stages
-    setPipelines(pipelines.map(pipeline => {
-      if (pipeline.id !== targetPipelineId || !pipeline.etapas) return pipeline;
-      
-      const stages = [...pipeline.etapas];
-      const draggedIndex = stages.findIndex(e => e.id === draggedStage.etapaId);
-      const targetIndex = stages.findIndex(e => e.id === targetEtapaId);
-      
-      if (draggedIndex === -1 || targetIndex === -1) return pipeline;
-      
-      // Remove dragged item and insert at target position
-      const [draggedItem] = stages.splice(draggedIndex, 1);
-      stages.splice(targetIndex, 0, draggedItem);
-      
-      // Update order for all stages
-      return {
-        ...pipeline,
-        etapas: stages.map((etapa, index) => ({
-          ...etapa,
-          ordem: index + 1
-        }))
-      };
-    }));
+    const currentPipeline = pipelines.find(pipeline => pipeline.id === targetPipelineId);
+    if (!currentPipeline?.etapas) {
+      setDraggedStage(null);
+      setDragOverStage(null);
+      return;
+    }
+
+    const stages = [...currentPipeline.etapas];
+    const draggedIndex = stages.findIndex(e => e.id === draggedStage.etapaId);
+    const targetIndex = stages.findIndex(e => e.id === targetEtapaId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedStage(null);
+      setDragOverStage(null);
+      return;
+    }
+
+    const [draggedItem] = stages.splice(draggedIndex, 1);
+    stages.splice(targetIndex, 0, draggedItem);
+
+    try {
+      setSaving(true);
+      await pipelinesApi.reorderStages(targetPipelineId, {
+        stages: stages.map((etapa, index) => ({
+          stageId: etapa.id,
+          order: index + 1,
+        })),
+      });
+      await loadPipelines();
+    } catch (error) {
+      console.error("[Configuracoes] Falha ao reordenar etapas oficiais:", error);
+    } finally {
+      setSaving(false);
+    }
 
     setDraggedStage(null);
     setDragOverStage(null);
@@ -574,7 +627,7 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           // Exportar configurações gerais
           const configData = {
             tema: theme,
-            pipelines: initialPipelines,
+            pipelines,
             tags: TAGS_SISTEMA,
             automacoes: AUTOMAÇÕES_BASE,
           };
@@ -866,6 +919,16 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
           {activeTab === "pipelines" && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-white">Gerenciar Pipelines</h3>
+              {pipelinesLoading && (
+                <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200">
+                  Carregando pipelines oficiais...
+                </div>
+              )}
+              {pipelinesError && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                  {pipelinesError}
+                </div>
+              )}
               
               {/* Lista de Pipelines */}
               <div className="space-y-4">
@@ -884,10 +947,16 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
                           <Edit size={16} />
                         </button>
                         <button 
-                          onClick={() => {
-                            setPipelines(pipelines.map(p => 
-                              p.id === pipeline.id ? { ...p, ativo: !p.ativo } : p
-                            ));
+                          onClick={async () => {
+                            try {
+                              setSaving(true);
+                              await pipelinesApi.deletePipeline(pipeline.id);
+                              await loadPipelines();
+                            } catch (error) {
+                              console.error("[Configuracoes] Falha ao excluir pipeline oficial:", error);
+                            } finally {
+                              setSaving(false);
+                            }
                           }}
                           className="p-2 text-slate-500 hover:text-red-500 hover:bg-gray-100 rounded-lg"
                         >
@@ -946,19 +1015,16 @@ export const ConfiguracoesPage: React.FC<ConfiguracoesPageProps> = ({ defaultTab
               
               {/* Botão adicionar pipeline */}
               <button
-                onClick={() => {
-                  const novoId = `pipeline_${Date.now()}`;
-                  const novoPipeline: Pipeline = {
-                    id: novoId,
-                    nome: "Novo Pipeline",
-                    ativo: true,
-                    etapas: [
-                      { id: `${novoId}_lead`, nome: "Novo Lead", ordem: 1, ativo: true },
-                      { id: `${novoId}_processo`, nome: "Em Processo", ordem: 2, ativo: true },
-                      { id: `${novoId}_fechamento`, nome: "Fechamento", ordem: 3, ativo: true },
-                    ],
-                  };
-                  setPipelines([...pipelines, novoPipeline]);
+                onClick={async () => {
+                  try {
+                    setSaving(true);
+                    await pipelinesApi.createPipeline({ name: "Novo Pipeline" });
+                    await loadPipelines();
+                  } catch (error) {
+                    console.error("[Configuracoes] Falha ao criar pipeline oficial:", error);
+                  } finally {
+                    setSaving(false);
+                  }
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-[#000dff] text-white rounded-lg hover:bg-[#000dcc] transition-colors"
               >

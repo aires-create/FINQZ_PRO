@@ -10,12 +10,11 @@ import { Plus, X, Edit2, Trash2, MoreVertical, MoreHorizontal, Search, RefreshCw
 import { Button, Card as DSCard, Input, Select, PageActions, FilterButton, ExportButtons, PrimaryButton, RefreshButton, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard } from "../components/ui";
 import { generateId } from "../utils/idGenerator";
 import { PageHeader } from "../components/layout/PageHeader";
-import { pipelines, podeAvancar, getPipelineById, PIPELINES, getPipelinesOrdenados, getPipelineConfigById, mapearProdutoLegadoParaPipeline, pipelineRequerAssinaturaDigital, getDocumentosObrigatorios, isPipelineOnboarding, isPipelineParceiro, isPipelineColaborador, getPipelineTipoLabel } from "../config/pipelines";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { KanbanColumn, PipelineSelect, getStageColor, formatCurrency, filterOportunitiesByPipeline, groupOportunitiesByStage, calculateTotalsByStage } from "../components/pipeline";
-import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages, getPipelineStageColor } from "../data/catalogRepository";
+import { KanbanColumn, formatCurrency } from "../components/pipeline";
+import { getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, emitOpportunityEvent, createOpportunityEventPayload } from "../data/catalogRepository";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
@@ -393,19 +392,6 @@ export const validarEtapa = (
   return { valido: true, mensagem: "", camposFaltantes: [] };
 };
   
-// 🔵 ETAPAS DINÂMICAS DO PIPELINE - USA CONFIGURAÇÃO OU PADRÃO
-const getEtapasAtivas = (pipelineId: string) => {
-  // Tenta carregar etapas configuradas em Administração > Pipelines
-  const stages = getPipelineStages(pipelineId);
-  
-  // Mapeia as etapas para o formato esperado pelo Kanban
-  return stages.map((nome, index) => ({
-    id: normalizeKey(nome),
-    nome: nome,
-    cor: getCorEtapa(normalizeKey(nome), index)
-  }));
-};
-
 // Cores para cada etapa
 const getCorEtapa = (key: string, index: number): string => {
   const cores: Record<string, string> = {
@@ -633,34 +619,20 @@ const dedupeOportunidades = (items: any[]): any[] => {
 const OportunidadesPageInner = () => {
   const navigate = useNavigate();
   const { 
-    pipelines, 
-    oportunidadesKanban, 
-    currentPipelineId, 
-    setCurrentPipelineId,
-    moveOportunidade,
     addOportunidade,
     updateOportunidade,
     deleteOportunidade,
-    addPipeline,
-    updatePipeline,
-    deletePipeline,
-    addColumn,
-    updateColumn,
-    deleteColumn,
     usuarios,
     user,
     theme,
     hasPermission 
   } = useAppStore();
-
-  // PROTEÇÃO COMPLETA DO STORE - Safe fallbacks para todos os dados
-  const safePipelinesStore = Array.isArray(pipelines) ? pipelines : [];
-  const safeOportunidadesKanban = Array.isArray(oportunidadesKanban) ? oportunidadesKanban : [];
   const safeUsuarios = Array.isArray(usuarios) ? usuarios : [];
   const [apiOportunidadesReadOnly, setApiOportunidadesReadOnly] = useState<any[] | null>(null);
   const [officialPipelines, setOfficialPipelines] = useState<any[]>([]);
   const [apiReadError, setApiReadError] = useState<string | null>(null);
   const [apiReadReloadKey, setApiReadReloadKey] = useState(0);
+  const [selectedPipelineId, setSelectedPipelineId] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -709,6 +681,13 @@ const OportunidadesPageInner = () => {
 
         if (!cancelled) {
           setOfficialPipelines(normalizedPipelines);
+          setSelectedPipelineId((current) => {
+            if (current && normalizedPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === current)) {
+              return current;
+            }
+
+            return String(normalizedPipelines[0]?.id ?? "");
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erro ao carregar pipelines oficiais";
@@ -716,6 +695,7 @@ const OportunidadesPageInner = () => {
 
         if (!cancelled) {
           setOfficialPipelines([]);
+          setSelectedPipelineId("");
         }
       }
     };
@@ -726,38 +706,6 @@ const OportunidadesPageInner = () => {
       cancelled = true;
     };
   }, []);
-
-  // Safe currentPipelineId sem pipeline default operacional
-  const safeCurrentPipelineId =
-    typeof currentPipelineId === "string" && currentPipelineId
-      ? currentPipelineId
-      : "";
-
-  // Safe setters e actions do store
-  const safeSetCurrentPipelineId =
-    typeof setCurrentPipelineId === "function"
-      ? setCurrentPipelineId
-      : () => {};
-
-  const safeMoveOportunidade =
-    typeof moveOportunidade === "function"
-      ? moveOportunidade
-      : () => {};
-
-  const safeAddOportunidade =
-    typeof addOportunidade === "function"
-      ? addOportunidade
-      : () => {};
-
-  const safeUpdateOportunidade =
-    typeof updateOportunidade === "function"
-      ? updateOportunidade
-      : () => {};
-
-  const safeDeleteOportunidade =
-    typeof deleteOportunidade === "function"
-      ? deleteOportunidade
-      : () => {};
 
   const isDark = theme === "dark";
   // Fallback seguro para hasPermission - evita erro se store ainda não carregou
@@ -790,23 +738,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   // NOVA TAXONOMIA PF - Estado para subproduto e modalidade
   const [selectedSubproductId, setSelectedSubproductId] = useState<string>("");
   const [selectedModality, setSelectedModality] = useState<string>("");
-  const [pipelineSelectionReady, setPipelineSelectionReady] = useState(false);
-  const [localPipelineSelectionId, setLocalPipelineSelectionId] = useState("");
 
   const syncPipelineSelection = (nextPipelineId: string) => {
     const normalizedNextPipelineId = typeof nextPipelineId === "string" ? nextPipelineId : "";
-    setLocalPipelineSelectionId(normalizedNextPipelineId);
-    safeSetCurrentPipelineId(normalizedNextPipelineId);
+    setSelectedPipelineId(normalizedNextPipelineId);
   };
-  
-  const selectedPipelineId = useMemo(() => {
-    if (!pipelineSelectionReady) return "";
-    const candidatePipelineId = localPipelineSelectionId || currentPipelineId || "";
-    if (!candidatePipelineId) return "";
-    return officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === candidatePipelineId)
-      ? candidatePipelineId
-      : "";
-  }, [currentPipelineId, localPipelineSelectionId, officialPipelines, pipelineSelectionReady]);
   const catalogProductOptions = useMemo(() => getProductOptions(), []);
   const catalogSubproducts = useMemo(() => 
     selectedProductId ? getSubproductsByProductId(selectedProductId) : [], 
@@ -820,26 +756,22 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   );
 
   React.useEffect(() => {
-    if (!pipelineSelectionReady) {
-      setLocalPipelineSelectionId("");
-      safeSetCurrentPipelineId("");
+    if (!officialPipelines.length) {
+      setSelectedPipelineId("");
       setSelectedProductId("");
       setSelectedSubproductId("");
       setSelectedModality("");
-      setPipelineSelectionReady(true);
       return;
     }
 
-    if (currentPipelineId && !selectedPipelineId) {
-      setLocalPipelineSelectionId("");
-      safeSetCurrentPipelineId("");
-      return;
-    }
+    setSelectedPipelineId((current) => {
+      if (current && officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === current)) {
+        return current;
+      }
 
-    if (selectedPipelineId && selectedPipelineId !== localPipelineSelectionId) {
-      setLocalPipelineSelectionId(selectedPipelineId);
-    }
-  }, [currentPipelineId, localPipelineSelectionId, pipelineSelectionReady, safeSetCurrentPipelineId, selectedPipelineId]);
+      return String(officialPipelines[0]?.id ?? "");
+    });
+  }, [officialPipelines]);
   
   // Ordenação por coluna: { [etapaId]: 'valor_asc' | 'valor_desc' | 'data_asc' | 'data_desc' }
   const [columnSort, setColumnSort] = useState<Record<string, string>>({});
@@ -1612,7 +1544,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
     const targetEtapaKey = normalizeKey(novaFaseAposAceite);
     const origemPipelineSemantico = String(
-      selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? currentPipelineId ?? "",
+      selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
       selectedLead?.backendPipelineId ||
@@ -1665,20 +1597,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       alert(`Erro ao confirmar mudança de fase: ${message}`);
       return;
     }
-
-    // Atualizar localmente no store apenas após sucesso da API
-    moveOportunidade(selectedLeadId, { 
-      etapa_id: novaFaseAposAceite, 
-      status: novoStatus 
-    });
-    
-    // Atualizar selectedLead para refletir na UI
-    setSelectedLead((prev: any) => prev ? ({ 
-      ...prev, 
-      etapa_id: novaFaseAposAceite,
-      etapa: novaFaseAposAceite,
-      status: novoStatus
-    }) : null);
 
     setApiReadReloadKey((prev) => prev + 1);
     setShowFaseSelector(false);
@@ -2073,7 +1991,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       officialPipelines.find((pipeline: any) => String(pipeline?.id ?? "") === selectedPipelineId) ?? null,
     [officialPipelines, selectedPipelineId],
   );
-  const selectedOfficialStages = resolveOfficialStagesForSelectedPipeline(selectedOfficialPipeline).map((stage) => stage.name);
+  const selectedOfficialStages = resolveOfficialStagesForSelectedPipeline(selectedOfficialPipeline);
   const currentPipelineConfig: PipelineRuntimeConfig | null = selectedOfficialPipeline
     ? {
         id: String(selectedOfficialPipeline.id),
@@ -2085,7 +2003,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
           ),
         ),
         descricao: String(selectedOfficialPipeline.name ?? ""),
-        etapas: selectedOfficialStages,
+        etapas: selectedOfficialStages.map((stage) => stage.name),
+        colunas: selectedOfficialStages.map((stage) => ({
+          id: String(stage.id),
+          nome: String(stage.name),
+          ordem: Number(stage.order ?? 0),
+          cor: getCorEtapa(normalizeKey(stage.name), Math.max(0, Number(stage.order ?? 1) - 1)),
+          ativo: true,
+        })),
       }
     : null;
 
@@ -2099,67 +2024,24 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     return resolveOfficialStagesForSelectedPipeline(formSelectedOfficialPipeline).map((stage) => stage.name);
   }, [formSelectedOfficialPipeline]);
 
-  const matchedOfficialPipelineForSelection = useMemo(() => {
-    if (selectedOfficialPipeline) {
-      return selectedOfficialPipeline;
-    }
-
-    const origemPipelineSemantico = String(currentPipelineConfig?.id ?? currentPipelineId ?? "");
-    const normalizedCurrentPipelineName = normalizeKey(String(currentPipelineConfig?.nome ?? ""));
-
-    return officialPipelines.find((pipeline: any) => {
-      const semanticPipelineId = mapBackendPipelineNameToSemanticId(
-        String(pipeline?.name ?? ""),
-        String(pipeline?.id ?? ""),
-      );
-      const normalizedPipelineName = normalizeKey(String(pipeline?.name ?? ""));
-
-      return (
-        semanticPipelineId === origemPipelineSemantico ||
-        (normalizedCurrentPipelineName.length > 0 && normalizedPipelineName === normalizedCurrentPipelineName)
-      );
-    }) ?? null;
-  }, [currentPipelineConfig?.id, currentPipelineConfig?.nome, currentPipelineId, officialPipelines, selectedOfficialPipeline]);
-  
-  // ETAPAS DINÂMICAS do pipeline atual - usar OFICIAL_ETAPAS como base
-  // HARDENING: Com normalizeKey e fallback seguro
-  const etapasAtivasRaw = Array.isArray(currentPipelineConfig?.etapas)
-    ? currentPipelineConfig.etapas.map((key: string, index: number) => {
-        const stageName = String(key);
-        const etapaOriginal = OFICIAL_ETAPAS.find(
-          e => normalizeKey(e.key) === normalizeKey(key) || normalizeKey(e.label) === normalizeKey(stageName)
-        );
-        return {
-          id: normalizeKey(key),
-          nome: etapaOriginal?.label ?? stageName,
-          ordem: index + 1,
-          ativo: true,
-          cor: currentPipelineConfig
-            ? getPipelineStageColor(currentPipelineConfig.id, stageName, index)
-            : getCorEtapa(normalizeKey(key), index)
-        };
-      })
-    : [];
+  const etapasAtivasRaw = selectedOfficialStages.map((stage, index) => ({
+    id: String(stage.id),
+    nome: String(stage.name),
+    ordem: Number(stage.order ?? index + 1),
+    ativo: true,
+    cor: getCorEtapa(normalizeKey(stage.name), index),
+  }));
   const etapasAtivas = Array.isArray(etapasAtivasRaw) ? etapasAtivasRaw : [];
   const hasSelectedOfficialPipeline = Boolean(selectedOfficialPipeline);
   const hasSelectedPipelineWithoutStages = hasSelectedOfficialPipeline && etapasAtivas.length === 0;
-  const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
-  const etapasNovaOportunidade =
-    Array.isArray(matchedOfficialPipelineForSelection?.stages) && matchedOfficialPipelineForSelection.stages.length > 0
-      ? matchedOfficialPipelineForSelection.stages.map((stage: any) => ({
-          id: String(stage?.id ?? ""),
-          nome: String(stage?.name ?? stage?.id ?? "Etapa"),
-        }))
-      : etapasAtivas.length > 0
-      ? etapasAtivas.map((etapa) => ({
-          id: String(etapa.id),
-          nome: String(etapa.nome ?? etapa.id),
-        }))
-      : OFICIAL_ETAPAS.map((etapa) => ({
-          id: etapa.key,
-          nome: etapa.label,
-        }));
-  const fasePosAceiteFallbackId = String(etapasPosSimulacao[0]?.id || "novo_lead");
+  const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : [];
+  const etapasNovaOportunidade = etapasAtivas.length > 0
+    ? etapasAtivas.map((etapa) => ({
+        id: String(etapa.id),
+        nome: String(etapa.nome ?? etapa.id),
+      }))
+    : [];
+  const fasePosAceiteFallbackId = String(etapasPosSimulacao[0]?.id || "");
   const fasePosAceiteSelecionada =
     etapasPosSimulacao.find((etapa) => String(etapa.id) === String(novaFaseAposAceite)) || null;
 
@@ -2276,18 +2158,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   
   // Protection: Check if pipeline is valid
   const isPipelineValid = currentPipelineConfig && etapasAtivas.length > 0;
-  
-  // Check if current pipeline requires digital signature
-  const requerAssinaturaDigital = currentPipelineConfig ? pipelineRequerAssinaturaDigital(currentPipelineConfig.id) : false;
-  
-  // Get required documents for current pipeline
-  const documentosObrigatorios = currentPipelineConfig ? getDocumentosObrigatorios(currentPipelineConfig.id) : [];
-  
-  // Check if current pipeline is onboarding type
-  const isOnboarding = currentPipelineConfig ? isPipelineOnboarding(currentPipelineConfig.id) : false;
-  const isParceiro = currentPipelineConfig ? isPipelineParceiro(currentPipelineConfig.id) : false;
-  const isColaborador = currentPipelineConfig ? isPipelineColaborador(currentPipelineConfig.id) : false;
-  const pipelineTipoLabel = currentPipelineConfig ? getPipelineTipoLabel(currentPipelineConfig.tipo) : '';
+  const selectedPipelineName = String(selectedOfficialPipeline?.name ?? currentPipelineConfig?.nome ?? "").toLowerCase();
+  const requerAssinaturaDigital = selectedPipelineName.includes("contrato") || selectedPipelineName.includes("assinatura");
+  const documentosObrigatorios: string[] = [];
+  const isOnboarding = selectedPipelineName.includes("onboard") || selectedPipelineName.includes("integra") || selectedPipelineName.includes("entrada");
+  const isParceiro = selectedPipelineName.includes("parceir");
+  const isColaborador = selectedPipelineName.includes("colabor");
+  const pipelineTipoLabel = currentPipelineConfig ? String(currentPipelineConfig.nome ?? "") : '';
   
   // BLINDAGEM DE ARRAY - Filter oportunidades - based on current pipeline (novo sistema PIPELINES)
   // O store local nao deve mascarar falha da API oficial de oportunidades.
@@ -2312,48 +2189,19 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       etapa: etapaFallbackId,
     };
   });
-  const legacyCompatiblePipelineIds = currentPipelineConfig
-    ? getLegacyCompatiblePipelineIds(
-        selectedOfficialPipeline
-          ? mapBackendPipelineNameToSemanticId(
-              String(selectedOfficialPipeline.name ?? ""),
-              String(selectedOfficialPipeline.id ?? ""),
-            )
-          : currentPipelineConfig.id,
-      )
-    : [];
-  const resolveLegacyProductPipelineFallback = (produto: string | undefined | null): string | undefined => {
-    if (!produto || typeof mapearProdutoLegadoParaPipeline !== "function") {
-      return undefined;
-    }
-
-    return mapearProdutoLegadoParaPipeline(produto);
-  };
   const oportunidades = oportunidadesBase.filter((o: any) => {
-    // Proteção: verificar se o objeto existe
     if (!o) return false;
-    
-    // Se currentPipelineConfig não existe, não filtrar (mostrar tudo)
-    if (!currentPipelineConfig?.id) return true;
 
-    if (selectedOfficialPipeline?.id) {
-      const backendPipelineId = String(o?.backendPipelineId ?? "");
-      if (backendPipelineId) {
-        return backendPipelineId === String(selectedOfficialPipeline.id);
-      }
+    if (!selectedPipelineId) {
+      return true;
     }
 
-    // Se a oportunidade tem o novo campo pipeline_id, usar ele
-    if (o?.pipeline_id) {
-      return legacyCompatiblePipelineIds.includes(String(o.pipeline_id));
-    }
-    // Se não, verificar se o produto antigo mapeia para o pipeline atual
-    if (o?.produto) {
-      const mappedPipelineId = resolveLegacyProductPipelineFallback(o.produto);
-      return mappedPipelineId ? legacyCompatiblePipelineIds.includes(mappedPipelineId) : false;
-    }
-    // Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
-    return true;
+    const backendPipelineId = String(o?.backendPipelineId ?? "");
+    const semanticPipelineId = String(o?.pipeline_id ?? "");
+    return (
+      backendPipelineId === selectedPipelineId ||
+      semanticPipelineId === selectedPipelineId
+    );
   });
   
   // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
@@ -2573,7 +2421,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
     const targetEtapaKey = normalizeKey(etapaId);
     const origemPipelineSemantico = String(
-      oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? currentPipelineId ?? "",
+      oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
       oportunidade?.backendPipelineId ||
@@ -2632,10 +2480,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
 
-    moveOportunidade(cardId, {
-      etapa_id: etapaId,
-      status: statusDestino
-    });
     setApiReadReloadKey((prev) => prev + 1);
 
     setDraggedCard(null);
@@ -2927,7 +2771,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     );
     const targetEtapaLabelKey = normalizeKey(selectedEtapaOption?.nome ?? "");
     const origemPipelineSemantico = String(
-      currentPipelineConfig?.id ?? newOportunidade.pipeline_id ?? currentPipelineId ?? "",
+      currentPipelineConfig?.id ?? newOportunidade.pipeline_id ?? selectedPipelineId ?? "",
     );
     const matchedOfficialPipeline = matchedOfficialPipelineForSelection;
 
@@ -3157,55 +3001,23 @@ if (
   // Pipeline handlers
   const handleCreatePipeline = (e: React.FormEvent) => {
     e.preventDefault();
-    const newPipeline = {
-      id: `pipeline-${Date.now()}`,
-      nome: pipelineFormData.nome,
-      ativo: true,
-      colunas: [
-        { id: "col-1", nome: "Entrada", ordem: 1, cor: "#3b82f6" },
-        { id: "col-2", nome: "Em Andamento", ordem: 2, cor: "#8b5cf6" },
-        { id: "col-3", nome: "Concluído", ordem: 3, cor: "#22c55e" }
-      ]
-    };
-    addPipeline(newPipeline);
-    syncPipelineSelection(newPipeline.id);
     setShowPipelineModal(false);
     setPipelineFormData({ nome: "" });
   };
 
   const handleEditPipeline = () => {
     if (!editingPipeline) return;
-    updatePipeline(editingPipeline.id, { nome: editingPipeline.nome });
     setEditingPipeline(null);
     setShowPipelineMenu(false);
   };
 
   const handleDeletePipeline = () => {
-    const safePipelines = Array.isArray(pipelines) ? pipelines : [];
-    const currentPipelineKey = String(currentPipelineConfig?.id ?? currentPipelineId ?? "");
-    if (!currentPipelineKey || safePipelines.length <= 1) return;
-    const pipelineName = currentPipelineConfig?.nome || currentPipelineKey;
-    if (confirm(`Excluir pipeline "${pipelineName}"?`)) {
-      const otherPipeline = safePipelines.find((p: any) => p?.id !== currentPipelineKey);
-      if (otherPipeline?.id) {
-        syncPipelineSelection(otherPipeline.id);
-      }
-      deletePipeline(currentPipelineKey);
-    }
     setShowPipelineMenu(false);
   };
 
   // Column handlers
   const handleCreateColumn = (e: React.FormEvent) => {
     e.preventDefault();
-    const colunas = currentPipelineConfig?.colunas || [];
-    const newColumn = {
-      id: `col-${Date.now()}`,
-      nome: columnFormData.nome,
-      ordem: colunas.length + 1,
-      cor: columnFormData.cor
-    };
-    addColumn(String(currentPipelineConfig?.id ?? currentPipelineId ?? ""), newColumn);
     setShowColumnModal(false);
     setColumnFormData({ nome: "", cor: "#3b82f6" });
   };
@@ -3213,19 +3025,11 @@ if (
   const handleEditColumn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingColumn) return;
-    updateColumn(String(currentPipelineConfig?.id ?? currentPipelineId ?? ""), editingColumn.id, editingColumn.nome);
     setEditingColumn(null);
   };
 
   const handleDeleteColumn = (columnId: string) => {
-    const oportunidadesNaColuna = oportunidades.filter(o => o.coluna_id === columnId);
-    if (oportunidadesNaColuna.length > 0) {
-      alert("Não é possível excluir coluna com oportunidades. Mova-as primeiro.");
-      return;
-    }
-    if (confirm("Excluir esta coluna?")) {
-      deleteColumn(String(currentPipelineConfig?.id ?? currentPipelineId ?? ""), columnId);
-    }
+    setShowColumnModal(false);
   };
 
   // Oportunidade handlers
@@ -5852,7 +5656,7 @@ if (
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-slate-600 mb-1">Pipeline *</label>
                     <select
-                      value={formData.pipelineId || currentPipelineId || ""}
+                      value={formData.pipelineId || selectedPipelineId || ""}
                       onChange={(e) => setFormData({ ...formData, pipelineId: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
                       required
