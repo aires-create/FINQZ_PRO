@@ -1,10 +1,32 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PartnerAcquisitionService, isSamePayload } from '../../../modules/partner-acquisition/services/partner-acquisition.service.js';
 import type { PartnerAcquisitionRepositoryContract } from '../../../modules/partner-acquisition/repositories/partner-acquisition.repository.contract.js';
 import { ConflictError, NotFoundError } from '../../../shared/errors/AppError.js';
+import { PartnerNotFoundError } from '../../../modules/partners/services/partner.errors.js';
+
+const partnerServiceMock = vi.hoisted(() => ({
+  getPartnerById: vi.fn(),
+  getPartnerByCode: vi.fn(),
+  createPartner: vi.fn(),
+}));
+
+const partnerAcquisitionTransactionRepositoryMock = vi.hoisted(() => ({
+  findProspectById: vi.fn(),
+  linkProspectToPartner: vi.fn(),
+  recordConversionDecision: vi.fn(),
+  updateProspectLifecycle: vi.fn(),
+}));
+
+vi.mock('../../../modules/partners/services/partner.service.js', () => ({
+  PartnerService: vi.fn().mockImplementation(() => partnerServiceMock),
+}));
+
+vi.mock('../../../modules/partners/repositories/partner.prisma.repository.js', () => ({
+  PartnerPrismaRepository: vi.fn().mockImplementation(() => partnerAcquisitionTransactionRepositoryMock),
+}));
 
 const createRepositoryMock = () =>
   ({
@@ -46,6 +68,10 @@ const servicePath = resolve(
 const serviceSource = readFileSync(servicePath, 'utf8');
 
 describe('partner-acquisition.service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('compares JSON-like payloads semantically regardless of object key order', () => {
     expect(isSamePayload(
       { leadId: 'lead-1', source: 'CAMPAIGN', commandType: 'PromotePartnerLeadToProspectCommand' },
@@ -1261,5 +1287,317 @@ describe('partner-acquisition.service', () => {
     expect(repository.findLeadById).not.toHaveBeenCalled();
     expect(repository.promoteLeadToProspectInTransaction).not.toHaveBeenCalled();
     expect(repository.markCommandFailed).not.toHaveBeenCalled();
+  });
+
+  it('materializes a Partner through the official PartnerService when converting a Prospect', async () => {
+    const repository = createRepositoryMock();
+    const transactionRepository = partnerAcquisitionTransactionRepositoryMock;
+
+    transactionRepository.findProspectById.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: '+5511999999999',
+      companyName: 'Parceiro Exemplo LTDA',
+      document: '12345678000190',
+      channel: 'SDR_IA',
+      sourceName: 'H19 Smoke',
+      sourceReference: 'h19-smoke',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'SIGNED',
+      pipelineCode: null,
+      stageCode: null,
+      score: 92,
+      qualificationReason: 'Aderente ao fluxo oficial',
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: null,
+      partnerId: null,
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    transactionRepository.linkProspectToPartner.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: '+5511999999999',
+      companyName: 'Parceiro Exemplo LTDA',
+      document: '12345678000190',
+      channel: 'SDR_IA',
+      sourceName: 'H19 Smoke',
+      sourceReference: 'h19-smoke',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'SIGNED',
+      pipelineCode: null,
+      stageCode: null,
+      score: 92,
+      qualificationReason: 'Aderente ao fluxo oficial',
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: null,
+      partnerId: 'partner-1',
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    transactionRepository.recordConversionDecision.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      partnerId: 'partner-1',
+      approved: true,
+      decidedByUserId: 'user-1',
+      decidedAt: '2026-06-25T00:00:00.000Z',
+      reason: null,
+    });
+    transactionRepository.updateProspectLifecycle.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: 'partner@example.com',
+      phone: '+5511999999999',
+      companyName: 'Parceiro Exemplo LTDA',
+      document: '12345678000190',
+      channel: 'SDR_IA',
+      sourceName: 'H19 Smoke',
+      sourceReference: 'h19-smoke',
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'CONVERTED',
+      pipelineCode: null,
+      stageCode: null,
+      score: 92,
+      qualificationReason: 'Aderente ao fluxo oficial',
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: '2026-06-25T00:00:00.000Z',
+      lostAt: null,
+      lostReason: null,
+      partnerId: 'partner-1',
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    vi.mocked(partnerServiceMock.getPartnerById).mockRejectedValueOnce(new PartnerNotFoundError('partner-1'));
+    vi.mocked(partnerServiceMock.getPartnerByCode).mockRejectedValueOnce(new PartnerNotFoundError('P-001'));
+    vi.mocked(partnerServiceMock.createPartner).mockResolvedValueOnce({
+      id: 'partner-1',
+      tenantId: 'tenant-1',
+      code: 'P-001',
+      name: 'Parceiro Exemplo LTDA',
+      type: 'COMPANY',
+      document: '12345678000190',
+      email: 'partner@example.com',
+      phone: '+5511999999999',
+      status: 'ativo',
+      parentId: null,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+
+    const service = new PartnerAcquisitionService(
+      repository,
+      async (action) => action({} as never),
+    );
+
+    const result = await service.convertProspectToPartner({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'SDR_IA',
+      commandType: 'ConvertPartnerProspectToPartnerCommand',
+      aggregateType: 'PARTNER_PROSPECT',
+      prospectId: 'prospect-1',
+      expectedVersion: 4,
+      partnerId: 'partner-1',
+      partnerCode: 'P-001',
+      partnerName: 'Parceiro Exemplo LTDA',
+      partnerType: 'COMPANY',
+    });
+
+    expect(partnerServiceMock.createPartner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        actorUserId: 'user-1',
+        correlationId: 'corr-1',
+        code: 'P-001',
+        name: 'Parceiro Exemplo LTDA',
+        type: 'COMPANY',
+        document: '12345678000190',
+        email: 'partner@example.com',
+        phone: '+5511999999999',
+        status: 'ativo',
+      }),
+    );
+    expect(transactionRepository.linkProspectToPartner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        prospectId: 'prospect-1',
+        partnerId: 'partner-1',
+        expectedVersion: 4,
+      }),
+    );
+    expect(transactionRepository.recordConversionDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        prospectId: 'prospect-1',
+        partnerId: 'partner-1',
+      }),
+    );
+    expect(transactionRepository.updateProspectLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        prospectId: 'prospect-1',
+        expectedVersion: 4,
+        status: 'CONVERTED',
+      }),
+    );
+    expect(result.status).toBe('CONVERTED');
+  });
+
+  it('reuses an already materialized Partner without creating a duplicate', async () => {
+    const repository = createRepositoryMock();
+    const transactionRepository = partnerAcquisitionTransactionRepositoryMock;
+
+    transactionRepository.findProspectById.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'SDR_IA',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'SIGNED',
+      pipelineCode: null,
+      stageCode: null,
+      score: null,
+      qualificationReason: null,
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: null,
+      partnerId: 'partner-1',
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    transactionRepository.recordConversionDecision.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      partnerId: 'partner-1',
+      approved: true,
+      decidedByUserId: 'user-1',
+      decidedAt: '2026-06-25T00:00:00.000Z',
+      reason: null,
+    });
+    transactionRepository.updateProspectLifecycle.mockResolvedValueOnce({
+      tenantId: 'tenant-1',
+      prospectId: 'prospect-1',
+      leadId: 'lead-1',
+      fullName: 'Parceiro Exemplo',
+      email: null,
+      phone: null,
+      companyName: null,
+      document: null,
+      channel: 'SDR_IA',
+      sourceName: null,
+      sourceReference: null,
+      campaignId: null,
+      hubContextId: null,
+      sdrAgentId: null,
+      status: 'CONVERTED',
+      pipelineCode: null,
+      stageCode: null,
+      score: null,
+      qualificationReason: null,
+      assignedUserId: null,
+      nextActionAt: null,
+      signedAt: null,
+      convertedAt: '2026-06-25T00:00:00.000Z',
+      lostAt: null,
+      lostReason: null,
+      partnerId: 'partner-1',
+      createdAt: '2026-06-25T00:00:00.000Z',
+      updatedAt: '2026-06-25T00:00:00.000Z',
+    });
+    vi.mocked(partnerServiceMock.getPartnerById).mockResolvedValueOnce({
+      id: 'partner-1',
+      tenantId: 'tenant-1',
+      code: 'P-001',
+      name: 'Parceiro Exemplo LTDA',
+      type: 'COMPANY',
+      document: null,
+      email: null,
+      phone: null,
+      status: 'ativo',
+      parentId: null,
+      deletedAt: null,
+      createdAt: new Date('2026-06-25T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-25T00:00:00.000Z'),
+    });
+
+    const service = new PartnerAcquisitionService(
+      repository,
+      async (action) => action({} as never),
+    );
+
+    const result = await service.convertProspectToPartner({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      requestId: 'req-1',
+      correlationId: 'corr-1',
+      idempotencyKey: 'idem-1',
+      requestedAt: '2026-06-25T00:00:00.000Z',
+      source: 'SDR_IA',
+      commandType: 'ConvertPartnerProspectToPartnerCommand',
+      aggregateType: 'PARTNER_PROSPECT',
+      prospectId: 'prospect-1',
+      expectedVersion: 4,
+      partnerId: 'partner-1',
+      partnerCode: 'P-001',
+      partnerName: 'Parceiro Exemplo LTDA',
+      partnerType: 'COMPANY',
+    });
+
+    expect(partnerServiceMock.createPartner).not.toHaveBeenCalled();
+    expect(partnerServiceMock.getPartnerByCode).not.toHaveBeenCalled();
+    expect(transactionRepository.linkProspectToPartner).not.toHaveBeenCalled();
+    expect(transactionRepository.recordConversionDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        prospectId: 'prospect-1',
+        partnerId: 'partner-1',
+      }),
+    );
+    expect(transactionRepository.updateProspectLifecycle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        prospectId: 'prospect-1',
+        expectedVersion: 4,
+        status: 'CONVERTED',
+      }),
+    );
+    expect(result.partnerId).toBe('partner-1');
+    expect(result.status).toBe('CONVERTED');
   });
 });
