@@ -5,6 +5,8 @@ import useAppStore from "../store";
 import { opportunitiesApi } from "../api/modules/opportunities.api";
 import { pipelinesApi } from "../api/modules/pipelines.api";
 import { clientesApi } from "../api/modules/clientes.api";
+import { partnersApi } from "../api/modules/partners.api";
+import { usuariosApi } from "../api/modules/usuarios.api";
 import { useTenantFilter } from "../hooks/useTenantFilter";
 import { Plus, X, Edit2, Trash2, MoreVertical, MoreHorizontal, Search, RefreshCw, Calendar, Filter, LayoutGrid, List, ChevronDown, MessageCircle, Phone, Mail, Clock, User, Timer, ArrowUpDown, ArrowUp, ArrowDown, ArrowUpDown as SortIcon, FileText, Package, ArrowLeft, ArrowRight, AlertCircle, CheckCircle, XCircle, Tag, Paperclip, History, File, Upload, Send, Check, Circle, FileCheck, FileX, FilePlus, GripVertical, Calculator, DollarSign, Percent, CalendarDays, Wallet, Save, TrendingUp, MapPin, Target, FileSignature, Shield } from "lucide-react";
 import { Button, Card as DSCard, Input, Select, PageActions, FilterButton, ExportButtons, PrimaryButton, RefreshButton, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard } from "../components/ui";
@@ -114,6 +116,13 @@ const DETAIL_TABS = [
 ] as const;
 
 type DetailTabId = typeof DETAIL_TABS[number]['id'];
+
+type ResponsibleUser = {
+  id: string;
+  nome: string;
+  status: string;
+  scope?: string;
+};
 
 // Compatibilidade transitória de leitura/filtro para oportunidades legadas.
 // Nao representa taxonomia canônica nem source of truth de Pipeline.
@@ -652,17 +661,72 @@ const dedupeOportunidades = (items: any[]): any[] => {
 const OportunidadesPageInner = () => {
   const navigate = useNavigate();
   const { 
-    usuarios,
     user,
     theme,
     hasPermission 
   } = useAppStore();
-  const safeUsuarios = Array.isArray(usuarios) ? usuarios : [];
+  const [responsibleUsers, setResponsibleUsers] = useState<ResponsibleUser[]>([]);
   const [apiOportunidadesReadOnly, setApiOportunidadesReadOnly] = useState<any[] | null>(null);
   const [officialPipelines, setOfficialPipelines] = useState<any[]>([]);
   const [apiReadError, setApiReadError] = useState<string | null>(null);
   const [apiReadReloadKey, setApiReadReloadKey] = useState(0);
   const [selectedPipelineId, setSelectedPipelineId] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOfficialUsers = async () => {
+      try {
+        const response = await usuariosApi.getAll();
+        const rawUsers = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+
+        const normalizedUsers = rawUsers
+          .map((usuario: any): ResponsibleUser | null => {
+            const id = String(usuario?.id ?? "").trim();
+            if (!id) {
+              return null;
+            }
+
+            const nome = String(
+              usuario?.nome ??
+                [usuario?.firstName, usuario?.lastName].filter(Boolean).join(" ") ??
+                "Usuário",
+            ).trim();
+
+            return {
+              id,
+              nome: nome || "Usuário",
+              status: String(
+                usuario?.status ??
+                  (usuario?.isActive === false ? "inativo" : "ativo"),
+              ),
+              scope: usuario?.scope ?? usuario?.userScope ?? undefined,
+            };
+          })
+          .filter((usuario: ResponsibleUser | null): usuario is ResponsibleUser => Boolean(usuario));
+
+        if (!cancelled) {
+          setResponsibleUsers(normalizedUsers);
+        }
+      } catch (error) {
+        console.error("[Oportunidades] Falha ao carregar usuários oficiais:", error);
+
+        if (!cancelled) {
+          setResponsibleUsers([]);
+        }
+      }
+    };
+
+    void loadOfficialUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -697,7 +761,7 @@ const OportunidadesPageInner = () => {
 
   useEffect(() => {
     if (apiReadError) {
-      console.warn("[Oportunidades] Usando fallback do store após erro da API oficial:", apiReadError);
+      console.warn("[Oportunidades] Erro ao carregar oportunidades da API oficial:", apiReadError);
     }
   }, [apiReadError]);
 
@@ -731,6 +795,82 @@ const OportunidadesPageInner = () => {
     };
 
     void loadOfficialPipelines();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPartnersHierarchy = async () => {
+      try {
+        const response = await partnersApi.getAll({ limit: 1000 });
+        const rawPartners = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+
+        const partnerMap = new Map<string, any>();
+        rawPartners.forEach((partner: any) => {
+          const id = String(partner?.id ?? "").trim();
+          if (id) {
+            partnerMap.set(id, partner);
+          }
+        });
+
+        const companies = rawPartners
+          .filter((partner: any) => String(partner?.type ?? "").toUpperCase() === "COMPANY")
+          .map((partner: any) => ({
+            id: String(partner.id),
+            nome: String(partner.name ?? partner.nome ?? ""),
+          }))
+          .filter((partner: any) => partner.id && partner.nome);
+
+        const franquiasList = rawPartners
+          .filter((partner: any) => String(partner?.type ?? "").toUpperCase() === "FRANQUIA")
+          .map((partner: any) => {
+            const parentId = String(partner?.parentId ?? "").trim();
+            const parent = parentId ? partnerMap.get(parentId) : null;
+            return {
+              id: String(partner.id),
+              nome: String(partner.name ?? partner.nome ?? ""),
+              racionalCompany_id: parent && String(parent?.type ?? "").toUpperCase() === "COMPANY" ? String(parent.id) : null,
+            };
+          })
+          .filter((partner: any) => partner.id && partner.nome);
+
+        const franqueadosList = rawPartners
+          .filter((partner: any) => String(partner?.type ?? "").toUpperCase() === "FRANQUEADO")
+          .map((partner: any) => {
+            const parentId = String(partner?.parentId ?? "").trim();
+            const parent = parentId ? partnerMap.get(parentId) : null;
+            return {
+              id: String(partner.id),
+              nome: String(partner.name ?? partner.nome ?? ""),
+              franquia_id: parent && String(parent?.type ?? "").toUpperCase() === "FRANQUIA" ? String(parent.id) : null,
+            };
+          })
+          .filter((partner: any) => partner.id && partner.nome);
+
+        if (!cancelled) {
+          setRacionalCompanies(companies);
+          setFranquias(franquiasList);
+          setFranqueados(franqueadosList);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRacionalCompanies([]);
+          setFranquias([]);
+          setFranqueados([]);
+          console.error("[Oportunidades] Falha ao carregar hierarquia comercial oficial:", error);
+        }
+      }
+    };
+
+    void loadPartnersHierarchy();
 
     return () => {
       cancelled = true;
@@ -1866,51 +2006,36 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     return `(${digits.slice(0,2)}) ${digits.slice(2,3)} ${digits.slice(3,7)}-${digits.slice(7)}`;
   };
   
-  // Dados de Hierarquia Comercial (mock - substituir por API depois)
-  const [racionalCompanies, setRacionalCompanies] = useState<any[]>([
-    { id: 1, nome: "Racional Company SP" },
-    { id: 2, nome: "Racional Company RJ" },
-    { id: 3, nome: "Racional Company MG" }
-  ]);
-  
-  const [franquias, setFranquias] = useState<any[]>([
-    { id: 1, nome: "Franquia São Paulo", racionalCompany_id: 1 },
-    { id: 2, nome: "Franquia Campinas", racionalCompany_id: 1 },
-    { id: 3, nome: "Franquia Rio de Janeiro", racionalCompany_id: 2 },
-    { id: 4, nome: "Franquia Belo Horizonte", racionalCompany_id: 3 }
-  ]);
-  
-  const [franqueados, setFranqueados] = useState<any[]>([
-    { id: 1, nome: "Franqueado João Silva", franquia_id: 1 },
-    { id: 2, nome: "Franqueado Maria Santos", franquia_id: 1 },
-    { id: 3, nome: "Franqueado Pedro Costa", franquia_id: 2 },
-    { id: 4, nome: "Franqueado Ana Oliveira", franquia_id: 3 },
-    { id: 5, nome: "Franqueado Carlos Lima", franquia_id: 4 }
-  ]);
+  // Dados de Hierarquia Comercial carregados da API oficial de partners
+  const [racionalCompanies, setRacionalCompanies] = useState<any[]>([]);
+  const [franquias, setFranquias] = useState<any[]>([]);
+  const [franqueados, setFranqueados] = useState<any[]>([]);
   
   // Estado da Hierarquia selecionada
-  const [selectedRacionalCompany, setSelectedRacionalCompany] = useState<number | null>(null);
-  const [selectedFranquia, setSelectedFranquia] = useState<number | null>(null);
-  const [selectedFranqueado, setSelectedFranqueado] = useState<number | null>(null);
+  const [selectedRacionalCompany, setSelectedRacionalCompany] = useState<string | null>(null);
+  const [selectedFranquia, setSelectedFranquia] = useState<string | null>(null);
+  const [selectedFranqueado, setSelectedFranqueado] = useState<string | null>(null);
   
   // Handlers de Hierarquia
-  const handleRacionalCompanyChange = (companyId: number | null) => {
+  const handleRacionalCompanyChange = (companyId: string | null) => {
     setSelectedRacionalCompany(companyId);
     setSelectedFranquia(null);
     setSelectedFranqueado(null);
     setFormData({ ...formData, racionalCompany_id: companyId, franquia_id: null, franqueado_id: null });
   };
   
-  const handleFranquiaChange = (franquiaId: number | null) => {
+  const handleFranquiaChange = (franquiaId: string | null) => {
     setSelectedFranquia(franquiaId);
     setSelectedFranqueado(null);
     setFormData({ ...formData, franquia_id: franquiaId, franqueado_id: null });
   };
   
+  const safeUsuarios = Array.isArray(responsibleUsers) ? responsibleUsers : [];
+
   // Função para obter responsáveis disponíveis conforme hierarquia
   const getAvailableResponsibles = () => {
     const currentUser = user;
-    const allUsuarios = usuarios || [];
+    const allUsuarios = safeUsuarios;
     
     if (!currentUser) {
       return allUsuarios.filter((u: any) => u.status === "ativo");
@@ -4063,9 +4188,9 @@ if (
               <div className="border-b pb-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Hierarquia Comercial</h3>
                 <div className="grid grid-cols-3 gap-3">
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Company</label><select value={selectedRacionalCompany ?? ""} onChange={(e) => handleRacionalCompanyChange(e.target.value ? Number(e.target.value) : null)} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option>{racionalCompanies.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franquia</label><select value={selectedFranquia ?? ""} onChange={(e) => handleFranquiaChange(e.target.value ? Number(e.target.value) : null)} disabled={!selectedRacionalCompany} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franquias.filter(f => f.racionalCompany_id === selectedRacionalCompany).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franqueado</label><select value={selectedFranqueado ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setSelectedFranqueado(v); setFormData({ ...formData, franqueado_id: v }); }} disabled={!selectedFranquia} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franqueados.filter(f => f.franquia_id === selectedFranquia).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Company</label><select value={selectedRacionalCompany ?? ""} onChange={(e) => handleRacionalCompanyChange(e.target.value || null)} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option>{racionalCompanies.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franquia</label><select value={selectedFranquia ?? ""} onChange={(e) => handleFranquiaChange(e.target.value || null)} disabled={!selectedRacionalCompany} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franquias.filter(f => f.racionalCompany_id === selectedRacionalCompany).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franqueado</label><select value={selectedFranqueado ?? ""} onChange={(e) => { const v = e.target.value || null; setSelectedFranqueado(v); setFormData({ ...formData, franqueado_id: v }); }} disabled={!selectedFranquia} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franqueados.filter(f => f.franquia_id === selectedFranquia).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
                 </div>
               </div>
               
