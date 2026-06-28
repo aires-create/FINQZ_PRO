@@ -1,5 +1,6 @@
 import type { Partner } from '@prisma/client';
 
+import { registerAuditLog } from '../../audit/services/audit.service.js';
 import type {
   PartnerRepositoryContract,
   PartnerRepositoryCreateInput,
@@ -62,6 +63,16 @@ const normalizeText = (value?: string | null) => {
   return normalized ? normalized : undefined;
 };
 
+const getChangedFields = (
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+  fields: string[],
+) => {
+  return fields.filter((field) => {
+    return JSON.stringify(before[field]) !== JSON.stringify(after[field]);
+  });
+};
+
 const isAllowedStatus = (status: string): status is PartnerStatus => {
   return (ALLOWED_STATUSES as readonly string[]).includes(status);
 };
@@ -92,6 +103,12 @@ const buildUpdateData = (
   ...(input.phone !== undefined ? { phone: normalizeText(input.phone) ?? null } : {}),
   ...(input.parentId !== undefined ? { parentId: input.parentId } : {}),
 });
+
+const AuditActions = {
+  PARTNER_CREATED: 'PARTNER_CREATED',
+  PARTNER_UPDATED: 'PARTNER_UPDATED',
+  PARTNER_DELETED: 'PARTNER_DELETED',
+} as const;
 
 export class PartnerService implements PartnerServiceContract {
   constructor(
@@ -154,7 +171,24 @@ export class PartnerService implements PartnerServiceContract {
     this.validateTypeAgainstParent(input.type, parentContext?.partner);
     this.validateDepth(parentContext?.depth ?? 0);
 
-    return this.repository.create(buildCreateData(input));
+    const partner = await this.repository.create(buildCreateData(input));
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId ?? null,
+      action: AuditActions.PARTNER_CREATED,
+      entity: 'Partner',
+      entityId: partner.id,
+      metadata: {
+        code: partner.code,
+        name: partner.name,
+        type: partner.type,
+        status: partner.status,
+        parentId: partner.parentId,
+      },
+    });
+
+    return partner;
   }
 
   async updatePartner(input: PartnerServiceUpdateInput): Promise<Partner> {
@@ -222,6 +256,32 @@ export class PartnerService implements PartnerServiceContract {
       throw new PartnerNotFoundError(input.partnerId);
     }
 
+    const changedFields = getChangedFields(
+      current as unknown as Record<string, unknown>,
+      updated as unknown as Record<string, unknown>,
+      [
+        'code',
+        'name',
+        'type',
+        'document',
+        'email',
+        'phone',
+        'status',
+        'parentId',
+      ],
+    );
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId ?? null,
+      action: AuditActions.PARTNER_UPDATED,
+      entity: 'Partner',
+      entityId: updated.id,
+      metadata: {
+        changedFields,
+      },
+    });
+
     return updated;
   }
 
@@ -250,6 +310,17 @@ export class PartnerService implements PartnerServiceContract {
     if (result.count === 0) {
       throw new PartnerNotFoundError(input.partnerId);
     }
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId ?? null,
+      action: AuditActions.PARTNER_DELETED,
+      entity: 'Partner',
+      entityId: input.partnerId,
+      metadata: {
+        deletedAt: new Date().toISOString(),
+      },
+    });
   }
 
   private validateStatus(status: string) {

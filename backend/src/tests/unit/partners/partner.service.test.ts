@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Partner } from '@prisma/client';
 
@@ -12,6 +12,12 @@ import {
   PartnerSoftDeleteBlockedByChildrenError,
 } from '../../../modules/partners/services/partner.errors.js';
 import { PartnerService } from '../../../modules/partners/services/partner.service.js';
+
+const auditServiceMock = vi.hoisted(() => ({
+  registerAuditLog: vi.fn(),
+}));
+
+vi.mock('../../../modules/audit/services/audit.service.js', () => auditServiceMock);
 
 const createRepositoryMock = (): PartnerRepositoryContract & {
   findById: ReturnType<typeof vi.fn>;
@@ -65,6 +71,10 @@ const franchiseePartner = {
 
 describe('PartnerService', () => {
   const tenantId = 'tenant-a';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('listPartners requires tenantId and delegates to repository', async () => {
     const repository = createRepositoryMock();
@@ -135,6 +145,37 @@ describe('PartnerService', () => {
         status: 'ativo',
       }),
     ).rejects.toBeInstanceOf(PartnerCodeAlreadyExistsError);
+  });
+
+  it('createPartner registers audit log', async () => {
+    const repository = createRepositoryMock();
+    vi.mocked(repository.findByCode).mockResolvedValueOnce(null);
+    vi.mocked(repository.findById)
+      .mockResolvedValueOnce(basePartner)
+      .mockResolvedValueOnce(franchisePartner)
+      .mockResolvedValueOnce(franchiseePartner);
+    vi.mocked(repository.create).mockResolvedValueOnce(basePartner);
+    const service = new PartnerService(repository);
+
+    const result = await service.createPartner({
+      tenantId,
+      actorUserId: 'user-1',
+      code: 'PARTNER-010',
+      name: 'Partner Ten',
+      type: 'COMPANY',
+      status: 'ativo',
+    });
+
+    expect(result).toBe(basePartner);
+    expect(auditServiceMock.registerAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        userId: 'user-1',
+        action: 'PARTNER_CREATED',
+        entity: 'Partner',
+        entityId: basePartner.id,
+      }),
+    );
   });
 
   it('createPartner validates canonical status', async () => {
@@ -286,6 +327,15 @@ describe('PartnerService', () => {
       },
     });
     expect(result).toBe(basePartner);
+    expect(auditServiceMock.registerAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        userId: null,
+        action: 'PARTNER_UPDATED',
+        entity: 'Partner',
+        entityId: basePartner.id,
+      }),
+    );
   });
 
   it('updatePartner blocks duplicate code from another partner', async () => {
@@ -339,5 +389,14 @@ describe('PartnerService', () => {
       tenantId,
       partnerId: 'partner-1',
     });
+    expect(auditServiceMock.registerAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId,
+        userId: 'user-1',
+        action: 'PARTNER_DELETED',
+        entity: 'Partner',
+        entityId: 'partner-1',
+      }),
+    );
   });
 });

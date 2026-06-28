@@ -70,6 +70,12 @@ vi.mock('../../../core/prisma/client.js', () => ({
   prisma: prismaMock,
 }));
 
+const auditServiceMock = vi.hoisted(() => ({
+  registerAuditLog: vi.fn(),
+}));
+
+vi.mock('../../../modules/audit/services/audit.service.js', () => auditServiceMock);
+
 const basePipeline = {
   id: 'pipeline-1',
   tenantId: 'tenant-a',

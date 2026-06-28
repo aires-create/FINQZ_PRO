@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 
 import { prisma } from '../../core/prisma/client.js';
+import { registerAuditLog } from '../audit/services/audit.service.js';
 import { pipelinesRepository } from './repository.js';
 import { ConflictError } from '../../shared/errors/AppError.js';
 import type {
@@ -166,6 +167,16 @@ const runInSerializableTransaction = async <T>(
   });
 };
 
+const AuditActions = {
+  PIPELINE_CREATED: 'PIPELINE_CREATED',
+  PIPELINE_UPDATED: 'PIPELINE_UPDATED',
+  PIPELINE_DELETED: 'PIPELINE_DELETED',
+  PIPELINE_STAGE_CREATED: 'PIPELINE_STAGE_CREATED',
+  PIPELINE_STAGE_UPDATED: 'PIPELINE_STAGE_UPDATED',
+  PIPELINE_STAGE_DELETED: 'PIPELINE_STAGE_DELETED',
+  PIPELINE_STAGES_REORDERED: 'PIPELINE_STAGES_REORDERED',
+} as const;
+
 export class PipelinesService implements PipelineServiceContract {
   constructor(
     private readonly repository: PipelineRepositoryContract =
@@ -199,7 +210,23 @@ export class PipelinesService implements PipelineServiceContract {
       ...(input.stages !== undefined ? { stages: input.stages } : {}),
     };
 
-    return this.repository.createPipeline(payload);
+    const pipeline = await this.repository.createPipeline(payload);
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_CREATED,
+      entity: 'Pipeline',
+      entityId: pipeline.id,
+      metadata: {
+        name: pipeline.name,
+        isDefault: pipeline.isDefault,
+        isActive: pipeline.isActive,
+        stagesCount: pipeline.stages.length,
+      },
+    });
+
+    return pipeline;
   }
 
   async updatePipeline(
@@ -252,6 +279,19 @@ export class PipelinesService implements PipelineServiceContract {
       throw new PipelineNotFoundError(input.id);
     }
 
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_UPDATED,
+      entity: 'Pipeline',
+      entityId: pipeline.id,
+      metadata: {
+        name: pipeline.name,
+        isDefault: pipeline.isDefault,
+        isActive: pipeline.isActive,
+      },
+    });
+
     return pipeline;
   }
 
@@ -295,6 +335,17 @@ export class PipelinesService implements PipelineServiceContract {
       pipelineId: input.pipelineId,
       actorUserId: input.actorUserId,
     });
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_DELETED,
+      entity: 'Pipeline',
+      entityId: input.pipelineId,
+      metadata: {
+        archivedAt: new Date().toISOString(),
+      },
+    });
   }
 
   async createStage(
@@ -311,7 +362,7 @@ export class PipelinesService implements PipelineServiceContract {
       throw new PipelineNotFoundError(input.pipelineId);
     }
 
-    return this.repository.createStage({
+    const stage = await this.repository.createStage({
       tenantId: input.tenantId,
       pipelineId: input.pipelineId,
       name: input.name,
@@ -319,6 +370,23 @@ export class PipelinesService implements PipelineServiceContract {
       isWon: input.isWon,
       isLost: input.isLost,
     });
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_STAGE_CREATED,
+      entity: 'PipelineStage',
+      entityId: stage.id,
+      metadata: {
+        pipelineId: stage.pipelineId,
+        name: stage.name,
+        order: stage.order,
+        isWon: stage.isWon,
+        isLost: stage.isLost,
+      },
+    });
+
+    return stage;
   }
 
   async updateStage(
@@ -326,7 +394,7 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<PipelineContract['stages'][number]> {
     validateStageWrite(input);
 
-    return runInSerializableTransaction(async (transaction) => {
+    const stage = await runInSerializableTransaction(async (transaction) => {
       const repository = this.repository as PipelinesRepositoryWithClient;
 
       const currentStage = await repository.findStageById(
@@ -383,11 +451,31 @@ export class PipelinesService implements PipelineServiceContract {
 
       return stage;
     });
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_STAGE_UPDATED,
+      entity: 'PipelineStage',
+      entityId: stage.id,
+      metadata: {
+        pipelineId: stage.pipelineId,
+        name: stage.name,
+        order: stage.order,
+        isWon: stage.isWon,
+        isLost: stage.isLost,
+        isActive: stage.isActive,
+      },
+    });
+
+    return stage;
   }
 
   async deactivateStage(
     input: DeactivateStageServiceInput,
   ): Promise<void> {
+    let currentStagePipelineId: string | null = null;
+
     await runInSerializableTransaction(async (transaction) => {
       const repository = this.repository as PipelinesRepositoryWithClient;
 
@@ -402,6 +490,8 @@ export class PipelinesService implements PipelineServiceContract {
       if (!currentStage) {
         throw new StageNotFoundError(input.stageId);
       }
+
+      currentStagePipelineId = currentStage.pipelineId;
 
       if (currentStage.isActive) {
         const activeStagesCount = await repository.countActiveStagesByPipeline(
@@ -439,13 +529,26 @@ export class PipelinesService implements PipelineServiceContract {
         },
         transaction,
       );
+
+    });
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_STAGE_DELETED,
+      entity: 'PipelineStage',
+      entityId: input.stageId,
+      metadata: {
+        archivedAt: new Date().toISOString(),
+        pipelineId: currentStagePipelineId ?? input.stageId,
+      },
     });
   }
 
   async reorderStages(
     input: ReorderStagesServiceInput,
   ): Promise<PipelineContract['stages']> {
-    return runInSerializableTransaction(async (transaction) => {
+    const updatedStages = await runInSerializableTransaction(async (transaction) => {
       const repository = this.repository as PipelinesRepositoryWithClient;
 
       const pipeline = await repository.findById(
@@ -495,6 +598,24 @@ export class PipelinesService implements PipelineServiceContract {
 
       return updatedPipeline.stages;
     });
+
+    await registerAuditLog({
+      tenantId: input.tenantId,
+      userId: input.actorUserId,
+      action: AuditActions.PIPELINE_STAGES_REORDERED,
+      entity: 'Pipeline',
+      entityId: input.pipelineId,
+      metadata: {
+        pipelineId: input.pipelineId,
+        stageCount: updatedStages.length,
+        stageOrders: updatedStages.map((stage) => ({
+          stageId: stage.id,
+          order: stage.order,
+        })),
+      },
+    });
+
+    return updatedStages;
   }
 }
 
