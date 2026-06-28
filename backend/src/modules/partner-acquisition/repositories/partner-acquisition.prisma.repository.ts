@@ -169,6 +169,7 @@ const toProspectModel = (prospect: ProspectRow): PartnerProspect => ({
   hubContextId: prospect.hubContextId,
   sdrAgentId: prospect.sdrAgentId,
   status: prospect.status as PartnerProspectStatus,
+  partnerId: prospect.partnerId,
   pipelineCode: prospect.pipelineCode,
   stageCode: prospect.stageCode,
   score: prospect.score,

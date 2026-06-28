@@ -187,6 +187,7 @@ export interface PartnerProspectSource {
 
 export interface PartnerProspectWorkflowContext {
   status: PartnerProspectStatus;
+  partnerId?: string | null;
   pipelineCode?: string | null;
   stageCode?: string | null;
   score?: number | null;

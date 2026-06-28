@@ -24,25 +24,27 @@ describe('rbac materializer', () => {
       rolePermission: { upsert: rolePermissionUpsert },
     });
 
-    expect(PARTNER_ACQUISITION_RBAC_PERMISSIONS).toHaveLength(7);
+    expect(PARTNER_ACQUISITION_RBAC_PERMISSIONS).toHaveLength(9);
     expect(PARTNER_ACQUISITION_RBAC_PERMISSION_SLUGS).toEqual([
       'partner_acquisition:read',
       'partner_acquisition:create',
+      'partner_acquisition:transition',
+      'partner_acquisition:promote',
       'partner_acquisition:approve',
       'partner_prospect:read',
       'partner_prospect:create',
       'partner_prospect:transition',
       'partner_prospect:convert',
     ]);
-    expect(permissionUpsert).toHaveBeenCalledTimes(7);
+    expect(permissionUpsert).toHaveBeenCalledTimes(9);
     expect(roleFindMany).toHaveBeenCalledWith({
       where: { slug: 'super-admin' },
       select: { id: true, tenantId: true, slug: true },
     });
-    expect(rolePermissionUpsert).toHaveBeenCalledTimes(14);
+    expect(rolePermissionUpsert).toHaveBeenCalledTimes(18);
     expect(result).toEqual({
-      permissionsUpserted: 7,
-      roleGrantsUpserted: 14,
+      permissionsUpserted: 9,
+      roleGrantsUpserted: 18,
       superAdminRolesFound: 2,
     });
     expect(permissionUpsert.mock.calls[0][0]).toMatchObject({

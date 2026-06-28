@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { Prisma, type Partner } from '@prisma/client';
 
 import type {
-  ConvertPartnerProspectToPartnerCommand,
   PartnerAcquisitionCommandFailureInput,
   PartnerAcquisitionCommandLookup,
   PartnerAcquisitionCommandProgressInput,
@@ -44,6 +43,7 @@ import {
 } from '../domain/partner-lead-prospect-handoff.contract.js';
 import { canTransitionPartnerLead } from '../domain/partner-lead-lifecycle.contract.js';
 import type {
+  ConvertPartnerProspectToPartnerCommand,
   TransitionPartnerLeadCommand,
 } from '../domain/partner-acquisition.commands.js';
 import { partnerAcquisitionPrismaRepository } from '../repositories/partner-acquisition.prisma.repository.js';

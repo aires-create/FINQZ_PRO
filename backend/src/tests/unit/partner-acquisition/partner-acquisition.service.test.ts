@@ -21,11 +21,22 @@ const partnerAcquisitionTransactionRepositoryMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../../../modules/partners/services/partner.service.js', () => ({
-  PartnerService: vi.fn().mockImplementation(() => partnerServiceMock),
+  PartnerService: vi.fn(function PartnerService() {
+    return partnerServiceMock;
+  }),
+}));
+
+vi.mock('../../../modules/partner-acquisition/repositories/partner-acquisition.prisma.repository.js', () => ({
+  partnerAcquisitionPrismaRepository: partnerAcquisitionTransactionRepositoryMock,
+  PartnerAcquisitionPrismaRepository: vi.fn(function PartnerAcquisitionPrismaRepository() {
+    return partnerAcquisitionTransactionRepositoryMock;
+  }),
 }));
 
 vi.mock('../../../modules/partners/repositories/partner.prisma.repository.js', () => ({
-  PartnerPrismaRepository: vi.fn().mockImplementation(() => partnerAcquisitionTransactionRepositoryMock),
+  PartnerPrismaRepository: vi.fn(function PartnerPrismaRepository() {
+    return partnerAcquisitionTransactionRepositoryMock;
+  }),
 }));
 
 const createRepositoryMock = () =>

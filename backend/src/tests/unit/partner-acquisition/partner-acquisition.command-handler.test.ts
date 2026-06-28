@@ -375,6 +375,7 @@ describe('partner-acquisition.command-handler', () => {
       payload: {},
       status: 'RECEIVED',
     });
+    service.listEventsByAggregate.mockResolvedValue([]);
     service.convertProspectToPartner.mockResolvedValue({
       tenantId: 'tenant-1',
       prospectId: 'prospect-1',
@@ -390,6 +391,7 @@ describe('partner-acquisition.command-handler', () => {
       campaignId: null,
       hubContextId: null,
       sdrAgentId: null,
+      partnerId: 'partner-1',
       status: 'CONVERTED',
       pipelineCode: null,
       stageCode: null,
