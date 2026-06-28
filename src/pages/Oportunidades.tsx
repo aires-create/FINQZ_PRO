@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import useAppStore from "../store";
 import { opportunitiesApi } from "../api/modules/opportunities.api";
 import { pipelinesApi } from "../api/modules/pipelines.api";
+import { masterCatalogApi, type MasterCatalogTreeDto } from "../api/modules/master-catalog.api";
 import { clientesApi } from "../api/modules/clientes.api";
 import { partnersApi } from "../api/modules/partners.api";
 import { usuariosApi } from "../api/modules/usuarios.api";
@@ -16,7 +17,6 @@ import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
 import { KanbanColumn, formatCurrency } from "../components/pipeline";
-import { getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, emitOpportunityEvent, createOpportunityEventPayload } from "../data/catalogRepository";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
 const mapKanbanOpportunityToCreateIntakePayload = (formData: any, oportunidade: any, selectedPipelineId: string, selectedStageId: string) => {
@@ -458,13 +458,6 @@ const getCorEtapa = (key: string, index: number): string => {
   return cores[key] || "#6b7280";
 };
 
-// Fallback para compatibilidade - USA LISTA OFICIAL
-const ETAPAS_PIPELINE = OFICIAL_ETAPAS.map((e, index) => ({
-  id: e.key,
-  nome: e.label,
-  cor: getCorEtapa(e.key, index)
-}));
-
 const OverlayPortal = ({ children }: { children: React.ReactNode }) => {
   if (typeof document === "undefined") return null;
   return createPortal(children, document.body);
@@ -668,6 +661,7 @@ const OportunidadesPageInner = () => {
   const [responsibleUsers, setResponsibleUsers] = useState<ResponsibleUser[]>([]);
   const [apiOportunidadesReadOnly, setApiOportunidadesReadOnly] = useState<any[] | null>(null);
   const [officialPipelines, setOfficialPipelines] = useState<any[]>([]);
+  const [masterCatalogTree, setMasterCatalogTree] = useState<MasterCatalogTreeDto>({ segments: [], products: [] });
   const [apiReadError, setApiReadError] = useState<string | null>(null);
   const [apiReadReloadKey, setApiReadReloadKey] = useState(0);
   const [selectedPipelineId, setSelectedPipelineId] = useState("");
@@ -722,6 +716,32 @@ const OportunidadesPageInner = () => {
     };
 
     void loadOfficialUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMasterCatalogTree = async () => {
+      try {
+        const tree = await masterCatalogApi.getCatalogTree({ status: "ACTIVE" });
+
+        if (!cancelled) {
+          setMasterCatalogTree(tree);
+        }
+      } catch (error) {
+        console.error("[Oportunidades] Falha ao carregar catálogo mestre oficial:", error);
+
+        if (!cancelled) {
+          setMasterCatalogTree({ segments: [], products: [] });
+        }
+      }
+    };
+
+    void loadMasterCatalogTree();
 
     return () => {
       cancelled = true;
@@ -913,16 +933,46 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     const normalizedNextPipelineId = typeof nextPipelineId === "string" ? nextPipelineId : "";
     setSelectedPipelineId(normalizedNextPipelineId);
   };
-  const catalogProductOptions = useMemo(() => getProductOptions(), []);
-  const catalogSubproducts = useMemo(() => 
-    selectedProductId ? getSubproductsByProductId(selectedProductId) : [], 
-    [selectedProductId]
+  const catalogProductOptions = useMemo(
+    () =>
+      (masterCatalogTree.products ?? [])
+        .map((product) => ({
+          id: String(product.id),
+          code: String(product.code),
+          name: String(product.name),
+          subproducts: Array.isArray(product.subproducts)
+            ? product.subproducts.map((subproduct) => ({
+                id: String(subproduct.id),
+                code: String(subproduct.code),
+                name: String(subproduct.name),
+                modalities: Array.isArray(subproduct.modalities)
+                  ? subproduct.modalities.map((modality) => ({
+                      id: String(modality.id),
+                      code: String(modality.code),
+                      name: String(modality.name),
+                    }))
+                  : [],
+              }))
+            : [],
+        }))
+        .filter((product) => product.id.length > 0),
+    [masterCatalogTree],
   );
-  const catalogModalities = useMemo(() => 
-    selectedProductId && selectedSubproductId 
-      ? getModalitiesByProductAndSubproduct(selectedProductId, selectedSubproductId) 
-      : [],
-    [selectedProductId, selectedSubproductId]
+  const selectedCatalogProduct = useMemo(
+    () => catalogProductOptions.find((product) => product.id === selectedProductId) ?? null,
+    [catalogProductOptions, selectedProductId],
+  );
+  const catalogSubproducts = useMemo(
+    () => selectedCatalogProduct?.subproducts ?? [],
+    [selectedCatalogProduct],
+  );
+  const selectedCatalogSubproduct = useMemo(
+    () => catalogSubproducts.find((subproduct) => subproduct.id === selectedSubproductId) ?? null,
+    [catalogSubproducts, selectedSubproductId],
+  );
+  const catalogModalities = useMemo(
+    () => selectedCatalogSubproduct?.modalities ?? [],
+    [selectedCatalogSubproduct],
   );
 
   React.useEffect(() => {
@@ -942,6 +992,23 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return String(officialPipelines[0]?.id ?? "");
     });
   }, [officialPipelines]);
+
+  React.useEffect(() => {
+    if (!catalogProductOptions.length) {
+      setSelectedProductId("");
+      setSelectedSubproductId("");
+      setSelectedModality("");
+      return;
+    }
+
+    setSelectedProductId((current) => {
+      if (current && catalogProductOptions.some((product) => product.id === current)) {
+        return current;
+      }
+
+      return String(catalogProductOptions[0]?.id ?? "");
+    });
+  }, [catalogProductOptions]);
   
   // Ordenação por coluna: { [etapaId]: 'valor_asc' | 'valor_desc' | 'data_asc' | 'data_desc' }
   const [columnSort, setColumnSort] = useState<Record<string, string>>({});
@@ -2305,8 +2372,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     ? apiOportunidadesReadOnly
     : [];
   const oportunidadesBaseRaw = Array.isArray(oportunidadesReadSource) ? oportunidadesReadSource : [];
-  const etapasReferencia = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
-  const etapaFallbackId = String(etapasReferencia[0]?.id || "novo_lead");
+  const etapasReferencia = etapasAtivas;
+  const etapaFallbackId = String(etapasReferencia[0]?.id || "");
   const etapaIdsValidas = new Set(etapasReferencia.map((etapa) => String(etapa.id)));
   const oportunidadesBase = oportunidadesBaseRaw.map((op: any) => {
     if (!op || typeof op !== "object") return op;
@@ -2451,7 +2518,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   
   // OTIMIZAÇÃO: Agrupar oportunidades por etapa uma única vez com ordenação
   const oportunidadesPorEtapa = useMemo(() => {
-    const etapas = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
+    const etapas = etapasAtivas;
     const resultado: Record<string, typeof dedupedFilteredOportunidades> = {};
     
     for (const etapa of etapas) {
@@ -2484,7 +2551,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   // OTIMIZAÇÃO: Calcular totais por etapa uma única vez
   const totaisPorEtapa = useMemo(() => {
     const resultado: Record<string, number> = {};
-    for (const etapa of etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE) {
+    for (const etapa of etapasAtivas) {
       const ops = oportunidadesPorEtapa[etapa.id] || [];
       resultado[etapa.id] = ops.reduce((acc, o) => acc + (o.valor || 0), 0);
     }
@@ -3465,7 +3532,7 @@ if (
 
                     <Select value={filters.etapa_id} onChange={(e)=>updateFilter("etapa_id", e.target.value)}>
                       <option value="">Etapa</option>
-                      {(etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map(e => (
+                      {etapasAtivas.map(e => (
                         <option key={e.id} value={e.id}>{e.nome}</option>
                       ))}
                     </Select>
@@ -3601,7 +3668,7 @@ if (
         <div className="flex gap-3 p-4 min-h-full">
           {/* Kanban dinâmico baseado no pipeline configurado */}
           {/* OTIMIZAÇÃO: Usar dados pré-calculados de oportunidadesPorEtapa */}
-          {(etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map((etapa) => {
+          {etapasAtivas.map((etapa) => {
           const columnOportunidades = oportunidadesPorEtapa[etapa.id] || [];
           const totalValor = totaisPorEtapa[etapa.id] || 0;
           const isDragOver = dragOverColumn === etapa.id;
@@ -4141,13 +4208,13 @@ if (
                     >
                       <option value="">Selecione</option>
                       {catalogModalities.map((m) => (
-                        <option key={m} value={m}>{getModalityLabel(m)}</option>
+                        <option key={m.id} value={m.code}>{m.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
-                    <select value={formData.etapa_id ?? String(etapasNovaOportunidade[0]?.id || "novo_lead")} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+                    <select value={formData.etapa_id ?? String(etapasNovaOportunidade[0]?.id || "")} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
                       {etapasNovaOportunidade.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
                     </select>
                   </div>
