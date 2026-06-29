@@ -601,6 +601,13 @@ async function createPermissions() {
       action: PermissionAction.UPDATE,
     },
     {
+      name: 'Move Opportunity Stage',
+      slug: 'opportunity:move_stage',
+      description: 'Move opportunity to another stage',
+      resource: 'opportunities',
+      action: PermissionAction.UPDATE,
+    },
+    {
       name: 'Delete Opportunity',
       slug: 'opportunity:delete',
       description: 'Delete opportunities',
@@ -1116,7 +1123,7 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         // Customer management
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
         // Opportunity management
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         // Bank proposal management
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         // Commission management
@@ -1153,7 +1160,7 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         // Customer management
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
         // Opportunity management
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         // Bank proposal management
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         // Commission management
@@ -1280,6 +1287,7 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:read',
         'partner:update',
         'partner:delete',
+        'opportunity:move_stage',
       ],
     },
     {
@@ -1605,7 +1613,7 @@ async function createRolePermissions(
         'tenant:create', 'tenant:read', 'tenant:update', 'tenant:delete',
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:create', 'partner:read', 'partner:update', 'partner:delete', 'partner:assign',
@@ -1624,7 +1632,7 @@ async function createRolePermissions(
         'membership:create', 'membership:read', 'membership:update',
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:read', 'partner:update', 'partner:assign',
