@@ -1743,11 +1743,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     const pipelineIdForStageLookup = resolvedBackendPipelineId;
     const targetOfficialStage = resolveOfficialStageById(pipelineIdForStageLookup, novaFaseAposAceite);
     const resolvedBackendStageId = String(targetOfficialStage?.id ?? "");
-    const novoStatus = targetOfficialStage?.isWon
-      ? "ganho"
-      : targetOfficialStage?.isLost
-        ? "perdido"
-        : "ativo";
 
     if (!resolvedBackendPipelineId || !resolvedBackendStageId) {
       console.error("[Oportunidades] Confirmação de fase cancelada: stageId UUID não resolvido.", {
@@ -1764,8 +1759,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       await opportunitiesApi.moveStage(selectedLeadId, {
         stageId: resolvedBackendStageId,
         pipelineId: resolvedBackendPipelineId || undefined,
-        status: novoStatus,
-        reason: "simulation-phase-confirmation",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao confirmar mudança de fase";
