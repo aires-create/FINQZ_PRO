@@ -2888,7 +2888,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     const origemPipelineSemantico = String(
       currentPipelineConfig?.id ?? newOportunidade.pipeline_id ?? selectedPipelineId ?? "",
     );
-    const matchedOfficialPipeline = matchedOfficialPipelineForSelection;
+    const matchedOfficialPipeline = selectedOfficialPipeline;
 
     const resolvedBackendPipelineId = String(matchedOfficialPipeline?.id ?? "");
 
