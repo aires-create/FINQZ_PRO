@@ -786,7 +786,7 @@ const OportunidadesPageInner = () => {
 
     const loadPartnersHierarchy = async () => {
       try {
-        const response = await partnersApi.getAll({ limit: 1000 });
+        const response = await partnersApi.getAll({ limit: 100 });
         const rawPartners = Array.isArray(response)
           ? response
           : Array.isArray(response?.data)
