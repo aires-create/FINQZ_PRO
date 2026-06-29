@@ -4,8 +4,9 @@ import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Cale
 import { clientesApi } from "../api/modules/clientes.api";
 import { useLocation } from "react-router-dom";
 import type { Cliente } from "../types";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, ErrorState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, ErrorState, KpiCard, ImportModal, ExportMenu, SegmentedControl } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
+import { fetchAddressByCEPWithStatus, formatCEP as formatCepMasked, isValidCEPFormat } from "../data/cepService";
 
 // Função utilitária para formatar código do cliente no padrão #C-0000
 const formatClientCode = (cliente: Cliente | undefined, index: number): string => {
@@ -41,7 +42,11 @@ export const ClientesPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [tipoPessoa, setTipoPessoa] = useState<"" | "CPF" | "CNPJ">("");
   const [cepError, setCepError] = useState<string | null>(null);
-  const tipoPessoaSelectRef = useRef<HTMLSelectElement | null>(null);
+  const tipoPessoaControlRef = useRef<HTMLDivElement | null>(null);
+  const cepLookupRequestRef = useRef(0);
+  const cepLookupLastResolvedRef = useRef("");
+  const [cepLookupStatus, setCepLookupStatus] = useState<"idle" | "loading" | "found" | "not_found" | "error">("idle");
+  const [cepLookupMessage, setCepLookupMessage] = useState("");
   
   // Filtros avançados
   const [showFilters, setShowFilters] = useState(false);
@@ -127,7 +132,7 @@ export const ClientesPage: React.FC = () => {
     if (!showModal) return;
 
     const focusTimer = window.setTimeout(() => {
-      tipoPessoaSelectRef.current?.focus();
+      tipoPessoaControlRef.current?.querySelector<HTMLButtonElement>('button[role="radio"]')?.focus();
     }, 0);
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -472,20 +477,75 @@ export const ClientesPage: React.FC = () => {
     }
   };
 
-  const formatCEP = (cep: string) => {
-    const numbers = onlyNumbers(cep).slice(0, 8);
-    if (numbers.length <= 5) return numbers;
-    return `${numbers.slice(0, 5)}-${numbers.slice(5)}`;
-  };
-
   const validateCEP = (cep: string) => {
     const numbers = onlyNumbers(cep);
     if (!numbers) {
       setCepError(null);
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
       return;
     }
 
     setCepError(numbers.length === 8 ? null : "CEP deve conter 8 dígitos");
+    if (numbers.length !== 8) {
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
+    }
+  };
+
+  const lookupAddressByCEP = async (rawCep: string) => {
+    const cleanCEP = onlyNumbers(rawCep);
+
+    if (!cleanCEP) {
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
+      return;
+    }
+
+    if (!isValidCEPFormat(cleanCEP)) {
+      setCepError("CEP deve conter 8 dígitos");
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
+      return;
+    }
+
+    if (cepLookupLastResolvedRef.current === cleanCEP) {
+      return;
+    }
+
+    const requestId = ++cepLookupRequestRef.current;
+    setCepError(null);
+    setCepLookupStatus("loading");
+    setCepLookupMessage("Buscando endereço...");
+
+    const result = await fetchAddressByCEPWithStatus(cleanCEP);
+    if (requestId !== cepLookupRequestRef.current) return;
+
+    if (result.status === "found" && result.address) {
+      setFormData((prev) => ({
+        ...prev,
+        cep: onlyNumbers(result.address?.cep || cleanCEP),
+        rua: result.address?.street || prev.rua,
+        complemento: result.address?.complement || prev.complemento,
+        bairro: result.address?.neighborhood || prev.bairro,
+        cidade: result.address?.city || prev.cidade,
+        estado: result.address?.state || prev.estado,
+      }));
+      cepLookupLastResolvedRef.current = cleanCEP;
+      setCepLookupStatus("found");
+      setCepLookupMessage("Endereço localizado");
+      return;
+    }
+
+    if (result.status === "not_found") {
+      cepLookupLastResolvedRef.current = cleanCEP;
+      setCepLookupStatus("not_found");
+      setCepLookupMessage("CEP não encontrado");
+      return;
+    }
+
+    setCepLookupStatus("error");
+    setCepLookupMessage("Não foi possível consultar o CEP");
   };
 
   const handleFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
@@ -883,6 +943,10 @@ export const ClientesPage: React.FC = () => {
       doNotCallConsultedAt: cliente.doNotCallConsultedAt ?? "",
     });
     setCepError(null);
+    setCepLookupStatus("idle");
+    setCepLookupMessage("");
+    cepLookupRequestRef.current = 0;
+    cepLookupLastResolvedRef.current = "";
     setIsEditing(false); // Modo visualização
     setShowModal(true);
   };
@@ -893,6 +957,10 @@ export const ClientesPage: React.FC = () => {
     setEditingCliente(null);
     setTipoPessoa("");
     setCepError(null);
+    setCepLookupStatus("idle");
+    setCepLookupMessage("");
+    cepLookupRequestRef.current = 0;
+    cepLookupLastResolvedRef.current = "";
     setIsEditing(true); // Novo cliente já em modo de edição
     setShowModal(true);
   };
@@ -989,6 +1057,10 @@ export const ClientesPage: React.FC = () => {
       doNotCallConsultedAt: "",
     });
     setCepError(null);
+    setCepLookupStatus("idle");
+    setCepLookupMessage("");
+    cepLookupRequestRef.current = 0;
+    cepLookupLastResolvedRef.current = "";
     setIsEditing(false);
   };
 
@@ -1415,22 +1487,21 @@ export const ClientesPage: React.FC = () => {
                   Dados Pessoais
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <div className="md:col-span-2">
+                  <div ref={tipoPessoaControlRef} className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Tipo de Pessoa
                     </label>
-                    <select
-                      ref={tipoPessoaSelectRef}
-                      autoFocus
+                    <SegmentedControl
+                      name="tipoPessoa"
+                      aria-label="Tipo de Pessoa"
                       value={tipoPessoa}
-                      onChange={(e) => setTipoPessoa(e.target.value as "" | "CPF" | "CNPJ")}
+                      onChange={(nextValue) => setTipoPessoa(nextValue as "" | "CPF" | "CNPJ")}
                       disabled={!isEditable}
-                      className={modalSelectClass}
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="CPF">Pessoa Física</option>
-                      <option value="CNPJ">Pessoa Jurídica</option>
-                    </select>
+                      options={[
+                        { value: "CPF", label: "Pessoa Física", icon: <User size={16} /> },
+                        { value: "CNPJ", label: "Pessoa Jurídica", icon: <Building2 size={16} /> },
+                      ]}
+                    />
                   </div>
 
                   {tipoPessoa === "CPF" && (
@@ -1659,13 +1730,20 @@ export const ClientesPage: React.FC = () => {
                     <input
                       type="text"
                       disabled={!isEditable}
-                      value={formatCEP(formData.cep)}
+                      value={formatCepMasked(formData.cep)}
                       onChange={(e) => {
                         const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
                         setFormData({ ...formData, cep: digits });
                         if (cepError) setCepError(null);
+                        if (cepLookupStatus !== "idle") {
+                          setCepLookupStatus("idle");
+                          setCepLookupMessage("");
+                        }
                       }}
-                      onBlur={(e) => validateCEP(e.target.value)}
+                      onBlur={(e) => {
+                        validateCEP(e.target.value);
+                        void lookupAddressByCEP(e.target.value);
+                      }}
                       className={modalFieldClass}
                       placeholder="00000-000"
                       maxLength={9}
@@ -1673,8 +1751,21 @@ export const ClientesPage: React.FC = () => {
                     {cepError && (
                       <p className="mt-1 text-xs text-rose-500">{cepError}</p>
                     )}
-                    {!cepError && (
-                      <p className="mt-1 text-xs text-slate-500">Preparado para busca automatica por CEP em proxima wave.</p>
+                    {!cepError && cepLookupMessage && (
+                      <p
+                        className={`mt-1 text-xs ${
+                          cepLookupStatus === "found"
+                            ? "text-emerald-600"
+                            : cepLookupStatus === "loading"
+                              ? "text-slate-500"
+                              : cepLookupStatus === "not_found"
+                                ? "text-amber-600"
+                                : "text-rose-500"
+                        }`}
+                        aria-live="polite"
+                      >
+                        {cepLookupMessage}
+                      </p>
                     )}
                   </div>
                   <div className="md:col-span-2">
