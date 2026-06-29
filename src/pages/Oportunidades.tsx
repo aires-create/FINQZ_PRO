@@ -1714,41 +1714,36 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
     
-    const novoStatus = novaFaseAposAceite === 'perdido' ? 'perdido' : 'ativo';
-
     const selectedLeadId = String(getCanonicalOpportunityId(selectedLead) ?? "");
     if (!selectedLeadId) {
       alert("Não foi possível mover: oportunidade sem identificador.");
       return;
     }
 
-    const targetEtapaKey = normalizeKey(novaFaseAposAceite);
     const origemPipelineSemantico = String(
       selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
       selectedLead?.backendPipelineId ||
+      selectedLead?.pipelineId ||
+      currentPipelineConfig?.id ||
+      selectedPipelineId ||
       oportunidadesBase.find((op: any) =>
         String(op?.pipeline_id ?? "") === origemPipelineSemantico && String(op?.backendPipelineId ?? "").length > 0,
       )?.backendPipelineId ||
       "",
     );
 
-    const resolvedBackendStageId = String(
-      oportunidadesBase.find((op: any) => {
-        if (!op?.backendStageId) return false;
-        const sameBackendPipeline = resolvedBackendPipelineId
-          ? String(op?.backendPipelineId ?? "") === resolvedBackendPipelineId
-          : String(op?.pipeline_id ?? "") === origemPipelineSemantico;
-        if (!sameBackendPipeline) return false;
-        return normalizeKey(op?.backendStageName ?? "") === targetEtapaKey;
-      })?.backendStageId ||
-      (normalizeKey(selectedLead?.backendStageName ?? "") === targetEtapaKey
-        ? String(selectedLead?.backendStageId ?? "")
-        : ""),
-    );
+    const pipelineIdForStageLookup = resolvedBackendPipelineId;
+    const targetOfficialStage = resolveOfficialStageById(pipelineIdForStageLookup, novaFaseAposAceite);
+    const resolvedBackendStageId = String(targetOfficialStage?.id ?? "");
+    const novoStatus = targetOfficialStage?.isWon
+      ? "ganho"
+      : targetOfficialStage?.isLost
+        ? "perdido"
+        : "ativo";
 
-    if (!resolvedBackendStageId) {
+    if (!resolvedBackendPipelineId || !resolvedBackendStageId) {
       console.error("[Oportunidades] Confirmação de fase cancelada: stageId UUID não resolvido.", {
         selectedLeadId,
         novaFaseAposAceite,
@@ -2182,6 +2177,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     cor: getCorEtapa(normalizeKey(stage.name), index),
   }));
   const etapasAtivas = Array.isArray(etapasAtivasRaw) ? etapasAtivasRaw : [];
+  const resolveOfficialStageById = (pipelineId: string, stageId: string) => {
+    const pipeline = officialPipelines.find((item: any) => String(item?.id ?? "") === String(pipelineId ?? ""));
+    const rawStages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+
+    return rawStages.find((stage: any) =>
+      String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? "") === String(stageId ?? ""),
+    ) ?? null;
+  };
   const hasSelectedOfficialPipeline = Boolean(selectedOfficialPipeline);
   const hasSelectedPipelineWithoutStages = hasSelectedOfficialPipeline && etapasAtivas.length === 0;
   const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : [];
@@ -2555,8 +2558,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       setDragOverColumn(null);
       return;
     }
-    if (oportunidade && etapaId !== 'perdido') {
-      const validacao = validarEtapa(oportunidade, etapaId as EtapaKey);
+    const pipelineIdForStageLookup = String(
+      oportunidade?.backendPipelineId ??
+      oportunidade?.pipelineId ??
+      currentPipelineConfig?.id ??
+      selectedPipelineId ??
+      "",
+    );
+    const targetOfficialStage = resolveOfficialStageById(pipelineIdForStageLookup, etapaId);
+    const targetEtapaKey = normalizeKey(targetOfficialStage?.name ?? etapaId);
+
+    if (oportunidade && targetOfficialStage && !targetOfficialStage.isLost) {
+      const validacao = validarEtapa(oportunidade, targetEtapaKey as EtapaKey);
       if (!validacao.valido) {
         alert(`Não é possível avançar para esta etapa.\n\n${validacao.mensagem}`);
         setDraggedCard(null);
@@ -2565,37 +2578,26 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       }
     }
 
-    const statusDestino = etapaId === "integrado" ? "ganho" :
-      etapaId === "perdido" ? "perdido" :
-      "ativo";
+    const statusDestino = targetOfficialStage?.isWon
+      ? "ganho"
+      : targetOfficialStage?.isLost
+        ? "perdido"
+        : "ativo";
 
-    const targetEtapaKey = normalizeKey(etapaId);
     const origemPipelineSemantico = String(
       oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
       oportunidade?.backendPipelineId ||
-      oportunidadesBase.find((op: any) =>
-        String(op?.pipeline_id ?? "") === origemPipelineSemantico && String(op?.backendPipelineId ?? "").length > 0,
-      )?.backendPipelineId ||
+      oportunidade?.pipelineId ||
+      currentPipelineConfig?.id ||
+      selectedPipelineId ||
       "",
     );
 
-    const resolvedBackendStageId = String(
-      oportunidadesBase.find((op: any) => {
-        if (!op?.backendStageId) return false;
-        const sameBackendPipeline = resolvedBackendPipelineId
-          ? String(op?.backendPipelineId ?? "") === resolvedBackendPipelineId
-          : String(op?.pipeline_id ?? "") === origemPipelineSemantico;
-        if (!sameBackendPipeline) return false;
-        return normalizeKey(op?.backendStageName ?? "") === targetEtapaKey;
-      })?.backendStageId ||
-      (normalizeKey(oportunidade?.backendStageName ?? "") === targetEtapaKey
-        ? String(oportunidade?.backendStageId ?? "")
-        : ""),
-    );
+    const resolvedBackendStageId = String(targetOfficialStage?.id ?? etapaId ?? "");
 
-    if (!resolvedBackendStageId) {
+    if (!resolvedBackendPipelineId || !resolvedBackendStageId) {
       console.error("[Oportunidades] MoveStage cancelado: stageId UUID não resolvido.", {
         cardId,
         etapaId,
