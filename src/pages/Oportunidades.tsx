@@ -2620,8 +2620,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       await opportunitiesApi.moveStage(String(getCanonicalOpportunityId(oportunidade) ?? ""), {
         stageId: resolvedBackendStageId,
         pipelineId: resolvedBackendPipelineId || undefined,
-        status: statusDestino,
-        reason: "kanban-drag-drop",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao mover oportunidade";
