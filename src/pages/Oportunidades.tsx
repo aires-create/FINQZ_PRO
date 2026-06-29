@@ -74,28 +74,7 @@ const toStageLabel = (stage: any): string => {
   return String(stage?.nome || stage?.label || stage?.id || stage?.key || "Etapa");
 };
 
-// LISTA ÚNICA OFICIAL DE ETAPAS DO PIPELINE (inclui etapas de onboarding)
-export const OFICIAL_ETAPAS = [
-  // Etapas básicas
-  { key: "novo_lead", label: "Novo Lead" },
-  { key: "negociacao", label: "Negociação" },
-  // Etapas de documentação
-  { key: "documentacao", label: "Documentação" },
-  // Etapas de aceite/contrato
-  { key: "aceite", label: "Aceite" },
-  { key: "contrato_enviado", label: "Contrato Enviado" },
-  { key: "aguardando_assinatura", label: "Aguardando Assinatura" },
-  { key: "contrato_assinado", label: "Contrato Assinado" },
-  // Etapas de ativação
-  { key: "ativo", label: "Ativo" },
-  // Etapas de fechamento
-  { key: "formalizacao", label: "Formalização" },
-  { key: "integrado", label: "Integrado" },
-  { key: "pendencia", label: "Pendência" },
-  { key: "perdido", label: "Perdido" }
-] as const;
-
-export type EtapaKey = typeof OFICIAL_ETAPAS[number]['key'];
+export type EtapaKey = string;
 
 type PipelineRuntimeConfig = {
   id: string;
@@ -122,25 +101,6 @@ type ResponsibleUser = {
   nome: string;
   status: string;
   scope?: string;
-};
-
-// Compatibilidade transitória de leitura/filtro para oportunidades legadas.
-// Nao representa taxonomia canônica nem source of truth de Pipeline.
-// TODO H-14G: remover após migração completa dos pipelineIds legados.
-const LEGACY_PIPELINE_IDS_BY_CATALOG: Record<string, string[]> = {
-  "pipeline-antecipacao": ["pipeline-antecipacao", "fgts"],
-  "pipeline-cartao": ["pipeline-cartao"],
-  "pipeline-consignado": ["pipeline-consignado", "finqz-consignado", "credito_consignado", "consignado"],
-  "pipeline-consorcio": ["pipeline-consorcio"],
-  "pipeline-credito-pessoal-cdc": ["pipeline-credito-pessoal-cdc", "finqz-auto", "emprestimo_pessoal", "personalizado"],
-  "pipeline-emprestimo-com-garantia": ["pipeline-emprestimo-com-garantia", "emprestimo_com_garantia"],
-  "pipeline-energia": ["pipeline-energia", "energia_gd", "mercado_livre_energia"],
-  "pipeline-financiamento": ["pipeline-financiamento", "financiamento_veiculo"],
-  "pipeline-seguro": ["pipeline-seguro"],
-};
-
-const getLegacyCompatiblePipelineIds = (pipelineId: string): string[] => {
-  return LEGACY_PIPELINE_IDS_BY_CATALOG[pipelineId] || [pipelineId];
 };
 
 const normalizeOfficialPipelinesForRead = (payload: any): any[] => {
@@ -2214,16 +2174,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       }
     : null;
 
-  // Adapter local do formulário: pipeline oficial selecionado no form, independente do pipeline ativo da página.
-  const formSelectedOfficialPipeline = useMemo(
-    () => officialPipelines.find((pipeline: any) => String(pipeline?.id ?? "") === String(formData.pipelineId ?? "")) ?? null,
-    [officialPipelines, formData.pipelineId],
-  );
-
-  const formOfficialStages = useMemo(() => {
-    return resolveOfficialStagesForSelectedPipeline(formSelectedOfficialPipeline).map((stage) => stage.name);
-  }, [formSelectedOfficialPipeline]);
-
   const etapasAtivasRaw = selectedOfficialStages.map((stage, index) => ({
     id: String(stage.id),
     nome: String(stage.name),
@@ -3447,7 +3397,7 @@ if (
         onOpenFilters={() => setShowFilterDrawer(true)}
         extraLeft={pipelineSelectControl}
         filters={[
-          { label: 'Etapa', key: 'etapa_id', type: 'select', options: OFICIAL_ETAPAS.map(e => ({ label: e.label, value: e.key })), placeholder: 'Todas as etapas' },
+          { label: 'Etapa', key: 'etapa_id', type: 'select', options: etapasAtivas.map(e => ({ label: e.nome, value: e.id })), placeholder: 'Todas as etapas' },
           { label: 'Status', key: 'status', type: 'select', options: [
             { label: 'Ativo', value: 'ativo' },
             { label: 'Integrado', value: 'ganho' },
@@ -5589,7 +5539,7 @@ if (
                                         className="w-full px-3 py-2.5 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 flex items-center justify-center gap-2"
                                       >
                                         <ArrowRight size={14} className="inline mr-1" />
-                                        Confirmar e mover para {fasePosAceiteSelecionada?.nome ?? OFICIAL_ETAPAS.find(e => e.key === novaFaseAposAceite)?.label ?? "Etapa"}
+                                        Confirmar e mover para {fasePosAceiteSelecionada?.nome ?? "Etapa"}
                                       </button>
                                     </div>
                                   )}
@@ -5843,12 +5793,7 @@ if (
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
                       required
                     >
-                      {(formOfficialStages.length > 0
-                        ? formOfficialStages.map((stageName) => ({
-                            id: normalizeKey(stageName),
-                            nome: stageName,
-                          }))
-                        : OFICIAL_ETAPAS.map((etapa) => ({ id: etapa.key, nome: etapa.label }))).map((etapa) => (
+                      {etapasNovaOportunidade.map((etapa) => (
                         <option key={etapa.id} value={etapa.id}>
                           {etapa.nome}
                         </option>
