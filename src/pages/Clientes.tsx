@@ -63,7 +63,6 @@ export const ClientesPage: React.FC = () => {
     valorNovo: string;
   }>>([]);
   const [formData, setFormData] = useState({
-    nome_fantasia: "",
     nome: "",
     cpf_cnpj: "",
     email: "",
@@ -134,7 +133,6 @@ export const ClientesPage: React.FC = () => {
 
       return {
         ...cliente,
-        nome_fantasia: cliente.nome_fantasia || cliente.fantasia || "",
         nome:
           cliente.nome ||
           [cliente.firstName, cliente.lastName].filter(Boolean).join(' ') ||
@@ -264,7 +262,6 @@ export const ClientesPage: React.FC = () => {
         estado: row.estado || "",
         status: "ativo",
         observacao: row.observacao || "",
-        nome_fantasia: row.nome_fantasia || row.fantasia || "",
         profissao: row.profissao || "",
         estado_civil: row.estado_civil || "",
         responsavel_legal: row.responsavel_legal || "",
@@ -572,7 +569,6 @@ export const ClientesPage: React.FC = () => {
     const now = Date.now();
     const newClient = {
       id: now,
-      nome_fantasia: formData.nome_fantasia || "",
       nome: (formData?.nome || '').trim(),
       cpf_cnpj: onlyNumbers(formData.cpf_cnpj || ''),
       tipoPessoa: tipoPessoa,
@@ -812,7 +808,6 @@ export const ClientesPage: React.FC = () => {
   // Helper: verifica se campo deve estar editável
   const isEditable = !editingCliente || isEditing;
   const isPessoaJuridica = tipoPessoa === "CNPJ";
-  const isPessoaFisica = tipoPessoa === "CPF";
 
   const resolveTipoPessoa = (cliente: any): "CPF" | "CNPJ" => {
     const explicitType = String(cliente?.documentType || cliente?.tipoPessoa || "").toUpperCase();
@@ -844,7 +839,6 @@ export const ClientesPage: React.FC = () => {
       ? formatCNPJInput(normalizedDoc)
       : formatCPFInput(normalizedDoc);
     setFormData({
-      nome_fantasia: (cliente as any).nome_fantasia || (cliente as any).fantasia || "",
       nome: normalizedNome,
       cpf_cnpj: formattedDoc,
       email: cliente.email || "",
@@ -954,7 +948,6 @@ export const ClientesPage: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
-      nome_fantasia: "",
       nome: "",
       cpf_cnpj: "",
       email: "",
@@ -1423,6 +1416,7 @@ export const ClientesPage: React.FC = () => {
                       <option value="CNPJ">Pessoa Jurídica</option>
                     </select>
                   </div>
+
                   {tipoPessoa === "CPF" && (
                     <>
                       <div>
@@ -1514,6 +1508,7 @@ export const ClientesPage: React.FC = () => {
                       </div>
                     </>
                   )}
+
                   {tipoPessoa === "CNPJ" && (
                     <>
                       <div>
@@ -1550,11 +1545,11 @@ export const ClientesPage: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          disabled={!isEditable}
+                          readOnly
+                          disabled
                           value={formData.responsavel_legal}
-                          onChange={(e) => setFormData({ ...formData, responsavel_legal: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                          placeholder="Nome do responsável legal"
+                          className="w-full h-10 rounded-lg border border-dashed border-[#1f2937] px-3 text-sm bg-gray-50 text-slate-400 placeholder:text-slate-400"
+                          placeholder="Campo futuro"
                         />
                       </div>
                       <div>
@@ -1563,10 +1558,10 @@ export const ClientesPage: React.FC = () => {
                         </label>
                         <input
                           type="text"
-                          disabled={!isEditable}
+                          readOnly
+                          disabled
                           value={formatCPFInput(formData.cpf_responsavel)}
-                          onChange={(e) => setFormData({ ...formData, cpf_responsavel: e.target.value.replace(/\D/g, "").slice(0, 11) })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className="w-full h-10 rounded-lg border border-dashed border-[#1f2937] px-3 text-sm bg-gray-50 text-slate-400 placeholder:text-slate-400"
                           placeholder="000.000.000-00"
                           maxLength={14}
                         />
@@ -1585,97 +1580,8 @@ export const ClientesPage: React.FC = () => {
                       </div>
                     </>
                   )}
-                  {isPessoaFisica && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Sexo
-                        </label>
-                        <select
-                          disabled={!isEditable}
-                          value={formData.sexo}
-                          onChange={(e) => setFormData({ ...formData, sexo: e.target.value as any })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                        >
-                          <option value="">Selecione...</option>
-                          <option value="masculino">Masculino</option>
-                          <option value="feminino">Feminino</option>
-                          <option value="outro">Outro</option>
-                          <option value="nao_informar">Prefiro não informar</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Estado Civil
-                        </label>
-                        <select
-                          disabled={!isEditable}
-                          value={formData.estado_civil}
-                          onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                        >
-                          <option value="">Selecione...</option>
-                          <option value="solteiro">Solteiro</option>
-                          <option value="casado">Casado</option>
-                          <option value="divorciado">Divorciado</option>
-                          <option value="viuvo">Viúvo</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Profissão
-                        </label>
-                        <input
-                          type="text"
-                          disabled={!isEditable}
-                          value={formData.profissao}
-                          onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                          placeholder="Profissão"
-                        />
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
-
-              {isPessoaJuridica && (
-                <div>
-                  <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
-                    <Building2 size={16} />
-                    Responsável Legal
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        Responsável Legal
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!isEditable}
-                        value={formData.responsavel_legal}
-                        onChange={(e) => setFormData({ ...formData, responsavel_legal: e.target.value })}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                        placeholder="Nome do responsável ou contato"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        CPF do Responsável
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!isEditable}
-                        value={formatCPFInput(formData.cpf_responsavel)}
-                        onChange={(e) => setFormData({ ...formData, cpf_responsavel: e.target.value.replace(/\D/g, "").slice(0, 11) })}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                        placeholder="000.000.000-00"
-                        maxLength={14}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Contato */}
               <div>
