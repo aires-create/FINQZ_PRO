@@ -29,6 +29,17 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
   return `#C-${String(fallback).padStart(4, '0')}`;
 };
 
+const formatClientCodeShort = (cliente: Cliente | undefined, index: number): string => {
+  const fullCode = formatClientCode(cliente, index);
+  const digits = fullCode.replace(/\D/g, "");
+
+  if (digits.length <= 4) {
+    return fullCode;
+  }
+
+  return `#C-${digits.slice(-4)}`;
+};
+
 export const ClientesPage: React.FC = () => {
   const location = useLocation();
   
@@ -390,6 +401,25 @@ export const ClientesPage: React.FC = () => {
     
     return true;
   });
+
+  const duplicateCliente = useMemo(() => {
+    if (!tipoPessoa) return null;
+
+    const docNumbers = onlyNumbers(formData.cpf_cnpj || "");
+    const expectedLength = tipoPessoa === "CPF" ? 11 : 14;
+    if (docNumbers.length !== expectedLength) return null;
+    if (!validarDocumento(docNumbers, tipoPessoa)) return null;
+
+    return safeClientes.find((cliente) => {
+      if (editingCliente && String(cliente.id) === String(editingCliente.id)) {
+        return false;
+      }
+
+      const candidateDoc = onlyNumbers(cliente.cpf_cnpj || cliente.cpf || "");
+      if (candidateDoc.length !== expectedLength) return false;
+      return candidateDoc === docNumbers;
+    }) || null;
+  }, [safeClientes, formData.cpf_cnpj, tipoPessoa, editingCliente]);
 
   // Função para validar CPF
   const validarCPF = (cpf: string): boolean => {
@@ -1307,8 +1337,11 @@ export const ClientesPage: React.FC = () => {
                 {filteredClientes.map((cliente, index) => (
                   <tr key={cliente.id} className="border-b border-[var(--border-muted)] hover:bg-[var(--bg-surface-hover)] transition-colors">
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)] whitespace-nowrap">
-                      <span className="text-sm font-medium font-mono tabular-nums text-[var(--text-primary)]">
-                        {formatClientCode(cliente, index)}
+                      <span
+                        className="text-sm font-medium font-mono tabular-nums text-[var(--text-primary)]"
+                        title={formatClientCode(cliente, index)}
+                      >
+                        {formatClientCodeShort(cliente, index)}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
@@ -1517,6 +1550,20 @@ export const ClientesPage: React.FC = () => {
                           placeholder="000.000.000-00"
                           maxLength={14}
                         />
+                        {duplicateCliente && (
+                          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+                            <p className="font-medium">
+                              Cliente já cadastrado: {duplicateCliente.nome || "Cliente sem nome"}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(duplicateCliente)}
+                              className="mt-1 inline-flex items-center text-[11px] font-medium text-amber-700 underline decoration-amber-500/60 underline-offset-2 hover:text-amber-800"
+                            >
+                              Editar cadastro existente
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
@@ -1597,6 +1644,20 @@ export const ClientesPage: React.FC = () => {
                           placeholder="00.000.000/0000-00"
                           maxLength={18}
                         />
+                        {duplicateCliente && (
+                          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+                            <p className="font-medium">
+                              Cliente já cadastrado: {duplicateCliente.nome || "Cliente sem nome"}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(duplicateCliente)}
+                              className="mt-1 inline-flex items-center text-[11px] font-medium text-amber-700 underline decoration-amber-500/60 underline-offset-2 hover:text-amber-800"
+                            >
+                              Editar cadastro existente
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">Razão Social</label>
