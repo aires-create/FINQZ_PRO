@@ -1,5 +1,5 @@
 // FINQZ PRO - Clientes Page
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Clock, Shield, Upload } from "lucide-react";
 import { clientesApi } from "../api/modules/clientes.api";
 import { useLocation } from "react-router-dom";
@@ -40,7 +40,8 @@ export const ClientesPage: React.FC = () => {
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [tipoPessoa, setTipoPessoa] = useState<"" | "CPF" | "CNPJ">("");
-  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+  const tipoPessoaSelectRef = useRef<HTMLSelectElement | null>(null);
   
   // Filtros avançados
   const [showFilters, setShowFilters] = useState(false);
@@ -102,6 +103,15 @@ export const ClientesPage: React.FC = () => {
     doNotCallConsultedAt: "",
   });
 
+  const modalFieldClass =
+    "w-full h-9 rounded-xl border border-[#1f2937] bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#000dff] focus:outline-none focus:ring-2 focus:ring-[#000dff]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500";
+  const modalSelectClass = `${modalFieldClass} appearance-none pr-9`;
+  const modalTextareaClass =
+    "w-full rounded-xl border border-[#1f2937] bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#000dff] focus:outline-none focus:ring-2 focus:ring-[#000dff]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 resize-none";
+  const modalCardClass = "rounded-xl border border-[#1f2937] bg-white/90 p-3 shadow-sm";
+  const modalSubtleCardClass = "rounded-xl border border-dashed border-[#1f2937] bg-white/60 p-3";
+  const modalSectionTitleClass = "text-sm font-medium text-slate-200 mb-2 flex items-center gap-2";
+
   useEffect(() => {
     loadClientes();
   }, [search]);
@@ -112,6 +122,27 @@ export const ClientesPage: React.FC = () => {
       currentSearch === nextSearch ? currentSearch : nextSearch,
     );
   }, [location.search]);
+
+  useEffect(() => {
+    if (!showModal) return;
+
+    const focusTimer = window.setTimeout(() => {
+      tipoPessoaSelectRef.current?.focus();
+    }, 0);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        handleCloseModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showModal]);
 
   const loadClientes = async () => {
     try {
@@ -441,63 +472,45 @@ export const ClientesPage: React.FC = () => {
     }
   };
 
-  // Função para buscar endereço pelo CEP
-  const buscarEnderecoPorCEP = async (cep: string) => {
-    if (!cep || cep.replace(/\D/g, "").length !== 8) return;
-    
-    setCepLoading(true);
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
-      const data = await response.json();
-      
-      if (!data.erro) {
-        setFormData({
-          ...formData,
-          rua: data.logradouro || "",
-          bairro: data.bairro || "",
-          cidade: data.localidade || "",
-          estado: data.uf || "",
-          complemento: data.complemento || "",
-        });
-      }
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
-    } finally {
-      setCepLoading(false);
-    }
+  const formatCEP = (cep: string) => {
+    const numbers = onlyNumbers(cep).slice(0, 8);
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5)}`;
   };
 
-  // Funções de Consulta de Compliance
-  const handleConsultCredit = () => {
-    const doc = formData.cpf_cnpj?.replace(/\D/g, '');
-    if (!doc || doc.length < 11) {
-      alert('CPF/CNPJ inválido para consulta');
+  const validateCEP = (cep: string) => {
+    const numbers = onlyNumbers(cep);
+    if (!numbers) {
+      setCepError(null);
       return;
     }
-    
-    // Simulação de consulta (em produção, chamaria API)
-    const hasRestriction = Math.random() > 0.7; // 30% de chance de restrição
-    setFormData({
-      ...formData,
-      rdStatus: hasRestriction ? 'restricao' : 'sem_restricao',
-      rdConsultedAt: new Date().toISOString(),
-    });
+
+    setCepError(numbers.length === 8 ? null : "CEP deve conter 8 dígitos");
   };
 
-  const handleConsultDoNotCall = () => {
-    const phone = formData.celular || formData.telefone;
-    if (!phone || phone.length < 10) {
-      alert('Telefone/Celular inválido para consulta');
+  const handleFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (event.key !== "Enter") return;
+
+    const target = event.target as HTMLElement;
+    if (
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "BUTTON" ||
+      (target as HTMLInputElement).type === "submit"
+    ) {
       return;
     }
-    
-    // Simulação de consulta (em produção, chamaria API)
-    const isBlocked = Math.random() > 0.8; // 20% de chance de bloqueio
-    setFormData({
-      ...formData,
-      doNotCallStatus: isBlocked ? 'bloqueado' : 'liberado',
-      doNotCallConsultedAt: new Date().toISOString(),
-    });
+
+    const focusableElements = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])',
+      ),
+    ).filter((element) => element.offsetParent !== null);
+
+    const currentIndex = focusableElements.indexOf(target);
+    if (currentIndex === -1 || currentIndex >= focusableElements.length - 1) return;
+
+    event.preventDefault();
+    focusableElements[currentIndex + 1]?.focus();
   };
 
   // Renderizar status de compliance
@@ -869,6 +882,7 @@ export const ClientesPage: React.FC = () => {
       doNotCallStatus: cliente.doNotCallStatus ?? "nao_consultado",
       doNotCallConsultedAt: cliente.doNotCallConsultedAt ?? "",
     });
+    setCepError(null);
     setIsEditing(false); // Modo visualização
     setShowModal(true);
   };
@@ -878,6 +892,7 @@ export const ClientesPage: React.FC = () => {
     resetForm();
     setEditingCliente(null);
     setTipoPessoa("");
+    setCepError(null);
     setIsEditing(true); // Novo cliente já em modo de edição
     setShowModal(true);
   };
@@ -973,6 +988,7 @@ export const ClientesPage: React.FC = () => {
       doNotCallStatus: "nao_consultado",
       doNotCallConsultedAt: "",
     });
+    setCepError(null);
     setIsEditing(false);
   };
 
@@ -1015,7 +1031,7 @@ export const ClientesPage: React.FC = () => {
 
   // Função para formatar telefone
   const formatPhone = (phone: string) => {
-    if (!phone) return "-";
+    if (!phone) return "";
     if (phone.length === 10) {
       return phone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
     }
@@ -1372,35 +1388,44 @@ export const ClientesPage: React.FC = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] rounded-2xl w-full max-w-3xl max-h-[88vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-5 border-b border-[#1f2937]">
-              <h3 className="text-lg font-semibold text-white">
-                {editingCliente ? "Editar Cliente" : "Novo Cliente"}
-              </h3>
+          <div className="bg-[#111827] rounded-2xl w-full max-w-[950px] max-h-[86vh] overflow-hidden shadow-xl flex flex-col">
+            <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[#1f2937] flex-none">
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  {editingCliente ? "Editar Cliente" : "Novo Cliente"}
+                </h3>
+                <p className="text-sm text-slate-500">
+                  {editingCliente
+                    ? "Atualize as informações cadastrais."
+                    : "Cadastre um cliente Pessoa Física ou Pessoa Jurídica."}
+                </p>
+              </div>
               <button
                 onClick={handleCloseModal}
-                className="p-2 text-[#000dff] hover:text-slate-600 hover:bg-gray-100 rounded-2xl transition-colors"
+                className="p-2 text-[#000dff] hover:text-slate-300 hover:bg-white/10 rounded-xl transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {/* Dados Pessoais */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <User size={16} />
                   Dados Pessoais
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Tipo de Pessoa
                     </label>
                     <select
+                      ref={tipoPessoaSelectRef}
+                      autoFocus
                       value={tipoPessoa}
                       onChange={(e) => setTipoPessoa(e.target.value as "" | "CPF" | "CNPJ")}
                       disabled={!isEditable}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                      className={modalSelectClass}
                     >
                       <option value="">Selecione...</option>
                       <option value="CPF">Pessoa Física</option>
@@ -1417,7 +1442,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.cpf_cnpj}
                           onChange={(e) => setFormData({ ...formData, cpf_cnpj: formatCPFInput(e.target.value) })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="000.000.000-00"
                           maxLength={14}
                         />
@@ -1430,7 +1455,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.nome}
                           onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Nome completo"
                         />
                       </div>
@@ -1441,7 +1466,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.data_nascimento}
                           onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                         />
                       </div>
                       <div>
@@ -1450,7 +1475,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.sexo}
                           onChange={(e) => setFormData({ ...formData, sexo: e.target.value as any })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalSelectClass}
                         >
                           <option value="">Selecione...</option>
                           <option value="masculino">Masculino</option>
@@ -1465,7 +1490,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.estado_civil}
                           onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalSelectClass}
                         >
                           <option value="">Selecione...</option>
                           <option value="solteiro">Solteiro</option>
@@ -1481,7 +1506,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.profissao}
                           onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Profissão"
                         />
                       </div>
@@ -1497,7 +1522,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.cpf_cnpj}
                           onChange={(e) => setFormData({ ...formData, cpf_cnpj: formatCNPJInput(e.target.value) })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="00.000.000/0000-00"
                           maxLength={18}
                         />
@@ -1510,7 +1535,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.nome}
                           onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Razão social"
                         />
                       </div>
@@ -1521,7 +1546,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.data_nascimento}
                           onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                         />
                       </div>
                     </>
@@ -1531,11 +1556,11 @@ export const ClientesPage: React.FC = () => {
 
               {/* Contato */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <Phone size={16} />
                   Informações de Contato
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Celular *
@@ -1554,7 +1579,7 @@ export const ClientesPage: React.FC = () => {
                         const numbers = e.target.value.replace(/\D/g, "");
                         setFormData({ ...formData, celular: numbers });
                       }}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                      className={modalFieldClass}
                       placeholder="(00) 00000-0000"
                       maxLength={15}
                     />
@@ -1572,11 +1597,11 @@ export const ClientesPage: React.FC = () => {
                           const numbers = e.target.value.replace(/\D/g, "");
                           setFormData({ ...formData, telefone: numbers.slice(0, 11) });
                         }}
-                        onBlur={(e) => {
-                          const numbers = e.target.value.replace(/\D/g, "");
-                          setFormData({ ...formData, telefone: numbers });
-                        }}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                      onBlur={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, "");
+                        setFormData({ ...formData, telefone: numbers });
+                      }}
+                        className={modalFieldClass}
                         placeholder="(00) 0000-0000"
                         maxLength={14}
                       />
@@ -1591,40 +1616,66 @@ export const ClientesPage: React.FC = () => {
                       disabled={!isEditable}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                      className={modalFieldClass}
                       placeholder="email@exemplo.com"
                     />
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className={modalCardClass}>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                        Não Perturbe
+                      </label>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.doNotCallStatus === "bloqueado"}
+                          disabled={!isEditable}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              doNotCallStatus: e.target.checked ? "bloqueado" : "liberado",
+                            })
+                          }
+                          className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
+                        />
+                        <span className="text-sm text-slate-700">Bloquear contato</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Endereço */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <MapPin size={16} />
                   Endereço
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      CEP {cepLoading && <span className="text-xs text-[#000dff]">buscando...</span>}
+                      CEP
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        disabled={!isEditable}
-                        value={formData.cep}
-                        onChange={(e) => setFormData({ ...formData, cep: e.target.value.replace(/\D/g, "") })}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 disabled:cursor-not-allowed pr-10"
-                        placeholder="00000-000"
-                        maxLength={8}
-                      />
-                      {cepLoading && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="w-4 h-4 border-2 border-[#000dff] border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      )}
-                    </div>
+                    <input
+                      type="text"
+                      disabled={!isEditable}
+                      value={formatCEP(formData.cep)}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                        setFormData({ ...formData, cep: digits });
+                        if (cepError) setCepError(null);
+                      }}
+                      onBlur={(e) => validateCEP(e.target.value)}
+                      className={modalFieldClass}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                    {cepError && (
+                      <p className="mt-1 text-xs text-rose-500">{cepError}</p>
+                    )}
+                    {!cepError && (
+                      <p className="mt-1 text-xs text-slate-500">Preparado para busca automatica por CEP em proxima wave.</p>
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -1634,7 +1685,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.rua}
                       onChange={(e) => setFormData({ ...formData, rua: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Nome da rua"
                     />
                   </div>
@@ -1646,7 +1697,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.numero}
                       onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Nº"
                     />
                   </div>
@@ -1658,7 +1709,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.complemento}
                       onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Apto, sala, etc."
                     />
                   </div>
@@ -1670,7 +1721,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.bairro}
                       onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Bairro"
                     />
                   </div>
@@ -1682,7 +1733,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.cidade}
                       onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Cidade"
                     />
                   </div>
@@ -1694,7 +1745,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.estado}
                       onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="UF"
                       maxLength={2}
                     />
@@ -1704,16 +1755,16 @@ export const ClientesPage: React.FC = () => {
 
               {/* Dados Bancários */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <Building2 size={16} />
                   Dados Bancários
                 </h4>
-                <div className="space-y-3">
-                  <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                <div className="space-y-2.5">
+                  <div className={modalCardClass}>
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">
                       Conta Bancária
                     </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">Banco</label>
                         <input
@@ -1721,7 +1772,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.banco}
                           onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Nome do banco"
                         />
                       </div>
@@ -1732,7 +1783,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.agencia}
                           onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Agência"
                         />
                       </div>
@@ -1743,7 +1794,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.conta}
                           onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Conta"
                         />
                       </div>
@@ -1753,7 +1804,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.tipoConta}
                           onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value as any })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalSelectClass}
                         >
                           <option value="">Selecione...</option>
                           <option value="corrente">Corrente</option>
@@ -1767,7 +1818,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.titular}
                           onChange={(e) => setFormData({ ...formData, titular: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Nome do titular"
                         />
                       </div>
@@ -1778,25 +1829,25 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.documentoTitular}
                           onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value.replace(/\D/g, "") })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="CPF ou CNPJ do titular"
                           maxLength={14}
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                  <div className={modalCardClass}>
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">
                       PIX
                     </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Chave PIX</label>
                         <select
                           disabled={!isEditable}
                           value={formData.pixTipo}
                           onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value as any })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalSelectClass}
                         >
                           <option value="">Selecione...</option>
                           <option value="cpf">CPF</option>
@@ -1813,7 +1864,7 @@ export const ClientesPage: React.FC = () => {
                           disabled={!isEditable}
                           value={formData.pixChave}
                           onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })}
-                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          className={modalFieldClass}
                           placeholder="Chave PIX"
                         />
                       </div>
@@ -1824,14 +1875,14 @@ export const ClientesPage: React.FC = () => {
 
               {/* Status e Observações */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <Edit size={16} />
                   Informações Adicionais
                 </h4>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <div className={modalCardClass}>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">
                         Status
                       </label>
                       <div className="flex flex-col gap-2">
@@ -1845,7 +1896,7 @@ export const ClientesPage: React.FC = () => {
                             onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
                             className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
                           />
-                          <span className="text-slate-300">Ativo</span>
+                          <span className="text-slate-700">Ativo</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
@@ -1857,78 +1908,70 @@ export const ClientesPage: React.FC = () => {
                             onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
                             className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
                           />
-                          <span className="text-red-600">Inativo</span>
+                          <span className="text-rose-600">Inativo</span>
                         </label>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
-                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
-                        Não Perturbe
-                      </label>
-                      <label className="inline-flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.doNotCallStatus === "bloqueado"}
-                          disabled={!isEditable}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              doNotCallStatus: e.target.checked ? "bloqueado" : "liberado",
-                            })
-                          }
-                          className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
-                        />
-                        <span className="text-slate-300">Bloquear contato</span>
-                      </label>
-                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Observações
-                    </label>
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <label className="block text-sm font-medium text-slate-300">
+                        Observações
+                      </label>
+                      <span className="text-xs text-slate-500">{formData.observacao.length}/500</span>
+                    </div>
                     <textarea
                       value={formData.observacao}
-                      onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
-                      className="w-full bg-[#111827] border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors resize-none"
+                      maxLength={500}
+                      onChange={(e) => setFormData({ ...formData, observacao: e.target.value.slice(0, 500) })}
+                      className={modalTextareaClass}
                       placeholder="Observações sobre o cliente..."
-                      rows={3}
+                      rows={4}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Compliance e Consultas */}
-              <div className="mt-4 pt-4 border-t border-[#1f2937]">
-                <h4 className="text-sm font-medium text-slate-600 mb-4 flex items-center gap-2">
+              <div className="pt-3 border-t border-[#1f2937]">
+                <h4 className={modalSectionTitleClass}>
                   <Shield size={16} />
                   Compliance
                 </h4>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div className="rounded-lg border border-[#1f2937] bg-gray-50/40 p-3">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <div className={modalCardClass}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Restrição de Crédito</p>
                     {renderCreditStatus()}
                   </div>
-                  <div className="rounded-lg border border-[#1f2937] bg-gray-50/40 p-3">
+                  <div className={modalCardClass}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Não Perturbe</p>
                     {renderDoNotCallStatus()}
                   </div>
-                  <div className="rounded-lg border border-dashed border-[#1f2937] bg-gray-50/20 p-3">
+                  <div className={modalSubtleCardClass}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Receita Federal</p>
                     <p className="text-xs text-slate-500">Futuro</p>
                   </div>
-                  <div className="rounded-lg border border-dashed border-[#1f2937] bg-gray-50/20 p-3">
+                  <div className={modalSubtleCardClass}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">GOV.BR</p>
                     <p className="text-xs text-slate-500">Futuro</p>
+                  </div>
+                  <div className={modalSubtleCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">LGPD</p>
+                    <p className="text-xs text-slate-500">Disponivel futuramente</p>
+                  </div>
+                  <div className={modalSubtleCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Cadastro Positivo</p>
+                    <p className="text-xs text-slate-500">Roadmap</p>
                   </div>
                 </div>
               </div>
 
               {/* Botões */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#1f2937]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#1f2937] flex-none">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="px-4 py-2 text-slate-500 hover:text-slate-300 hover:bg-gray-100 rounded-2xl transition-colors"
+                  className="px-4 h-9 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1940,14 +1983,14 @@ export const ClientesPage: React.FC = () => {
                       e.stopPropagation();
                       setIsEditing(true);
                     }}
-                    className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-2xl transition-colors"
+                    className="px-4 h-9 bg-primary hover:bg-primary/80 text-white rounded-xl transition-colors"
                   >
                     Editar
                   </button>
                 ) : (
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-2xl transition-colors"
+                    className="px-4 h-9 bg-primary hover:bg-primary/80 text-white rounded-xl transition-colors"
                   >
                     {editingCliente ? "Salvar Alterações" : "Cadastrar Cliente"}
                   </button>
