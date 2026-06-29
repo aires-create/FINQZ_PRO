@@ -82,6 +82,9 @@ export type CreateOpportunityInput = {
   status?: string;
   expectedCloseDate?: Date | string | null;
   actualCloseDate?: Date | string | null;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
   partnerId?: string | null;
   leadId?: string | null;
   customerId?: string | null;
@@ -102,6 +105,9 @@ export type UpdateOpportunityInput = {
   status?: string;
   expectedCloseDate?: Date | string | null;
   actualCloseDate?: Date | string | null;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
   partnerId?: string | null;
   leadId?: string | null;
   customerId?: string | null;
@@ -255,6 +261,9 @@ const buildOpportunityUpdateData = (
   if (input.actualCloseDate !== undefined) {
     data.actualCloseDate = parseOptionalDate(input.actualCloseDate);
   }
+  if (input.productId !== undefined) data.productId = normalizeText(input.productId);
+  if (input.subproductId !== undefined) data.subproductId = normalizeText(input.subproductId);
+  if (input.modalityId !== undefined) data.modalityId = normalizeText(input.modalityId);
   if (input.partnerId !== undefined) data.partnerId = normalizeText(input.partnerId);
   if (input.leadId !== undefined) data.leadId = normalizeText(input.leadId);
   if (input.customerId !== undefined) data.customerId = normalizeText(input.customerId);
@@ -322,6 +331,16 @@ export class OpportunitiesService {
       await this.assertLeadBelongsToTenant(tenantId, scopedInput.leadId);
     }
 
+    await this.assertOpportunityProductHierarchyConsistency(
+      {
+        tenantId,
+        productId: scopedInput.productId ?? null,
+        subproductId: scopedInput.subproductId ?? null,
+        modalityId: scopedInput.modalityId ?? null,
+      },
+      prisma,
+    );
+
     const created = await opportunitiesRepository.create({
       tenantId,
       title: scopedInput.title.trim(),
@@ -335,6 +354,9 @@ export class OpportunitiesService {
       partnerId: normalizeText(scopedInput.partnerId),
       leadId: normalizeText(scopedInput.leadId),
       customerId: normalizeText(scopedInput.customerId),
+      productId: normalizeText(scopedInput.productId),
+      subproductId: normalizeText(scopedInput.subproductId),
+      modalityId: normalizeText(scopedInput.modalityId),
       pipelineId: scopedInput.pipelineId,
       stageId: scopedInput.stageId,
       ownerId: normalizeText(scopedInput.ownerId),
@@ -351,6 +373,9 @@ export class OpportunitiesService {
         amount: created.amount,
         pipelineId: created.pipelineId,
         stageId: created.stageId,
+        productId: created.productId,
+        subproductId: created.subproductId,
+        modalityId: created.modalityId,
         customerId: created.customerId,
         leadId: created.leadId,
       },
@@ -372,6 +397,16 @@ export class OpportunitiesService {
           tenantId,
           pipelineId: body.opportunity.pipelineId,
           stageId: body.opportunity.stageId,
+        },
+        tx,
+      );
+
+      await this.assertOpportunityProductHierarchyConsistency(
+        {
+          tenantId,
+          productId: body.opportunity.productId ?? null,
+          subproductId: body.opportunity.subproductId ?? null,
+          modalityId: body.opportunity.modalityId ?? null,
         },
         tx,
       );
@@ -398,6 +433,9 @@ export class OpportunitiesService {
           partnerId: null,
           leadId: null,
           customerId,
+          productId: normalizeText(body.opportunity.productId),
+          subproductId: normalizeText(body.opportunity.subproductId),
+          modalityId: normalizeText(body.opportunity.modalityId),
           pipelineId: body.opportunity.pipelineId,
           stageId: body.opportunity.stageId,
           ownerId: normalizeText(body.opportunity.ownerId) ?? userId,
@@ -415,6 +453,9 @@ export class OpportunitiesService {
           customerId: createdOpportunity.customerId ?? customerId,
           pipelineId: createdOpportunity.pipelineId,
           stageId: createdOpportunity.stageId,
+          productId: createdOpportunity.productId,
+          subproductId: createdOpportunity.subproductId,
+          modalityId: createdOpportunity.modalityId,
         },
       };
     });
@@ -436,6 +477,9 @@ export class OpportunitiesService {
 
     const nextPipelineId = scopedInput.pipelineId ?? current!.pipelineId;
     const nextStageId = scopedInput.stageId ?? current!.stageId;
+    const nextProductId = scopedInput.productId ?? current!.productId ?? null;
+    const nextSubproductId = scopedInput.subproductId ?? current!.subproductId ?? null;
+    const nextModalityId = scopedInput.modalityId ?? current!.modalityId ?? null;
 
     if (scopedInput.pipelineId !== undefined || scopedInput.stageId !== undefined) {
       await this.assertPipelineAndStageConsistency({
@@ -444,6 +488,16 @@ export class OpportunitiesService {
         stageId: nextStageId,
       });
     }
+
+    await this.assertOpportunityProductHierarchyConsistency(
+      {
+        tenantId,
+        productId: nextProductId,
+        subproductId: nextSubproductId,
+        modalityId: nextModalityId,
+      },
+      prisma,
+    );
 
     if (scopedInput.customerId !== undefined && scopedInput.customerId !== null) {
       await this.assertCustomerBelongsToTenant(tenantId, scopedInput.customerId);
@@ -470,6 +524,9 @@ export class OpportunitiesService {
       metadata: {
         pipelineId: updated.pipelineId,
         stageId: updated.stageId,
+        productId: updated.productId,
+        subproductId: updated.subproductId,
+        modalityId: updated.modalityId,
         customerId: updated.customerId,
         leadId: updated.leadId,
         status: updated.status,
@@ -591,6 +648,91 @@ export class OpportunitiesService {
 
     if (stage!.pipelineId !== input.pipelineId) {
       throw new InvalidStageError(input.stageId);
+    }
+  }
+
+  private async assertOpportunityProductHierarchyConsistency(
+    input: {
+      tenantId: string;
+      productId?: string | null;
+      subproductId?: string | null;
+      modalityId?: string | null;
+    },
+    client: OpportunitiesPrismaClient = prisma,
+  ) {
+    const productId = normalizeText(input.productId);
+    const subproductId = normalizeText(input.subproductId);
+    const modalityId = normalizeText(input.modalityId);
+
+    if (!productId && !subproductId && !modalityId) {
+      return;
+    }
+
+    if (subproductId && !productId) {
+      throw new BadRequestError('subproductId requires productId');
+    }
+
+    if (modalityId && !subproductId) {
+      throw new BadRequestError('modalityId requires subproductId');
+    }
+
+    if (productId) {
+      const product = await client.masterCatalogProduct.findFirst({
+        where: {
+          id: productId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      if (!product) {
+        await this.throwInvalidOrTenantScope('product', productId, input.tenantId);
+      }
+    }
+
+    if (subproductId) {
+      const subproduct = await client.masterCatalogSubproduct.findFirst({
+        where: {
+          id: subproductId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          productId: true,
+        },
+      });
+
+      if (!subproduct) {
+        await this.throwInvalidOrTenantScope('subproduct', subproductId, input.tenantId);
+      }
+
+      if (productId && subproduct!.productId !== productId) {
+        throw new BadRequestError('subproductId does not belong to productId');
+      }
+    }
+
+    if (modalityId) {
+      const modality = await client.masterCatalogModality.findFirst({
+        where: {
+          id: modalityId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          subproductId: true,
+        },
+      });
+
+      if (!modality) {
+        await this.throwInvalidOrTenantScope('modality', modalityId, input.tenantId);
+      }
+
+      if (subproductId && modality!.subproductId !== subproductId) {
+        throw new BadRequestError('modalityId does not belong to subproductId');
+      }
     }
   }
 
@@ -769,7 +911,7 @@ export class OpportunitiesService {
   }
 
   private async throwInvalidOrTenantScope(
-    entity: 'pipeline' | 'stage' | 'customer' | 'lead',
+    entity: 'pipeline' | 'stage' | 'customer' | 'lead' | 'product' | 'subproduct' | 'modality',
     entityId: string,
     tenantId: string,
   ): Promise<never> {
@@ -787,6 +929,18 @@ export class OpportunitiesService {
         select: { id: true, tenantId: true },
       }),
       lead: () => prisma.lead.findFirst({
+        where: { id: entityId },
+        select: { id: true, tenantId: true },
+      }),
+      product: () => prisma.masterCatalogProduct.findFirst({
+        where: { id: entityId },
+        select: { id: true, tenantId: true },
+      }),
+      subproduct: () => prisma.masterCatalogSubproduct.findFirst({
+        where: { id: entityId },
+        select: { id: true, tenantId: true },
+      }),
+      modality: () => prisma.masterCatalogModality.findFirst({
         where: { id: entityId },
         select: { id: true, tenantId: true },
       }),

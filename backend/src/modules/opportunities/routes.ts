@@ -213,6 +213,9 @@ export async function opportunitiesRoutes(app: FastifyInstance) {
             amount: parsedBody.opportunity.amount,
             pipelineId: parsedBody.opportunity.pipelineId,
             stageId: parsedBody.opportunity.stageId,
+            productId: parsedBody.opportunity.productId,
+            subproductId: parsedBody.opportunity.subproductId,
+            modalityId: parsedBody.opportunity.modalityId,
             ownerId: parsedBody.opportunity.ownerId,
             description: parsedBody.opportunity.description,
             probability: parsedBody.opportunity.probability,
@@ -277,6 +280,9 @@ export async function opportunitiesRoutes(app: FastifyInstance) {
           amount: body.amount,
           pipelineId: body.pipelineId,
           stageId: body.stageId,
+          productId: body.productId,
+          subproductId: body.subproductId,
+          modalityId: body.modalityId,
           customerId: body.customerId,
           leadId: body.leadId,
           ownerId: body.ownerId,
@@ -321,6 +327,9 @@ export async function opportunitiesRoutes(app: FastifyInstance) {
           ownerId: body.ownerId,
           customerId: body.customerId,
           leadId: body.leadId,
+          productId: body.productId,
+          subproductId: body.subproductId,
+          modalityId: body.modalityId,
         });
         const data = await opportunitiesService.update(input, scope);
 

@@ -77,6 +77,27 @@ const buildOpportunityWhere = (
 };
 
 const opportunitiesReadInclude = {
+  product: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+    },
+  },
+  subproduct: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+    },
+  },
+  modality: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+    },
+  },
   pipeline: {
     select: {
       id: true,

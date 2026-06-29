@@ -14,6 +14,9 @@ export interface CreateOpportunityBodyDto {
   amount: number;
   pipelineId: string;
   stageId: string;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
   customerId?: string | null;
   leadId?: string | null;
   ownerId?: string | null;
@@ -33,6 +36,9 @@ export interface UpdateOpportunityBodyDto {
   ownerId?: string | null;
   customerId?: string | null;
   leadId?: string | null;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
 }
 
 export interface MoveOpportunityStageBodyDto {
@@ -70,6 +76,9 @@ export interface CreateOpportunityIntakeBodyDto {
     amount: number;
     pipelineId: string;
     stageId: string;
+    productId?: string | null;
+    subproductId?: string | null;
+    modalityId?: string | null;
     ownerId?: string | null;
     description?: string | null;
     probability?: number;
@@ -90,5 +99,8 @@ export interface CreateOpportunityIntakeResponseDto {
     customerId: string;
     pipelineId: string;
     stageId: string;
+    productId?: string | null;
+    subproductId?: string | null;
+    modalityId?: string | null;
   };
 }

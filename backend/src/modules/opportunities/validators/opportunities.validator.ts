@@ -26,6 +26,9 @@ export const createOpportunityBodySchema = z
     amount: z.coerce.number().finite(),
     pipelineId: uuidSchema,
     stageId: uuidSchema,
+    productId: optionalNullableUuidSchema,
+    subproductId: optionalNullableUuidSchema,
+    modalityId: optionalNullableUuidSchema,
     customerId: optionalNullableUuidSchema,
     leadId: optionalNullableUuidSchema,
     ownerId: optionalNullableUuidSchema,
@@ -47,6 +50,9 @@ export const updateOpportunityBodySchema = z
     ownerId: optionalNullableUuidSchema,
     customerId: optionalNullableUuidSchema,
     leadId: optionalNullableUuidSchema,
+    productId: optionalNullableUuidSchema,
+    subproductId: optionalNullableUuidSchema,
+    modalityId: optionalNullableUuidSchema,
   })
   .strict();
 
@@ -86,11 +92,14 @@ export const intakeOptionsSchema = z
 export const createOpportunityIntakeBodySchema = z
   .object({
     opportunity: z
-      .object({
+    .object({
         title: z.string().trim().min(1, 'Opportunity title is required'),
         amount: z.coerce.number().finite(),
         pipelineId: uuidSchema,
         stageId: uuidSchema,
+        productId: optionalNullableUuidSchema,
+        subproductId: optionalNullableUuidSchema,
+        modalityId: optionalNullableUuidSchema,
         ownerId: optionalNullableUuidSchema,
         description: optionalNullableTextSchema,
         probability: z.coerce.number().int().min(0).max(100).optional(),

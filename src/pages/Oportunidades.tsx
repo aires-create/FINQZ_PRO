@@ -238,6 +238,8 @@ export interface OpportunityUiShape {
   subproductCode?: string;
 
   modality?: string;
+  modalityId?: string | number | null;
+  modality_id?: string | number | null;
 
   pipeline_id?: string;
   pipelineId?: string;
@@ -466,10 +468,12 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
     opportunity?.celular ??
     "";
   const rawOwnerId = opportunity?.ownerId ?? null;
-  const rawProductId = opportunity?.productId ?? opportunity?.product_id ?? opportunity?.produto_id ?? null;
-  const rawSubproductId = opportunity?.subproductId ?? opportunity?.subproduto_id ?? null;
+  const rawProductId = opportunity?.productId ?? opportunity?.product?.id ?? opportunity?.product_id ?? opportunity?.produto_id ?? null;
+  const rawSubproductId = opportunity?.subproductId ?? opportunity?.subproduct?.id ?? opportunity?.subproduto_id ?? null;
+  const rawModalityId = opportunity?.modalityId ?? opportunity?.modality?.id ?? opportunity?.modality_id ?? null;
   const rawProdutoText = opportunity?.produto ?? opportunity?.product?.name ?? "";
   const rawSubprodutoText = opportunity?.subproduto ?? opportunity?.subproduct?.name ?? "";
+  const rawModalityText = opportunity?.modality?.name ?? opportunity?.modality?.code ?? opportunity?.modality ?? "";
   const rawClienteNome =
     opportunity?.customer?.name ??
     opportunity?.customer?.fullName ??
@@ -520,7 +524,9 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
     subproduto_id: rawSubproductId,
     subproductId: rawSubproductId,
     subproductCode: String(opportunity?.subproductCode ?? ""),
-    modality: String(opportunity?.modality ?? ""),
+    modality: String(rawModalityText),
+    modalityId: rawModalityId,
+    modality_id: rawModalityId,
     observacoes: String(rawDescription),
     description: String(rawDescription),
     createdAt: opportunity?.createdAt ?? new Date().toISOString(),
@@ -2798,6 +2804,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       // Produto selecionado
       produto: formData.produto || "",
       produto_id: selectedProductId || null,
+      modalityId: selectedModality || null,
       
       // Pipeline (novo sistema PIPELINES)
       pipeline_id: String(formData.pipelineId || currentPipelineConfig?.id || "").trim(),
@@ -2959,6 +2966,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         amount: Number(newOportunidade.valor || 0),
         pipelineId: resolvedBackendPipelineId,
         stageId: resolvedBackendStageId,
+        productId: selectedProductId || null,
+        subproductId: selectedSubproductId || null,
+        modalityId: selectedModality || null,
         ownerId: newOportunidade.responsavel_id ? String(newOportunidade.responsavel_id) : undefined,
         description: newOportunidade.observacoes || undefined,
       },
@@ -3057,6 +3067,9 @@ const handleSubmitEdit = async (e: React.FormEvent) => {
   amount: Number(payload.valor || 0),
   customerId: payload.cliente_id ?? undefined,
   ownerId: payload.responsavel_id ?? undefined,
+  productId: selectedProductId || null,
+  subproductId: selectedSubproductId || null,
+  modalityId: selectedModality || null,
   status: novoStatus,
   description: String(payload.observacoes || ""),
 };
@@ -3167,7 +3180,8 @@ if (
     const leadBankData = lead.bankData && typeof lead.bankData === "object" ? lead.bankData : {};
     const leadProductId = String(lead.productId ?? lead.product_id ?? lead.produto_id ?? "");
     const leadSubproductId = String(lead.subproductId ?? lead.subproduto_id ?? "");
-    const leadModality = String(lead.modality ?? "");
+    const leadModalityId = String(lead.modalityId ?? lead.modality_id ?? lead.modality?.id ?? "");
+    const leadModalityLabel = String(lead.modality?.name ?? lead.modality?.code ?? lead.modality ?? "");
     const leadTipoPessoa = lead.tipoPessoa === "CNPJ" ? "CNPJ" : "CPF";
     const leadTipoConta =
       lead.tipoConta === "corrente" || lead.tipoConta === "poupanca"
@@ -3222,7 +3236,7 @@ if (
       productCode: String(lead.productCode ?? ""),
       subproductId: leadSubproductId,
       subproductCode: String(lead.subproductCode ?? ""),
-      modality: leadModality,
+      modality: leadModalityLabel,
       pipelineId: String(cleanFormData.pipelineId || lead.pipeline_id || "").trim(),
       pipelineCode: String(lead.pipelineCode ?? ""),
       catalogVersion:
@@ -3278,7 +3292,7 @@ if (
     });
     setSelectedProductId(leadProductId);
     setSelectedSubproductId(leadSubproductId);
-    setSelectedModality(leadModality);
+    setSelectedModality(leadModalityId);
     setSelectedRacionalCompany(
       typeof lead.racionalCompany_id === "number" ? lead.racionalCompany_id : null,
     );
@@ -4147,20 +4161,22 @@ if (
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Modalidade</label>
                     <select 
-                      value={formData.modality || ""} 
+                      value={selectedModality || ""} 
                       onChange={(e) => {
+                        const modalityId = e.target.value;
+                        const modality = catalogModalities.find((m) => m.id === modalityId);
                         setFormData({ 
                           ...formData, 
-                          modality: e.target.value
+                          modality: modality?.code || modality?.name || ""
                         });
-                        setSelectedModality(e.target.value);
+                        setSelectedModality(modalityId);
                       }}
                       disabled={!formData.subproductId}
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:opacity-50"
                     >
                       <option value="">Selecione</option>
                       {catalogModalities.map((m) => (
-                        <option key={m.id} value={m.code}>{m.name}</option>
+                        <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                     </select>
                   </div>

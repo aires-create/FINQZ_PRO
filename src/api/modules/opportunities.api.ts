@@ -16,6 +16,9 @@ export interface Opportunity {
   partnerId?: string | null;
   leadId?: string | null;
   customerId?: string | null;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
   pipelineId: string;
   stageId: string;
   ownerId?: string | null;
@@ -23,6 +26,15 @@ export interface Opportunity {
   createdAt: string;
   updatedAt: string;
   customer?: OpportunityCustomer | null;
+  product?: OpportunityCatalogEntry | null;
+  subproduct?: OpportunityCatalogEntry | null;
+  modality?: OpportunityCatalogEntry | null;
+}
+
+export interface OpportunityCatalogEntry {
+  id: string;
+  code: string;
+  name: string;
 }
 
 export interface OpportunityCustomer {
@@ -49,6 +61,9 @@ export interface CreateOpportunityPayload {
   amount: number;
   pipelineId: string;
   stageId: string;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
   customerId?: string | null;
   leadId?: string | null;
   ownerId?: string | null;
@@ -68,6 +83,9 @@ export interface UpdateOpportunityPayload {
   ownerId?: string | null;
   customerId?: string | null;
   leadId?: string | null;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
 }
 
 export interface MoveOpportunityStagePayload {
@@ -100,6 +118,9 @@ export interface CreateOpportunityIntakePayload {
     amount: number;
     pipelineId: string;
     stageId: string;
+    productId?: string | null;
+    subproductId?: string | null;
+    modalityId?: string | null;
     ownerId?: string | null;
     description?: string | null;
   };
@@ -122,6 +143,9 @@ export interface OpportunityIntakeResponse {
       customerId: string;
       pipelineId: string;
       stageId: string;
+      productId?: string | null;
+      subproductId?: string | null;
+      modalityId?: string | null;
     };
   };
 }

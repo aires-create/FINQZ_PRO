@@ -543,6 +543,15 @@ model Opportunity {
   customerId String?   @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id])
 
+  productId String? @db.Uuid
+  product   MasterCatalogProduct? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  subproductId String? @db.Uuid
+  subproduct   MasterCatalogSubproduct? @relation(fields: [subproductId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  modalityId String? @db.Uuid
+  modality   MasterCatalogModality? @relation(fields: [modalityId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   pipelineId String   @db.Uuid
   pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
@@ -562,6 +571,9 @@ model Opportunity {
   @@index([stageId])
   @@index([leadId])
   @@index([customerId])
+  @@index([productId])
+  @@index([subproductId])
+  @@index([modalityId])
   @@index([ownerId])
   @@index([partnerId])
   @@index([deletedAt])
@@ -1093,6 +1105,7 @@ model MasterCatalogProduct {
   deletedAt    DateTime?
 
   subproducts MasterCatalogSubproduct[]
+  opportunities Opportunity[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1116,6 +1129,7 @@ model MasterCatalogSubproduct {
   deletedAt    DateTime?
 
   modalities MasterCatalogModality[]
+  opportunities Opportunity[]
 
   @@unique([tenantId, productId, code])
   @@index([tenantId])
@@ -1138,6 +1152,8 @@ model MasterCatalogModality {
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt
   deletedAt    DateTime?
+
+  opportunities Opportunity[]
 
   @@unique([tenantId, subproductId, code])
   @@index([tenantId])
