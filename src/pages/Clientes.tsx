@@ -616,20 +616,11 @@ export const ClientesPage: React.FC = () => {
       
       try {
         const normalizedStatus = formData?.status || 'ativo';
-        const statusPayload = normalizedStatus === 'inativo'
-          ? {
-              isActive: false,
-              doNotCallStatus: 'liberado',
-            }
-          : normalizedStatus === 'nao_perturbe'
-            ? {
-                isActive: true,
-                doNotCallStatus: 'bloqueado',
-              }
-            : {
-                isActive: true,
-                doNotCallStatus: 'liberado',
-              };
+        const statusPayload = {
+          isActive: normalizedStatus !== 'inativo',
+          doNotCallStatus:
+            formData.doNotCallStatus === 'bloqueado' ? 'bloqueado' : 'liberado',
+        };
 
         const apiPayload = {
           firstName: newClient.nome?.split(' ')[0] || '',
@@ -851,7 +842,7 @@ export const ClientesPage: React.FC = () => {
       bairro: address.bairro || cliente.bairro || "",
       cidade: address.cidade || cliente.cidade || "",
       estado: address.estado || cliente.estado || "",
-      status: cliente.status || "ativo",
+      status: cliente.status === "nao_perturbe" ? "inativo" : (cliente.status || "ativo"),
       observacao: cliente.notes || cliente.observacao || "",
       // Novos campos
       profissao: cliente.profession || cliente.profissao || "",
@@ -1381,8 +1372,8 @@ export const ClientesPage: React.FC = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-6 border-b border-[#1f2937]">
+          <div className="bg-[#111827] rounded-2xl w-full max-w-3xl max-h-[88vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center justify-between p-5 border-b border-[#1f2937]">
               <h3 className="text-lg font-semibold text-white">
                 {editingCliente ? "Editar Cliente" : "Novo Cliente"}
               </h3>
@@ -1393,15 +1384,15 @@ export const ClientesPage: React.FC = () => {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
               {/* Dados Pessoais */}
               <div>
                 <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
                   <User size={16} />
                   Dados Pessoais
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Tipo de Pessoa
                     </label>
@@ -1420,9 +1411,7 @@ export const ClientesPage: React.FC = () => {
                   {tipoPessoa === "CPF" && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          CPF
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">CPF</label>
                         <input
                           type="text"
                           disabled={!isEditable}
@@ -1434,9 +1423,7 @@ export const ClientesPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Nome Completo
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
                         <input
                           type="text"
                           required
@@ -1448,9 +1435,7 @@ export const ClientesPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Data de Nascimento
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Data de Nascimento</label>
                         <input
                           type="date"
                           disabled={!isEditable}
@@ -1460,9 +1445,7 @@ export const ClientesPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Sexo
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Sexo</label>
                         <select
                           disabled={!isEditable}
                           value={formData.sexo}
@@ -1477,9 +1460,7 @@ export const ClientesPage: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Estado Civil
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Estado Civil</label>
                         <select
                           disabled={!isEditable}
                           value={formData.estado_civil}
@@ -1494,9 +1475,7 @@ export const ClientesPage: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Profissão
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Profissão</label>
                         <input
                           type="text"
                           disabled={!isEditable}
@@ -1512,9 +1491,7 @@ export const ClientesPage: React.FC = () => {
                   {tipoPessoa === "CNPJ" && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          CNPJ
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">CNPJ</label>
                         <input
                           type="text"
                           disabled={!isEditable}
@@ -1526,9 +1503,7 @@ export const ClientesPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Razão Social
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Razão Social</label>
                         <input
                           type="text"
                           required
@@ -1540,36 +1515,7 @@ export const ClientesPage: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Responsável Legal
-                        </label>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={formData.responsavel_legal}
-                          className="w-full h-10 rounded-lg border border-dashed border-[#1f2937] px-3 text-sm bg-gray-50 text-slate-400 placeholder:text-slate-400"
-                          placeholder="Campo futuro"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          CPF do Responsável
-                        </label>
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          value={formatCPFInput(formData.cpf_responsavel)}
-                          className="w-full h-10 rounded-lg border border-dashed border-[#1f2937] px-3 text-sm bg-gray-50 text-slate-400 placeholder:text-slate-400"
-                          placeholder="000.000.000-00"
-                          maxLength={14}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">
-                          Data de Abertura
-                        </label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Data de Abertura</label>
                         <input
                           type="date"
                           disabled={!isEditable}
@@ -1589,7 +1535,7 @@ export const ClientesPage: React.FC = () => {
                   <Phone size={16} />
                   Informações de Contato
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Celular *
@@ -1613,7 +1559,30 @@ export const ClientesPage: React.FC = () => {
                       maxLength={15}
                     />
                   </div>
-                  <div>
+                  {tipoPessoa === "CNPJ" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">
+                        Telefone Comercial
+                      </label>
+                      <input
+                        type="text"
+                        disabled={!isEditable}
+                        value={formatPhone(formData.telefone)}
+                        onChange={(e) => {
+                          const numbers = e.target.value.replace(/\D/g, "");
+                          setFormData({ ...formData, telefone: numbers.slice(0, 11) });
+                        }}
+                        onBlur={(e) => {
+                          const numbers = e.target.value.replace(/\D/g, "");
+                          setFormData({ ...formData, telefone: numbers });
+                        }}
+                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                        placeholder="(00) 0000-0000"
+                        maxLength={14}
+                      />
+                    </div>
+                  )}
+                  <div className={tipoPessoa === "CNPJ" ? "md:col-span-2" : ""}>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Email *
                     </label>
@@ -1623,7 +1592,7 @@ export const ClientesPage: React.FC = () => {
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Obrigatório - email@exemplo.com"
+                      placeholder="email@exemplo.com"
                     />
                   </div>
                 </div>
@@ -1646,7 +1615,6 @@ export const ClientesPage: React.FC = () => {
                         disabled={!isEditable}
                         value={formData.cep}
                         onChange={(e) => setFormData({ ...formData, cep: e.target.value.replace(/\D/g, "") })}
-                        onBlur={() => buscarEnderecoPorCEP(formData.cep)}
                         className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 disabled:cursor-not-allowed pr-10"
                         placeholder="00000-000"
                         maxLength={8}
@@ -1720,7 +1688,7 @@ export const ClientesPage: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Estado
+                      UF
                     </label>
                     <input
                       type="text"
@@ -1740,118 +1708,116 @@ export const ClientesPage: React.FC = () => {
                   <Building2 size={16} />
                   Dados Bancários
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Banco
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.banco}
-                      onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Nome do banco"
-                    />
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                      Conta Bancária
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Banco</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.banco}
+                          onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          placeholder="Nome do banco"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Agência</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.agencia}
+                          onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          placeholder="Agência"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Conta</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.conta}
+                          onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          placeholder="Conta"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Conta</label>
+                        <select
+                          disabled={!isEditable}
+                          value={formData.tipoConta}
+                          onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value as any })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="corrente">Corrente</option>
+                          <option value="poupanca">Poupança</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Titular</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.titular}
+                          onChange={(e) => setFormData({ ...formData, titular: e.target.value })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          placeholder="Nome do titular"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">CPF/CNPJ do Titular</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.documentoTitular}
+                          onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value.replace(/\D/g, "") })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          placeholder="CPF ou CNPJ do titular"
+                          maxLength={14}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Agência
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.agencia}
-                      onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Agência"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Conta
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.conta}
-                      onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Conta"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Tipo de Conta
-                    </label>
-                    <select
-                      disabled={!isEditable}
-                      value={formData.tipoConta}
-                      onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value as any })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="corrente">Corrente</option>
-                      <option value="poupanca">Poupança</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Titular
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.titular}
-                      onChange={(e) => setFormData({ ...formData, titular: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Nome do titular"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Documento do Titular
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.documentoTitular}
-                      onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value.replace(/\D/g, "") })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="CPF ou CNPJ do titular"
-                      maxLength={14}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Tipo de Chave PIX
-                    </label>
-                    <select
-                      disabled={!isEditable}
-                      value={formData.pixTipo}
-                      onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value as any })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="cpf">CPF</option>
-                      <option value="cnpj">CNPJ</option>
-                      <option value="email">Email</option>
-                      <option value="telefone">Telefone</option>
-                      <option value="aleatoria">Chave Aleatória</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Chave PIX
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.pixChave}
-                      onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Chave PIX"
-                    />
+                  <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                      PIX
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Chave PIX</label>
+                        <select
+                          disabled={!isEditable}
+                          value={formData.pixTipo}
+                          onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value as any })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="cpf">CPF</option>
+                          <option value="cnpj">CNPJ</option>
+                          <option value="email">Email</option>
+                          <option value="telefone">Telefone</option>
+                          <option value="aleatoria">Chave Aleatória</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Chave PIX</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.pixChave}
+                          onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })}
+                          className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                          placeholder="Chave PIX"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1862,45 +1828,57 @@ export const ClientesPage: React.FC = () => {
                   <Edit size={16} />
                   Informações Adicionais
                 </h4>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-slate-300">Status:</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="status"
-                          value="ativo"
-                          checked={formData.status === "ativo"}
-                          disabled={!isEditable}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" | "nao_perturbe" })}
-                          className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
-                        />
-                        <span className="text-slate-300">Ativo</span>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                        Status
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="status"
-                          value="inativo"
-                          checked={formData.status === "inativo"}
-                          disabled={!isEditable}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" | "nao_perturbe" })}
-                          className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
-                        />
-                        <span className="text-red-600">Inativo</span>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="status"
+                            value="ativo"
+                            checked={formData.status === "ativo"}
+                            disabled={!isEditable}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
+                            className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
+                          />
+                          <span className="text-slate-300">Ativo</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="status"
+                            value="inativo"
+                            checked={formData.status === "inativo"}
+                            disabled={!isEditable}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
+                            className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
+                          />
+                          <span className="text-red-600">Inativo</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-[#1f2937] bg-gray-50/40 p-4">
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">
+                        Não Perturbe
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
                         <input
-                          type="radio"
-                          name="status"
-                          value="nao_perturbe"
-                          checked={formData.status === "nao_perturbe"}
+                          type="checkbox"
+                          checked={formData.doNotCallStatus === "bloqueado"}
                           disabled={!isEditable}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" | "nao_perturbe" })}
-                          className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              doNotCallStatus: e.target.checked ? "bloqueado" : "liberado",
+                            })
+                          }
+                          className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
                         />
-                        <span className="text-slate-300">Não Perturbe</span>
+                        <span className="text-slate-300">Bloquear contato</span>
                       </label>
                     </div>
                   </div>
@@ -1920,50 +1898,27 @@ export const ClientesPage: React.FC = () => {
               </div>
 
               {/* Compliance e Consultas */}
-              <div className="mt-6 pt-6 border-t border-[#1f2937]">
+              <div className="mt-4 pt-4 border-t border-[#1f2937]">
                 <h4 className="text-sm font-medium text-slate-600 mb-4 flex items-center gap-2">
                   <Shield size={16} />
-                  Compliance e Consultas
+                  Compliance
                 </h4>
-                <div className="space-y-4">
-                  {/* Restrição de Crédito */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">Restrição de Crédito</p>
-                      <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ. Em implantação.</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {renderCreditStatus()}
-                      <button
-                        type="button"
-                        onClick={handleConsultCredit}
-                        disabled
-                        title="Em implantação"
-                        className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
-                      >
-                        Consultar
-                      </button>
-                    </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg border border-[#1f2937] bg-gray-50/40 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Restrição de Crédito</p>
+                    {renderCreditStatus()}
                   </div>
-
-                  {/* Não Perturbe */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">Não Perturbe</p>
-                      <p className="text-xs text-slate-500">Bloqueio de contato por telefone. Em implantação.</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {renderDoNotCallStatus()}
-                      <button
-                        type="button"
-                        onClick={handleConsultDoNotCall}
-                        disabled
-                        title="Em implantação"
-                        className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
-                      >
-                        Consultar
-                      </button>
-                    </div>
+                  <div className="rounded-lg border border-[#1f2937] bg-gray-50/40 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Não Perturbe</p>
+                    {renderDoNotCallStatus()}
+                  </div>
+                  <div className="rounded-lg border border-dashed border-[#1f2937] bg-gray-50/20 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Receita Federal</p>
+                    <p className="text-xs text-slate-500">Futuro</p>
+                  </div>
+                  <div className="rounded-lg border border-dashed border-[#1f2937] bg-gray-50/20 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">GOV.BR</p>
+                    <p className="text-xs text-slate-500">Futuro</p>
                   </div>
                 </div>
               </div>
