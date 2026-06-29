@@ -402,24 +402,8 @@ export const ClientesPage: React.FC = () => {
     return true;
   });
 
-  const duplicateCliente = useMemo(() => {
-    if (!tipoPessoa) return null;
-
-    const docNumbers = onlyNumbers(formData.cpf_cnpj || "");
-    const expectedLength = tipoPessoa === "CPF" ? 11 : 14;
-    if (docNumbers.length !== expectedLength) return null;
-    if (!validarDocumento(docNumbers, tipoPessoa)) return null;
-
-    return safeClientes.find((cliente) => {
-      if (editingCliente && String(cliente.id) === String(editingCliente.id)) {
-        return false;
-      }
-
-      const candidateDoc = onlyNumbers(cliente.cpf_cnpj || cliente.cpf || "");
-      if (candidateDoc.length !== expectedLength) return false;
-      return candidateDoc === docNumbers;
-    }) || null;
-  }, [safeClientes, formData.cpf_cnpj, tipoPessoa, editingCliente]);
+  // Função segura para obter apenas números
+  const onlyNumbers = (value: any) => String(value || '').replace(/\D/g, '');
 
   // Função para validar CPF
   const validarCPF = (cpf: string): boolean => {
@@ -506,6 +490,25 @@ export const ClientesPage: React.FC = () => {
       return validarCNPJ(numbers);
     }
   };
+
+  const duplicateCliente = useMemo(() => {
+    if (!tipoPessoa) return null;
+
+    const docNumbers = onlyNumbers(formData.cpf_cnpj || "");
+    const expectedLength = tipoPessoa === "CPF" ? 11 : 14;
+    if (docNumbers.length !== expectedLength) return null;
+    if (!validarDocumento(docNumbers, tipoPessoa)) return null;
+
+    return safeClientes.find((cliente) => {
+      if (editingCliente && String(cliente.id) === String(editingCliente.id)) {
+        return false;
+      }
+
+      const candidateDoc = onlyNumbers(cliente.cpf_cnpj || cliente.cpf || "");
+      if (candidateDoc.length !== expectedLength) return false;
+      return candidateDoc === docNumbers;
+    }) || null;
+  }, [safeClientes, formData.cpf_cnpj, tipoPessoa, editingCliente]);
 
   const validateCEP = (cep: string) => {
     const numbers = onlyNumbers(cep);
@@ -1104,9 +1107,6 @@ export const ClientesPage: React.FC = () => {
   const isCNPJ = (cpfCnpj: string) => {
     return cpfCnpj && cpfCnpj.length > 11;
   };
-
-  // Função segura para obter apenas números
-  const onlyNumbers = (value: any) => String(value || '').replace(/\D/g, '');
 
   // Função segura para formatar CPF/CNPJ
   const formatDocument = (value: any, personType?: string) => {
