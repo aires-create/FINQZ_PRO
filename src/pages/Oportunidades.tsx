@@ -482,6 +482,7 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
   const rawResponsavelNome = opportunity?.owner?.name ?? opportunity?.ownerName ?? "";
   const legacyProductAliases = { product_id: rawProductId };
   const semanticStageId = normalizeKey(stageName) || "novo_lead";
+  const visualStageId = backendStageId || semanticStageId;
   const semanticPipelineId = mapBackendPipelineNameToSemanticId(
     pipelineName,
     backendPipelineId,
@@ -498,9 +499,9 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
     customerId: rawCustomerId,
     pipeline_id: semanticPipelineId,
     pipelineId: String(opportunity?.pipelineId ?? ""),
-    etapa_id: semanticStageId,
-    etapa: semanticStageId,
-    stageId: String(opportunity?.stageId ?? ""),
+    etapa_id: visualStageId,
+    etapa: visualStageId,
+    stageId: backendStageId,
     backendPipelineId,
     backendPipelineName: pipelineName,
     backendStageId,
