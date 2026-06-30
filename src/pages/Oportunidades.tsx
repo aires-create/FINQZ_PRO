@@ -85,6 +85,373 @@ type PipelineRuntimeConfig = {
   colunas?: PipelineColumn[];
 };
 
+type OpportunityIdentitySource = "stageId" | "backendStageId" | "etapa_id" | "etapa" | "pipelineId" | "backendPipelineId" | "pipeline_id" | "missing";
+
+type KanbanRuntimeDragEvent = {
+  timestamp: string;
+  opportunityId: string;
+  tenantId?: string | null;
+  previousPipelineId: string;
+  nextPipelineId: string;
+  previousStageId: string;
+  nextStageId: string;
+  patchStatus: "pending" | "success" | "error";
+  patchMessage?: string;
+  postGetStatus?: "pending" | "success" | "miss" | "error";
+  postGetStageId?: string;
+};
+
+export type KanbanRuntimeHealthReport = {
+  reportVersion: "H18-C";
+  environment: "dev" | "hml" | "disabled";
+  generatedAt: string;
+  totalOpportunitiesAudited: number;
+  totalWithOfficialStageId: number;
+  totalWithOfficialPipelineId: number;
+  totalUsingAliases: number;
+  totalUsingEtapa: number;
+  totalUsingEtapaId: number;
+  totalUsingPipelineIdAlias: number;
+  totalUsingBackendStageId: number;
+  totalUsingBackendPipelineId: number;
+  totalUsingSemanticStageId: number;
+  totalUsingSemanticPipelineId: number;
+  totalMissingOfficialStage: number;
+  totalMissingOfficialPipeline: number;
+  totalFallbackFirstStage: number;
+  totalStageEtapaDivergence: number;
+  totalPipelineDivergence: number;
+  totalGroupedByUuid: number;
+  totalGroupedByAlias: number;
+  totalGroupedByFallback: number;
+  totalInconsistent: number;
+  totalCorrectedAutomatically: number;
+  recentDragEvents: KanbanRuntimeDragEvent[];
+  recentObservations: Array<{
+    timestamp: string;
+    type: string;
+    details: Record<string, unknown>;
+  }>;
+};
+
+type KanbanRuntimeObservable = Partial<OpportunityUiShape> & {
+  tenantId?: string | null;
+  semanticStageId?: string;
+  semanticPipelineId?: string;
+};
+
+const KANBAN_RUNTIME_REPORT_KEY = "__FINQZ_KANBAN_RUNTIME_HEALTH__";
+const KANBAN_RUNTIME_EVENT_LIMIT = 25;
+
+const getKanbanRuntimeEnvironment = (): KanbanRuntimeHealthReport["environment"] => {
+  if (typeof window === "undefined") return "disabled";
+
+  const host = String(window.location.hostname ?? "").toLowerCase();
+  if (import.meta.env.DEV) return "dev";
+  if (host.includes("hml")) return "hml";
+  return "disabled";
+};
+
+const isKanbanRuntimeObservabilityEnabled = (): boolean => getKanbanRuntimeEnvironment() !== "disabled";
+
+const createEmptyKanbanRuntimeHealthReport = (): KanbanRuntimeHealthReport => ({
+  reportVersion: "H18-C",
+  environment: getKanbanRuntimeEnvironment(),
+  generatedAt: new Date().toISOString(),
+  totalOpportunitiesAudited: 0,
+  totalWithOfficialStageId: 0,
+  totalWithOfficialPipelineId: 0,
+  totalUsingAliases: 0,
+  totalUsingEtapa: 0,
+  totalUsingEtapaId: 0,
+  totalUsingPipelineIdAlias: 0,
+  totalUsingBackendStageId: 0,
+  totalUsingBackendPipelineId: 0,
+  totalUsingSemanticStageId: 0,
+  totalUsingSemanticPipelineId: 0,
+  totalMissingOfficialStage: 0,
+  totalMissingOfficialPipeline: 0,
+  totalFallbackFirstStage: 0,
+  totalStageEtapaDivergence: 0,
+  totalPipelineDivergence: 0,
+  totalGroupedByUuid: 0,
+  totalGroupedByAlias: 0,
+  totalGroupedByFallback: 0,
+  totalInconsistent: 0,
+  totalCorrectedAutomatically: 0,
+  recentDragEvents: [],
+  recentObservations: [],
+});
+
+const getKanbanRuntimeHealthReportTarget = (): Record<string, unknown> | null => {
+  if (typeof window !== "undefined") return window as unknown as Record<string, unknown>;
+  if (typeof globalThis !== "undefined") return globalThis as unknown as Record<string, unknown>;
+  return null;
+};
+
+export const getKanbanRuntimeHealthReport = (): KanbanRuntimeHealthReport => {
+  const target = getKanbanRuntimeHealthReportTarget();
+  if (!target) return createEmptyKanbanRuntimeHealthReport();
+
+  const existing = target[KANBAN_RUNTIME_REPORT_KEY];
+  if (existing && typeof existing === "object") {
+    return existing as KanbanRuntimeHealthReport;
+  }
+
+  const report = createEmptyKanbanRuntimeHealthReport();
+  target[KANBAN_RUNTIME_REPORT_KEY] = report;
+  return report;
+};
+
+export const resetKanbanRuntimeHealthReport = (): KanbanRuntimeHealthReport => {
+  const report = createEmptyKanbanRuntimeHealthReport();
+  const target = getKanbanRuntimeHealthReportTarget();
+  if (target) {
+    target[KANBAN_RUNTIME_REPORT_KEY] = report;
+  }
+  return report;
+};
+
+export const resetKanbanRuntimeHealthMetrics = (): KanbanRuntimeHealthReport => {
+  const report = getKanbanRuntimeHealthReport();
+  const next = createEmptyKanbanRuntimeHealthReport();
+  next.recentDragEvents = report.recentDragEvents;
+  next.recentObservations = report.recentObservations;
+
+  const target = getKanbanRuntimeHealthReportTarget();
+  if (target) {
+    target[KANBAN_RUNTIME_REPORT_KEY] = next;
+  }
+
+  return next;
+};
+
+const mutateKanbanRuntimeHealthReport = (
+  mutator: (report: KanbanRuntimeHealthReport) => void,
+): KanbanRuntimeHealthReport => {
+  const report = getKanbanRuntimeHealthReport();
+  mutator(report);
+  report.generatedAt = new Date().toISOString();
+  return report;
+};
+
+const appendKanbanRuntimeObservation = (
+  type: string,
+  details: Record<string, unknown>,
+) => {
+  if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+  mutateKanbanRuntimeHealthReport((report) => {
+    report.recentObservations.unshift({
+      timestamp: new Date().toISOString(),
+      type,
+      details,
+    });
+    report.recentObservations = report.recentObservations.slice(0, KANBAN_RUNTIME_EVENT_LIMIT);
+  });
+};
+
+const upsertKanbanRuntimeDragEvent = (
+  opportunityId: string,
+  patch: Partial<KanbanRuntimeDragEvent>,
+) => {
+  if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+  mutateKanbanRuntimeHealthReport((report) => {
+    const index = report.recentDragEvents.findIndex((event) => event.opportunityId === opportunityId);
+    const current: KanbanRuntimeDragEvent = index >= 0
+      ? report.recentDragEvents[index]
+      : {
+          timestamp: new Date().toISOString(),
+          opportunityId,
+          tenantId: null,
+          previousPipelineId: "",
+          nextPipelineId: "",
+          previousStageId: "",
+          nextStageId: "",
+          patchStatus: "pending",
+        };
+
+    const nextEvent = {
+      ...current,
+      ...patch,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (index >= 0) {
+      report.recentDragEvents[index] = nextEvent;
+    } else {
+      report.recentDragEvents.unshift(nextEvent);
+    }
+
+    report.recentDragEvents = report.recentDragEvents.slice(0, KANBAN_RUNTIME_EVENT_LIMIT);
+  });
+};
+
+const resolveOpportunityStageIdentity = (
+  opportunity: Partial<OpportunityUiShape> | null | undefined,
+): { value: string; source: OpportunityIdentitySource } => {
+  const candidates: Array<[OpportunityIdentitySource, unknown]> = [
+    ["stageId", opportunity?.stageId],
+    ["backendStageId", opportunity?.backendStageId],
+    ["etapa_id", opportunity?.etapa_id],
+    ["etapa", opportunity?.etapa],
+  ];
+
+  for (const [source, candidate] of candidates) {
+    const value = String(candidate ?? "").trim();
+    if (value) return { value, source };
+  }
+
+  return { value: "", source: "missing" };
+};
+
+const resolveOpportunityPipelineIdentity = (
+  opportunity: Partial<OpportunityUiShape> | null | undefined,
+): { value: string; source: OpportunityIdentitySource } => {
+  const candidates: Array<[OpportunityIdentitySource, unknown]> = [
+    ["pipelineId", opportunity?.pipelineId],
+    ["backendPipelineId", opportunity?.backendPipelineId],
+    ["pipeline_id", opportunity?.pipeline_id],
+  ];
+
+  for (const [source, candidate] of candidates) {
+    const value = String(candidate ?? "").trim();
+    if (value) return { value, source };
+  }
+
+  return { value: "", source: "missing" };
+};
+
+const inspectKanbanOpportunityRuntime = (
+  opportunity: KanbanRuntimeObservable,
+  details: Partial<Record<string, unknown>> = {},
+) => {
+  const stageIdentity = resolveOpportunityStageIdentity(opportunity);
+  const pipelineIdentity = resolveOpportunityPipelineIdentity(opportunity);
+  const etapaId = String(opportunity?.etapa_id ?? "").trim();
+  const etapa = String(opportunity?.etapa ?? "").trim();
+  const backendStageId = String(opportunity?.backendStageId ?? "").trim();
+  const backendPipelineId = String(opportunity?.backendPipelineId ?? "").trim();
+  const stageId = String(opportunity?.stageId ?? "").trim();
+  const pipelineId = String(opportunity?.pipelineId ?? "").trim();
+  const semanticStageId = String(opportunity?.semanticStageId ?? "").trim();
+  const semanticPipelineId = String(opportunity?.semanticPipelineId ?? "").trim();
+  const usesAlias =
+    (stageIdentity.source !== "stageId" && stageIdentity.source !== "missing") ||
+    (pipelineIdentity.source !== "pipelineId" && pipelineIdentity.source !== "missing");
+
+  const hasStageEtapaDivergence = Boolean(stageId && etapaId && stageId !== etapaId);
+  const hasPipelineDivergence = Boolean(pipelineId && backendPipelineId && pipelineId !== backendPipelineId);
+  const isInconsistent = Boolean(!stageIdentity.value || !pipelineIdentity.value || hasStageEtapaDivergence || hasPipelineDivergence);
+
+  return {
+    id: String(opportunity?.id ?? ""),
+    stageIdentity,
+    pipelineIdentity,
+    etapaId,
+    etapa,
+    stageId,
+    pipelineId,
+    backendStageId,
+    backendPipelineId,
+    semanticStageId,
+    semanticPipelineId,
+    usesAlias,
+    hasStageEtapaDivergence,
+    hasPipelineDivergence,
+    isInconsistent,
+    details,
+  };
+};
+
+const publishKanbanRuntimeHealthReport = (
+  reason: string,
+  extra: Record<string, unknown> = {},
+) => {
+  if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+  const report = mutateKanbanRuntimeHealthReport(() => {});
+  appendKanbanRuntimeObservation("report", {
+    reason,
+    totalOpportunitiesAudited: report.totalOpportunitiesAudited,
+    totalWithOfficialStageId: report.totalWithOfficialStageId,
+    totalWithOfficialPipelineId: report.totalWithOfficialPipelineId,
+    totalUsingAliases: report.totalUsingAliases,
+    totalFallbackFirstStage: report.totalFallbackFirstStage,
+    totalInconsistent: report.totalInconsistent,
+    totalCorrectedAutomatically: report.totalCorrectedAutomatically,
+    ...extra,
+  });
+};
+
+export const getOpportunityVisualStageId = (opportunity: Partial<OpportunityUiShape> | null | undefined): string => {
+  return resolveOpportunityStageIdentity(opportunity).value;
+};
+
+export const getOpportunityVisualPipelineId = (opportunity: Partial<OpportunityUiShape> | null | undefined): string => {
+  return resolveOpportunityPipelineIdentity(opportunity).value;
+};
+
+export const normalizeOpportunityForKanbanStage = (
+  opportunity: any,
+  validStageIds: Set<string>,
+  fallbackStageId: string,
+) => {
+  if (!opportunity || typeof opportunity !== "object") return opportunity;
+
+  const visualStageId = getOpportunityVisualStageId(opportunity);
+  if (visualStageId && validStageIds.has(visualStageId)) {
+    return {
+      ...opportunity,
+      etapa_id: visualStageId,
+      etapa: visualStageId,
+    };
+  }
+
+  return {
+    ...opportunity,
+    etapa_id: fallbackStageId,
+    etapa: fallbackStageId,
+  };
+};
+
+export const buildOpportunitiesByStage = (
+  opportunities: OpportunityUiShape[],
+  stages: Array<{ id: string }>,
+  columnSort: Record<string, string>,
+) => {
+  const grouped: Record<string, OpportunityUiShape[]> = {};
+
+  for (const stage of stages) {
+    const stageOpportunities = opportunities.filter(
+      (opportunity) => getOpportunityVisualStageId(opportunity) === String(stage.id),
+    );
+    const sortOption = columnSort[stage.id] || "data_desc";
+
+    grouped[stage.id] = stageOpportunities.sort((a, b) => {
+      const valorA = Number(a.valor ?? 0);
+      const valorB = Number(b.valor ?? 0);
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+
+      switch (sortOption) {
+        case "valor_asc":
+          return valorA - valorB;
+        case "valor_desc":
+          return valorB - valorA;
+        case "data_asc":
+          return dateA - dateB;
+        case "data_desc":
+        default:
+          return dateB - dateA;
+      }
+    });
+  }
+
+  return grouped;
+};
+
 const DETAIL_TABS = [
   { id: 'tarefas', label: 'Tarefas', icon: Check },
   { id: 'anotacoes', label: 'Anotações', icon: FileText },
@@ -448,7 +815,7 @@ const getVisualOpportunityId = (opportunity: OpportunityUiShape): string => {
   return shortUuid || "SEM-ID-VISUAL";
 };
 
-const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape => {
+export const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape => {
   const backendPipelineId = String(opportunity?.pipelineId ?? "");
   const backendStageId = String(opportunity?.stageId ?? "");
   const stageName = String(opportunity?.stage?.name ?? "");
@@ -487,8 +854,8 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
     pipelineName,
     backendPipelineId,
   );
-
-  return {
+  const visualPipelineId = backendPipelineId || semanticPipelineId;
+  const mapped: OpportunityUiShape = {
     id: String(opportunity?.id ?? ""),
     displayId: getVisualOpportunityId(opportunity),
     title: String(rawTitle),
@@ -497,8 +864,8 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
     valor: Number(rawAmount ?? 0),
     status: String(opportunity?.status ?? "ativo"),
     customerId: rawCustomerId,
-    pipeline_id: semanticPipelineId,
-    pipelineId: String(opportunity?.pipelineId ?? ""),
+    pipeline_id: visualPipelineId,
+    pipelineId: backendPipelineId,
     etapa_id: visualStageId,
     etapa: visualStageId,
     stageId: backendStageId,
@@ -534,6 +901,8 @@ const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape =>
     updatedAt: opportunity?.updatedAt ?? opportunity?.createdAt ?? new Date().toISOString(),
     __officialApiSource: true,
   };
+
+  return mapped;
 };
 
 const UUID_V4_LIKE_REGEX =
@@ -632,6 +1001,7 @@ const OportunidadesPageInner = () => {
   const [apiReadError, setApiReadError] = useState<string | null>(null);
   const [apiReadReloadKey, setApiReadReloadKey] = useState(0);
   const [selectedPipelineId, setSelectedPipelineId] = useState("");
+  const pendingMoveAuditRef = useRef<KanbanRuntimeDragEvent | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -727,6 +1097,12 @@ const OportunidadesPageInner = () => {
 
         if (!cancelled) {
           setApiOportunidadesReadOnly(mappedData);
+          if (isKanbanRuntimeObservabilityEnabled()) {
+            appendKanbanRuntimeObservation("api:getAll:success", {
+              reloadKey: apiReadReloadKey,
+              total: mappedData.length,
+            });
+          }
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erro ao carregar oportunidades";
@@ -735,6 +1111,12 @@ const OportunidadesPageInner = () => {
         if (!cancelled) {
           setApiReadError(message);
           setApiOportunidadesReadOnly(null);
+          if (isKanbanRuntimeObservabilityEnabled()) {
+            appendKanbanRuntimeObservation("api:getAll:error", {
+              reloadKey: apiReadReloadKey,
+              message,
+            });
+          }
         }
       }
     };
@@ -751,6 +1133,72 @@ const OportunidadesPageInner = () => {
       console.warn("[Oportunidades] Erro ao carregar oportunidades da API oficial:", apiReadError);
     }
   }, [apiReadError]);
+
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    resetKanbanRuntimeHealthMetrics();
+    const snapshot = Array.isArray(apiOportunidadesReadOnly) ? apiOportunidadesReadOnly : [];
+
+    for (const opportunity of snapshot) {
+      const inspected = inspectKanbanOpportunityRuntime(opportunity, {
+        context: "post-get",
+        reloadKey: apiReadReloadKey,
+      });
+
+      mutateKanbanRuntimeHealthReport((report) => {
+        report.totalOpportunitiesAudited += 1;
+        if (inspected.stageId) report.totalWithOfficialStageId += 1;
+        else report.totalMissingOfficialStage += 1;
+
+        if (inspected.pipelineId) report.totalWithOfficialPipelineId += 1;
+        else report.totalMissingOfficialPipeline += 1;
+
+        if (inspected.usesAlias) report.totalUsingAliases += 1;
+        if (inspected.stageIdentity.source === "backendStageId") report.totalUsingBackendStageId += 1;
+        if (inspected.stageIdentity.source === "etapa_id") report.totalUsingEtapaId += 1;
+        if (inspected.stageIdentity.source === "etapa") report.totalUsingEtapa += 1;
+        if (inspected.pipelineIdentity.source === "backendPipelineId") report.totalUsingBackendPipelineId += 1;
+        if (inspected.pipelineIdentity.source === "pipeline_id") report.totalUsingPipelineIdAlias += 1;
+        if (inspected.semanticStageId) report.totalUsingSemanticStageId += 1;
+        if (inspected.semanticPipelineId) report.totalUsingSemanticPipelineId += 1;
+        if (inspected.hasStageEtapaDivergence) report.totalStageEtapaDivergence += 1;
+        if (inspected.hasPipelineDivergence) report.totalPipelineDivergence += 1;
+        if (inspected.isInconsistent) report.totalInconsistent += 1;
+      });
+    }
+
+    if (pendingMoveAuditRef.current?.opportunityId) {
+      const movedOpportunity = snapshot.find(
+        (opportunity) => String(opportunity?.id ?? "") === pendingMoveAuditRef.current?.opportunityId,
+      );
+
+      upsertKanbanRuntimeDragEvent(pendingMoveAuditRef.current.opportunityId, movedOpportunity
+        ? {
+            postGetStatus: getOpportunityVisualStageId(movedOpportunity) === pendingMoveAuditRef.current.nextStageId ? "success" : "miss",
+            postGetStageId: getOpportunityVisualStageId(movedOpportunity),
+          }
+        : {
+            postGetStatus: "miss",
+          });
+
+      appendKanbanRuntimeObservation("drag:post-get", {
+        opportunityId: pendingMoveAuditRef.current.opportunityId,
+        expectedStageId: pendingMoveAuditRef.current.nextStageId,
+        receivedStageId: movedOpportunity ? getOpportunityVisualStageId(movedOpportunity) : "",
+        matched: movedOpportunity
+          ? getOpportunityVisualStageId(movedOpportunity) === pendingMoveAuditRef.current.nextStageId
+          : false,
+      });
+
+      pendingMoveAuditRef.current = null;
+    }
+
+    publishKanbanRuntimeHealthReport("post-get-snapshot", {
+      reloadKey: apiReadReloadKey,
+      total: snapshot.length,
+    });
+  }, [apiOportunidadesReadOnly, apiReadReloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2187,6 +2635,28 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   };
   const hasSelectedOfficialPipeline = Boolean(selectedOfficialPipeline);
   const hasSelectedPipelineWithoutStages = hasSelectedOfficialPipeline && etapasAtivas.length === 0;
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    if (selectedPipelineId && !selectedOfficialPipeline) {
+      mutateKanbanRuntimeHealthReport((report) => {
+        report.totalPipelineDivergence += 1;
+        report.totalInconsistent += 1;
+      });
+      appendKanbanRuntimeObservation("pipeline:missing", {
+        selectedPipelineId,
+      });
+      return;
+    }
+
+    if (selectedOfficialPipeline && selectedOfficialStages.length === 0) {
+      appendKanbanRuntimeObservation("pipeline:no-stages", {
+        selectedPipelineId,
+        pipelineName: String(selectedOfficialPipeline?.name ?? ""),
+      });
+    }
+  }, [selectedOfficialPipeline, selectedOfficialStages, selectedPipelineId]);
+
   const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : [];
   const etapasNovaOportunidade = etapasAtivas.length > 0
     ? etapasAtivas.map((etapa) => ({
@@ -2331,16 +2801,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const oportunidadesBase = oportunidadesBaseRaw.map((op: any) => {
     if (!op || typeof op !== "object") return op;
 
-    const etapaAtual = String(op.etapa_id ?? op.etapa ?? "");
-    if (etapaAtual && etapaIdsValidas.has(etapaAtual)) {
-      return op;
-    }
-
-    return {
-      ...op,
-      etapa_id: etapaFallbackId,
-      etapa: etapaFallbackId,
-    };
+    return normalizeOpportunityForKanbanStage(op, etapaIdsValidas, etapaFallbackId);
   });
   const oportunidades = oportunidadesBase.filter((o: any) => {
     if (!o) return false;
@@ -2349,11 +2810,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return true;
     }
 
-    const backendPipelineId = String(o?.backendPipelineId ?? "");
-    const semanticPipelineId = String(o?.pipeline_id ?? "");
+    const canonicalPipelineId = getOpportunityVisualPipelineId(o);
     return (
-      backendPipelineId === selectedPipelineId ||
-      semanticPipelineId === selectedPipelineId
+      canonicalPipelineId === selectedPipelineId
     );
   });
   
@@ -2471,35 +2930,96 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   
   // OTIMIZAÇÃO: Agrupar oportunidades por etapa uma única vez com ordenação
   const oportunidadesPorEtapa = useMemo(() => {
-    const etapas = etapasAtivas;
-    const resultado: Record<string, typeof dedupedFilteredOportunidades> = {};
-    
-    for (const etapa of etapas) {
-      const etapaOpportunities = dedupedFilteredOportunidades.filter((o) => o.etapa_id === etapa.id);
-      const sortOption = columnSort[etapa.id] || 'data_desc';
-      
-      resultado[etapa.id] = etapaOpportunities.sort((a, b) => {
-        const valorA = Number(a.valor ?? 0);
-        const valorB = Number(b.valor ?? 0);
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-        
-        switch (sortOption) {
-          case 'valor_asc':
-            return valorA - valorB;
-          case 'valor_desc':
-            return valorB - valorA;
-          case 'data_asc':
-            return dateA - dateB;
-          case 'data_desc':
-          default:
-            return dateB - dateA;
-        }
+    return buildOpportunitiesByStage(dedupedFilteredOportunidades, etapasAtivas, columnSort);
+  }, [dedupedFilteredOportunidades, columnSort, etapasAtivas]);
+
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    const rawById = new Map(
+      oportunidadesBaseRaw
+        .filter((opportunity: any) => opportunity && typeof opportunity === "object")
+        .map((opportunity: any) => [String(opportunity.id ?? ""), opportunity]),
+    );
+
+    let fallbackCount = 0;
+    let correctedCount = 0;
+
+    for (const opportunity of oportunidadesBase) {
+      if (!opportunity || typeof opportunity !== "object") continue;
+
+      const raw = rawById.get(String(opportunity.id ?? ""));
+      const rawVisualStageId = getOpportunityVisualStageId(raw);
+      const normalizedVisualStageId = getOpportunityVisualStageId(opportunity);
+      const usedFallback = Boolean(
+        normalizedVisualStageId &&
+        normalizedVisualStageId === etapaFallbackId &&
+        rawVisualStageId !== normalizedVisualStageId,
+      );
+
+      if (usedFallback) fallbackCount += 1;
+      if (String(raw?.etapa_id ?? "").trim() !== String(opportunity?.etapa_id ?? "").trim()) {
+        correctedCount += 1;
+      }
+
+      appendKanbanRuntimeObservation("opportunity:normalize", {
+        id: String(opportunity.id ?? ""),
+        rawVisualStageId,
+        normalizedVisualStageId,
+        usedFallback,
       });
     }
-    
-    return resultado;
-  }, [dedupedFilteredOportunidades, columnSort, etapasAtivas]);
+
+    mutateKanbanRuntimeHealthReport((report) => {
+      report.totalFallbackFirstStage = fallbackCount;
+      report.totalCorrectedAutomatically = Math.max(report.totalCorrectedAutomatically, correctedCount);
+    });
+
+    publishKanbanRuntimeHealthReport("normalize-snapshot", {
+      fallbackCount,
+      correctedCount,
+    });
+  }, [oportunidadesBase, oportunidadesBaseRaw, etapaFallbackId]);
+
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    let groupedByUuid = 0;
+    let groupedByAlias = 0;
+    let groupedByFallback = 0;
+
+    for (const [stageId, ops] of Object.entries(oportunidadesPorEtapa)) {
+      for (const opportunity of ops) {
+        const inspected = inspectKanbanOpportunityRuntime(opportunity, {
+          context: "grouping",
+          groupedStageId: stageId,
+        });
+
+        if (inspected.stageIdentity.source === "stageId" || inspected.stageIdentity.source === "backendStageId") {
+          groupedByUuid += 1;
+        } else if (inspected.stageIdentity.source === "etapa_id" || inspected.stageIdentity.source === "etapa") {
+          groupedByAlias += 1;
+        }
+
+        if (String(opportunity?.etapa_id ?? "").trim() === etapaFallbackId && !String(opportunity?.stageId ?? "").trim()) {
+          groupedByFallback += 1;
+        }
+      }
+    }
+
+    mutateKanbanRuntimeHealthReport((report) => {
+      report.totalGroupedByUuid = groupedByUuid;
+      report.totalGroupedByAlias = groupedByAlias;
+      report.totalGroupedByFallback = groupedByFallback;
+    });
+
+    publishKanbanRuntimeHealthReport("grouping-snapshot", {
+      groupedByUuid,
+      groupedByAlias,
+      groupedByFallback,
+      groupedStages: Object.keys(oportunidadesPorEtapa).length,
+    });
+  }, [oportunidadesPorEtapa, etapaFallbackId]);
 
   // OTIMIZAÇÃO: Calcular totais por etapa uma única vez
   const totaisPorEtapa = useMemo(() => {
@@ -2559,8 +3079,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
     const pipelineIdForStageLookup = String(
-      oportunidade?.backendPipelineId ??
-      oportunidade?.pipelineId ??
+      getOpportunityVisualPipelineId(oportunidade) ??
       currentPipelineConfig?.id ??
       selectedPipelineId ??
       "",
@@ -2588,8 +3107,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
     );
     const resolvedBackendPipelineId = String(
-      oportunidade?.backendPipelineId ||
-      oportunidade?.pipelineId ||
+      getOpportunityVisualPipelineId(oportunidade) ||
       currentPipelineConfig?.id ||
       selectedPipelineId ||
       "",
@@ -2610,13 +3128,47 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
 
+    const canonicalOpportunityId = String(getCanonicalOpportunityId(oportunidade) ?? "");
+    pendingMoveAuditRef.current = {
+      timestamp: new Date().toISOString(),
+      opportunityId: String(oportunidade?.id ?? canonicalOpportunityId),
+      tenantId: oportunidade?.tenantId ? String(oportunidade.tenantId) : null,
+      previousPipelineId: getOpportunityVisualPipelineId(oportunidade),
+      nextPipelineId: resolvedBackendPipelineId,
+      previousStageId: getOpportunityVisualStageId(oportunidade),
+      nextStageId: resolvedBackendStageId,
+      patchStatus: "pending",
+      postGetStatus: "pending",
+    };
+    upsertKanbanRuntimeDragEvent(pendingMoveAuditRef.current.opportunityId, pendingMoveAuditRef.current);
+    appendKanbanRuntimeObservation("drag:patch:start", {
+      opportunityId: pendingMoveAuditRef.current.opportunityId,
+      previousPipelineId: pendingMoveAuditRef.current.previousPipelineId,
+      nextPipelineId: pendingMoveAuditRef.current.nextPipelineId,
+      previousStageId: pendingMoveAuditRef.current.previousStageId,
+      nextStageId: pendingMoveAuditRef.current.nextStageId,
+    });
+
     try {
-      await opportunitiesApi.moveStage(String(getCanonicalOpportunityId(oportunidade) ?? ""), {
+      await opportunitiesApi.moveStage(canonicalOpportunityId, {
         stageId: resolvedBackendStageId,
         pipelineId: resolvedBackendPipelineId || undefined,
       });
+      upsertKanbanRuntimeDragEvent(String(oportunidade?.id ?? canonicalOpportunityId), {
+        patchStatus: "success",
+        patchMessage: "PATCH /stage OK",
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao mover oportunidade";
+      upsertKanbanRuntimeDragEvent(String(oportunidade?.id ?? canonicalOpportunityId), {
+        patchStatus: "error",
+        patchMessage: message,
+        postGetStatus: "error",
+      });
+      appendKanbanRuntimeObservation("drag:patch:error", {
+        opportunityId: String(oportunidade?.id ?? canonicalOpportunityId),
+        message,
+      });
       console.error("[Oportunidades] Falha ao mover oportunidade via API oficial:", {
         cardId,
         etapaId,
@@ -2630,6 +3182,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
 
+    appendKanbanRuntimeObservation("drag:patch:success", {
+      opportunityId: String(oportunidade?.id ?? canonicalOpportunityId),
+      nextStageId: resolvedBackendStageId,
+      nextPipelineId: resolvedBackendPipelineId,
+    });
     setApiReadReloadKey((prev) => prev + 1);
 
     setDraggedCard(null);
