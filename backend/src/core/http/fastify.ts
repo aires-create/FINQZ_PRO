@@ -42,6 +42,7 @@ import { masterCatalogRoutes } from '../../modules/master-catalog/presentation/h
 import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
 import { partnerRoutes } from '../../modules/partners/presentation/http/partner.routes.js';
 import { partnerAcquisitionRoutes } from '../../modules/partner-acquisition/http/partner-acquisition.routes.js';
+import { edpRoutes } from '../../modules/edp/presentation/http/edp.routes.js';
 
 import {
   applyRequestSanitization,
@@ -609,6 +610,7 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   await app.register(opportunitiesRoutes, { prefix: '/api/v1/opportunities' });
   await app.register(operationRoutes, { prefix: '/api/v1/operations' });
   await app.register(masterCatalogRoutes, { prefix: '/api/v1/master-catalog' });
+  await app.register(edpRoutes, { prefix: '/api/v1/edp' });
 
   // Error handler
   app.setErrorHandler(sendErrorResponse);
