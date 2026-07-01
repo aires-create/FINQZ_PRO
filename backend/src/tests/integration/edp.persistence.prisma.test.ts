@@ -31,25 +31,37 @@ const requiredTables = [
   'edp_correlation_records',
 ] as const;
 
-const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const databaseUrl = process.env.DATABASE_URL?.trim() ?? '';
 
-const prisma = databaseUrl ? new PrismaClient({ datasourceUrl: databaseUrl }) : null;
-
-let canRunRealSuite = false;
-let skipReason = 'DATABASE_URL is not configured';
-
-if (hasDatabaseUrl) {
+const maskDatabaseUrl = (value: string) => {
   try {
-    await prisma!.$connect();
-    canRunRealSuite = true;
-  } catch (error) {
-    skipReason = error instanceof Error ? error.message : String(error);
+    const url = new URL(value);
+    const host = url.host || 'unknown-host';
+    const database = url.pathname.replace(/^\//, '') || 'unknown-db';
+
+    return `${url.protocol}//${host}/${database}`;
+  } catch {
+    return 'invalid-database-url';
   }
+};
+
+if (databaseUrl) {
+  console.info(`[EDP persistence runtime against Prisma/PostgreSQL] DATABASE_URL=${maskDatabaseUrl(databaseUrl)}`);
 }
 
-if (!canRunRealSuite) {
-  console.warn(`[EDP persistence runtime against Prisma/PostgreSQL] skipped: ${skipReason}`);
+const canRunRealSuite = Boolean(databaseUrl);
+const prisma = canRunRealSuite
+  ? new PrismaClient({
+      datasources: {
+        db: {
+          url: databaseUrl,
+        },
+      },
+    })
+  : null;
+
+if (canRunRealSuite) {
+  await prisma!.$connect();
 }
 
 const suite = canRunRealSuite ? describe : describe.skip;
@@ -95,10 +107,10 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
   it('confirms the migration created the expected EDP tables', async () => {
     for (const tableName of requiredTables) {
       const rows = await prisma!.$queryRaw<Array<{ regclass: string | null }>>(
-        Prisma.sql`select to_regclass(${`public.${tableName}`}) as regclass`,
+        Prisma.sql`select to_regclass(${`public.${tableName}`})::text as regclass`,
       );
 
-      expect(rows[0]?.regclass).toBe(`public.${tableName}`);
+      expect(rows[0]?.regclass).toBe(tableName);
     }
   });
 
@@ -205,8 +217,10 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
       const auditRepository = new AuditTimelineRepository(prisma!);
       const idempotencyRepository = new IdempotencyRepository(prisma!);
 
+      const eventId = randomUUID();
+
       const event = await eventStore.append({
-        eventId: 'event-1',
+        eventId,
         name: 'simulation.calculation.requested',
         version: '1',
         correlationId: 'corr-1',
@@ -225,7 +239,7 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
 
       const outboxEntry = await outbox.enqueue({
         tenantId: tenant.id,
-        eventId: 'event-1',
+        eventId: undefined as unknown as string,
         eventName: 'audit.event.recorded',
         aggregateId: 'timeline-1',
         aggregateType: 'Audit Timeline Aggregate',
@@ -264,8 +278,8 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
       const replay = await idempotencyRepository.findByKey(tenant.id, 'idem-1');
 
       expect(event.version).toBe(1);
-      expect(await eventStore.findByEventId(tenant.id, 'event-1')).toMatchObject({
-        eventId: 'event-1',
+      expect(await eventStore.findByEventId(tenant.id, eventId)).toMatchObject({
+        eventId,
         eventName: 'simulation.calculation.requested',
         version: 1,
       });
