@@ -14,8 +14,6 @@ import {
   SimulationRepository,
 } from '../../modules/edp/infrastructure/prisma/index.js';
 
-const prisma = new PrismaClient();
-
 const requiredTables = [
   'edp_decisions',
   'edp_decision_policies',
@@ -34,13 +32,16 @@ const requiredTables = [
 ] as const;
 
 const hasDatabaseUrl = Boolean(process.env.DATABASE_URL?.trim());
+const databaseUrl = process.env.DATABASE_URL?.trim();
+
+const prisma = databaseUrl ? new PrismaClient({ datasourceUrl: databaseUrl }) : null;
 
 let canRunRealSuite = false;
 let skipReason = 'DATABASE_URL is not configured';
 
 if (hasDatabaseUrl) {
   try {
-    await prisma.$connect();
+    await prisma!.$connect();
     canRunRealSuite = true;
   } catch (error) {
     skipReason = error instanceof Error ? error.message : String(error);
@@ -56,7 +57,7 @@ const suite = canRunRealSuite ? describe : describe.skip;
 const nowIso = '2026-07-01T00:00:00.000Z';
 
 const createTenant = async (suffix: string) =>
-  prisma.tenant.create({
+  prisma!.tenant.create({
     data: {
       id: randomUUID(),
       name: `EDP Prisma Test ${suffix}`,
@@ -65,7 +66,7 @@ const createTenant = async (suffix: string) =>
   });
 
 const deleteTenant = async (tenantId: string) => {
-  await prisma.tenant.delete({
+  await prisma!.tenant.delete({
     where: { id: tenantId },
   });
 };
@@ -87,13 +88,13 @@ const simulationAggregate = (tenantId: string, aggregateId: string, state: strin
 suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
   afterAll(async () => {
     if (canRunRealSuite) {
-      await prisma.$disconnect();
+      await prisma!.$disconnect();
     }
   });
 
   it('confirms the migration created the expected EDP tables', async () => {
     for (const tableName of requiredTables) {
-      const rows = await prisma.$queryRaw<Array<{ regclass: string | null }>>(
+      const rows = await prisma!.$queryRaw<Array<{ regclass: string | null }>>(
         Prisma.sql`select to_regclass(${`public.${tableName}`}) as regclass`,
       );
 
@@ -106,7 +107,7 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
     const tenantB = await createTenant('tenant-b');
 
     try {
-      const repository = new SimulationRepository(prisma);
+      const repository = new SimulationRepository(prisma!);
       await repository.save(simulationAggregate(tenantA.id, 'sim-1', 'draft'));
       await repository.save(simulationAggregate(tenantB.id, 'sim-1', 'draft'));
 
@@ -130,8 +131,8 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
     const tenant = await createTenant('versions');
 
     try {
-      const policyRepository = new DecisionPolicyRepository(prisma);
-      const strategyRepository = new DecisionStrategyRepository(prisma);
+      const policyRepository = new DecisionPolicyRepository(prisma!);
+      const strategyRepository = new DecisionStrategyRepository(prisma!);
 
       await policyRepository.save({
         tenantId: tenant.id,
@@ -199,10 +200,10 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
     const tenant = await createTenant('events');
 
     try {
-      const eventStore = new EventStoreRepository(prisma);
-      const outbox = new OutboxRepository(prisma);
-      const auditRepository = new AuditTimelineRepository(prisma);
-      const idempotencyRepository = new IdempotencyRepository(prisma);
+      const eventStore = new EventStoreRepository(prisma!);
+      const outbox = new OutboxRepository(prisma!);
+      const auditRepository = new AuditTimelineRepository(prisma!);
+      const idempotencyRepository = new IdempotencyRepository(prisma!);
 
       const event = await eventStore.append({
         eventId: 'event-1',
@@ -283,8 +284,8 @@ suite('EDP persistence runtime against Prisma/PostgreSQL', () => {
     const tenant = await createTenant('rollback');
 
     try {
-      const unitOfWork = new PrismaEdpUnitOfWork(prisma);
-      const repository = new SimulationRepository(prisma);
+      const unitOfWork = new PrismaEdpUnitOfWork(prisma!);
+      const repository = new SimulationRepository(prisma!);
 
       await expect(
         unitOfWork.run(async (transaction) => {
