@@ -59,6 +59,20 @@ model Tenant {
   userRoles                             UserRole[]
   auditLogs                             AuditLog[]
   securityEventLogs                     SecurityEventLog[]
+  edpDecisions                          EdpDecision[]
+  edpDecisionPolicies                   EdpDecisionPolicy[]
+  edpDecisionStrategies                 EdpDecisionStrategy[]
+  edpSimulations                        EdpSimulation[]
+  edpRecommendations                    EdpRecommendation[]
+  edpProposals                          EdpProposal[]
+  edpProviderCapabilities               EdpProviderCapability[]
+  edpProviderExecutions                 EdpProviderExecution[]
+  edpOperationCandidates                EdpOperationCandidate[]
+  edpAuditTimelineEvents                EdpAuditTimelineEvent[]
+  edpEventStore                         EdpEventStore[]
+  edpOutboxMessages                     EdpOutboxMessage[]
+  edpIdempotencyRecords                 EdpIdempotencyRecord[]
+  edpCorrelationRecords                 EdpCorrelationRecord[]
 
   @@index([domain])
   @@index([isActive])
@@ -1255,4 +1269,331 @@ model RefreshToken {
   @@index([expiresAt])
   @@index([revokedAt])
   @@map("refresh_tokens")
+}
+
+// ============================================
+// EDP PERSISTENCE
+// ============================================
+
+model EdpDecision {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_decisions")
+}
+
+model EdpDecisionPolicy {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  version       Int
+  status        String
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  approvedBy    String?
+  approvedAt    DateTime?
+  rollbackOf    String?
+  configSnapshot Json
+  audit         Json?
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId, version])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@map("edp_decision_policies")
+}
+
+model EdpDecisionStrategy {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  version       Int
+  status        String
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  approvedBy    String?
+  approvedAt    DateTime?
+  rollbackOf    String?
+  configSnapshot Json
+  audit         Json?
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId, version])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@map("edp_decision_strategies")
+}
+
+model EdpSimulation {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_simulations")
+}
+
+model EdpRecommendation {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_recommendations")
+}
+
+model EdpProposal {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_proposals")
+}
+
+model EdpProviderCapability {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_provider_capabilities")
+}
+
+model EdpProviderExecution {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_provider_executions")
+}
+
+model EdpOperationCandidate {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_operation_candidates")
+}
+
+model EdpAuditTimelineEvent {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  eventName     String
+  actor         String
+  action        String
+  correlationId String?
+  payload       Json
+  metadata      Json?
+  timestamp     DateTime
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, correlationId])
+  @@index([tenantId, eventName])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, deletedAt])
+  @@map("edp_audit_timeline_events")
+}
+
+model EdpEventStore {
+  eventId       String   @id
+  eventName     String
+  eventVersion  String
+  tenantId      String   @db.Uuid
+  aggregateId   String
+  aggregateType String
+  aggregateVersion Int
+  correlationId String
+  causationId   String?
+  payload       Json
+  metadata      Json?
+  occurredAt    DateTime
+  createdAt     DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, correlationId])
+  @@index([tenantId, eventName])
+  @@index([tenantId, occurredAt])
+  @@map("edp_event_store")
+}
+
+model EdpOutboxMessage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  eventName     String
+  aggregateId   String?
+  aggregateType String?
+  payload       Json
+  status        String   @default("PENDING")
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, nextAttemptAt])
+  @@index([tenantId, deletedAt])
+  @@map("edp_outbox_messages")
+}
+
+model EdpIdempotencyRecord {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  idempotencyKey String
+  commandName   String
+  commandHash   String
+  responseSnapshot Json?
+  status        String   @default("RECEIVED")
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId])
+  @@index([tenantId, commandName])
+  @@index([tenantId, status])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, deletedAt])
+  @@map("edp_idempotency_records")
+}
+
+model EdpCorrelationRecord {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid
+  correlationId String
+  aggregateId   String?
+  aggregateType String?
+  causationId   String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, correlationId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_correlation_records")
 }
