@@ -38,6 +38,7 @@ Checklist obrigatorio antes da H19-C3.
 - [ ] Precedencia documental definida
 - [ ] RR-001 concluida
 - [ ] RR-002 concluida
+- [x] RR-003 homologada em HML
 - [ ] Conflict rules publicadas
 - [ ] Change control definido
 
