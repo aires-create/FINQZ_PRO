@@ -13,7 +13,7 @@ import { createAuditRecord, createCorrelationRecord, createEventStoreRecord, cre
 import type { EdpDomainService } from '../domain/services.js';
 import type { EdpStoredAggregate } from '../contracts/persistence.js';
 import type { EdpAggregateName } from '../domain/aggregates.js';
-import { EdpContractViolationError } from '../domain/exceptions.js';
+import { EdpContractViolationError, EdpIdempotencyConflictError } from '../domain/exceptions.js';
 import { createCommandExecution, createQueryExecution } from './runtime-foundation.js';
 import type { EdpUnitOfWork } from './unit-of-work.js';
 
@@ -71,6 +71,34 @@ type CorrelationRepositoryLike = {
   }): Promise<unknown>;
 };
 
+type IdempotencyRepositoryLike = {
+  findByKey(tenantId: string, idempotencyKey: string): Promise<{
+    idempotencyKey: string;
+    tenantId: string;
+    owner: string;
+    requestHash: string;
+    status: 'RECEIVED' | 'PROCESSED' | 'FAILED';
+    responseId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null>;
+  remember(record: {
+    idempotencyKey: string;
+    tenantId: string;
+    owner: string;
+    requestHash: string;
+    status: 'RECEIVED' | 'PROCESSED' | 'FAILED';
+    responseId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }): Promise<unknown>;
+  markProcessed(
+    tenantId: string,
+    idempotencyKey: string,
+    responseId?: string | null,
+  ): Promise<unknown>;
+};
+
 export interface EdpUseCaseDependencies {
   uow: EdpUnitOfWork;
   repositoryRegistry?: Readonly<{
@@ -78,6 +106,7 @@ export interface EdpUseCaseDependencies {
     outboxRepository?: OutboxRepositoryLike;
     auditTimelineRepository?: AuditTimelineRepositoryLike;
     correlationRepository?: CorrelationRepositoryLike;
+    idempotencyRepository?: IdempotencyRepositoryLike;
   }>;
 }
 
@@ -100,9 +129,10 @@ const requireId = (value: string, label: string): string => {
 const withResponse = (
   tenantId: string,
   correlationId: string,
+  responseId: string,
   payload: Record<string, unknown>,
 ): EdpResponseEnvelope<Record<string, unknown>> => ({
-  responseId: randomUUID(),
+  responseId,
   correlationId,
   tenantId,
   schemaVersion: '1',
@@ -116,6 +146,42 @@ const executeCommandUseCase = async (
   commandName: EdpCommandName,
   input: EdpCommandEnvelope,
 ): Promise<EdpResponseEnvelope<Record<string, unknown>>> => dependencies.uow.run(async () => {
+  const idempotencyRepository = dependencies.repositoryRegistry?.idempotencyRepository;
+  const idempotencyRecord = idempotencyRepository
+    ? await idempotencyRepository.findByKey(input.tenantId, input.idempotencyKey)
+    : null;
+
+  if (idempotencyRecord?.status === 'RECEIVED') {
+    throw new EdpIdempotencyConflictError(input.idempotencyKey);
+  }
+
+  if (idempotencyRecord?.status === 'PROCESSED') {
+    return withResponse(
+      input.tenantId,
+      input.correlationId,
+      idempotencyRecord.responseId ?? randomUUID(),
+      {
+        commandName: idempotencyRecord.owner,
+        accepted: true,
+        idempotent: true,
+        replayed: true,
+        responseId: idempotencyRecord.responseId ?? null,
+      },
+    );
+  }
+
+  if (idempotencyRepository) {
+    await idempotencyRepository.remember(
+      createIdempotencyRecord(
+        input.tenantId,
+        input.idempotencyKey,
+        commandName,
+        input.commandId,
+        'RECEIVED',
+      ),
+    );
+  }
+
   const result = await createCommandExecution(commandName, input);
   await dependencies.repositoryRegistry?.eventStoreRepository?.append(result.emittedEvent);
   await dependencies.repositoryRegistry?.outboxRepository?.enqueue(
@@ -156,6 +222,13 @@ const executeCommandUseCase = async (
       },
     ),
   );
+  if (idempotencyRepository) {
+    await idempotencyRepository.markProcessed(
+      input.tenantId,
+      input.idempotencyKey,
+      result.envelope.responseId,
+    );
+  }
 
   return result.envelope;
 });

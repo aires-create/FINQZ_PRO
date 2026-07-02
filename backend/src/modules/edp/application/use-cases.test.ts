@@ -34,8 +34,9 @@ const buildQueryEnvelope = () => ({
 });
 
 describe('createEdpUseCases', () => {
-  it('persists exactly one emitted event, one outbox record, one audit record and one correlation record inside the unit of work', async () => {
+  it('processes a new command with idempotency reservation and all persistence writes inside the unit of work', async () => {
     let inTransaction = false;
+    const steps: string[] = [];
     const run = vi.fn(async <T>(action: (transaction: never) => Promise<T>) => {
       inTransaction = true;
 
@@ -45,22 +46,46 @@ describe('createEdpUseCases', () => {
         inTransaction = false;
       }
     });
+    const findByKey = vi.fn(async () => {
+      steps.push('findByKey');
+      if (!inTransaction) {
+        throw new Error('idempotency lookup must happen inside the unit of work');
+      }
+
+      return null;
+    });
+    const remember = vi.fn(async () => {
+      steps.push('remember');
+      if (!inTransaction) {
+        throw new Error('idempotency remember must happen inside the unit of work');
+      }
+    });
+    const markProcessed = vi.fn(async () => {
+      steps.push('markProcessed');
+      if (!inTransaction) {
+        throw new Error('idempotency markProcessed must happen inside the unit of work');
+      }
+    });
     const append = vi.fn(async () => {
+      steps.push('eventStore');
       if (!inTransaction) {
         throw new Error('event store append must happen inside the unit of work');
       }
     });
     const enqueue = vi.fn(async () => {
+      steps.push('outbox');
       if (!inTransaction) {
         throw new Error('outbox enqueue must happen inside the unit of work');
       }
     });
     const auditAppend = vi.fn(async () => {
+      steps.push('audit');
       if (!inTransaction) {
         throw new Error('audit append must happen inside the unit of work');
       }
     });
     const correlationUpsert = vi.fn(async () => {
+      steps.push('correlation');
       if (!inTransaction) {
         throw new Error('correlation upsert must happen inside the unit of work');
       }
@@ -79,6 +104,11 @@ describe('createEdpUseCases', () => {
         },
         correlationRepository: {
           upsert: correlationUpsert,
+        },
+        idempotencyRepository: {
+          findByKey,
+          remember,
+          markProcessed,
         },
       },
       {
@@ -99,6 +129,10 @@ describe('createEdpUseCases', () => {
             return Reflect.get(target, property, receiver);
           }
 
+          if (property === 'idempotencyRepository') {
+            return Reflect.get(target, property, receiver);
+          }
+
           throw new Error(`repository registry should not access ${String(property)} in this wave`);
         },
       },
@@ -112,30 +146,131 @@ describe('createEdpUseCases', () => {
     const response = await useCases.createSimulation.execute(buildCommandEnvelope() as never);
 
     expect(run).toHaveBeenCalledTimes(1);
+    expect(findByKey).toHaveBeenCalledTimes(1);
+    expect(remember).toHaveBeenCalledTimes(1);
     expect(append).toHaveBeenCalledTimes(1);
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(auditAppend).toHaveBeenCalledTimes(1);
     expect(correlationUpsert).toHaveBeenCalledTimes(1);
+    expect(markProcessed).toHaveBeenCalledTimes(1);
+    expect(steps.indexOf('findByKey')).toBeLessThan(steps.indexOf('remember'));
+    expect(steps.indexOf('remember')).toBeLessThan(steps.indexOf('eventStore'));
+    expect(steps.indexOf('eventStore')).toBeLessThan(steps.indexOf('outbox'));
+    expect(steps.indexOf('outbox')).toBeLessThan(steps.indexOf('audit'));
+    expect(steps.indexOf('audit')).toBeLessThan(steps.indexOf('correlation'));
+    expect(steps.indexOf('correlation')).toBeLessThan(steps.indexOf('markProcessed'));
     expect(response.success).toBe(true);
     expect(response.data.commandName).toBe('CreateSimulation');
     expect(response.data.accepted).toBe(true);
   });
 
+  it('fails fast on received duplicates without reexecuting persistence', async () => {
+    const run = vi.fn(async <T>(action: (transaction: never) => Promise<T>) => action(undefined as never));
+    const findByKey = vi.fn(async () => ({
+      idempotencyKey: 'idem-1',
+      tenantId: 'tenant-1',
+      owner: 'CreateSimulation',
+      requestHash: 'cmd-1',
+      status: 'RECEIVED' as const,
+      createdAt: '2026-07-01T00:00:00.000Z',
+      updatedAt: '2026-07-01T00:00:00.000Z',
+    }));
+    const append = vi.fn(async () => undefined);
+    const enqueue = vi.fn(async () => undefined);
+    const auditAppend = vi.fn(async () => undefined);
+    const correlationUpsert = vi.fn(async () => undefined);
+    const remember = vi.fn(async () => undefined);
+    const markProcessed = vi.fn(async () => undefined);
+    const useCases = createEdpUseCases({
+      uow: { run } as EdpUnitOfWork,
+      repositoryRegistry: {
+        idempotencyRepository: {
+          findByKey,
+          remember,
+          markProcessed,
+        },
+        eventStoreRepository: { append },
+        outboxRepository: { enqueue },
+        auditTimelineRepository: { append: auditAppend },
+        correlationRepository: { upsert: correlationUpsert },
+      },
+    });
+
+    await expect(useCases.createSimulation.execute(buildCommandEnvelope() as never)).rejects.toThrow(
+      'Idempotency conflict',
+    );
+    expect(findByKey).toHaveBeenCalledTimes(1);
+    expect(remember).not.toHaveBeenCalled();
+    expect(append).not.toHaveBeenCalled();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(auditAppend).not.toHaveBeenCalled();
+    expect(correlationUpsert).not.toHaveBeenCalled();
+    expect(markProcessed).not.toHaveBeenCalled();
+  });
+
+  it('short-circuits processed duplicates without reexecuting persistence', async () => {
+    const run = vi.fn(async <T>(action: (transaction: never) => Promise<T>) => action(undefined as never));
+    const findByKey = vi.fn(async () => ({
+      idempotencyKey: 'idem-1',
+      tenantId: 'tenant-1',
+      owner: 'CreateSimulation',
+      requestHash: 'cmd-1',
+      status: 'PROCESSED' as const,
+      responseId: 'response-1',
+      createdAt: '2026-07-01T00:00:00.000Z',
+      updatedAt: '2026-07-01T00:00:00.000Z',
+    }));
+    const append = vi.fn(async () => undefined);
+    const enqueue = vi.fn(async () => undefined);
+    const auditAppend = vi.fn(async () => undefined);
+    const correlationUpsert = vi.fn(async () => undefined);
+    const remember = vi.fn(async () => undefined);
+    const markProcessed = vi.fn(async () => undefined);
+    const useCases = createEdpUseCases({
+      uow: { run } as EdpUnitOfWork,
+      repositoryRegistry: {
+        idempotencyRepository: {
+          findByKey,
+          remember,
+          markProcessed,
+        },
+        eventStoreRepository: { append },
+        outboxRepository: { enqueue },
+        auditTimelineRepository: { append: auditAppend },
+        correlationRepository: { upsert: correlationUpsert },
+      },
+    });
+
+    const response = await useCases.createSimulation.execute(buildCommandEnvelope() as never);
+
+    expect(findByKey).toHaveBeenCalledTimes(1);
+    expect(remember).not.toHaveBeenCalled();
+    expect(append).not.toHaveBeenCalled();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(auditAppend).not.toHaveBeenCalled();
+    expect(correlationUpsert).not.toHaveBeenCalled();
+    expect(markProcessed).not.toHaveBeenCalled();
+    expect(response.success).toBe(true);
+  });
+
   it('propagates correlation failures and aborts the command', async () => {
     const run = vi.fn(async <T>(action: (transaction: never) => Promise<T>) => action(undefined as never));
+    const findByKey = vi.fn(async () => null);
+    const remember = vi.fn(async () => undefined);
     const append = vi.fn(async () => undefined);
     const enqueue = vi.fn(async () => undefined);
     const auditAppend = vi.fn(async () => undefined);
     const correlationUpsert = vi.fn(async () => {
       throw new Error('correlation unavailable');
     });
-    const idempotencyRepository = {
-      remember: vi.fn(),
-      findByKey: vi.fn(),
-      markProcessed: vi.fn(),
-    };
+    const markProcessed = vi.fn(async () => undefined);
     const unitOfWork = { run } as EdpUnitOfWork;
     const repositoryRegistry = {
+      idempotencyRepository: {
+        findByKey,
+        remember,
+        markProcessed,
+      },
       eventStoreRepository: {
         append,
       },
@@ -148,7 +283,6 @@ describe('createEdpUseCases', () => {
       correlationRepository: {
         upsert: correlationUpsert,
       },
-      idempotencyRepository,
     };
 
     const useCases = createEdpUseCases({
@@ -160,13 +294,13 @@ describe('createEdpUseCases', () => {
       'correlation unavailable',
     );
     expect(run).toHaveBeenCalledTimes(1);
+    expect(findByKey).toHaveBeenCalledTimes(1);
+    expect(remember).toHaveBeenCalledTimes(1);
     expect(append).toHaveBeenCalledTimes(1);
     expect(enqueue).toHaveBeenCalledTimes(1);
     expect(auditAppend).toHaveBeenCalledTimes(1);
     expect(correlationUpsert).toHaveBeenCalledTimes(1);
-    expect(idempotencyRepository.remember).not.toHaveBeenCalled();
-    expect(idempotencyRepository.findByKey).not.toHaveBeenCalled();
-    expect(idempotencyRepository.markProcessed).not.toHaveBeenCalled();
+    expect(markProcessed).not.toHaveBeenCalled();
   });
 
   it('keeps queries free from event store, outbox, audit and correlation persistence', async () => {
@@ -174,10 +308,13 @@ describe('createEdpUseCases', () => {
     const enqueue = vi.fn();
     const auditAppend = vi.fn();
     const correlationUpsert = vi.fn();
+    const findByKey = vi.fn();
+    const remember = vi.fn();
+    const markProcessed = vi.fn();
     const idempotencyRepository = {
+      findByKey,
       remember: vi.fn(),
-      findByKey: vi.fn(),
-      markProcessed: vi.fn(),
+      markProcessed,
     };
 
     const result = await createQueryExecution('GetAuditTimeline' as never, buildQueryEnvelope() as never);
@@ -187,8 +324,8 @@ describe('createEdpUseCases', () => {
     expect(enqueue).not.toHaveBeenCalled();
     expect(auditAppend).not.toHaveBeenCalled();
     expect(correlationUpsert).not.toHaveBeenCalled();
-    expect(idempotencyRepository.remember).not.toHaveBeenCalled();
-    expect(idempotencyRepository.findByKey).not.toHaveBeenCalled();
-    expect(idempotencyRepository.markProcessed).not.toHaveBeenCalled();
+    expect(findByKey).not.toHaveBeenCalled();
+    expect(remember).not.toHaveBeenCalled();
+    expect(markProcessed).not.toHaveBeenCalled();
   });
 });
