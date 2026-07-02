@@ -59,12 +59,25 @@ type AuditTimelineRepositoryLike = {
   }): Promise<unknown>;
 };
 
+type CorrelationRepositoryLike = {
+  upsert(record: {
+    tenantId: string;
+    correlationId: string;
+    aggregateId?: string | null;
+    aggregateType?: string | null;
+    causationId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    createdAt: string;
+  }): Promise<unknown>;
+};
+
 export interface EdpUseCaseDependencies {
   uow: EdpUnitOfWork;
   repositoryRegistry?: Readonly<{
     eventStoreRepository?: EventStoreRepositoryLike;
     outboxRepository?: OutboxRepositoryLike;
     auditTimelineRepository?: AuditTimelineRepositoryLike;
+    correlationRepository?: CorrelationRepositoryLike;
   }>;
 }
 
@@ -125,6 +138,22 @@ const executeCommandUseCase = async (
       input.userId,
       input.correlationId,
       result.emittedEvent.payload,
+    ),
+  );
+  await dependencies.repositoryRegistry?.correlationRepository?.upsert(
+    createCorrelationRecord(
+      result.emittedEvent.tenantId,
+      result.emittedEvent.correlationId,
+      result.emittedEvent.aggregateType,
+      result.emittedEvent.aggregateId,
+      input.causationId ?? result.emittedEvent.causationId ?? null,
+      null,
+      {
+        commandId: input.commandId,
+        commandName,
+        eventId: result.emittedEvent.eventId,
+        eventName: result.emittedEvent.name,
+      },
     ),
   );
 
