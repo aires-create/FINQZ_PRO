@@ -14,7 +14,6 @@ import type { EdpAggregateName } from '../domain/aggregates.js';
 import { EdpContractViolationError } from '../domain/exceptions.js';
 import { createCommandExecution, createQueryExecution } from './runtime-foundation.js';
 import type { EdpUnitOfWork } from './unit-of-work.js';
-import type { EdpTransactionBoundary } from './transaction-boundary.js';
 
 type UseCaseContext = {
   tenantId: string;
@@ -28,6 +27,11 @@ type AggregateRepo<TAggregate extends EdpStoredAggregate<EdpAggregateName, strin
   findById(tenantId: string, aggregateId: string): Promise<TAggregate | null>;
   save(aggregate: TAggregate): Promise<TAggregate>;
 };
+
+export interface EdpUseCaseDependencies {
+  uow: EdpUnitOfWork;
+  repositoryRegistry?: Readonly<Record<string, unknown>>;
+}
 
 const requireTenantId = (tenantId: string): string => {
   if (!tenantId.trim()) {
@@ -162,15 +166,24 @@ export interface EdpUseCaseBundle {
   rejectProposal: RejectProposalUseCase;
 }
 
-export const createEdpUseCases = (uow: EdpUnitOfWork): EdpUseCaseBundle => ({
-  createSimulation: new CreateSimulationUseCase(uow),
-  updateSimulationInput: new UpdateSimulationInputUseCase(uow),
-  calculateSimulation: new CalculateSimulationUseCase(uow),
-  generateProposal: new GenerateProposalUseCase(uow),
-  recommendDecision: new RecommendDecisionUseCase(uow),
-  materializeOpportunity: new MaterializeOpportunityUseCase(uow),
-  createOperationCandidate: new CreateOperationCandidateUseCase(uow),
-  acceptProposal: new AcceptProposalUseCase(uow),
-  rejectProposal: new RejectProposalUseCase(uow),
-});
+export function createEdpUseCases(uow: EdpUnitOfWork): EdpUseCaseBundle;
+export function createEdpUseCases(dependencies: EdpUseCaseDependencies): EdpUseCaseBundle;
+export function createEdpUseCases(
+  uowOrDependencies: EdpUnitOfWork | EdpUseCaseDependencies,
+): EdpUseCaseBundle {
+  const uow = 'run' in uowOrDependencies ? uowOrDependencies : uowOrDependencies.uow;
+  const repositoryRegistry = 'run' in uowOrDependencies ? undefined : uowOrDependencies.repositoryRegistry;
+  void repositoryRegistry;
 
+  return {
+    createSimulation: new CreateSimulationUseCase(uow),
+    updateSimulationInput: new UpdateSimulationInputUseCase(uow),
+    calculateSimulation: new CalculateSimulationUseCase(uow),
+    generateProposal: new GenerateProposalUseCase(uow),
+    recommendDecision: new RecommendDecisionUseCase(uow),
+    materializeOpportunity: new MaterializeOpportunityUseCase(uow),
+    createOperationCandidate: new CreateOperationCandidateUseCase(uow),
+    acceptProposal: new AcceptProposalUseCase(uow),
+    rejectProposal: new RejectProposalUseCase(uow),
+  };
+}

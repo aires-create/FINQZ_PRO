@@ -23,10 +23,14 @@ export const createEdpComposition = (
 ): EdpComposition => {
   const prismaClient = dependencies.prismaClient ?? prisma;
   const unitOfWork = new PrismaEdpUnitOfWork(prismaClient);
+  const repositoryRegistry = createPrismaEdpRepositoryRegistry(prismaClient);
 
   return {
-    repositoryRegistry: createPrismaEdpRepositoryRegistry(prismaClient),
+    repositoryRegistry,
     unitOfWork,
-    useCases: createEdpUseCases(unitOfWork),
+    useCases: createEdpUseCases({
+      uow: unitOfWork,
+      repositoryRegistry,
+    }),
   };
 };

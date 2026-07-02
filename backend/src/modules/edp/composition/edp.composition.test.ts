@@ -12,6 +12,8 @@ describe('createEdpComposition', () => {
     expect(composition.unitOfWork).toBeDefined();
     expect(typeof composition.unitOfWork.run).toBe('function');
     expect(composition.repositoryRegistry).toBeDefined();
+    expect(composition.useCases).toBeDefined();
+    expect(composition.useCases.createSimulation).toBeDefined();
     expect(composition.repositoryRegistry.decisionRepository).toBeDefined();
     expect(composition.repositoryRegistry.eventStoreRepository).toBeDefined();
     expect(composition.repositoryRegistry.outboxRepository).toBeDefined();
