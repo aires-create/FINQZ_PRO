@@ -46,11 +46,25 @@ type OutboxRepositoryLike = {
   }): Promise<unknown>;
 };
 
+type AuditTimelineRepositoryLike = {
+  append(record: {
+    tenantId: string;
+    aggregateType: string;
+    aggregateId: string;
+    action: string;
+    actorId: string;
+    correlationId: string;
+    occurredAt: string;
+    payload: Record<string, unknown>;
+  }): Promise<unknown>;
+};
+
 export interface EdpUseCaseDependencies {
   uow: EdpUnitOfWork;
   repositoryRegistry?: Readonly<{
     eventStoreRepository?: EventStoreRepositoryLike;
     outboxRepository?: OutboxRepositoryLike;
+    auditTimelineRepository?: AuditTimelineRepositoryLike;
   }>;
 }
 
@@ -100,6 +114,17 @@ const executeCommandUseCase = async (
       result.emittedEvent.aggregateId,
       result.emittedEvent.payload,
       result.emittedEvent.timestamp,
+    ),
+  );
+  await dependencies.repositoryRegistry?.auditTimelineRepository?.append(
+    createAuditRecord(
+      result.emittedEvent.tenantId,
+      result.emittedEvent.aggregateType,
+      result.emittedEvent.aggregateId,
+      result.emittedEvent.name,
+      input.userId,
+      input.correlationId,
+      result.emittedEvent.payload,
     ),
   );
 
