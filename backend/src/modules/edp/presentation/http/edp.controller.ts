@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { randomUUID } from 'node:crypto';
 
+import type { EdpComposition } from '../../composition/edp.composition.js';
 import { edpCommandHandlers } from '../../application/command-handlers.js';
 import { edpQueryHandlers } from '../../application/query-handlers.js';
 import type { EdpFastifyRequest } from '../../contracts/envelopes.js';
@@ -13,7 +14,11 @@ const asEdpRequest = (request: FastifyRequest) => request as EdpFastifyRequest;
 const buildFallbackCorrelationId = (request: FastifyRequest) =>
   asEdpRequest(request).edpContext?.correlationId ?? request.id ?? randomUUID();
 
-export const edpController = {
+export interface EdpControllerDependencies {
+  composition: EdpComposition;
+}
+
+export const createEdpController = (_dependencies: EdpControllerDependencies) => ({
   async runtime(request: FastifyRequest, reply: FastifyReply) {
     return reply.send({
       status: 'ready',
@@ -95,7 +100,7 @@ export const edpController = {
     const result = await handler.handle(body);
     return reply.send(result);
   },
-};
+});
 
 function validateEdpCommandName(value: string) {
   return typeof value === 'string' && value.trim().length > 0;
