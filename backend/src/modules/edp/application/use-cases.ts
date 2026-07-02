@@ -34,10 +34,23 @@ type EventStoreRepositoryLike = {
   append(event: EdpEventEnvelope<EdpEventName, Record<string, unknown>>): Promise<unknown>;
 };
 
+type OutboxRepositoryLike = {
+  enqueue(record: {
+    tenantId: string;
+    eventId: string;
+    eventName: EdpEventName;
+    aggregateId: string;
+    aggregateType: string;
+    availableAt: string;
+    payload: Record<string, unknown>;
+  }): Promise<unknown>;
+};
+
 export interface EdpUseCaseDependencies {
   uow: EdpUnitOfWork;
   repositoryRegistry?: Readonly<{
     eventStoreRepository?: EventStoreRepositoryLike;
+    outboxRepository?: OutboxRepositoryLike;
   }>;
 }
 
@@ -78,6 +91,17 @@ const executeCommandUseCase = async (
 ): Promise<EdpResponseEnvelope<Record<string, unknown>>> => dependencies.uow.run(async () => {
   const result = await createCommandExecution(commandName, input);
   await dependencies.repositoryRegistry?.eventStoreRepository?.append(result.emittedEvent);
+  await dependencies.repositoryRegistry?.outboxRepository?.enqueue(
+    createOutboxRecord(
+      result.emittedEvent.tenantId,
+      result.emittedEvent.eventId,
+      result.emittedEvent.name,
+      result.emittedEvent.aggregateType,
+      result.emittedEvent.aggregateId,
+      result.emittedEvent.payload,
+      result.emittedEvent.timestamp,
+    ),
+  );
 
   return result.envelope;
 });
