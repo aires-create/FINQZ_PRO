@@ -6,6 +6,8 @@ import type {
   EdpQueryEnvelope,
   EdpResponseEnvelope,
 } from '../contracts/envelopes.js';
+import type { EdpCommandName } from '../contracts/commands.js';
+import type { EdpEventName } from '../contracts/events.js';
 import { edpEventPublisher } from '../domain/event-publisher.js';
 import { createAuditRecord, createCorrelationRecord, createEventStoreRecord, createIdempotencyRecord, createOutboxRecord, createStoredAggregate, createVersionRecord } from '../domain/factories.js';
 import type { EdpDomainService } from '../domain/services.js';
@@ -28,9 +30,15 @@ type AggregateRepo<TAggregate extends EdpStoredAggregate<EdpAggregateName, strin
   save(aggregate: TAggregate): Promise<TAggregate>;
 };
 
+type EventStoreRepositoryLike = {
+  append(event: EdpEventEnvelope<EdpEventName, Record<string, unknown>>): Promise<unknown>;
+};
+
 export interface EdpUseCaseDependencies {
   uow: EdpUnitOfWork;
-  repositoryRegistry?: Readonly<Record<string, unknown>>;
+  repositoryRegistry?: Readonly<{
+    eventStoreRepository?: EventStoreRepositoryLike;
+  }>;
 }
 
 const requireTenantId = (tenantId: string): string => {
@@ -63,78 +71,86 @@ const withResponse = (
   data: payload,
 });
 
+const executeCommandUseCase = async (
+  dependencies: EdpUseCaseDependencies,
+  commandName: EdpCommandName,
+  input: EdpCommandEnvelope,
+): Promise<EdpResponseEnvelope<Record<string, unknown>>> => dependencies.uow.run(async () => {
+  const result = await createCommandExecution(commandName, input);
+  await dependencies.repositoryRegistry?.eventStoreRepository?.append(result.emittedEvent);
+
+  return result.envelope;
+});
+
 export class CreateSimulationUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => {
-      const result = await createCommandExecution('CreateSimulation', input);
-      return result.envelope;
-    });
+    return executeCommandUseCase(this.dependencies, 'CreateSimulation', input);
   }
 }
 
 export class UpdateSimulationInputUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('UpdateSimulationInput', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'UpdateSimulationInput', input);
   }
 }
 
 export class CalculateSimulationUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('CalculateSimulation', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'CalculateSimulation', input);
   }
 }
 
 export class GenerateProposalUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('GenerateProposal', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'GenerateProposal', input);
   }
 }
 
 export class RecommendDecisionUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('RecommendDecision', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'RecommendDecision', input);
   }
 }
 
 export class MaterializeOpportunityUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('MaterializeOpportunity', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'MaterializeOpportunity', input);
   }
 }
 
 export class CreateOperationCandidateUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('CreateOperationCandidate', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'CreateOperationCandidate', input);
   }
 }
 
 export class AcceptProposalUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('AcceptProposal', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'AcceptProposal', input);
   }
 }
 
 export class RejectProposalUseCase {
-  constructor(private readonly uow: EdpUnitOfWork) {}
+  constructor(private readonly dependencies: EdpUseCaseDependencies) {}
 
   async execute(input: EdpCommandEnvelope): Promise<EdpResponseEnvelope<Record<string, unknown>>> {
-    return this.uow.run(async () => (await createCommandExecution('RejectProposal', input)).envelope);
+    return executeCommandUseCase(this.dependencies, 'RejectProposal', input);
   }
 }
 
@@ -171,19 +187,19 @@ export function createEdpUseCases(dependencies: EdpUseCaseDependencies): EdpUseC
 export function createEdpUseCases(
   uowOrDependencies: EdpUnitOfWork | EdpUseCaseDependencies,
 ): EdpUseCaseBundle {
-  const uow = 'run' in uowOrDependencies ? uowOrDependencies : uowOrDependencies.uow;
-  const repositoryRegistry = 'run' in uowOrDependencies ? undefined : uowOrDependencies.repositoryRegistry;
-  void repositoryRegistry;
+  const dependencies = 'run' in uowOrDependencies
+    ? { uow: uowOrDependencies }
+    : uowOrDependencies;
 
   return {
-    createSimulation: new CreateSimulationUseCase(uow),
-    updateSimulationInput: new UpdateSimulationInputUseCase(uow),
-    calculateSimulation: new CalculateSimulationUseCase(uow),
-    generateProposal: new GenerateProposalUseCase(uow),
-    recommendDecision: new RecommendDecisionUseCase(uow),
-    materializeOpportunity: new MaterializeOpportunityUseCase(uow),
-    createOperationCandidate: new CreateOperationCandidateUseCase(uow),
-    acceptProposal: new AcceptProposalUseCase(uow),
-    rejectProposal: new RejectProposalUseCase(uow),
+    createSimulation: new CreateSimulationUseCase(dependencies),
+    updateSimulationInput: new UpdateSimulationInputUseCase(dependencies),
+    calculateSimulation: new CalculateSimulationUseCase(dependencies),
+    generateProposal: new GenerateProposalUseCase(dependencies),
+    recommendDecision: new RecommendDecisionUseCase(dependencies),
+    materializeOpportunity: new MaterializeOpportunityUseCase(dependencies),
+    createOperationCandidate: new CreateOperationCandidateUseCase(dependencies),
+    acceptProposal: new AcceptProposalUseCase(dependencies),
+    rejectProposal: new RejectProposalUseCase(dependencies),
   };
 }
