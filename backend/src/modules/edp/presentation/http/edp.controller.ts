@@ -1,11 +1,11 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { randomUUID } from 'node:crypto';
 
-import type { EdpComposition } from '../../composition/edp.composition.js';
+import type { EdpComposition, EdpUseCaseBundle } from '../../composition/edp.composition.js';
 import { edpCommandHandlers } from '../../application/command-handlers.js';
 import { edpQueryHandlers } from '../../application/query-handlers.js';
 import type { EdpFastifyRequest } from '../../contracts/envelopes.js';
-import { EDP_COMMAND_CATALOG } from '../../contracts/commands.js';
+import { EDP_COMMAND_CATALOG, type EdpCommandName } from '../../contracts/commands.js';
 import { EDP_QUERY_CATALOG } from '../../contracts/queries.js';
 import { validateEdpCommandEnvelope, validateEdpQueryEnvelope } from '../../validators/index.js';
 
@@ -18,7 +18,25 @@ export interface EdpControllerDependencies {
   composition: EdpComposition;
 }
 
-export const createEdpController = (_dependencies: EdpControllerDependencies) => ({
+type CommandUseCaseExecutor = (command: Parameters<EdpUseCaseBundle['createSimulation']['execute']>[0]) => ReturnType<EdpUseCaseBundle['createSimulation']['execute']>;
+
+const createCommandUseCaseExecutors = (useCases: EdpUseCaseBundle): Partial<Record<EdpCommandName, CommandUseCaseExecutor>> =>
+  ({
+    CreateSimulation: (command) => useCases.createSimulation.execute(command),
+    UpdateSimulationInput: (command) => useCases.updateSimulationInput.execute(command),
+    CalculateSimulation: (command) => useCases.calculateSimulation.execute(command),
+    GenerateProposal: (command) => useCases.generateProposal.execute(command),
+    RecommendDecision: (command) => useCases.recommendDecision.execute(command),
+    MaterializeOpportunity: (command) => useCases.materializeOpportunity.execute(command),
+    CreateOperationCandidate: (command) => useCases.createOperationCandidate.execute(command),
+    AcceptProposal: (command) => useCases.acceptProposal.execute(command),
+    RejectProposal: (command) => useCases.rejectProposal.execute(command),
+  });
+
+export const createEdpController = ({ composition }: EdpControllerDependencies) => {
+  const commandUseCaseExecutors = createCommandUseCaseExecutors(composition.useCases);
+
+  return {
   async runtime(request: FastifyRequest, reply: FastifyReply) {
     return reply.send({
       status: 'ready',
@@ -54,6 +72,13 @@ export const createEdpController = (_dependencies: EdpControllerDependencies) =>
         error: 'Invalid command envelope',
         correlationId,
       });
+    }
+
+    const commandExecutor = commandUseCaseExecutors[commandName as EdpCommandName];
+
+    if (commandExecutor) {
+      const result = await commandExecutor(body);
+      return reply.send(result);
     }
 
     const handler = edpCommandHandlers[commandName as keyof typeof edpCommandHandlers];
@@ -100,7 +125,8 @@ export const createEdpController = (_dependencies: EdpControllerDependencies) =>
     const result = await handler.handle(body);
     return reply.send(result);
   },
-});
+  };
+};
 
 function validateEdpCommandName(value: string) {
   return typeof value === 'string' && value.trim().length > 0;

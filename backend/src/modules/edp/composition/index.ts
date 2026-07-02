@@ -3,5 +3,5 @@ export type {
   EdpComposition,
   EdpCompositionDependencies,
   EdpRepositoryRegistry,
+  EdpUseCaseBundle,
 } from './edp.composition.js';
-
