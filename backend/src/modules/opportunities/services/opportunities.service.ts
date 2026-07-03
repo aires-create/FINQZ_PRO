@@ -1,6 +1,3 @@
-import { Prisma } from '@prisma/client';
-
-import { prisma } from '../../../core/prisma/client.js';
 import {
   BadRequestError,
   ConflictError,
@@ -20,6 +17,24 @@ import type {
 import {
   opportunitiesRepository,
   type FindManyOpportunitiesParams,
+  type OpportunitiesTransactionClient,
+  createCustomerInTransaction,
+  findCustomerById,
+  findCustomerTenantScope,
+  findLeadById,
+  findLeadTenantScope,
+  findModalityById,
+  findModalityTenantScope,
+  findOpportunityTenantScope,
+  findPipelineById,
+  findPipelineTenantScope,
+  findProductById,
+  findProductTenantScope,
+  findStageById,
+  findStageTenantScope,
+  findSubproductById,
+  findSubproductTenantScope,
+  runOpportunitiesSerializableTransaction,
 } from '../repositories/opportunities.repository.js';
 
 export class OpportunityNotFoundError extends Error {
@@ -129,8 +144,6 @@ export type ArchiveOpportunityInput = {
   actorId?: string | null;
   opportunityId: string;
 };
-
-type OpportunitiesPrismaClient = typeof prisma | Prisma.TransactionClient;
 
 const AuditActions = {
   OPPORTUNITY_CREATED: 'OPPORTUNITY_CREATED',
@@ -246,8 +259,8 @@ const parseOptionalDate = (value?: string | Date | null) => {
 
 const buildOpportunityUpdateData = (
   input: UpdateOpportunityInput,
-): Prisma.OpportunityUncheckedUpdateInput => {
-  const data: Prisma.OpportunityUncheckedUpdateInput = {};
+): Parameters<typeof opportunitiesRepository.update>[2] => {
+  const data: Parameters<typeof opportunitiesRepository.update>[2] = {};
 
   if (input.title !== undefined) data.title = input.title.trim();
   if (input.description !== undefined) data.description = normalizeText(input.description);
@@ -338,7 +351,6 @@ export class OpportunitiesService {
         subproductId: scopedInput.subproductId ?? null,
         modalityId: scopedInput.modalityId ?? null,
       },
-      prisma,
     );
 
     const created = await opportunitiesRepository.create({
@@ -391,7 +403,7 @@ export class OpportunitiesService {
   ): Promise<CreateOpportunityIntakeResponseDto> {
     if (!tenantId) throw new TenantScopeViolationError('tenant', 'missing');
 
-    return prisma.$transaction(async (tx) => {
+    return runOpportunitiesSerializableTransaction(async (tx) => {
       await this.assertPipelineAndStageConsistency(
         {
           tenantId,
@@ -496,7 +508,6 @@ export class OpportunitiesService {
         subproductId: nextSubproductId,
         modalityId: nextModalityId,
       },
-      prisma,
     );
 
     if (scopedInput.customerId !== undefined && scopedInput.customerId !== null) {
@@ -616,27 +627,19 @@ export class OpportunitiesService {
       pipelineId: string;
       stageId: string;
     },
-    client: OpportunitiesPrismaClient = prisma,
+    client?: OpportunitiesTransactionClient,
   ) {
-    const pipeline = await client.pipeline.findFirst({
-      where: {
-        id: input.pipelineId,
-        tenantId: input.tenantId,
-        deletedAt: null,
-      },
-    });
+    const pipeline = client
+      ? await findPipelineById(input.tenantId, input.pipelineId, client)
+      : await findPipelineById(input.tenantId, input.pipelineId);
 
     if (!pipeline) {
       await this.throwInvalidOrTenantScope('pipeline', input.pipelineId, input.tenantId);
     }
 
-    const stage = await client.stage.findFirst({
-      where: {
-        id: input.stageId,
-        tenantId: input.tenantId,
-        deletedAt: null,
-      },
-    });
+    const stage = client
+      ? await findStageById(input.tenantId, input.stageId, client)
+      : await findStageById(input.tenantId, input.stageId);
 
     if (!stage) {
       await this.throwInvalidOrTenantScope('stage', input.stageId, input.tenantId);
@@ -658,7 +661,7 @@ export class OpportunitiesService {
       subproductId?: string | null;
       modalityId?: string | null;
     },
-    client: OpportunitiesPrismaClient = prisma,
+    client?: OpportunitiesTransactionClient,
   ) {
     const productId = normalizeText(input.productId);
     const subproductId = normalizeText(input.subproductId);
@@ -677,14 +680,9 @@ export class OpportunitiesService {
     }
 
     if (productId) {
-      const product = await client.masterCatalogProduct.findFirst({
-        where: {
-          id: productId,
-          tenantId: input.tenantId,
-          deletedAt: null,
-        },
-        select: { id: true },
-      });
+      const product = client
+        ? await findProductById(input.tenantId, productId, client)
+        : await findProductById(input.tenantId, productId);
 
       if (!product) {
         await this.throwInvalidOrTenantScope('product', productId, input.tenantId);
@@ -692,17 +690,9 @@ export class OpportunitiesService {
     }
 
     if (subproductId) {
-      const subproduct = await client.masterCatalogSubproduct.findFirst({
-        where: {
-          id: subproductId,
-          tenantId: input.tenantId,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          productId: true,
-        },
-      });
+      const subproduct = client
+        ? await findSubproductById(input.tenantId, subproductId, client)
+        : await findSubproductById(input.tenantId, subproductId);
 
       if (!subproduct) {
         await this.throwInvalidOrTenantScope('subproduct', subproductId, input.tenantId);
@@ -714,17 +704,9 @@ export class OpportunitiesService {
     }
 
     if (modalityId) {
-      const modality = await client.masterCatalogModality.findFirst({
-        where: {
-          id: modalityId,
-          tenantId: input.tenantId,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          subproductId: true,
-        },
-      });
+      const modality = client
+        ? await findModalityById(input.tenantId, modalityId, client)
+        : await findModalityById(input.tenantId, modalityId);
 
       if (!modality) {
         await this.throwInvalidOrTenantScope('modality', modalityId, input.tenantId);
@@ -740,7 +722,7 @@ export class OpportunitiesService {
     tenantId: string,
     customer: CreateOpportunityIntakeCustomerDto,
     allowCreateCustomer: boolean,
-    tx: Prisma.TransactionClient,
+    tx: OpportunitiesTransactionClient,
   ) {
     if (customer.id) {
       const existingById = await customersRepository.findById(tenantId, customer.id, tx);
@@ -812,15 +794,16 @@ export class OpportunitiesService {
       throw new BadRequestError('Customer CPF/CNPJ is required when customer creation is allowed');
     }
 
-    const createdCustomer = await tx.customer.create({
-      data: this.buildCustomerCreateDataForIntake(tenantId, customer, {
+    const createdCustomer = await createCustomerInTransaction(
+      this.buildCustomerCreateDataForIntake(tenantId, customer, {
         firstName,
         lastName,
         email,
         emailNormalized,
         cpfCnpj,
       }),
-    });
+      tx,
+    );
 
     return {
       customer: createdCustomer,
@@ -839,7 +822,7 @@ export class OpportunitiesService {
       cpfCnpj: string;
     },
   ): CreateCustomerRepositoryInput {
-    return {
+    const data = {
       tenantId,
       customerCode: `CUST-${Date.now()}`,
       firstName: required.firstName,
@@ -853,25 +836,26 @@ export class OpportunitiesService {
       maritalStatus: normalizeText(customer.maritalStatus),
       gender: normalizeText(customer.gender),
       documentType: normalizeText(customer.documentType),
-      address: (customer.address as Prisma.InputJsonValue | null | undefined) ?? Prisma.JsonNull,
-      bankData: (customer.bankData as Prisma.InputJsonValue | null | undefined) ?? Prisma.JsonNull,
       notes: normalizeText(customer.notes),
       isActive: true,
       partnerId: null,
       leadId: null,
       parentCustomerId: null,
-    };
+    } as CreateCustomerRepositoryInput;
+
+    if (customer.address !== undefined) {
+      data.address = customer.address as Exclude<CreateCustomerRepositoryInput['address'], undefined>;
+    }
+
+    if (customer.bankData !== undefined) {
+      data.bankData = customer.bankData as Exclude<CreateCustomerRepositoryInput['bankData'], undefined>;
+    }
+
+    return data;
   }
 
   private async assertCustomerBelongsToTenant(tenantId: string, customerId: string) {
-    const customer = await prisma.customer.findFirst({
-      where: {
-        id: customerId,
-        tenantId,
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
+    const customer = await findCustomerById(tenantId, customerId);
 
     if (!customer) {
       await this.throwInvalidOrTenantScope('customer', customerId, tenantId);
@@ -879,14 +863,7 @@ export class OpportunitiesService {
   }
 
   private async assertLeadBelongsToTenant(tenantId: string, leadId: string) {
-    const lead = await prisma.lead.findFirst({
-      where: {
-        id: leadId,
-        tenantId,
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
+    const lead = await findLeadById(tenantId, leadId);
 
     if (!lead) {
       await this.throwInvalidOrTenantScope('lead', leadId, tenantId);
@@ -898,10 +875,7 @@ export class OpportunitiesService {
     entityId: string,
     tenantId: string,
   ): Promise<never> {
-    const existsAnyTenant = await prisma.opportunity.findFirst({
-      where: { id: entityId },
-      select: { id: true, tenantId: true },
-    });
+    const existsAnyTenant = await findOpportunityTenantScope(entityId);
 
     if (existsAnyTenant && existsAnyTenant.tenantId !== tenantId) {
       throw new TenantScopeViolationError(entity, entityId);
@@ -916,34 +890,13 @@ export class OpportunitiesService {
     tenantId: string,
   ): Promise<never> {
     const entityFinders = {
-      pipeline: () => prisma.pipeline.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
-      stage: () => prisma.stage.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
-      customer: () => prisma.customer.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
-      lead: () => prisma.lead.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
-      product: () => prisma.masterCatalogProduct.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
-      subproduct: () => prisma.masterCatalogSubproduct.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
-      modality: () => prisma.masterCatalogModality.findFirst({
-        where: { id: entityId },
-        select: { id: true, tenantId: true },
-      }),
+      pipeline: () => findPipelineTenantScope(entityId),
+      stage: () => findStageTenantScope(entityId),
+      customer: () => findCustomerTenantScope(entityId),
+      lead: () => findLeadTenantScope(entityId),
+      product: () => findProductTenantScope(entityId),
+      subproduct: () => findSubproductTenantScope(entityId),
+      modality: () => findModalityTenantScope(entityId),
     };
 
     const existing = await entityFinders[entity]();

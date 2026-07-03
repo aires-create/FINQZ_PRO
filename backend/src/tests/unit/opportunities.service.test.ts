@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 const repoMock = vi.hoisted(() => ({
   findMany: vi.fn(),
@@ -22,6 +24,9 @@ const prismaMock = vi.hoisted(() => ({
   stage: { findFirst: vi.fn() },
   customer: { findFirst: vi.fn(), create: vi.fn() },
   lead: { findFirst: vi.fn() },
+  masterCatalogProduct: { findFirst: vi.fn() },
+  masterCatalogSubproduct: { findFirst: vi.fn() },
+  masterCatalogModality: { findFirst: vi.fn() },
   opportunity: { findFirst: vi.fn() },
 }));
 
@@ -29,9 +34,207 @@ const auditMock = vi.hoisted(() => ({
   registerAuditLog: vi.fn(),
 }));
 
-vi.mock('../../modules/opportunities/repositories/opportunities.repository.js', () => ({
+const opportunitiesRepositoryModuleMock = vi.hoisted(() => ({
   opportunitiesRepository: repoMock,
+  runOpportunitiesSerializableTransaction: vi.fn(
+    async (callback: (tx: Prisma.TransactionClient) => unknown) =>
+      prismaMock.$transaction(callback, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }),
+  ),
+  findPipelineById: vi.fn((tenantId: string, pipelineId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).pipeline.findFirst({
+      where: {
+        id: pipelineId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findPipelineTenantScope: vi.fn((pipelineId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).pipeline.findFirst({
+      where: {
+        id: pipelineId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findStageById: vi.fn((tenantId: string, stageId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).stage.findFirst({
+      where: {
+        id: stageId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        pipelineId: true,
+        isActive: true,
+      },
+    }),
+  ),
+  findStageTenantScope: vi.fn((stageId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).stage.findFirst({
+      where: {
+        id: stageId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findCustomerById: vi.fn((tenantId: string, customerId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).customer.findFirst({
+      where: {
+        id: customerId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findCustomerTenantScope: vi.fn((customerId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).customer.findFirst({
+      where: {
+        id: customerId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findLeadById: vi.fn((tenantId: string, leadId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).lead.findFirst({
+      where: {
+        id: leadId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findLeadTenantScope: vi.fn((leadId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).lead.findFirst({
+      where: {
+        id: leadId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findProductById: vi.fn((tenantId: string, productId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).masterCatalogProduct.findFirst({
+      where: {
+        id: productId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findProductTenantScope: vi.fn((productId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).masterCatalogProduct.findFirst({
+      where: {
+        id: productId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  findSubproductById: vi.fn((tenantId: string, subproductId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).masterCatalogSubproduct.findFirst({
+      where: {
+        id: subproductId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        productId: true,
+      },
+    }),
+  ),
+  findSubproductTenantScope: vi.fn((subproductId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).masterCatalogSubproduct.findFirst({
+      where: {
+        id: subproductId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        productId: true,
+      },
+    }),
+  ),
+  findModalityById: vi.fn((tenantId: string, modalityId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).masterCatalogModality.findFirst({
+      where: {
+        id: modalityId,
+        tenantId,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        subproductId: true,
+      },
+    }),
+  ),
+  findModalityTenantScope: vi.fn((modalityId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).masterCatalogModality.findFirst({
+      where: {
+        id: modalityId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        subproductId: true,
+      },
+    }),
+  ),
+  findOpportunityTenantScope: vi.fn((opportunityId: string, client?: Prisma.TransactionClient) =>
+    (client ?? prismaMock).opportunity.findFirst({
+      where: {
+        id: opportunityId,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    }),
+  ),
+  createCustomerInTransaction: vi.fn((data: unknown, client: Prisma.TransactionClient) =>
+    client.customer.create({
+      data: data as never,
+    }),
+  ),
 }));
+
+vi.mock('../../modules/opportunities/repositories/opportunities.repository.js', () => opportunitiesRepositoryModuleMock);
 
 vi.mock('../../core/prisma/client.js', () => ({
   prisma: prismaMock,
@@ -99,6 +302,9 @@ describe('OpportunitiesService', () => {
     prismaMock.customer.findFirst.mockReset();
     prismaMock.customer.create.mockReset();
     prismaMock.lead.findFirst.mockReset();
+    prismaMock.masterCatalogProduct.findFirst.mockReset();
+    prismaMock.masterCatalogSubproduct.findFirst.mockReset();
+    prismaMock.masterCatalogModality.findFirst.mockReset();
     prismaMock.opportunity.findFirst.mockReset();
     prismaMock.$transaction.mockImplementation(async (callback: (tx: Prisma.TransactionClient) => unknown) =>
       callback(txMock),
@@ -657,5 +863,17 @@ describe('OpportunitiesService', () => {
     expect(prismaMock.$transaction).toHaveBeenCalledOnce();
     expect(txMock.customer.create).toHaveBeenCalledOnce();
     expect(auditMock.registerAuditLog).not.toHaveBeenCalled();
+  });
+
+  it('service não acessa Prisma diretamente no source', () => {
+    const serviceSource = readFileSync(
+      new URL('../../modules/opportunities/services/opportunities.service.ts', import.meta.url),
+      'utf8',
+    );
+
+    expect(serviceSource).not.toContain("from '../../../core/prisma/client.js'");
+    expect(serviceSource).not.toContain('prisma.$transaction');
+    expect(serviceSource).not.toContain('tx.customer.create');
+    expect(serviceSource).not.toContain('Prisma.');
   });
 });

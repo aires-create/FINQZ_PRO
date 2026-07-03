@@ -1,7 +1,30 @@
+import { Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: vi.fn(),
+  pipeline: {
+    findFirst: vi.fn(),
+  },
+  stage: {
+    findFirst: vi.fn(),
+  },
+  customer: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+  },
+  lead: {
+    findFirst: vi.fn(),
+  },
+  masterCatalogProduct: {
+    findFirst: vi.fn(),
+  },
+  masterCatalogSubproduct: {
+    findFirst: vi.fn(),
+  },
+  masterCatalogModality: {
+    findFirst: vi.fn(),
+  },
   opportunity: {
     findMany: vi.fn(),
     count: vi.fn(),
@@ -16,6 +39,18 @@ vi.mock('../../core/prisma/client.js', () => ({
 }));
 
 import { opportunitiesRepository } from '../../modules/opportunities/repositories/opportunities.repository.js';
+import {
+  createCustomerInTransaction,
+  findCustomerById,
+  findLeadById,
+  findModalityById,
+  findOpportunityTenantScope,
+  findPipelineById,
+  findProductById,
+  findStageById,
+  findSubproductById,
+  runOpportunitiesSerializableTransaction,
+} from '../../modules/opportunities/repositories/opportunities.repository.js';
 
 describe('opportunitiesRepository', () => {
   it('findById respects tenant isolation', async () => {
@@ -88,6 +123,209 @@ describe('opportunitiesRepository', () => {
           },
         },
       },
+    });
+  });
+
+  it('runOpportunitiesSerializableTransaction uses serializable isolation', async () => {
+    await runOpportunitiesSerializableTransaction(async (transaction) => {
+      expect(transaction).toBeDefined();
+      return 'ok';
+    });
+
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }),
+    );
+  });
+
+  it('findPipelineById scopes by tenant', async () => {
+    prismaMock.pipeline.findFirst.mockResolvedValueOnce({ id: 'pipe-1', tenantId: 'tenant-a' });
+
+    await findPipelineById('tenant-a', 'pipe-1');
+
+    expect(prismaMock.pipeline.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'pipe-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    });
+  });
+
+  it('findStageById scopes by tenant and includes pipeline relation', async () => {
+    prismaMock.stage.findFirst.mockResolvedValueOnce({
+      id: 'stage-1',
+      tenantId: 'tenant-a',
+    });
+
+    await findStageById('tenant-a', 'stage-1');
+
+    expect(prismaMock.stage.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'stage-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        pipelineId: true,
+        isActive: true,
+      },
+    });
+  });
+
+  it('findOpportunityTenantScope reads cross-tenant identity only', async () => {
+    prismaMock.opportunity.findFirst.mockResolvedValueOnce({
+      id: 'opp-1',
+      tenantId: 'tenant-a',
+    });
+
+    await findOpportunityTenantScope('opp-1');
+
+    expect(prismaMock.opportunity.findFirst).toHaveBeenCalledWith({
+      where: { id: 'opp-1' },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    });
+  });
+
+  it('findCustomerById scopes by tenant', async () => {
+    prismaMock.customer.findFirst.mockResolvedValueOnce({ id: 'cust-1', tenantId: 'tenant-a' });
+
+    await findCustomerById('tenant-a', 'cust-1');
+
+    expect(prismaMock.customer.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'cust-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    });
+  });
+
+  it('findLeadById scopes by tenant', async () => {
+    prismaMock.lead.findFirst.mockResolvedValueOnce({ id: 'lead-1', tenantId: 'tenant-a' });
+
+    await findLeadById('tenant-a', 'lead-1');
+
+    expect(prismaMock.lead.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'lead-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    });
+  });
+
+  it('findProductById scopes by tenant', async () => {
+    prismaMock.masterCatalogProduct.findFirst.mockResolvedValueOnce({
+      id: 'product-1',
+      tenantId: 'tenant-a',
+    });
+
+    await findProductById('tenant-a', 'product-1');
+
+    expect(prismaMock.masterCatalogProduct.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'product-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+      },
+    });
+  });
+
+  it('findSubproductById scopes by tenant and returns product relation', async () => {
+    prismaMock.masterCatalogSubproduct.findFirst.mockResolvedValueOnce({
+      id: 'subproduct-1',
+      tenantId: 'tenant-a',
+    });
+
+    await findSubproductById('tenant-a', 'subproduct-1');
+
+    expect(prismaMock.masterCatalogSubproduct.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'subproduct-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        productId: true,
+      },
+    });
+  });
+
+  it('findModalityById scopes by tenant and returns subproduct relation', async () => {
+    prismaMock.masterCatalogModality.findFirst.mockResolvedValueOnce({
+      id: 'modality-1',
+      tenantId: 'tenant-a',
+    });
+
+    await findModalityById('tenant-a', 'modality-1');
+
+    expect(prismaMock.masterCatalogModality.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'modality-1',
+        tenantId: 'tenant-a',
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        subproductId: true,
+      },
+    });
+  });
+
+  it('createCustomerInTransaction normalizes JSON null values', async () => {
+    const tx = {
+      customer: {
+        create: vi.fn().mockResolvedValueOnce({ id: 'cust-1' }),
+      },
+    };
+
+    await createCustomerInTransaction(
+      {
+        tenantId: 'tenant-a',
+        customerCode: 'CUST-1',
+        firstName: 'Maria',
+        lastName: 'Silva',
+        email: 'maria@finqz.com.br',
+        emailNormalized: 'maria@finqz.com.br',
+        cpf: '12345678900',
+        address: null,
+        bankData: null,
+      },
+      tx as never,
+    );
+
+    expect(tx.customer.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        address: expect.any(Object),
+        bankData: expect.any(Object),
+      }),
     });
   });
 

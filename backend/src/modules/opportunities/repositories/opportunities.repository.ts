@@ -1,8 +1,11 @@
-import type { Opportunity, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Opportunity } from '@prisma/client';
 
 import { prisma } from '../../../core/prisma/client.js';
+import type { CreateCustomerRepositoryInput } from '../../crm/repositories/customers.repository.js';
 
 type OpportunitiesPrismaClient = typeof prisma | Prisma.TransactionClient;
+export type OpportunitiesTransactionClient = Prisma.TransactionClient;
 
 export type FindManyOpportunitiesParams = {
   tenantId: string;
@@ -123,6 +126,285 @@ const opportunitiesReadInclude = {
     },
   },
 } satisfies Prisma.OpportunityInclude;
+
+const normalizeJsonInput = (
+  value?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | null,
+) => {
+  if (value === undefined || value === null) {
+    return Prisma.JsonNull;
+  }
+
+  return value;
+};
+
+export const runOpportunitiesSerializableTransaction = async <T>(
+  action: (transaction: OpportunitiesTransactionClient) => Promise<T>,
+) => {
+  return prisma.$transaction(action, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
+};
+
+export const findPipelineById = (
+  tenantId: string,
+  pipelineId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.pipeline.findFirst({
+    where: {
+      id: pipelineId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findPipelineTenantScope = (
+  pipelineId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.pipeline.findFirst({
+    where: {
+      id: pipelineId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findStageById = (
+  tenantId: string,
+  stageId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.stage.findFirst({
+    where: {
+      id: stageId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      pipelineId: true,
+      isActive: true,
+    },
+  });
+};
+
+export const findStageTenantScope = (
+  stageId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.stage.findFirst({
+    where: {
+      id: stageId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findCustomerById = (
+  tenantId: string,
+  customerId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.customer.findFirst({
+    where: {
+      id: customerId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findCustomerTenantScope = (
+  customerId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.customer.findFirst({
+    where: {
+      id: customerId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findLeadById = (
+  tenantId: string,
+  leadId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.lead.findFirst({
+    where: {
+      id: leadId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findLeadTenantScope = (
+  leadId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.lead.findFirst({
+    where: {
+      id: leadId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findProductById = (
+  tenantId: string,
+  productId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.masterCatalogProduct.findFirst({
+    where: {
+      id: productId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findProductTenantScope = (
+  productId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.masterCatalogProduct.findFirst({
+    where: {
+      id: productId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findSubproductById = (
+  tenantId: string,
+  subproductId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.masterCatalogSubproduct.findFirst({
+    where: {
+      id: subproductId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      productId: true,
+    },
+  });
+};
+
+export const findSubproductTenantScope = (
+  subproductId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.masterCatalogSubproduct.findFirst({
+    where: {
+      id: subproductId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findModalityById = (
+  tenantId: string,
+  modalityId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.masterCatalogModality.findFirst({
+    where: {
+      id: modalityId,
+      tenantId,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      subproductId: true,
+    },
+  });
+};
+
+export const findModalityTenantScope = (
+  modalityId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.masterCatalogModality.findFirst({
+    where: {
+      id: modalityId,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const findOpportunityTenantScope = (
+  opportunityId: string,
+  client: OpportunitiesPrismaClient = prisma,
+) => {
+  return client.opportunity.findFirst({
+    where: { id: opportunityId },
+    select: {
+      id: true,
+      tenantId: true,
+    },
+  });
+};
+
+export const createCustomerInTransaction = (
+  data: CreateCustomerRepositoryInput,
+  client: OpportunitiesPrismaClient,
+) => {
+  return client.customer.create({
+    data: {
+      ...data,
+      address: normalizeJsonInput(data.address),
+      bankData: normalizeJsonInput(data.bankData),
+    },
+  });
+};
 
 export const opportunitiesRepository = {
   async findMany(
