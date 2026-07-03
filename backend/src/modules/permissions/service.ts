@@ -3,6 +3,7 @@
 // ============================================
 
 import { prisma } from '../../database/prisma.js';
+import type { Prisma } from '@prisma/client';
 import { PermissionAction } from '@prisma/client';
 import { AppError, ValidationError } from '../../types/index.js';
 import { createModuleLogger } from '../../shared/logger.js';
@@ -10,6 +11,97 @@ import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionRespon
 import { PARTNER_ACQUISITION_RBAC_PERMISSIONS } from './partner-acquisition-rbac.catalog.js';
 
 const logger = createModuleLogger('PermissionsService');
+
+class PermissionsRepository {
+  private getClient(client?: Prisma.TransactionClient) {
+    return client ?? prisma;
+  }
+
+  async findBySlug(slug: string, client?: Prisma.TransactionClient) {
+    return this.getClient(client).permission.findUnique({
+      where: { slug },
+    });
+  }
+
+  async findById(permissionId: string, client?: Prisma.TransactionClient) {
+    return this.getClient(client).permission.findUnique({
+      where: { id: permissionId },
+    });
+  }
+
+  async list(skip = 0, take = 100, client?: Prisma.TransactionClient) {
+    const [permissions, total] = await Promise.all([
+      this.getClient(client).permission.findMany({
+        skip,
+        take,
+        orderBy: { resource: 'asc' },
+      }),
+      this.getClient(client).permission.count(),
+    ]);
+
+    return { permissions, total };
+  }
+
+  async findByResource(resource: string, client?: Prisma.TransactionClient) {
+    return this.getClient(client).permission.findMany({
+      where: { resource },
+      orderBy: { action: 'asc' },
+    });
+  }
+
+  async create(
+    data: {
+      name: string;
+      slug: string;
+      description?: string | null;
+      resource: string;
+      action: PermissionAction;
+    },
+    client?: Prisma.TransactionClient,
+  ) {
+    return this.getClient(client).permission.create({
+      data: {
+        name: data.name,
+        slug: data.slug,
+        description: data.description ?? null,
+        resource: data.resource,
+        action: data.action,
+      },
+    });
+  }
+
+  async update(
+    permissionId: string,
+    data: {
+      name?: string;
+      description?: string | null;
+    },
+    client?: Prisma.TransactionClient,
+  ) {
+    return this.getClient(client).permission.update({
+      where: { id: permissionId },
+      data,
+    });
+  }
+
+  async countRoleAssignments(permissionId: string, client?: Prisma.TransactionClient) {
+    return this.getClient(client).role.count({
+      where: {
+        rolePermissions: {
+          some: { permissionId },
+        },
+      },
+    });
+  }
+
+  async delete(permissionId: string, client?: Prisma.TransactionClient) {
+    return this.getClient(client).permission.delete({
+      where: { id: permissionId },
+    });
+  }
+}
+
+const permissionsRepository = new PermissionsRepository();
 
 export class PermissionsService {
   /**
@@ -20,23 +112,19 @@ export class PermissionsService {
       logger.info(`Creating permission: ${data.slug}`);
 
       // Check if permission already exists
-      const existingPermission = await prisma.permission.findUnique({
-        where: { slug: data.slug },
-      });
+      const existingPermission = await permissionsRepository.findBySlug(data.slug);
 
       if (existingPermission) {
         throw new ValidationError('Permission already exists', ['Permission slug must be unique']);
       }
 
       // Create permission
-      const permission = await prisma.permission.create({
-        data: {
-          name: data.name,
-          slug: data.slug,
-          description: data.description ?? null,
-          resource: data.resource,
-          action: data.action.toUpperCase() as PermissionAction,
-        },
+      const permission = await permissionsRepository.create({
+        name: data.name,
+        slug: data.slug,
+        description: data.description ?? null,
+        resource: data.resource,
+        action: data.action.toUpperCase() as PermissionAction,
       });
 
       logger.info(`Permission created: ${permission.id}`);
@@ -52,9 +140,7 @@ export class PermissionsService {
    */
   async getPermission(permissionId: string): Promise<PermissionResponse> {
     try {
-      const permission = await prisma.permission.findUnique({
-        where: { id: permissionId },
-      });
+      const permission = await permissionsRepository.findById(permissionId);
 
       if (!permission) {
         throw new AppError('Permission not found', 404);
@@ -72,14 +158,7 @@ export class PermissionsService {
    */
   async getPermissions(skip = 0, take = 100): Promise<{ permissions: PermissionResponse[]; total: number }> {
     try {
-      const [permissions, total] = await Promise.all([
-        prisma.permission.findMany({
-          skip,
-          take,
-          orderBy: { resource: 'asc' },
-        }),
-        prisma.permission.count(),
-      ]);
+      const { permissions, total } = await permissionsRepository.list(skip, take);
 
       return { permissions: permissions as PermissionResponse[], total };
     } catch (error) {
@@ -93,10 +172,7 @@ export class PermissionsService {
    */
   async getPermissionsByResource(resource: string): Promise<PermissionResponse[]> {
     try {
-      const permissions = await prisma.permission.findMany({
-        where: { resource },
-        orderBy: { action: 'asc' },
-      });
+      const permissions = await permissionsRepository.findByResource(resource);
 
       return permissions as PermissionResponse[];
     } catch (error) {
@@ -120,10 +196,7 @@ export class PermissionsService {
         updateData.description = data.description ?? null;
       }
 
-      const permission = await prisma.permission.update({
-        where: { id: permissionId },
-        data: updateData,
-      });
+      const permission = await permissionsRepository.update(permissionId, updateData);
 
       logger.info(`Permission updated: ${permissionId}`);
       return permission as PermissionResponse;
@@ -141,13 +214,7 @@ export class PermissionsService {
       logger.info(`Deleting permission: ${permissionId}`);
 
       // Check if permission is assigned to roles
-      const roleCount = await prisma.role.count({
-        where: {
-          rolePermissions: {
-            some: { permissionId },
-          },
-        },
-      });
+      const roleCount = await permissionsRepository.countRoleAssignments(permissionId);
 
       if (roleCount > 0) {
         throw new ValidationError('Cannot delete permission with assigned roles', [
@@ -155,9 +222,7 @@ export class PermissionsService {
         ]);
       }
 
-      await prisma.permission.delete({
-        where: { id: permissionId },
-      });
+      await permissionsRepository.delete(permissionId);
 
       logger.info(`Permission deleted: ${permissionId}`);
     } catch (error) {
@@ -218,14 +283,10 @@ export class PermissionsService {
       ];
 
       for (const permission of defaultPermissions) {
-        const exists = await prisma.permission.findUnique({
-          where: { slug: permission.slug },
-        });
+        const exists = await permissionsRepository.findBySlug(permission.slug);
 
         if (!exists) {
-          await prisma.permission.create({
-            data: permission,
-          });
+          await permissionsRepository.create(permission);
         }
       }
 

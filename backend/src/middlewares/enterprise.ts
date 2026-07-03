@@ -4,10 +4,17 @@
 // ============================================
 
 import { Request, Response, NextFunction } from 'express';
-import type { Prisma } from '@prisma/client';
-import { prisma } from '../database/prisma.js';
 import { AuthenticationError, AuthorizationError } from '../types/index.js';
 import { createModuleLogger } from '../shared/logger.js';
+import { authRepository } from '../modules/auth/repositories/auth.repository.js';
+import { membershipsRepository } from '../modules/memberships/repositories/memberships.repository.js';
+import { organizationsRepository } from '../modules/organizations/repositories/organizations.repository.js';
+import { rolesRepository } from '../modules/roles/repositories/roles.repository.js';
+import { leadsRepository } from '../modules/crm/repositories/leads.repository.js';
+import { customersRepository } from '../modules/crm/repositories/customers.repository.js';
+import { opportunitiesRepository } from '../modules/opportunities/repositories/opportunities.repository.js';
+import { partnerPrismaRepository } from '../modules/partners/repositories/partner.prisma.repository.js';
+import { createAuditLog } from '../modules/audit/repositories/audit.repository.js';
 
 const logger = createModuleLogger('EnterpriseMiddleware');
 
@@ -18,24 +25,34 @@ type TenantScopedResource =
   | 'lead'
   | 'customer'
   | 'opportunity'
-  | 'bankProposal'
-  | 'commission'
   | 'partner';
 
-const tenantScopedDelegates: Record<TenantScopedResource, { findFirst(args: any): Promise<unknown> }> = {
-  lead: prisma.lead,
-  customer: prisma.customer,
-  opportunity: prisma.opportunity,
-  bankProposal: prisma.bankProposal,
-  commission: prisma.commission,
-  partner: prisma.partner,
-};
+type TenantScopedRecord = Record<string, unknown> & { id?: string };
 
 const roleWeight: Record<MembershipRole, number> = {
   member: 10,
   manager: 20,
   admin: 30,
   owner: 40,
+};
+
+const resolveTenantScopedRecord = async (
+  resource: TenantScopedResource,
+  tenantId: string,
+  resourceId: string,
+): Promise<TenantScopedRecord | null> => {
+  switch (resource) {
+    case 'lead':
+      return leadsRepository.findById(resourceId, tenantId) as Promise<TenantScopedRecord | null>;
+    case 'customer':
+      return customersRepository.findById(tenantId, resourceId) as Promise<TenantScopedRecord | null>;
+    case 'opportunity':
+      return opportunitiesRepository.findById(resourceId, tenantId) as Promise<TenantScopedRecord | null>;
+    case 'partner':
+      return partnerPrismaRepository.findById({ tenantId, partnerId: resourceId }) as Promise<TenantScopedRecord | null>;
+    default:
+      return null;
+  }
 };
 
 const getUserId = (req: Request): string => {
@@ -106,26 +123,14 @@ export const enterpriseTenantGuard = async (
 ): Promise<void> => {
   try {
     const userId = getUserId(req);
-    const tenantId = req.user!.tenantId;
-
-    const user = await prisma.user.findFirst({
-      where: {
-        id: userId,
-        tenantId,
-        isActive: true,
-        deletedAt: null,
-      },
-      include: {
-        tenant: true,
-        organization: true,
-      },
-    });
+    const tenantId = getTenantId(req);
+    const user = await authRepository.findUserForSession(userId, tenantId);
 
     if (!user) {
       return next(new AuthenticationError('Authenticated user not found'));
     }
 
-    if (!user.tenant.isActive || user.tenant.deletedAt) {
+    if (!user.tenant.isActive) {
       return next(new AuthorizationError('Tenant not found or inactive'));
     }
 
@@ -133,23 +138,22 @@ export const enterpriseTenantGuard = async (
     req.companyId = user.tenantId;
     req.tenant = user.tenant;
 
-    if (user.organization && user.organization.isActive && !user.organization.deletedAt) {
-      req.organization = user.organization;
-      req.organizationId = user.organization.id;
-      req.user!.organizationId = user.organization.id;
+    const organizationAssignment = await membershipsRepository.findUserById(user.id);
+    const organizationId = organizationAssignment?.organizationId ?? req.user?.organizationId;
 
-      const membership = await prisma.membership.findUnique({
-        where: {
-          userId_organizationId: {
-            userId: user.id,
-            organizationId: user.organization.id,
-          },
-        },
-      });
+    if (organizationId) {
+      const organization = await organizationsRepository.findById(tenantId, organizationId);
+      if (organization?.isActive && !organization.deletedAt) {
+        req.organization = organization;
+        req.organizationId = organization.id;
+        req.user!.organizationId = organization.id;
 
-      if (membership?.isActive && !membership.deletedAt) {
-        req.membership = membership;
-        req.membershipId = membership.id;
+        const membership = await membershipsRepository.findActorMembership(user.id, organization.id);
+
+        if (membership?.isActive && !membership.deletedAt) {
+          req.membership = membership;
+          req.membershipId = membership.id;
+        }
       }
     }
 
@@ -183,28 +187,14 @@ export const organizationAccessGuard = (
       return next(new AuthorizationError('Organization ID required', 400));
     }
 
-    const organization = await prisma.organization.findFirst({
-      where: {
-        id: organizationId,
-        tenantId,
-        isActive: true,
-        deletedAt: null,
-      },
-    });
+    const organization = await organizationsRepository.findById(tenantId, organizationId);
 
-    if (!organization) {
+    if (!organization || !organization.isActive || organization.deletedAt) {
       return next(new AuthorizationError('Organization not found or access denied'));
     }
 
     if (requireMembership) {
-      const membership = await prisma.membership.findUnique({
-        where: {
-          userId_organizationId: {
-            userId,
-            organizationId,
-          },
-        },
-      });
+      const membership = await membershipsRepository.findActorMembership(userId, organizationId);
 
       if (!membership?.isActive || membership.deletedAt) {
         return next(new AuthorizationError('Organization membership required'));
@@ -247,63 +237,62 @@ export const roleHierarchyGuard = (requiredPermissions: string[] = []) =>
         return next();
       }
 
-      const user = await prisma.user.findFirst({
-        where: {
-          id: userId,
-          tenantId,
-          isActive: true,
-          deletedAt: null,
-        },
-        select: {
-          userRoles: {
-            select: { roleId: true },
-          },
-        },
-      });
+      const user = await authRepository.findUserForSession(userId, tenantId);
 
       if (!user) {
         return next(new AuthenticationError('Authenticated user not found'));
       }
 
-      const roles = await prisma.role.findMany({
-        where: {
-          tenantId,
-          deletedAt: null,
-        },
-        include: {
-          rolePermissions: {
-            include: { permission: true },
-          },
-        },
-      });
-
-      const roleById = new Map(roles.map((role) => [role.id, role]));
-      const assignedRoleIds = new Set<string>(user.userRoles.map((userRole) => userRole.roleId));
+      const assignedRoleIds = new Set<string>(
+        user.userRoles
+          .map((userRole) => userRole.role?.id)
+          .filter((roleId): roleId is string => Boolean(roleId)),
+      );
 
       const permissions = new Set<string>();
       const visitedRoles = new Set<string>();
+      const roleCache = new Map<string, any>();
 
-      const collectRolePermissions = (roleId: string): void => {
+      const loadRole = async (roleId: string): Promise<any | null> => {
+        if (roleCache.has(roleId)) {
+          return roleCache.get(roleId) ?? null;
+        }
+
+        const role = await rolesRepository.findById(tenantId, roleId);
+        if (!role) {
+          roleCache.set(roleId, null);
+          return null;
+        }
+
+        roleCache.set(roleId, role);
+        return role;
+      };
+
+      const collectRolePermissions = async (roleId: string): Promise<void> => {
         if (visitedRoles.has(roleId)) {
           return;
         }
         visitedRoles.add(roleId);
 
-        const role = roleById.get(roleId);
+        const role = await loadRole(roleId);
         if (!role) {
           return;
         }
 
-        role.rolePermissions.forEach((rolePermission) => {
-          permissions.add(rolePermission.permission.slug);
+        role.rolePermissions?.forEach((rolePermission: any) => {
+          if (rolePermission?.permission?.slug) {
+            permissions.add(rolePermission.permission.slug);
+          }
         });
 
         if (role.parentId) {
-          collectRolePermissions(role.parentId);
+          await collectRolePermissions(role.parentId);
         }
       };
 
-      assignedRoleIds.forEach(collectRolePermissions);
+      for (const roleId of assignedRoleIds) {
+        await collectRolePermissions(roleId);
+      }
 
       const hasAllPermissions = requiredPermissions.every((permission) => permissions.has(permission));
       if (!hasAllPermissions) {
@@ -316,9 +305,9 @@ export const roleHierarchyGuard = (requiredPermissions: string[] = []) =>
       }
 
       req.userPermissions = Array.from(permissions);
-      const firstRoleId = user.userRoles[0]?.roleId;
+      const firstRoleId = user.userRoles[0]?.role?.id;
       if (firstRoleId) {
-        const primaryRole = roleById.get(firstRoleId);
+        const primaryRole = await loadRole(firstRoleId);
         if (primaryRole) {
           req.userRole = primaryRole;
         }
@@ -352,18 +341,9 @@ export const dataOwnershipGuard = (
       return next();
     }
 
-    const delegate = tenantScopedDelegates[resource];
-    const record = await delegate.findFirst({
-      where: {
-        id: resourceId,
-        tenantId,
-        deletedAt: null,
-        [ownershipField]: userId,
-      },
-      select: { id: true },
-    });
+    const record = await resolveTenantScopedRecord(resource, tenantId, resourceId);
 
-    if (!record) {
+    if (!record || record[ownershipField] !== userId) {
       return next(new AuthorizationError('Access denied: data ownership required'));
     }
 
@@ -397,32 +377,28 @@ export const auditLogger = (action: string, entity: string) =>
           ? 'high'
           : 'low';
 
-      const data: Prisma.AuditLogUncheckedCreateInput = {
+      void createAuditLog({
+        tenantId,
+        userId: req.user?.userId ?? null,
         action,
         entity,
-        description: `${action} ${entity} by ${req.user?.email ?? 'system'}`,
-        tenantId,
+        entityId: entityId ?? req.requestId ?? 'unknown',
         metadata: {
+          description: `${action} ${entity} by ${req.user?.email ?? 'system'}`,
           method: req.method,
           path: req.originalUrl,
           statusCode,
           duration,
           query: req.query,
+          riskLevel,
+          ...(req.ip ? { ipAddress: req.ip } : {}),
+          ...(req.get('User-Agent') ? { userAgent: req.get('User-Agent') } : {}),
+          ...(req.sessionId ? { sessionId: req.sessionId } : {}),
+          ...(req.requestId ? { requestId: req.requestId } : {}),
+          ...(req.organizationId ? { organizationId: req.organizationId } : {}),
+          ...(req.membershipId ? { membershipId: req.membershipId } : {}),
         },
-        riskLevel,
-      };
-
-      if (entityId) data.entityId = entityId;
-      if (req.ip) data.ipAddress = req.ip;
-      const userAgent = req.get('User-Agent');
-      if (userAgent) data.userAgent = userAgent;
-      if (req.sessionId) data.sessionId = req.sessionId;
-      if (req.requestId) data.requestId = req.requestId;
-      if (req.organizationId) data.organizationId = req.organizationId;
-      if (req.user?.userId) data.userId = req.user.userId;
-      if (req.membershipId) data.membershipId = req.membershipId;
-
-      void prisma.auditLog.create({ data }).catch((error) => {
+      }).catch((error) => {
         logger.error('Audit logging failed:', error);
       });
     });
@@ -484,14 +460,15 @@ export const tenantRateLimit = (windowMs = 900000, maxRequests = 100) => {
 export const featureFlagGuard = (featureName: string) =>
   async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
-      const tenantId = getTenantId(req);
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        select: { plan: true, settings: true },
-      });
+      const tenant = req.tenant as
+        | {
+            plan?: string;
+            settings?: { features?: Record<string, boolean> } | null;
+          }
+        | undefined;
 
-      if (!tenant) {
-        return next(new AuthorizationError('Tenant not found'));
+      if (!tenant?.plan) {
+        return next(new AuthorizationError('Tenant context required'));
       }
 
       const planFeatures: Record<string, string[]> = {
@@ -513,7 +490,7 @@ export const featureFlagGuard = (featureName: string) =>
       };
 
       const allowedFeatures = planFeatures[tenant.plan] ?? [];
-      const customFeatures = tenant.settings as { features?: Record<string, boolean> } | null;
+      const customFeatures = tenant.settings ?? null;
 
       if (!allowedFeatures.includes(featureName) && customFeatures?.features?.[featureName] !== true) {
         return next(new AuthorizationError(`Feature '${featureName}' not available for your plan`));

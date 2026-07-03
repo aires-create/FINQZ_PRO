@@ -5,18 +5,10 @@
 // @ts-nocheck
 import { Request, Response, NextFunction } from 'express';
 import { AuthenticationError, AuthorizationError } from '../types/index.js';
-import { prisma } from '../database/prisma.js';
 import { createModuleLogger } from '../shared/logger.js';
 import { authenticate } from './auth.js';
 
 const logger = createModuleLogger('RBACMiddleware');
-
-type RoleRecord = {
-  id: string;
-  slug: string;
-  parentId: string | null;
-  rolePermissions: Array<{ permission: { slug: string } }>;
-};
 
 const getTenantId = (req: Request): string => {
   const tenantId = req.tenantId ?? req.user?.tenantId;
@@ -25,197 +17,30 @@ const getTenantId = (req: Request): string => {
   }
   return tenantId;
 };
+const normalizePermissions = (permissions: string[] | undefined): Set<string> => {
+  const normalized = new Set<string>();
 
-const buildUserWhere = (userId: string, tenantId?: string) => ({
-  id: userId,
-  ...(tenantId ? { tenantId } : {}),
-});
-
-async function getUserRoleAssignments(userId: string, tenantId?: string) {
-  return prisma.user.findUnique({
-    where: buildUserWhere(userId, tenantId),
-    select: {
-      userRoles: {
-        select: {
-          roleId: true,
-        },
-      },
-    },
+  (permissions ?? []).forEach((permission) => {
+    const value = String(permission ?? '').trim().toLowerCase();
+    if (value) {
+      normalized.add(value);
+    }
   });
+
+  return normalized;
+};
+
+async function getUserPermissions(req: Request): Promise<Set<string>> {
+  return normalizePermissions(req.user?.permissions);
 }
 
-async function getTenantRoles(tenantId: string): Promise<RoleRecord[]> {
-  return prisma.role.findMany({
-    where: {
-      tenantId,
-      deletedAt: null,
-    },
-    select: {
-      id: true,
-      slug: true,
-      parentId: true,
-      rolePermissions: {
-        select: {
-          permission: {
-            select: { slug: true },
-          },
-        },
-      },
-    },
-  });
-}
-
-function collectRolePermissions(roleId: string, roleById: Map<string, RoleRecord>, permissions: Set<string>, visited: Set<string>): void {
-  if (visited.has(roleId)) {
-    return;
-  }
-  visited.add(roleId);
-
-  const role = roleById.get(roleId);
+async function getUserRoleSlugs(req: Request): Promise<string[]> {
+  const role = req.user?.role;
   if (!role) {
-    return;
-  }
-
-  role.rolePermissions.forEach((rolePermission) => {
-    permissions.add(rolePermission.permission.slug);
-  });
-
-  if (role.parentId) {
-    collectRolePermissions(role.parentId, roleById, permissions, visited);
-  }
-}
-
-function collectRoleSlugs(roleId: string, roleById: Map<string, RoleRecord>, slugs: Set<string>, visited: Set<string>): void {
-  if (visited.has(roleId)) {
-    return;
-  }
-  visited.add(roleId);
-
-  const role = roleById.get(roleId);
-  if (!role) {
-    return;
-  }
-
-  slugs.add(role.slug);
-  if (role.parentId) {
-    collectRoleSlugs(role.parentId, roleById, slugs, visited);
-  }
-}
-
-async function getUserPermissions(userId: string, tenantId?: string): Promise<Set<string>> {
-  if (!tenantId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        userRoles: {
-          select: {
-            role: {
-              select: {
-                rolePermissions: {
-                  select: {
-                    permission: {
-                      select: { slug: true },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const permissionSlugs = new Set<string>();
-    if (user?.userRoles) {
-      user.userRoles.forEach((userRole: any) => {
-        userRole.role?.rolePermissions?.forEach((rp: any) => {
-          if (rp?.permission?.slug) {
-            permissionSlugs.add(rp.permission.slug);
-          }
-        });
-      });
-    }
-
-    return permissionSlugs;
-  }
-
-  const assignment = await getUserRoleAssignments(userId, tenantId);
-  const permissions = new Set<string>();
-
-  if (!assignment) {
-    return permissions;
-  }
-
-  const roleIds = new Set<string>();
-  assignment.userRoles.forEach(({ roleId }) => {
-    if (roleId) {
-      roleIds.add(roleId);
-    }
-  });
-
-  if (roleIds.size === 0) {
-    return permissions;
-  }
-
-  const tenantRoles = await getTenantRoles(tenantId);
-  const roleById = new Map(tenantRoles.map((role) => [role.id, role]));
-  const visited = new Set<string>();
-
-  roleIds.forEach((roleId) => collectRolePermissions(roleId, roleById, permissions, visited));
-  return permissions;
-}
-
-async function getUserRoleSlugs(userId: string, tenantId?: string): Promise<string[]> {
-  if (!tenantId) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        userRoles: {
-          select: {
-            role: {
-              select: { slug: true },
-            },
-          },
-        },
-      },
-    });
-
-    const slugs = new Set<string>();
-    if (user?.userRoles) {
-      user.userRoles.forEach((userRole: any) => {
-        if (userRole.role?.slug) {
-          slugs.add(userRole.role.slug);
-        }
-      });
-    }
-
-    return Array.from(slugs);
-  }
-
-  const assignment = await getUserRoleAssignments(userId, tenantId);
-  const roleSlugs = new Set<string>();
-
-  if (!assignment) {
     return [];
   }
 
-  const roleIds = new Set<string>();
-  assignment.userRoles.forEach(({ roleId }) => {
-    if (roleId) {
-      roleIds.add(roleId);
-    }
-  });
-
-  if (roleIds.size === 0) {
-    return [];
-  }
-
-  const tenantRoles = await getTenantRoles(tenantId);
-  const roleById = new Map(tenantRoles.map((role) => [role.id, role]));
-  const visited = new Set<string>();
-
-  roleIds.forEach((roleId) => collectRoleSlugs(roleId, roleById, roleSlugs, visited));
-  return Array.from(roleSlugs);
+  return [String(role).trim().toLowerCase()];
 }
 
 export const requireAuth = authenticate;
@@ -229,7 +54,7 @@ export const requireAllPermissions = (...requiredPermissions: string[]) => {
       }
 
       const tenantId = getTenantId(req);
-      const userPermissions = await getUserPermissions(req.user.userId, tenantId);
+      const userPermissions = await getUserPermissions(req);
       const hasAllPermissions = requiredPermissions.every((perm) => userPermissions.has(perm));
 
       if (!hasAllPermissions) {
@@ -257,7 +82,7 @@ export const requireAnyPermission = (...requiredPermissions: string[]) => {
       }
 
       const tenantId = getTenantId(req);
-      const userPermissions = await getUserPermissions(req.user.userId, tenantId);
+      const userPermissions = await getUserPermissions(req);
       const hasAnyPermission = requiredPermissions.some((perm) => userPermissions.has(perm));
 
       if (!hasAnyPermission) {
@@ -285,7 +110,7 @@ export const requireRole = (...allowedRoles: string[]) => {
       }
 
       const tenantId = getTenantId(req);
-      const userRoleSlugs = await getUserRoleSlugs(req.user.userId, tenantId);
+      const userRoleSlugs = await getUserRoleSlugs(req);
       const matchedRole = userRoleSlugs.find((slug) => allowedRoles.includes(slug));
 
       if (!matchedRole) {
@@ -316,7 +141,7 @@ export const requireAdmin = async (
     }
 
     const tenantId = getTenantId(req);
-    const roleSlugs = await getUserRoleSlugs(req.user.userId, tenantId);
+    const roleSlugs = await getUserRoleSlugs(req);
     if (!roleSlugs.includes('admin')) {
       logger.warn(`Admin access denied: User ${req.user.userId}`);
       throw new AuthorizationError('Admin access required');
@@ -373,53 +198,19 @@ export const attachUserContext = async (
       return next();
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: {
-        userRoles: {
-          select: {
-            role: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                type: true,
-                rolePermissions: {
-                  select: {
-                    permission: {
-                      select: {
-                        id: true,
-                        name: true,
-                        slug: true,
-                        resource: true,
-                        action: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const roles = new Map<string, any>();
-    const permissionSet = new Set<string>();
-
-      if (user?.userRoles) {
-      user.userRoles.forEach((userRole: any) => {
-        const role = userRole.role;
-        if (role && !roles.has(role.slug)) {
-          roles.set(role.slug, role);
+    const role = req.user.role
+      ? {
+          id: req.user.role,
+          name: req.user.role,
+          slug: req.user.role,
+          type: 'STANDARD',
+          rolePermissions: [],
         }
-        role.rolePermissions.forEach((rp: any) => permissionSet.add(rp.permission.slug));
-      });
-    }
+      : null;
 
     (req as any).userContext = {
-      roles: Array.from(roles.values()),
-      permissions: permissionSet,
+      roles: role ? [role] : [],
+      permissions: normalizePermissions(req.user.permissions),
     };
 
     next();
