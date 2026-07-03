@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { API_BASE_URL } from '../config/environment';
+import { apiFetch } from '../api/http';
 
 interface LeadQualificationResult {
   score: number;
@@ -76,7 +77,10 @@ const requestLeadQualification = async (
   config: LeadQualificationConfig,
   messages: Array<{ role: 'system' | 'user'; content: string }>,
 ) => {
-  const response = await fetch(`${getAiBaseUrl(config)}/lead-qualification`, {
+  const response = await apiFetch<{
+    text?: string;
+    result?: LeadQualificationResult;
+  }>(`${getAiBaseUrl(config)}/lead-qualification`, {
     method: 'POST',
     headers: getAiHeaders(config),
     body: JSON.stringify({
@@ -87,21 +91,12 @@ const requestLeadQualification = async (
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`API Error - AI request failed with status ${response.status}`);
+  if (response.text) {
+    return response.text;
   }
 
-  const data = (await response.json()) as {
-    text?: string;
-    result?: LeadQualificationResult;
-  };
-
-  if (data.text) {
-    return data.text;
-  }
-
-  if (data.result) {
-    return JSON.stringify(data.result);
+  if (response.result) {
+    return JSON.stringify(response.result);
   }
 
   throw new Error('API Error - Invalid response format from AI');

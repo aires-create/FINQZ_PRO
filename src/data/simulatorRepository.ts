@@ -1,6 +1,6 @@
 // ============================================
 // Repository: Simulador
-// Armazenamento local com localStorage
+// Estado efêmero em memória, sem persistência local.
 // ============================================
 
 import {
@@ -10,10 +10,7 @@ import {
   ProviderType,
   CommercialCondition,
 } from "./commercialRepository";
-
-// Storage keys
-const STORAGE_KEY_SIMULATIONS = "finqz_simulations";
-const STORAGE_KEY_PROPOSALS = "finqz_simulation_proposals";
+import { PIPELINES } from "../config/pipelines";
 
 // ============================================
 // Types
@@ -176,17 +173,19 @@ export const RANKING_TYPE_LABELS: Record<RankingType, string> = {
 // Repository
 // ============================================
 
+let simulationState: SimulationResult[] = [];
+let proposalState: SimulationProposal[] = [];
+let opportunityState: Array<Record<string, unknown>> = [];
+
 export const simulatorRepository = {
   // Criar simulação
   createSimulation(result: Omit<SimulationResult, "id" | "createdAt">): SimulationResult {
-    const simulations = this.listSimulations();
     const newSimulation: SimulationResult = {
       ...result,
       id: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: Date.now()
     };
-    simulations.push(newSimulation);
-    this.saveSimulations(simulations);
+    simulationState = [...simulationState, newSimulation];
     
     // Emitir evento
     emitAutomationEvent('SIMULATION_CREATED', { simulationId: newSimulation.id });
@@ -196,20 +195,7 @@ export const simulatorRepository = {
 
   // Listar simulações
   listSimulations(): SimulationResult[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_SIMULATIONS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading simulations:", e);
-      // Reset seguro se corrompido
-      localStorage.removeItem(STORAGE_KEY_SIMULATIONS);
-    }
-    return [];
+    return simulationState.map((simulation) => ({ ...simulation }));
   },
 
   // Obter simulação por ID
@@ -220,24 +206,18 @@ export const simulatorRepository = {
 
   // Salvar simulações
   saveSimulations(simulations: SimulationResult[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_SIMULATIONS, JSON.stringify(simulations));
-    } catch (e) {
-      console.error("Error saving simulations:", e);
-    }
+    simulationState = simulations.map((simulation) => ({ ...simulation }));
   },
 
   // Aceitar proposta
   acceptProposal(proposal: Omit<SimulationProposal, "id" | "acceptedAt" | "opportunityCreated">): SimulationProposal {
-    const proposals = this.listProposals();
     const newProposal: SimulationProposal = {
       ...proposal,
       id: `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       acceptedAt: Date.now(),
       opportunityCreated: false
     };
-    proposals.push(newProposal);
-    this.saveProposals(proposals);
+    proposalState = [...proposalState, newProposal];
     
     // Emitir evento
     emitAutomationEvent('SIMULATION_PROPOSAL_ACCEPTED', { proposalId: newProposal.id });
@@ -247,28 +227,12 @@ export const simulatorRepository = {
 
   // Listar propostas
   listProposals(): SimulationProposal[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_PROPOSALS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading proposals:", e);
-      localStorage.removeItem(STORAGE_KEY_PROPOSALS);
-    }
-    return [];
+    return proposalState.map((proposal) => ({ ...proposal }));
   },
 
   // Salvar propostas
   saveProposals(proposals: SimulationProposal[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_PROPOSALS, JSON.stringify(proposals));
-    } catch (e) {
-      console.error("Error saving proposals:", e);
-    }
+    proposalState = proposals.map((proposal) => ({ ...proposal }));
   },
 
   // Criar oportunidade no pipeline a partir de proposta aceita
@@ -283,21 +247,16 @@ export const simulatorRepository = {
 
     // Criar oportunidade
     const opportunityId = `opp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Obter dados do pipeline
     const pipelines = getPipelines();
     let pipelineId = pipelines[0]?.id || 'default';
-    
-    // Se é energia ou híbrido, usar pipeline de energia
+
     if (proposal.simulationType === 'ENERGY' || proposal.simulationType === 'HYBRID') {
-      const energyPipeline = pipelines.find(p => p.name.toLowerCase().includes('energia'));
+      const energyPipeline = pipelines.find(p => String(p.nome).toLowerCase().includes('energia'));
       if (energyPipeline) {
         pipelineId = energyPipeline.id;
       }
     }
 
-    // Salvar oportunidade no localStorage (formato simplificado para demo)
-    const opportunities = getOpportunities();
     const newOpportunity = {
       id: opportunityId,
       customerName: proposal.customer.name,
@@ -315,14 +274,13 @@ export const simulatorRepository = {
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
-    
-    opportunities.push(newOpportunity);
-    saveOpportunities(opportunities);
+
+    opportunityState = [...opportunityState, newOpportunity];
     
     // Marcar proposta como tendo oportunidade criada
     proposal.opportunityCreated = true;
     proposal.opportunityId = opportunityId;
-    this.saveProposals(proposals);
+    proposalState = proposals.map((item) => item.id === proposal.id ? { ...item, opportunityCreated: true, opportunityId } : item);
     
     return opportunityId;
   }
@@ -332,39 +290,20 @@ export const simulatorRepository = {
 // Funções auxiliares
 // ============================================
 
-// Obter pipelines do localStorage
 function getPipelines(): any[] {
-  try {
-    const stored = localStorage.getItem('finqz_pipelines');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error("Error loading pipelines:", e);
-  }
-  return [];
+  return PIPELINES.map((pipeline) => ({
+    id: pipeline.id,
+    name: pipeline.nome,
+    tipo: pipeline.tipo,
+  }));
 }
 
-// Obter oportunidades do localStorage
 function getOpportunities(): any[] {
-  try {
-    const stored = localStorage.getItem('finqz_opportunities');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error("Error loading opportunities:", e);
-  }
-  return [];
+  return opportunityState.map((opportunity) => ({ ...opportunity }));
 }
 
-// Salvar oportunidades
 function saveOpportunities(opportunities: any[]): void {
-  try {
-    localStorage.setItem('finqz_opportunities', JSON.stringify(opportunities));
-  } catch (e) {
-    console.error("Error saving opportunities:", e);
-  }
+  opportunityState = opportunities.map((opportunity) => ({ ...opportunity }));
 }
 
 // ============================================

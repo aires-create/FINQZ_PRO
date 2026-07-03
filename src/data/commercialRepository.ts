@@ -1,18 +1,14 @@
 // ============================================
 // Repository: Providers (Bancos/Providers)
-// Armazenamento local com localStorage
-// Preparado para futura integração com API
-// TODO tecnico FASE 2.19-B.3: manter este arquivo apenas como leitura legada/fallback.
-// A fonte oficial das Tabelas Comerciais passa a ser PostgreSQL via /api/v1/commercial.
-// Nao remover ainda: o Simulador e fluxos legados podem depender destes helpers.
+// Fonte canônica de apoio para a UI comercial e simulador.
+// Sem persistência operacional local.
 // ============================================
 
 import { creditPfCatalog } from "./creditPfCatalog";
 
-// Storage keys
-const STORAGE_KEY_PROVIDERS = "finqz_providers";
-const STORAGE_KEY_COMMERCIAL_TABLES = "finqz_commercial_tables";
-const STORAGE_KEY_COMMERCIAL_CONDITIONS = "finqz_commercial_conditions";
+let providerState: Provider[] = [];
+let commercialTableState: CommercialTable[] = [];
+let commercialConditionState: CommercialCondition[] = [];
 
 // ============================================
 // Types
@@ -269,34 +265,11 @@ const normalizeStoredCommercialCondition = (
 
 export const providerRepository = {
   listProviders(): Provider[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_PROVIDERS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Migrar providers antigos (sem type) para o novo formato
-          const needsMigration = parsed.some(
-            (p) => !isRecord(p) || typeof p.type !== "string",
-          );
-          if (needsMigration) {
-            const migrated = parsed
-              .filter(isRecord)
-              .map((p) => ({
-                ...p,
-                type: (typeof p.type === "string" ? p.type : "BANK") as ProviderType,
-              })) as Provider[];
-            this.saveProviders(migrated);
-            return migrated;
-          }
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading providers from localStorage:", e);
+    if (providerState.length === 0) {
+      providerState = [...initialProviders];
     }
-    // Initialize with mocks
-    this.saveProviders(initialProviders);
-    return initialProviders;
+
+    return providerState.map((provider) => ({ ...provider }));
   },
 
   getProviderById(id: string): Provider | undefined {
@@ -310,11 +283,7 @@ export const providerRepository = {
   },
 
   saveProviders(providers: Provider[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_PROVIDERS, JSON.stringify(providers));
-    } catch (e) {
-      console.error("Error saving providers to localStorage:", e);
-    }
+    providerState = providers.map((provider) => ({ ...provider }));
   },
 
   createProvider(provider: Omit<Provider, "id" | "createdAt" | "updatedAt">): Provider {
@@ -380,22 +349,9 @@ export const providerRepository = {
 // Commercial Table Repository
 // ============================================
 
-// TODO tecnico: remover gravacoes de tabelas comerciais em localStorage quando
-// Simulador e fluxos legados estiverem migrados para a API real.
 export const commercialTableRepository = {
   listCommercialTables(): CommercialTable[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_COMMERCIAL_TABLES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading commercial tables from localStorage:", e);
-    }
-    return [];
+    return commercialTableState.map((table) => ({ ...table }));
   },
 
   getTableById(id: string): CommercialTable | undefined {
@@ -409,11 +365,7 @@ export const commercialTableRepository = {
   },
 
   saveTables(tables: CommercialTable[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_COMMERCIAL_TABLES, JSON.stringify(tables));
-    } catch (e) {
-      console.error("Error saving commercial tables to localStorage:", e);
-    }
+    commercialTableState = tables.map((table) => ({ ...table }));
   },
 
   createTable(table: Omit<CommercialTable, "id" | "createdAt" | "updatedAt">): CommercialTable {
@@ -555,45 +507,19 @@ export const commercialTableRepository = {
 // Commercial Condition Repository
 // ============================================
 
-// TODO tecnico: remover gravacoes de condicoes comerciais em localStorage quando
-// Simulador e fluxos legados estiverem migrados para a API real.
 export const commercialConditionRepository = {
   listConditionsByTable(tableId: string): CommercialCondition[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_COMMERCIAL_CONDITIONS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(c => c.commercialTableId === tableId);
-        }
-      }
-    } catch (e) {
-      console.error("Error loading conditions from localStorage:", e);
-    }
-    return [];
+    return commercialConditionState
+      .filter((condition) => condition.commercialTableId === tableId)
+      .map((condition) => ({ ...condition }));
   },
 
   getConditionById(id: string): CommercialCondition | undefined {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_COMMERCIAL_CONDITIONS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.find(c => c.id === id);
-        }
-      }
-    } catch (e) {
-      console.error("Error loading condition from localStorage:", e);
-    }
-    return undefined;
+    return commercialConditionState.find((condition) => condition.id === id);
   },
 
   saveConditions(conditions: CommercialCondition[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_COMMERCIAL_CONDITIONS, JSON.stringify(conditions));
-    } catch (e) {
-      console.error("Error saving conditions to localStorage:", e);
-    }
+    commercialConditionState = conditions.map((condition) => ({ ...condition }));
   },
 
   createCondition(condition: NewCommercialCondition): CommercialCondition {
@@ -639,39 +565,13 @@ export const commercialConditionRepository = {
   },
 
   getAllConditions(): CommercialCondition[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_COMMERCIAL_CONDITIONS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          const normalized = parsed
-            .filter(isRecord)
-            .map((condition) =>
-              normalizeStoredCommercialCondition(condition as CommercialCondition),
-            );
-          const shouldPersistNormalizedConditions =
-            normalized.length !== parsed.length ||
-            parsed.some((condition) => (
-              isRecord(condition) &&
-              condition.minConsumption === undefined &&
-              (
-                condition.flatCommission === undefined ||
-                condition.bonusCommission === undefined ||
-                condition.advanceCommission === undefined ||
-                condition.totalCommission === undefined
-              )
-            ));
-
-          if (shouldPersistNormalizedConditions) {
-            this.saveConditions(normalized);
-          }
-          return normalized;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading all conditions from localStorage:", e);
+    if (commercialConditionState.length === 0) {
+      commercialConditionState = [];
     }
-    return [];
+
+    return commercialConditionState.map((condition) =>
+      normalizeStoredCommercialCondition({ ...condition }),
+    );
   }
 };
 

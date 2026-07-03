@@ -296,30 +296,6 @@ export const SimuladorPage: React.FC = () => {
     const proposalId = `prop_${Date.now()}`;
     setGeneratedProposalId(proposalId);
     setShowProposalPreview(true);
-    
-    // Save proposal to localStorage
-    const proposalData = {
-      id: proposalId,
-      simulationId: simulationResult.id,
-      simulationType: simulationResult.simulationType,
-      customer: customerData,
-      selectedCreditOffer: selectedCreditOffer || undefined,
-      selectedEnergyOffer: selectedEnergyOffer || undefined,
-      city: customerData.city,
-      state: customerData.state,
-      distributor: energyData.distributor || '',
-      createdAt: Date.now(),
-      status: 'GENERATED' as const
-    };
-    
-    // Save to localStorage
-    try {
-      const existingProposals = JSON.parse(localStorage.getItem('finqz_simulation_proposals') || '[]');
-      existingProposals.push(proposalData);
-      localStorage.setItem('finqz_simulation_proposals', JSON.stringify(existingProposals));
-    } catch (e) {
-      console.error('Error saving proposal:', e);
-    }
   };
   
   // Print proposal
