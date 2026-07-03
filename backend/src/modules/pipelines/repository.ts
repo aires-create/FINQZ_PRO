@@ -8,6 +8,7 @@ import type {
 import type { PipelineRepositoryContract } from './domain/pipeline-repository.contract.js';
 
 type PipelinesPrismaClient = typeof prisma | Prisma.TransactionClient;
+export type PipelinesTransactionClient = Prisma.TransactionClient;
 
 type FindByIdInput = { tenantId: string; pipelineId: string };
 type FindStageByIdInput = { tenantId: string; stageId: string };
@@ -111,6 +112,14 @@ const runInSerializableTransaction = async <T>(
   }
 
   return action(client);
+};
+
+export const runPipelinesSerializableTransaction = async <T>(
+  action: (transaction: PipelinesTransactionClient) => Promise<T>,
+) => {
+  return prisma.$transaction(action, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
 };
 
 const clearOtherActiveDefaultPipelines = (

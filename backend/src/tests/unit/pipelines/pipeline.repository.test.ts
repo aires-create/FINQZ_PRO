@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictError } from '../../../shared/errors/AppError.js';
 
@@ -50,7 +51,10 @@ vi.mock('../../../core/prisma/client.js', () => ({
   prisma: prismaMock,
 }));
 
-import { pipelinesRepository } from '../../../modules/pipelines/repository.js';
+import {
+  pipelinesRepository,
+  runPipelinesSerializableTransaction,
+} from '../../../modules/pipelines/repository.js';
 
 describe('pipelinesRepository', () => {
   beforeEach(() => {
@@ -513,6 +517,20 @@ describe('pipelinesRepository', () => {
         ],
       }),
     ).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it('runPipelinesSerializableTransaction uses a serializable Prisma transaction', async () => {
+    await runPipelinesSerializableTransaction(async (transaction) => {
+      expect(transaction).toBe(txMock);
+      return 'ok';
+    });
+
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   });
 
   it('findActiveByTenant continues working', async () => {

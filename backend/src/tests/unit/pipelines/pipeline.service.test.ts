@@ -182,6 +182,8 @@ describe('PipelinesService', () => {
     expect(serviceSource).not.toContain('asLegacyRepository');
     expect(serviceSource).not.toContain('unknown as PipelineRepositoryContract');
     expect(serviceSource).not.toContain('as never');
+    expect(serviceSource).not.toContain("from '../../core/prisma/client.js'");
+    expect(serviceSource).not.toContain('Prisma.TransactionIsolationLevel');
   });
 
   it('createPipeline rejects empty name before repository', async () => {

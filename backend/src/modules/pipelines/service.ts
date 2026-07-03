@@ -1,9 +1,11 @@
-import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 
-import { prisma } from '../../core/prisma/client.js';
 import { registerAuditLog } from '../audit/services/audit.service.js';
-import { pipelinesRepository } from './repository.js';
+import {
+  pipelinesRepository,
+  runPipelinesSerializableTransaction,
+  type PipelinesTransactionClient,
+} from './repository.js';
 import { ConflictError } from '../../shared/errors/AppError.js';
 import type {
   PipelineContract,
@@ -131,40 +133,32 @@ const validateReorderStagesPayload = (
 type PipelinesRepositoryWithClient = PipelineRepositoryContract & {
   findById(
     input: Parameters<PipelineRepositoryContract['findById']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['findById']>;
   findStageById(
     input: Parameters<PipelineRepositoryContract['findStageById']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['findStageById']>;
   updateStage(
     input: Parameters<PipelineRepositoryContract['updateStage']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['updateStage']>;
   softDeleteStage(
     input: Parameters<PipelineRepositoryContract['softDeleteStage']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['softDeleteStage']>;
   hasLinkedOpportunitiesForStage(
     input: Parameters<PipelineRepositoryContract['hasLinkedOpportunitiesForStage']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['hasLinkedOpportunitiesForStage']>;
   countActiveStagesByPipeline(
     input: Parameters<PipelineRepositoryContract['countActiveStagesByPipeline']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['countActiveStagesByPipeline']>;
   reorderStages(
     input: Parameters<PipelineRepositoryContract['reorderStages']>[0],
-    client?: Prisma.TransactionClient,
+    client?: PipelinesTransactionClient,
   ): ReturnType<PipelineRepositoryContract['reorderStages']>;
-};
-
-const runInSerializableTransaction = async <T>(
-  action: (transaction: Prisma.TransactionClient) => Promise<T>,
-) => {
-  return prisma.$transaction(action, {
-    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-  });
 };
 
 const AuditActions = {
@@ -394,7 +388,7 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<PipelineContract['stages'][number]> {
     validateStageWrite(input);
 
-    const stage = await runInSerializableTransaction(async (transaction) => {
+    const stage = await runPipelinesSerializableTransaction(async (transaction) => {
       const repository = this.repository as PipelinesRepositoryWithClient;
 
       const currentStage = await repository.findStageById(
@@ -476,7 +470,7 @@ export class PipelinesService implements PipelineServiceContract {
   ): Promise<void> {
     let currentStagePipelineId: string | null = null;
 
-    await runInSerializableTransaction(async (transaction) => {
+    await runPipelinesSerializableTransaction(async (transaction) => {
       const repository = this.repository as PipelinesRepositoryWithClient;
 
       const currentStage = await repository.findStageById(
@@ -548,7 +542,7 @@ export class PipelinesService implements PipelineServiceContract {
   async reorderStages(
     input: ReorderStagesServiceInput,
   ): Promise<PipelineContract['stages']> {
-    const updatedStages = await runInSerializableTransaction(async (transaction) => {
+    const updatedStages = await runPipelinesSerializableTransaction(async (transaction) => {
       const repository = this.repository as PipelinesRepositoryWithClient;
 
       const pipeline = await repository.findById(
