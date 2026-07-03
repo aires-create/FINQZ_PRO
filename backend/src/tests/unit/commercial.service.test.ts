@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+
+import { Prisma } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const transactionMock = vi.hoisted(() => ({
@@ -144,7 +147,7 @@ const createPayload: CreateCommercialTableDto = {
 
 describe('commercialService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     prismaMock.$transaction.mockImplementation(
       async (
         callback: (transaction: typeof transactionMock) => Promise<unknown>,
@@ -167,6 +170,12 @@ describe('commercialService', () => {
     } as unknown as CreateCommercialTableDto);
 
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+    expect(prismaMock.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
     expect(transactionMock.commercialTable.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         tenantId: 'tenant-1',
@@ -246,7 +255,7 @@ describe('commercialService', () => {
   });
 
   it('isolates table lookup by tenant', async () => {
-    transactionMock.commercialTable.findFirst.mockResolvedValueOnce(null);
+    prismaMock.commercialTable.findFirst.mockResolvedValueOnce(null);
 
     await expect(
       commercialService.getTableDetails('tenant-2', 'table-1'),
@@ -261,5 +270,16 @@ describe('commercialService', () => {
         }),
       }),
     );
+  });
+
+  it('service source does not access Prisma directly', () => {
+    const serviceSource = readFileSync(
+      new URL('../../modules/commercial/services/commercial.service.ts', import.meta.url),
+      'utf8',
+    );
+
+    expect(serviceSource).not.toContain("from '../../../core/prisma/client.js'");
+    expect(serviceSource).not.toContain('prisma.$transaction');
+    expect(serviceSource).not.toContain('Prisma.');
   });
 });
