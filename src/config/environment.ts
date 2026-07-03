@@ -28,10 +28,6 @@ const getApiBaseUrl = (): string => {
   return 'http://localhost:8787';
 };
 
-// SECURITY: Legacy auth fallback is only allowed in explicit development mode.
-export const ENABLE_LEGACY_AUTH_FALLBACK =
-  import.meta.env.VITE_ENABLE_LEGACY_AUTH_FALLBACK === 'true' && IS_DEV_MODE;
-
 // Base URL da API
 export const API_BASE_URL = getApiBaseUrl();
 
@@ -72,7 +68,6 @@ const getEndpoint = (base: string, id: number) => `${base}/${id}`;
 export const ENDPOINTS = {
   // Autenticação
   AUTH: {
-    // TODO(legacy-cleanup): manter catálogo legado mínimo sincronizado com o runtime Fastify oficial.
     LOGIN: '/api/v1/auth/login',
     LOGOUT: '/api/v1/auth/logout',
     REFRESH: '/api/v1/auth/refresh',
@@ -89,7 +84,6 @@ export const ENDPOINTS = {
   
   // Clientes
   CLIENTES: {
-    // TODO(legacy-cleanup): padronizar todos os consumidores no namespace crm oficial.
     LIST: '/api/v1/crm/clientes',
     GET: (id: number) => getEndpoint('/api/v1/crm/clientes', id),
     CREATE: '/api/v1/crm/clientes',
@@ -112,7 +106,6 @@ export const ENDPOINTS = {
   
   // Usuários
   USUARIOS: {
-    // TODO(legacy-cleanup): manter alinhado ao endpoint oficial Fastify.
     LIST: '/api/v1/users',
     GET: (id: number) => getEndpoint('/api/v1/users', id),
     CREATE: '/api/v1/users',

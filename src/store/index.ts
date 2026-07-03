@@ -460,7 +460,6 @@ const useAppStore = create<AppState>()(
       setClientes: (clientes) => set({ clientes }),
       addCliente: (cliente) => set((state) => ({ clientes: [...state.clientes, cliente] })),
       
-      // @deprecated Estado legado de Produto. Fonte operacional oficial deve ser Estrutura Comercial/Backend; este bloco permanece só para compatibilidade transitória.
       produtos: initialProdutos,
       setProdutos: (produtos) => set({ produtos }),
       addProduto: (produto) => set((state) => ({ produtos: [...state.produtos, produto] })),
@@ -514,7 +513,6 @@ const useAppStore = create<AppState>()(
         return state.estruturaComercial;
       },
       migrateProdutosToEstruturaComercial: () => set((state) => {
-        // @deprecated Migração transitória de legado Produto -> EstruturaComercial. Não representa a arquitetura oficial.
         const produtos = state.produtos;
         if (produtos.length === 0) return state;
         
@@ -782,7 +780,6 @@ const useAppStore = create<AppState>()(
       currentPipelineId: "",
       setCurrentPipelineId: (id) => set({ currentPipelineId: id }),
 
-      // @deprecated Kanban legado de Opportunity com compatibilidade de produto/pipeline; permanece apenas até os consumidores canônicos migrarem.
       oportunidadesKanban: initialOportunidades,
       setOportunidadesKanban: (oportunidades) => set({ oportunidadesKanban: oportunidades }),
       addOportunidade: (oportunidade) => set((state) => ({
@@ -846,14 +843,12 @@ const useAppStore = create<AppState>()(
       name: "finqz-pro-storage",
       version: 2,
       migrate: (persistedState: any, version: number) => {
-        // TODO(legacy-cleanup): manter somente estado de UI em persist para evitar stale de dados operacionais.
         if (!persistedState || typeof persistedState !== "object") {
           return persistedState;
         }
 
         const nextState = { ...persistedState };
         delete nextState.clientes;
-        // @deprecated Remoção parcial de persistência legada; mantém apenas o que é necessário para compatibilidade de UI durante a transição.
         delete nextState.produtos;
         delete nextState.parceiros;
         delete nextState.usuarios;

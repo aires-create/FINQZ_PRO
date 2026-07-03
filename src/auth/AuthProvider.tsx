@@ -44,8 +44,6 @@ export const useAuth = () => useContext(AuthContext);
 // ============================================
 // AUTH PROVIDER
 // ============================================
-// TODO(legacy-cleanup): consolidar com App router após estabilização dos contratos.
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);

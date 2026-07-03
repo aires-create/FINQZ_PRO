@@ -1,7 +1,5 @@
 // FINQZ PRO - API Client
 // Client HTTP com interceptors e tratamento de erros
-// Nota: Substituir por chamada real ao backend quando disponível
-
 import { finqzClient } from "./finqzClient";
 import { clientesApi } from "./modules/clientes.api";
 import { oportunidadesApi } from "./modules/oportunidades.api";
@@ -33,8 +31,6 @@ export const client = finqzClient;
 // ============================================
 // API ENDPOINTS (mantido para compatibilidade)
 // ============================================
-// TODO(legacy-cleanup): migrar telas restantes para src/api/modules/* com contratos oficiais /api/v1.
-
 const shouldPreserveOfficialApiPrefix = (endpoint: string): boolean =>
   /^\/api\/v\d+(?:\/|$)/i.test(endpoint);
 

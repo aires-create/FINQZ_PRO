@@ -36,7 +36,6 @@ export interface ResetPasswordPayload {
   send_email?: boolean;
 }
 
-// TODO(legacy-cleanup): manter relativo ao prefixo /api/v1 do API_BASE_URL para evitar /api/v1/api/*.
 const AUTH_BASE_PATH = '/api/v1/auth';
 
 // ============================================

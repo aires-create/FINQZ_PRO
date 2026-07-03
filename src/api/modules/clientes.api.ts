@@ -43,7 +43,6 @@ export interface UpdateClientePayload extends Partial<CreateClientePayload> {}
 
 type ClienteId = string | number;
 
-// TODO(legacy-cleanup): remover aliases antigos de clientes e manter somente /api/v1/crm/clientes.
 const CRM_CLIENTES_BASE_PATH = '/api/v1/crm/clientes';
 
 // ============================================
