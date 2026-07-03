@@ -4,7 +4,7 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, Info, Zap } from 'lucide-react';
-import { ApiException, isAuthError, isPermissionError, isValidationError, getErrorMessage } from '../api/client';
+import { ApiException, isAuthError, isPermissionError, isValidationError, getErrorMessage } from '../api/http';
 import { STORAGE_KEYS } from '../config/environment';
 
 // ============================================

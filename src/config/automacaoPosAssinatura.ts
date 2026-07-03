@@ -1,7 +1,6 @@
 // FINQZ PRO - Automação Pós-Assinatura
 // Executa ações automaticamente quando um contrato é assinado
 
-import api from "../api/client";
 import useAppStore from "../store";
 
 // Tipos de automação

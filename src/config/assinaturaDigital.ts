@@ -1,8 +1,6 @@
 // FINQZ PRO - Serviço de Assinatura Digital
 // Suporta múltiplos provedores: Authentic, DocuSign, Clicksign
 
-import api from "../api/client";
-
 // Tipos de provedor de assinatura
 export type ProvedorAssinatura = 'authentic' | 'docusign' | 'clicksign';
 

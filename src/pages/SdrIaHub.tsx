@@ -62,8 +62,8 @@ import {
 } from "lucide-react";
 import { Button, Card, Badge, Input, Modal, TextArea, Select } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import api from "../api/client";
-import { dataService } from "../api/dataService";
+import { apiFetch } from "../api/http";
+import { oportunidadesApi } from "../api/modules/oportunidades.api";
 import useAppStore from "../store";
 
 // Types
@@ -377,7 +377,7 @@ export const SdrIaHubPage: React.FC = () => {
   const loadMetrics = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/api/sdr/metrics");
+      const response = await apiFetch("/api/sdr/metrics");
       if (response.data.success) {
         setMetrics(response.data.metrics);
         setChannelMetrics(response.data.channelMetrics);
@@ -412,7 +412,7 @@ export const SdrIaHubPage: React.FC = () => {
   // Load recent analyses
   const loadAnalyses = async () => {
     try {
-      const response = await api.get("/api/sdr/analyses/recent");
+      const response = await apiFetch("/api/sdr/analyses/recent");
       if (response.data.success) {
         setAnalyses(response.data.analyses);
       }
@@ -425,7 +425,7 @@ export const SdrIaHubPage: React.FC = () => {
   const checkApiStatus = async () => {
     try {
       const start = Date.now();
-      await api.get("/api/sdr/status");
+      await apiFetch("/api/sdr/status");
       const latency = Date.now() - start;
       setStatus(prev => ({
         ...prev,
@@ -447,8 +447,11 @@ export const SdrIaHubPage: React.FC = () => {
     setTestResult(null);
     
     try {
-      const response = await api.post("/api/sdr/test", {
-        testMessage: "Olá, tenho interesse no produto, qual o preço?"
+      const response = await apiFetch("/api/sdr/test", {
+        method: "POST",
+        body: JSON.stringify({
+          testMessage: "Olá, tenho interesse no produto, qual o preço?"
+        }),
       });
       
       if (response.data.success) {
@@ -467,7 +470,7 @@ export const SdrIaHubPage: React.FC = () => {
   const handleForceAnalysis = async () => {
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/force-analysis");
+      await apiFetch("/api/sdr/force-analysis", { method: "POST" });
       await loadMetrics();
       await loadAnalyses();
     } catch (error) {
@@ -481,7 +484,7 @@ export const SdrIaHubPage: React.FC = () => {
   const handleReprocessLeads = async () => {
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/reprocess");
+      await apiFetch("/api/sdr/reprocess", { method: "POST" });
       await loadMetrics();
       await loadAnalyses();
     } catch (error) {
@@ -496,7 +499,7 @@ export const SdrIaHubPage: React.FC = () => {
     setIsLoading(true);
     setActionFeedback(null);
     try {
-      await api.post("/api/sdr/attack-hot-leads");
+      await apiFetch("/api/sdr/attack-hot-leads", { method: "POST" });
       setActionFeedback('Leads quentes atacados com sucesso!');
       setTimeout(() => setActionFeedback(null), 3000);
     } catch (error) {
@@ -512,7 +515,7 @@ export const SdrIaHubPage: React.FC = () => {
     setIsLoading(true);
     setActionFeedback(null);
     try {
-      await api.post("/api/sdr/generate-responses");
+      await apiFetch("/api/sdr/generate-responses", { method: "POST" });
       setActionFeedback('Respostas geradas para todos os leads pendentes!');
       setTimeout(() => setActionFeedback(null), 3000);
     } catch (error) {
@@ -534,9 +537,12 @@ export const SdrIaHubPage: React.FC = () => {
     if (!selectedObjection) return;
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/objection-action", {
-        tipo: selectedObjection.tipo,
-        acao: selectedObjection.acaoRecomendada
+      await apiFetch("/api/sdr/objection-action", {
+        method: "POST",
+        body: JSON.stringify({
+          tipo: selectedObjection.tipo,
+          acao: selectedObjection.acaoRecomendada
+        }),
       });
       setShowObjectionModal(false);
       setActionFeedback(`Ação executada: ${selectedObjection.acaoRecomendada.replace('_', ' ')}`);
@@ -797,7 +803,7 @@ export const SdrIaHubPage: React.FC = () => {
   const handleSendFollowUp = async () => {
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/followup");
+      await apiFetch("/api/sdr/followup", { method: "POST" });
     } catch (error) {
       console.error("[SDR] Follow-up error:", error);
     } finally {
@@ -811,8 +817,11 @@ export const SdrIaHubPage: React.FC = () => {
     setConfig(prev => ({ ...prev, autoMode: newMode }));
     
     try {
-      await api.post("/api/sdr/config", {
-        autoMode: newMode
+      await apiFetch("/api/sdr/config", {
+        method: "POST",
+        body: JSON.stringify({
+          autoMode: newMode
+        }),
       });
     } catch (error) {
       console.error("[SDR] Toggle automation error:", error);
@@ -823,9 +832,12 @@ export const SdrIaHubPage: React.FC = () => {
   // Save prompt
   const handleSavePrompt = async () => {
     try {
-      await api.post("/api/sdr/config", {
-        prompt: config.prompt,
-        tone: config.tone
+      await apiFetch("/api/sdr/config", {
+        method: "POST",
+        body: JSON.stringify({
+          prompt: config.prompt,
+          tone: config.tone
+        }),
       });
       setShowConfigModal(false);
     } catch (error) {
@@ -895,7 +907,7 @@ export const SdrIaHubPage: React.FC = () => {
     
     setIsCreatingOpp(true);
     try {
-      await dataService.oportunidades.create({
+      await oportunidadesApi.create({
         nome: oppData.nome,
         telefone: oppData.telefone,
         valor: oppData.valor,
@@ -903,7 +915,7 @@ export const SdrIaHubPage: React.FC = () => {
         observacoes: oppData.observacoes,
         status: 'novo',
         etapa: 'novo'
-      });
+      } as any);
       
       setShowCreateOppModal(false);
       setSelectedAnalysis(null);
