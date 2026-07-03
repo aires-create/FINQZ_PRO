@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-import { prisma } from '../../../database/prisma.js';
 import { config } from '../../../config/app.js';
 import { AppError } from '../../../shared/errors/AppError.js';
+import { authRepository } from '../repositories/auth.repository.js';
 
 type LoginDTO = {
   email: string;
@@ -14,11 +14,7 @@ export class AuthService {
   async login({ email, password }: LoginDTO) {
     const emailNormalized = email.trim().toLowerCase();
 
-    const user = await prisma.user.findFirst({
-      where: {
-        emailNormalized,
-      },
-    });
+    const user = await authRepository.findUserByEmail(emailNormalized);
 
     if (!user) {
       throw new AppError({

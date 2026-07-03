@@ -1,12 +1,13 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { prisma } from '../../database/prisma.js';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
 import { registerAuditLog } from '../audit/services/audit.service.js';
 import { requirePermissions } from '../rbac/rbac.guard.js';
 import { ConflictError, NotFoundError, ValidationAppError } from '../../shared/errors/index.js';
 import { hashPassword, validatePasswordStrength } from '../../utils/password.js';
+import { usersRepository } from './repositories/users.repository.js';
+import { rolesRepository } from '../roles/repositories/roles.repository.js';
 
 type UserRoleRow = {
   role?: {
@@ -201,16 +202,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
   }, async (request, reply) => {
     const tenantId = getTenantId(request);
 
-    const users = await prisma.user.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-      },
-      select: buildUserWithRolesSelect(),
-      orderBy: {
-        createdAt: 'desc',
-      },
-    }) as UserRecord[];
+    const users = await usersRepository.listByTenant(tenantId) as UserRecord[];
 
     return reply.send({
       success: true,
@@ -226,17 +218,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const body = request.body as UpdateUserBody;
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        id,
-        tenantId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        emailNormalized: true,
-      },
-    });
+    const existingUser = await usersRepository.findById(tenantId, id);
 
     if (!existingUser) {
       throw new NotFoundError('User not found');
@@ -255,18 +237,11 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       const emailNormalized = email.toLowerCase();
 
       if (emailNormalized !== existingUser.emailNormalized) {
-        const conflictingUser = await prisma.user.findFirst({
-          where: {
-            tenantId,
-            emailNormalized,
-            NOT: {
-              id: existingUser.id,
-            },
-          },
-          select: {
-            id: true,
-          },
-        });
+        const conflictingUser = await usersRepository.findByEmailNormalized(
+          tenantId,
+          emailNormalized,
+          existingUser.id,
+        );
 
         if (conflictingUser) {
           throw new ConflictError('User already exists for this tenant');
@@ -289,13 +264,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       updateData.isActive = body.isActive;
     }
 
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: existingUser.id,
-      },
-      data: updateData,
-      select: buildUserWithRolesSelect(),
-    }) as UserRecord;
+    const updatedUser = await usersRepository.update(existingUser.id, updateData) as UserRecord;
 
     return reply.send({
       success: true,
@@ -316,32 +285,13 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const lastName = (body.lastName ?? '').trim();
     const roleSlug = body.role.trim();
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        tenantId,
-        emailNormalized,
-      },
-    });
+    const existingUser = await usersRepository.findByEmailNormalized(tenantId, emailNormalized);
 
     if (existingUser) {
       throw new ConflictError('User already exists for this tenant');
     }
 
-    const role = await prisma.role.findFirst({
-      where: {
-        tenantId,
-        OR: [
-          { slug: roleSlug },
-          { name: roleSlug },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        type: true,
-      },
-    });
+    const role = await rolesRepository.findByTenantAndSlugOrName(tenantId, roleSlug);
 
     if (!role) {
       throw new ValidationAppError('Role not found for tenant');
@@ -349,35 +299,15 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
 
     const hashedPassword = await hashPassword(body.password);
 
-    const createdUser = await prisma.user.create({
-      data: {
-        email,
-        emailNormalized,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        tenant: {
-          connect: {
-            id: tenantId,
-          },
-        },
-        userRoles: {
-          create: {
-            tenant: {
-              connect: {
-                id: tenantId,
-              },
-            },
-            role: {
-              connect: {
-                id: role.id,
-              },
-            },
-          },
-        },
-        isActive: true,
-      },
-      select: buildUserWithRolesSelect(),
+    const createdUser = await usersRepository.create({
+      tenantId,
+      email,
+      emailNormalized,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      roleId: role.id,
+      isActive: true,
     }) as UserRecord;
 
     return reply.status(201).send({
@@ -396,17 +326,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const body = request.body as ResetPasswordBody;
 
-    const targetUser = await prisma.user.findFirst({
-      where: {
-        id,
-        tenantId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        email: true,
-      },
-    });
+    const targetUser = await usersRepository.findTargetForReset(tenantId, id);
 
     if (!targetUser) {
       throw new NotFoundError('User not found');
@@ -420,25 +340,8 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const hashedPassword = await hashPassword(body.newPassword);
 
     await Promise.all([
-      prisma.user.update({
-        where: {
-          id: targetUser.id,
-        },
-        data: {
-          password: hashedPassword,
-          updatedAt: new Date(),
-        },
-      }),
-      prisma.refreshToken.updateMany({
-        where: {
-          userId: targetUser.id,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: new Date(),
-          revokedReason: 'Password reset by administrator',
-        },
-      }),
+      usersRepository.updatePassword(targetUser.id, hashedPassword),
+      usersRepository.revokeRefreshTokens(targetUser.id, 'Password reset by administrator'),
       registerAuditLog({
         tenantId,
         userId: actorUserId,

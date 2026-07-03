@@ -2,10 +2,10 @@
 // FINQZ PRO - Roles Service
 // ============================================
 
-import { prisma } from '../../database/prisma.js';
 import { AppError, ValidationError } from '../../types/index.js';
 import { createModuleLogger } from '../../shared/logger.js';
 import type { CreateRoleRequest, UpdateRoleRequest, RoleResponse } from './types.js';
+import { rolesRepository } from './repositories/roles.repository.js';
 
 const logger = createModuleLogger('RolesService');
 
@@ -18,41 +18,19 @@ export class RolesService {
       logger.info(`Creating role: ${data.slug} for tenant: ${tenantId}`);
 
       // Check if role already exists
-      const existingRole = await prisma.role.findFirst({
-        where: {
-          tenantId,
-          slug: data.slug,
-        },
-      });
+      const existingRole = await rolesRepository.findByTenantAndSlug(tenantId, data.slug);
 
       if (existingRole) {
         throw new ValidationError('Role already exists', ['Role slug must be unique within tenant']);
       }
 
       // Create role
-      const role = await prisma.role.create({
-        data: {
-          name: data.name,
-          slug: data.slug,
-          description: data.description ?? null,
-          tenantId,
-          isSystem: false,
-        },
-        include: {
-          rolePermissions: {
-            select: {
-              permission: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  resource: true,
-                  action: true,
-                },
-              },
-            },
-          },
-        },
+      const role = await rolesRepository.create({
+        name: data.name,
+        slug: data.slug,
+        description: data.description ?? null,
+        tenantId,
+        isSystem: false,
       });
 
       // Add permissions if provided
@@ -76,27 +54,7 @@ export class RolesService {
    */
   async getRole(tenantId: string, roleId: string): Promise<RoleResponse> {
     try {
-      const role = await prisma.role.findFirst({
-        where: {
-          id: roleId,
-          tenantId,
-        },
-        include: {
-          rolePermissions: {
-            select: {
-              permission: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  resource: true,
-                  action: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      const role = await rolesRepository.findById(tenantId, roleId);
 
       if (!role) {
         throw new AppError('Role not found', 404);
@@ -117,32 +75,7 @@ export class RolesService {
    */
   async getRoles(tenantId: string, skip = 0, take = 10): Promise<{ roles: RoleResponse[]; total: number }> {
     try {
-      const [roles, total] = await Promise.all([
-        prisma.role.findMany({
-          where: { tenantId, deletedAt: null },
-          include: {
-            rolePermissions: {
-              select: {
-                permission: {
-                  select: {
-                    id: true,
-                    name: true,
-                    slug: true,
-                    resource: true,
-                    action: true,
-                  },
-                },
-              },
-            },
-          },
-          skip,
-          take,
-          orderBy: { createdAt: 'desc' },
-        }),
-        prisma.role.count({
-          where: { tenantId, deletedAt: null },
-        }),
-      ]);
+      const { roles, total } = await rolesRepository.listByTenant(tenantId, skip, take);
 
       return {
         roles: roles.map((role) => ({
@@ -165,9 +98,7 @@ export class RolesService {
       logger.info(`Updating role: ${roleId}`);
 
       // Check if role is system role
-      const role = await prisma.role.findFirst({
-        where: { id: roleId, tenantId },
-      });
+      const role = await rolesRepository.findById(tenantId, roleId);
 
       if (!role) {
         throw new AppError('Role not found', 404);
@@ -189,25 +120,19 @@ export class RolesService {
         updateData.description = data.description ?? null;
       }
 
-      const updatedRole = await prisma.role.update({
-        where: { id: roleId },
-        data: updateData,
-        include: {
-          rolePermissions: {
-            select: {
-              permission: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  resource: true,
-                  action: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      const roleUpdateData: {
+        name?: string;
+        description?: string | null;
+      } = {};
+
+      if (data.name !== undefined) {
+        roleUpdateData.name = data.name;
+      }
+      if (data.description !== undefined) {
+        roleUpdateData.description = data.description ?? null;
+      }
+
+      const updatedRole = await rolesRepository.update(tenantId, roleId, roleUpdateData);
 
             // Update permissions if provided
       if (data.permissions) {
@@ -232,9 +157,7 @@ export class RolesService {
       logger.info(`Deleting role: ${roleId}`);
 
       // Check if role exists and is not system role
-      const role = await prisma.role.findFirst({
-        where: { id: roleId, tenantId },
-      });
+      const role = await rolesRepository.findById(tenantId, roleId);
 
       if (!role) {
         throw new AppError('Role not found', 404);
@@ -245,19 +168,14 @@ export class RolesService {
       }
 
       // Check if role is assigned to users via role assignments
-      const userRoleCount = await prisma.userRole.count({
-        where: { roleId },
-      });
+      const userRoleCount = await rolesRepository.countUserAssignments(roleId);
 
       if (userRoleCount > 0) {
         throw new ValidationError('Cannot delete role with assigned users', [
           `This role is assigned to ${userRoleCount} user(s)`,
         ]);
       }      // Soft delete role
-      await prisma.role.update({
-        where: { id: roleId },
-        data: { deletedAt: new Date() },
-      });
+      await rolesRepository.softDelete(tenantId, roleId);
 
       logger.info(`Role deleted: ${roleId}`);
     } catch (error) {
@@ -273,21 +191,13 @@ export class RolesService {
     try {
       logger.info(`Updating permissions for role: ${roleId}`);
 
-      const role = await prisma.role.findUnique({
-        where: { id: roleId },
-        select: { id: true, tenantId: true },
-      });
+      const role = await rolesRepository.findByIdWithTenant(roleId);
 
       if (!role) {
         throw new AppError('Role not found', 404);
       }
 
-      const permissions = await prisma.permission.findMany({
-        where: {
-          slug: { in: permissionSlugs },
-        },
-        select: { id: true, slug: true },
-      });
+      const permissions = await rolesRepository.findPermissionsBySlugs(permissionSlugs);
 
       if (permissions.length !== permissionSlugs.length) {
         throw new ValidationError('Some permissions not found', [
@@ -295,19 +205,11 @@ export class RolesService {
         ]);
       }
 
-      await prisma.$transaction([
-        prisma.rolePermission.deleteMany({
-          where: { roleId },
-        }),
-        prisma.rolePermission.createMany({
-          data: permissions.map((permission) => ({
-            tenantId: role.tenantId,
-            roleId,
-            permissionId: permission.id,
-          })),
-          skipDuplicates: true,
-        }),
-      ]);
+      await rolesRepository.replacePermissions(
+        roleId,
+        role.tenantId,
+        permissions.map((permission) => permission.id),
+      );
 
       logger.info(`Permissions updated for role: ${roleId}`);
     } catch (error) {
