@@ -1,12 +1,13 @@
 // FINQZ PRO - Auth Provider
 // Provider de contexto de autenticação
-// Nota: Integração com backend real necessária para validação de tokens
+// Fonte oficial: backend + sessão por token
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { AuthUser, getScopeByRole, isAdminRole } from './permissions';
+import { AuthUser } from './permissions';
 import useAppStore from '../store';
 import { PROFILE_PERMISSIONS } from '../types';
 import { mergeFrontendAdminPermissions } from '../config/permissions';
+import { finqzAuth } from './finqzAuth';
 
 // ============================================
 // TYPES
@@ -41,30 +42,9 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 // ============================================
-// FALLBACK USER (para ambiente atual sem backend)
-// ============================================
-
-/**
- * Usuário fallback para ambiente de desenvolvimento
- * NOTA: Remover quando backend real estiver disponível
- */
-const getFallbackUser = (): AuthUser | null => {
-  // Tenta obter do localStorage
-  try {
-    const stored = localStorage.getItem('finqz_user');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-    // Ignora erros de parse
-  }
-  return null;
-};
-
-// ============================================
 // AUTH PROVIDER
 // ============================================
-// TODO(legacy-cleanup): provider legado/paralelo; App.tsx atualmente usa provider inline.
+// TODO(legacy-cleanup): consolidar com App router após estabilização dos contratos.
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -74,17 +54,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // Tenta obter usuário do localStorage ou sessão
-        const storedUser = getFallbackUser();
-        
-        if (storedUser) {
-          // Garante que Admin Sistema tenha permissões explícitas
-          if (storedUser.role === 'ROLE_ADMIN_SISTEMA') {
-            storedUser.permissions = mergeFrontendAdminPermissions(storedUser.permissions);
-            storedUser.scope = 'GLOBAL';
-            localStorage.setItem('finqz_user', JSON.stringify(storedUser));
-          }
-          setUser(storedUser);
+        const session = await finqzAuth.getSession();
+        const sessionUser = session.data?.user;
+
+        if (sessionUser) {
+          const normalizedUser = sessionUser.role === 'ROLE_ADMIN_SISTEMA'
+            ? {
+                ...sessionUser,
+                permissions: mergeFrontendAdminPermissions(sessionUser.permissions),
+                scope: 'GLOBAL',
+              }
+            : sessionUser;
+
+          setUser(normalizedUser);
+          useAppStore.getState().setAuth(normalizedUser);
         }
       } catch (error) {
         console.error('[Auth] Erro ao inicializar:', error);
@@ -100,12 +83,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = useCallback(async (credentials: { access_code_or_email: string; senha: string }): Promise<{ success: boolean; must_change_password?: boolean; error?: string }> => {
     try {
       setLoading(true);
-      
-      // Importa a API de autenticação
-      const { authApi } = await import('../api/modules/auth.api');
-      
-      // Tenta fazer login
-      const result = await authApi.login({
+
+      const result = await finqzAuth.login({
         access_code_or_email: credentials.access_code_or_email,
         senha: credentials.senha,
       });
@@ -123,66 +102,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         result.user.scope = 'GLOBAL';
       }
 
-      // Armazena no localStorage (temporário - tokens devem ser usados em produção)
-      localStorage.setItem('finqz_user', JSON.stringify(result.user));
-      
       setUser(result.user);
-      
-      // Inicializa permissões baseadas no perfil do usuário
+      useAppStore.getState().setAuth(result.user);
+
       const { setUserPermissions } = useAppStore.getState();
-      // Admin tem acesso total - aceita vários formatos de perfil admin
-      const isAdmin = result.user.perfil === 'admin' || 
-                     result.user.perfil === 'Admin Sistema' || 
-                     result.user.perfil === 'Admin' ||
-                     result.user.role === 'ROLE_ADMIN_SISTEMA';
-      
+
+      const isAdmin =
+        result.user.perfil === 'admin' ||
+        result.user.perfil === 'Admin Sistema' ||
+        result.user.perfil === 'Admin' ||
+        result.user.role === 'ROLE_ADMIN_SISTEMA';
+
       if (isAdmin) {
         setUserPermissions({ '*': ['*'] });
-      } else {
-        const backendPermissions = Array.isArray(result.user.permissions)
-          ? result.user.permissions
-          : [];
-
-        if (backendPermissions.length > 0) {
-          const convertedPermissions = backendPermissions.reduce<Record<string, string[]>>((acc, permission) => {
-            if (typeof permission !== "string" || !permission) {
-              return acc;
-            }
-
-            const normalizedPermission = permission.toUpperCase();
-
-            if (normalizedPermission === "*") {
-              acc["*"] = ["*"];
-              return acc;
-            }
-
-            const lastSeparatorIndex = normalizedPermission.lastIndexOf("_");
-            if (lastSeparatorIndex <= 0 || lastSeparatorIndex >= normalizedPermission.length - 1) {
-              const fallbackKey = normalizedPermission.toLowerCase();
-              acc[fallbackKey] = acc[fallbackKey] || [];
-              acc[fallbackKey].push("*");
-              return acc;
-            }
-
-            const moduleKey = normalizedPermission.slice(0, lastSeparatorIndex).toLowerCase();
-            const actionKey = normalizedPermission.slice(lastSeparatorIndex + 1).toLowerCase();
-            acc[moduleKey] = acc[moduleKey] || [];
-            acc[moduleKey].push(actionKey);
+      } else if (Array.isArray(result.user.permissions) && result.user.permissions.length > 0) {
+        const convertedPermissions = result.user.permissions.reduce<Record<string, string[]>>((acc, permission) => {
+          if (typeof permission !== 'string' || !permission) {
             return acc;
-          }, {});
-
-          setUserPermissions(convertedPermissions);
-        } else {
-          const profilePerms = PROFILE_PERMISSIONS[result.user.perfil];
-          if (profilePerms) {
-            setUserPermissions(profilePerms);
-          } else {
-            // Se não tem perfil definido, usa permissões vazias (acesso negado por padrão)
-            setUserPermissions({});
           }
-        }
+
+          const normalizedPermission = permission.toUpperCase();
+
+          if (normalizedPermission === '*') {
+            acc['*'] = ['*'];
+            return acc;
+          }
+
+          const lastSeparatorIndex = normalizedPermission.lastIndexOf('_');
+          if (lastSeparatorIndex <= 0 || lastSeparatorIndex >= normalizedPermission.length - 1) {
+            const fallbackKey = normalizedPermission.toLowerCase();
+            acc[fallbackKey] = acc[fallbackKey] || [];
+            acc[fallbackKey].push('*');
+            return acc;
+          }
+
+          const moduleKey = normalizedPermission.slice(0, lastSeparatorIndex).toLowerCase();
+          const actionKey = normalizedPermission.slice(lastSeparatorIndex + 1).toLowerCase();
+          acc[moduleKey] = acc[moduleKey] || [];
+          acc[moduleKey].push(actionKey);
+          return acc;
+        }, {});
+
+        setUserPermissions(convertedPermissions);
+      } else {
+        const profilePerms = PROFILE_PERMISSIONS[result.user.perfil];
+        setUserPermissions(profilePerms || {});
       }
-      
+
       return {
         success: true,
         must_change_password: result.must_change_password,
@@ -200,9 +166,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Função de logout
   const logout = useCallback(() => {
-    // Remove dados de autenticação
-    localStorage.removeItem('finqz_user');
+    void finqzAuth.signOut();
     setUser(null);
+    useAppStore.getState().setAuth(null);
   }, []);
 
   // Atualiza dados do usuário
@@ -210,13 +176,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(prev => {
       if (!prev) return null;
       const updated = { ...prev, ...userData };
-      
+
       // Garante que Admin sempre tenha permissões
       if (updated.role === 'ROLE_ADMIN_SISTEMA') {
         updated.permissions = mergeFrontendAdminPermissions(updated.permissions);
       }
-      
-      localStorage.setItem('finqz_user', JSON.stringify(updated));
+
+      useAppStore.getState().setAuth(updated);
       return updated;
     });
   }, []);

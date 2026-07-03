@@ -8,9 +8,7 @@ import { AuthUser, Module, Action } from "./auth/permissions";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
 import { finqzAuth } from "./auth/finqzAuth";
-import { getCurrentUser, setSessionUser } from "./auth/session";
 import { mergeFrontendAdminPermissions } from "./config/permissions";
-import { ENABLE_LEGACY_AUTH_FALLBACK } from "./config/environment";
 import {
   adminRoutes,
   crmRoutes,
@@ -27,8 +25,6 @@ import {
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
 const LoginParceiroPage = lazy(() => import("./pages/LoginParceiro"));
 const DashboardParceiroPage = lazy(() => import("./pages/DashboardParceiro"));
-
-import { generateSecurePassword } from "./utils/auth";
 
 // Page loader for lazy-loaded routes
 const PageLoader = () => (
@@ -197,7 +193,6 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const normalizedUser = normalizeAdminUser(nextUser);
     setUser(normalizedUser);
     setAuth(normalizedUser);
-    setSessionUser(normalizedUser);
     return normalizedUser;
   }, [setAuth]);
 
@@ -206,12 +201,6 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const checkAuth = async () => {
       try {
-        const storedUser = getCurrentUser();
-        if (storedUser && isMounted) {
-          applyAuthenticatedUser(storedUser);
-          return;
-        }
-
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error("Auth timeout")), 10000)
         );
@@ -241,33 +230,6 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [applyAuthenticatedUser]);
 
   const login = useCallback(async ({ access_code_or_email, senha }: { access_code_or_email: string; senha: string }) => {
-    const runLegacyLogin = () => {
-      const identifier = access_code_or_email.trim().toLowerCase();
-      const { usuarios } = useAppStore.getState();
-
-      const matchedUser = usuarios.find((currentUser) => {
-        const emailMatch = currentUser.email?.toLowerCase() === identifier;
-        const accessCodeMatch = currentUser.access_code?.toLowerCase() === identifier;
-        return (emailMatch || accessCodeMatch) && currentUser.senha === senha;
-      });
-
-      if (!matchedUser) {
-        return { success: false, error: "E-mail, código ou senha inválidos." };
-      }
-
-      if (matchedUser.status !== "ATIVO") {
-        return { success: false, error: "Seu acesso está inativo no momento." };
-      }
-
-      applyAuthenticatedUser({
-        ...matchedUser,
-        parceiroId: matchedUser.partner_id,
-        perfil: matchedUser.perfil,
-      });
-
-      return { success: true, must_change_password: matchedUser.must_change_password };
-    };
-
     const nativeLogin = await finqzAuth.login({ access_code_or_email, senha });
 
     if (nativeLogin.success && nativeLogin.user) {
@@ -285,41 +247,16 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    if (ENABLE_LEGACY_AUTH_FALLBACK) {
-  console.warn('[AUTH] Using legacy auth fallback');
-  return runLegacyLogin();
-}
-
-return {
-  success: false,
-  error: 'Authentication failed',
-};
+    return {
+      success: false,
+      error: nativeLogin.error || "Authentication failed",
+    };
   }, [applyAuthenticatedUser]);
 
   const requestPasswordReset = useCallback(async (identifier: string) => {
-    const normalizedIdentifier = identifier.trim().toLowerCase();
-    const { usuarios, updateUsuario } = useAppStore.getState();
-    const matchedUser = usuarios.find((currentUser) =>
-      currentUser.email?.toLowerCase() === normalizedIdentifier ||
-      currentUser.access_code?.toLowerCase() === normalizedIdentifier
-    );
-
-    if (!matchedUser) {
-      return { success: false, error: "Não encontramos um acesso com esse e-mail ou código." };
-    }
-
-    const temporaryPassword = generateSecurePassword(10);
-
-    updateUsuario(matchedUser.id, {
-      senha: temporaryPassword,
-      must_change_password: true,
-      temporary_password_expires_at: Date.now() + 1000 * 60 * 60,
-    });
-
     return {
-      success: true,
-      temporaryPassword,
-      accessCode: matchedUser.access_code,
+      success: false,
+      error: "Recuperação de senha indisponível nesta versão.",
     };
   }, []);
 

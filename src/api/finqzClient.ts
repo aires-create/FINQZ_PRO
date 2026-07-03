@@ -16,7 +16,6 @@ import {
 import {
   clearSession,
   getSessionSnapshot,
-  setSessionUser,
   type FinqzSession,
 } from "../auth/session";
 import { ENABLE_LEGACY_AUTH_FALLBACK, IS_DEV } from "../config/environment";
@@ -89,47 +88,13 @@ const fetchWithEdgeSparkFallback = async (endpoint: string, options: FinqzReques
   }
 };
 
-const getFallbackSession = async (): Promise<EdgeSparkSession> => {
-  if (!shouldUseLegacyEdgeSparkFallback) {
-    return { data: null, error: null };
-  }
-
-  const session = await edgeSparkClient.auth.getSession();
-  const fallbackUser = session.data?.user;
-
-  if (fallbackUser && typeof fallbackUser === "object") {
-    setSessionUser(fallbackUser);
-  }
-
-  return session;
-};
-
 const getSession = async (): Promise<FinqzAuthSession> => {
-  const nativeSession = getSessionSnapshot();
-  if (nativeSession.isAuthenticated) {
-    return nativeSession;
-  }
-
-  if (!shouldUseLegacyEdgeSparkFallback) {
-    return { data: null, error: null };
-  }
-
-  return getFallbackSession();
+  return getSessionSnapshot();
 };
 
 const signOut = async (): Promise<FinqzSignOutResult> => {
   clearSession();
-
-  try {
-    if (!shouldUseLegacyEdgeSparkFallback) {
-      return { data: null, error: null };
-    }
-
-    await edgeSparkClient.auth.signOut();
-    return { data: null, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
+  return { data: null, error: null };
 };
 
 const request = <T>(

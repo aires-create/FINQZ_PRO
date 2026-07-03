@@ -1,5 +1,5 @@
 // FINQZ PRO - Frontend session utilities
-// Centralizes local session storage without exposing sensitive values.
+// Centraliza apenas tokens de sessão. Usuário/tenant/roles devem vir do backend.
 
 import { STORAGE_KEYS } from "../config/environment";
 
@@ -81,38 +81,15 @@ export const setRefreshToken = (token: string | null | undefined): void => {
   setTokenValue(STORAGE_KEYS.REFRESH_TOKEN, token);
 };
 
-export const getCurrentUser = <T extends FinqzSessionUser = FinqzSessionUser>(): T | null => {
-  const storedUser = safeLocalStorageGet(STORAGE_KEYS.USER);
-  if (!storedUser) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(storedUser) as T;
-  } catch {
-    return null;
-  }
-};
-
-export const setSessionUser = (user: FinqzSessionUser | null | undefined): void => {
-  if (!user) {
-    safeLocalStorageRemove(STORAGE_KEYS.USER);
-    return;
-  }
-
-  safeLocalStorageSet(STORAGE_KEYS.USER, JSON.stringify(user));
-};
-
 export const getSessionSnapshot = (): FinqzSessionSnapshot => {
-  const user = getCurrentUser();
   const accessToken = getAccessToken();
   const refreshToken = getRefreshToken();
 
   return {
     data: {
-      user,
+      user: null,
     },
-    isAuthenticated: Boolean(user || accessToken),
+    isAuthenticated: Boolean(accessToken || refreshToken),
     hasAccessToken: Boolean(accessToken),
     hasRefreshToken: Boolean(refreshToken),
     source: "finqz",
@@ -139,10 +116,11 @@ export const storeSessionTokens = (tokens: {
 export const clearSession = (): void => {
   safeLocalStorageRemove(STORAGE_KEYS.TOKEN);
   safeLocalStorageRemove(STORAGE_KEYS.REFRESH_TOKEN);
-  safeLocalStorageRemove(STORAGE_KEYS.USER);
 };
 
 export const getStoredAuthToken = getAccessToken;
 export const getStoredRefreshToken = getRefreshToken;
+export const getCurrentUser = <T extends FinqzSessionUser = FinqzSessionUser>(): T | null => null;
+export const setSessionUser = (_user: FinqzSessionUser | null | undefined): void => {};
 export const getStoredUser = getCurrentUser;
 export const clearStoredSession = clearSession;

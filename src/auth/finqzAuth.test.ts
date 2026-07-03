@@ -1,0 +1,139 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { finqzAuth } from "./finqzAuth";
+import {
+  clearSession,
+  getAccessToken,
+  getCurrentUser,
+  getRefreshToken,
+  getSessionSnapshot,
+  storeSessionTokens,
+} from "./session";
+
+const finqzClientMock = vi.hoisted(() => ({
+  post: vi.fn(),
+  get: vi.fn(),
+  auth: {
+    getSession: vi.fn(),
+    signOut: vi.fn(),
+  },
+  api: {
+    fetch: vi.fn(),
+  },
+  destroy: vi.fn(),
+}));
+
+vi.mock("../api/finqzClient", () => ({
+  finqzClient: finqzClientMock,
+}));
+
+describe("auth/finqzAuth", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it("stores session tokens on login without persisting the user locally", async () => {
+    finqzClientMock.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          user: {
+            id: "user-1",
+            email: "admin@finqz.com.br",
+            firstName: "Admin",
+            lastName: "Sistema",
+            roleId: "role-1",
+            role: "ROLE_ADMIN_SISTEMA",
+            tenantId: "tenant-1",
+            tenantName: "FINQZ PRO",
+            permissions: ["USUARIOS_VIEW"],
+          },
+          tokens: {
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+          },
+        },
+      },
+    });
+
+    const result = await finqzAuth.login({
+      access_code_or_email: "admin@finqz.com.br",
+      senha: "Password123!",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.user).toMatchObject({
+      id: "user-1",
+      email: "admin@finqz.com.br",
+      role: "ROLE_ADMIN_SISTEMA",
+      tenant_id: "tenant-1",
+    });
+    expect(getAccessToken()).toBe("access-token");
+    expect(getRefreshToken()).toBe("refresh-token");
+    expect(getCurrentUser()).toBeNull();
+    expect(getSessionSnapshot().data?.user).toBeNull();
+  });
+
+  it("hydrates the session user from the backend profile endpoint", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+
+    finqzClientMock.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          user: {
+            id: "user-1",
+            email: "admin@finqz.com.br",
+            firstName: "Admin",
+            lastName: "Sistema",
+            roleId: "role-1",
+            role: "ROLE_ADMIN_SISTEMA",
+            perfil: "admin",
+            tenantId: "tenant-1",
+            tenantName: "FINQZ PRO",
+            roles: [
+              {
+                id: "role-1",
+                name: "Admin Sistema",
+                slug: "ROLE_ADMIN_SISTEMA",
+                type: "SYSTEM",
+              },
+            ],
+            permissions: ["USUARIOS_VIEW", "PERMISSOES_VIEW"],
+          },
+        },
+      },
+    });
+
+    const session = await finqzAuth.getSession();
+
+    expect(session.data?.user).toMatchObject({
+      id: "user-1",
+      email: "admin@finqz.com.br",
+      role: "ROLE_ADMIN_SISTEMA",
+      tenant_id: "tenant-1",
+      tenantName: "FINQZ PRO",
+      permissions: ["USUARIOS_VIEW", "PERMISSOES_VIEW"],
+    });
+    expect(finqzClientMock.get).toHaveBeenCalledWith("/api/v1/auth/profile");
+  });
+
+  it("clears session tokens on sign out", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+
+    finqzClientMock.auth.signOut.mockResolvedValueOnce({ data: null, error: null });
+
+    await finqzAuth.signOut();
+
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(getCurrentUser()).toBeNull();
+  });
+});

@@ -48,7 +48,6 @@ export const useApiErrorHandler = () => {
       // Limpa sessão
       localStorage.removeItem(STORAGE_KEYS.TOKEN);
       localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.USER);
       
       // Redirect para login
       navigate('/login', { replace: true });

@@ -8,8 +8,6 @@ import {
   clearSession,
   getAccessToken,
   getRefreshToken,
-  getSessionSnapshot,
-  setSessionUser,
   storeSessionTokens,
 } from "./session";
 import {
@@ -17,6 +15,33 @@ import {
   type BackendLoginResponse,
   type MappedFinqzUser,
 } from "./userMapper";
+
+interface BackendSessionUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roleId: string;
+  role: string;
+  perfil: string;
+  tenantId: string;
+  tenantName: string;
+  roles: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+  }>;
+  permissions: string[];
+}
+
+interface BackendSessionResponse {
+  success: boolean;
+  data?: {
+    user: BackendSessionUser;
+  };
+  message?: string;
+}
 
 export interface FinqzLoginResult {
   success: boolean;
@@ -41,8 +66,6 @@ interface NativeLogoutResponse {
   success: boolean;
   message?: string;
 }
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isBackendUnavailable = (error: unknown): boolean => {
   if (!(error instanceof ApiException)) {
@@ -89,13 +112,6 @@ export const finqzAuth = {
   login: async (input: LoginCredentials): Promise<FinqzLoginResult> => {
     const email = input.access_code_or_email.trim().toLowerCase();
 
-    if (!emailPattern.test(email)) {
-      return {
-        success: false,
-        error: "Use seu e-mail corporativo para entrar nesta versão.",
-      };
-    }
-
     try {
       const response = await finqzClient.post<BackendLoginResponse>(
         "/api/v1/auth/login",
@@ -122,7 +138,6 @@ export const finqzAuth = {
         accessToken: authData.tokens.accessToken,
         refreshToken: authData.tokens.refreshToken,
       });
-      setSessionUser(mappedUser);
 
       return {
         success: true,
@@ -194,12 +209,54 @@ export const finqzAuth = {
     }
   },
   getSession: async () => {
-    const nativeSession = getSessionSnapshot();
-    if (nativeSession.isAuthenticated) {
-      return nativeSession;
+    if (!getAccessToken() && !getRefreshToken()) {
+      return {
+        data: null,
+        error: null,
+      };
     }
 
-    return finqzClient.auth.getSession();
+    try {
+      const response = await finqzClient.get<BackendSessionResponse>("/api/v1/auth/profile");
+      const sessionUser = response.data?.data?.user;
+
+      if (!response.data.success || !sessionUser) {
+        return {
+          data: null,
+          error: null,
+        };
+      }
+
+      const normalizedUser: MappedFinqzUser = {
+        ...mapBackendAuthUser({
+          id: sessionUser.id,
+          email: sessionUser.email,
+          firstName: sessionUser.firstName,
+          lastName: sessionUser.lastName,
+          roleId: sessionUser.roleId,
+          role: sessionUser.role,
+          tenantId: sessionUser.tenantId,
+          tenantName: sessionUser.tenantName,
+          permissions: sessionUser.permissions,
+        }),
+        perfil: sessionUser.perfil,
+        roleId: sessionUser.roleId,
+        tenantName: sessionUser.tenantName,
+        permissions: sessionUser.permissions,
+      };
+
+      return {
+        data: {
+          user: normalizedUser,
+        },
+        error: null,
+      };
+    } catch {
+      return {
+        data: null,
+        error: null,
+      };
+    }
   },
   signOut: async () => {
     let nativeLogout: FinqzLogoutResult | undefined;
