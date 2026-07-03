@@ -1,6 +1,7 @@
 export { createEdpComposition } from './edp.composition.js';
 export { createDecisionContextFactory } from './decision-context.js';
 export { createDecisionInputsFactory } from './decision-inputs.js';
+export { createDecisionModelFactory } from './decision-model.js';
 export {
   createDecisionRuntimeComposition,
   createDecisionRuntimeUseCases,
@@ -22,6 +23,13 @@ export type {
   DecisionInputsFactory,
   DecisionInputsFactoryInput,
 } from './decision-inputs.js';
+export type {
+  DecisionModel,
+  DecisionModelFactory,
+  DecisionModelFactoryInput,
+  DecisionModelMetadata,
+  DecisionModelState,
+} from './decision-model.js';
 export type {
   EdpComposition,
   EdpCompositionDependencies,
