@@ -1,12 +1,9 @@
 // FINQZ PRO - API/Auth compatibility client
-// EdgeSpark stays encapsulated here during the migration window.
+// Client oficial para requests HTTP e sessão canônica.
 
-import { createEdgeSpark, type EdgeSparkClient } from "@edgespark/client";
-import "@edgespark/client/styles.css";
 import {
   apiRequest,
   buildRequestHeaders,
-  getResolvedApiBaseUrl,
   httpRequest,
   refreshSessionTokens,
   type FinqzHttpResponse,
@@ -18,23 +15,14 @@ import {
   getSessionSnapshot,
   type FinqzSession,
 } from "../auth/session";
-import { ENABLE_LEGACY_AUTH_FALLBACK, IS_DEV } from "../config/environment";
-
-type EdgeSparkSession = Awaited<ReturnType<EdgeSparkClient["auth"]["getSession"]>>;
-
-export type FinqzClientResponse<T> = FinqzHttpResponse<T>;
-export type FinqzAuthSession = FinqzSession | EdgeSparkSession;
 
 type FinqzSignOutResult = {
   data: null;
   error: unknown;
 };
 
-const edgeSparkClient = createEdgeSpark({
-  baseUrl: getResolvedApiBaseUrl(),
-});
-
-const shouldUseLegacyEdgeSparkFallback = IS_DEV && ENABLE_LEGACY_AUTH_FALLBACK;
+export type FinqzClientResponse<T> = FinqzHttpResponse<T>;
+export type FinqzAuthSession = FinqzSession;
 
 const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestInit = {}): Promise<Response> => {
   const { requestId, ...requestOptions } = options;
@@ -65,27 +53,6 @@ const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestI
   }
 
   return response;
-};
-
-const fetchWithEdgeSparkFallback = async (endpoint: string, options: FinqzRequestInit = {}): Promise<Response> => {
-  try {
-    return await fetchWithStandardHeaders(endpoint, options);
-  } catch {
-    if (!shouldUseLegacyEdgeSparkFallback) {
-      throw new Error("Official API request failed and EdgeSpark fallback is disabled.");
-    }
-
-    const { requestId, preserveApiPrefix, ...requestOptions } = options;
-    const prepared = buildRequestHeaders(requestOptions.headers, {
-      body: requestOptions.body,
-      requestId,
-    });
-
-    return edgeSparkClient.api.fetch(endpoint, {
-      ...requestOptions,
-      headers: prepared.headers,
-    });
-  }
 };
 
 const getSession = async (): Promise<FinqzAuthSession> => {
@@ -119,7 +86,7 @@ export const finqzClient = {
     signOut,
   },
   api: {
-    fetch: fetchWithEdgeSparkFallback,
+    fetch: fetchWithStandardHeaders,
   },
   get: <T = unknown>(endpoint: string, options?: FinqzRequestInit) =>
     request<T>("GET", endpoint, undefined, options),
@@ -131,7 +98,7 @@ export const finqzClient = {
     request<T>("PATCH", endpoint, data, options),
   delete: <T = unknown>(endpoint: string, options?: FinqzRequestInit) =>
     request<T>("DELETE", endpoint, undefined, options),
-  destroy: (options?: { clearToken?: boolean }): void => edgeSparkClient.destroy(options),
+  destroy: () => clearSession(),
 };
 
 export type FinqzClient = typeof finqzClient;

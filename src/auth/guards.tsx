@@ -6,7 +6,7 @@ import React, { useContext } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { AuthUser, canAccess, Module, Action } from './permissions';
 import { hasPermissionMatch } from './permissionMatcher';
-import { AuthContext } from '../App';
+import { AuthContext } from './AuthProvider';
 
 // ============================================
 // TYPES
@@ -23,7 +23,7 @@ interface ProtectedRouteProps {
 
 interface PublicRouteProps {
   children: React.ReactNode;
-  user: AuthUser | null;
+  user?: AuthUser | null;
   redirectTo?: string;
 }
 
@@ -135,9 +135,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
  */
 export const PublicRoute: React.FC<PublicRouteProps> = ({
   children,
-  user,
+  user: userProp,
   redirectTo = '/app/dashboard',
 }) => {
+  const authContext = useContext(AuthContext);
+  const user = userProp ?? authContext?.user;
+
   // Se já autenticado, redireciona para dashboard
   if (user) {
     return <Navigate to={redirectTo} replace />;

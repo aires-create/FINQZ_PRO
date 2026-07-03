@@ -30,7 +30,7 @@ interface AuthProviderProps {
 // CONTEXT
 // ============================================
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAuthenticated: false,

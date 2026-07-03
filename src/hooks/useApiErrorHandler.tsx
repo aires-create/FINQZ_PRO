@@ -5,7 +5,7 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, Info, Zap } from 'lucide-react';
 import { ApiException, isAuthError, isPermissionError, isValidationError, getErrorMessage } from '../api/http';
-import { STORAGE_KEYS } from '../config/environment';
+import { finqzAuth } from '../auth/finqzAuth';
 
 // ============================================
 // ERROR TYPES
@@ -45,13 +45,9 @@ export const useApiErrorHandler = () => {
 
     // Erro de autenticação
     if (isAuthError(status)) {
-      // Limpa sessão
-      localStorage.removeItem(STORAGE_KEYS.TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-      
-      // Redirect para login
-      navigate('/login', { replace: true });
-      
+      void finqzAuth.signOut();
+      navigate('/', { replace: true });
+
       return {
         type: 'warning',
         title: 'Sessão Expirada',

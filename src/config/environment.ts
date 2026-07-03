@@ -272,7 +272,6 @@ export const INTEGRATIONS = {
 // ============================================
 
 export const STORAGE_KEYS = {
-  USER: 'finqz_user',
   TOKEN: 'finqz_token',
   REFRESH_TOKEN: 'finqz_refresh_token',
   THEME: 'finqz_theme',
