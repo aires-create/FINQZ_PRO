@@ -943,10 +943,8 @@ const useAppStore = create<AppState>()(
         return nextState;
       },
       partialize: (state) => ({
-  theme: state.theme,
-  pipelines: state.pipelines,
-  currentPipelineId: state.currentPipelineId,
-}),
+        theme: state.theme,
+      }),
     }
   )
 );

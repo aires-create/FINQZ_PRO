@@ -1,10 +1,8 @@
 // FINQZ PRO - Data Service
-// Serviço unificado para acesso a dados
-// Usa API real quando disponível, fallback local apenas em desenvolvimento
-
+// Serviço unificado para acesso a dados oficiais e compatibilidade transitória.
 import { USE_MOCKS } from '../config/environment';
 import { api } from '../api/client';
-import adapters from '../api/adapters';
+import { clientesApi } from '../api/modules/clientes.api';
 import type {
   ClienteResponse,
   OportunidadeResponse,
@@ -14,8 +12,6 @@ import type {
   DashboardKPIsResponse,
   DashboardProducaoResponse,
   DashboardFunilResponse,
-  ApiResponse,
-  PaginatedResponse,
   PaginationParams,
   FilterParams,
 } from '../types/api';
@@ -47,7 +43,7 @@ const buildParams = (params?: PaginationParams & FilterParams): string => {
 
 /**
  * Serviço de dados unificado
- * Alterna entre API real e dados locais baseado na configuração
+ * Prioriza contratos oficiais para CRM e Opportunity.
  */
 export const dataService = {
   // ========================================
@@ -56,43 +52,24 @@ export const dataService = {
   
   clientes: {
     list: async (params?: FilterParams): Promise<ClienteResponse[]> => {
-      if (USE_MOCKS) {
-        return adapters.clientes.getAll();
-      }
-      const query = buildParams(params);
-      const response = await api.getClientes(query);
-      return response.data || [];
+      const response = await clientesApi.getAll(params);
+      return Array.isArray(response) ? response : [];
     },
     
     getById: async (id: number): Promise<ClienteResponse | null> => {
-      if (USE_MOCKS) {
-        return adapters.clientes.getById(id) || null;
-      }
-      return api.getCliente(id);
+      return clientesApi.getById(id);
     },
     
     create: async (data: Omit<ClienteResponse, 'id' | 'created_at' | 'updated_at'>): Promise<ClienteResponse> => {
-      if (USE_MOCKS) {
-        return adapters.clientes.create(data);
-      }
-      return api.createCliente(data);
+      return clientesApi.create(data);
     },
     
     update: async (id: number, data: Partial<ClienteResponse>): Promise<ClienteResponse> => {
-      if (USE_MOCKS) {
-        const updated = adapters.clientes.update(id, data);
-        if (!updated) throw new Error('Cliente não encontrado');
-        return updated;
-      }
-      return api.updateCliente(id, data);
+      return clientesApi.update(id, data);
     },
     
     delete: async (id: number): Promise<void> => {
-      if (USE_MOCKS) {
-        adapters.clientes.delete(id);
-        return;
-      }
-      return api.deleteCliente(id);
+      return clientesApi.delete(id);
     },
   },
 
@@ -102,41 +79,23 @@ export const dataService = {
   
   oportunidades: {
     list: async (params?: FilterParams): Promise<OportunidadeResponse[]> => {
-      if (USE_MOCKS) {
-        return adapters.oportunidades.getAll();
-      }
-      const response = await api.getOportunidades(params);
-      return response.data || [];
+      const response = await api.getOportunidades(params as any);
+      return Array.isArray(response?.data) ? response.data : [];
     },
     
     getById: async (id: number): Promise<OportunidadeResponse | null> => {
-      if (USE_MOCKS) {
-        return adapters.oportunidades.getById(id) || null;
-      }
       return api.getOportunidade(id);
     },
     
     create: async (data: Omit<OportunidadeResponse, 'id' | 'created_at' | 'updated_at'>): Promise<OportunidadeResponse> => {
-      if (USE_MOCKS) {
-        return adapters.oportunidades.create(data);
-      }
       return api.createOportunidade(data);
     },
     
     update: async (id: number, data: Partial<OportunidadeResponse>): Promise<OportunidadeResponse> => {
-      if (USE_MOCKS) {
-        const updated = adapters.oportunidades.update(id, data);
-        if (!updated) throw new Error('Oportunidade não encontrada');
-        return updated;
-      }
       return api.updateOportunidade(id, data);
     },
     
     delete: async (id: number): Promise<void> => {
-      if (USE_MOCKS) {
-        adapters.oportunidades.delete(id);
-        return;
-      }
       return api.deleteOportunidade(id);
     },
   },

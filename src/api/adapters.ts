@@ -1,197 +1,91 @@
 // FINQZ PRO - Data Adapter
-// Adapter para compatibilidade entre dados da API e localStorage
-// Usado como fallback quando API não está disponível
+// Camada de compatibilidade temporaria para consumers legados.
+// Nao utiliza localStorage nem persiste estado operacional.
 
-import { USE_MOCKS, STORAGE_KEYS } from '../config/environment';
-import type { 
-  ClienteResponse, 
-  OportunidadeResponse, 
-  ParceiroResponse, 
-  UsuarioResponse,
-  AutomacaoResponse,
-  TransacaoFinanceiraResponse
+import type {
+  ClienteResponse,
+  OportunidadeResponse,
 } from '../types/api';
 
-// ============================================
-// STORAGE ADAPTER
-// ============================================
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
-/**
- * Obtém dados do localStorage com fallback para array vazio
- */
-const getFromStorage = <T>(key: string, defaultValue: T[]): T[] => {
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? parsed : defaultValue;
-    }
-  } catch (error) {
-    console.error(`[Storage] Erro ao ler ${key}:`, error);
-  }
-  return defaultValue;
-};
+const clienteSeed: ClienteResponse[] = [];
+const oportunidadeSeed: OportunidadeResponse[] = [];
 
-/**
- * Salva dados no localStorage
- */
-const saveToStorage = <T>(key: string, data: T[]): void => {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (error) {
-    console.error(`[Storage] Erro ao salvar ${key}:`, error);
-  }
-};
+const nextNumericId = (items: Array<{ id: number }>): number =>
+  Math.max(0, ...items.map((item) => item.id)) + 1;
 
-// ============================================
-// ENTITY STORAGE KEYS
-// ============================================
-
-const STORAGE_ENTITY_KEYS = {
-  clientes: 'finqz_clientes',
-  oportunidades: 'finqz_oportunidades',
-  oportunidadesKanban: 'finqz_oportunidades_kanban',
-  parceiros: 'finqz_parceiros',
-  usuarios: 'finqz_usuarios',
-  transacoesFinanceiras: 'finqz_transacoes_financeiras',
-  automacoes: 'finqz_automacoes',
-  estruturaComercial: 'finqz_estrutura_comercial',
-  roteirosOperacionais: 'finqz_roteiros_operacionais',
-};
-
-// ============================================
-// DEFAULT DATA
-// ============================================
-
-const defaultClientes: ClienteResponse[] = [
-  { id: 1, nome: "João Silva", cpf_cnpj: "12345678901", email: "joao@email.com", telefone: "11999999999", status: "ativo", created_at: Date.now(), updated_at: Date.now() },
-  { id: 2, nome: "Maria Santos", cpf_cnpj: "23456789012", email: "maria@email.com", telefone: "11988888888", status: "ativo", created_at: Date.now(), updated_at: Date.now() },
-  { id: 3, nome: "Pedro Costa", cpf_cnpj: "34567890123", email: "pedro@email.com", telefone: "11977777777", status: "ativo", created_at: Date.now(), updated_at: Date.now() },
-];
-
-const defaultOportunidades: OportunidadeResponse[] = [
-  { id: 1, nome: "João Silva", telefone: "11999999999", produto: "Empréstimo Pessoal", valor: 15000, etapa: "novo_lead", created_at: Date.now(), updated_at: Date.now() },
-  { id: 2, nome: "Maria Santos", telefone: "11988888888", produto: "Crédito Consignado", valor: 25000, etapa: "negociacao", created_at: Date.now(), updated_at: Date.now() },
-  { id: 3, nome: "Pedro Costa", telefone: "11977777777", produto: "Empréstimo Pessoal", valor: 10000, etapa: "pendencia", created_at: Date.now(), updated_at: Date.now() },
-];
-
-// ============================================
-// DATA ADAPTER
-// ============================================
-
-/**
- * Adapter para dados de Clientes
- */
 export const clientesAdapter = {
-  getAll: (): ClienteResponse[] => {
-    if (USE_MOCKS) {
-      return getFromStorage<ClienteResponse>(STORAGE_ENTITY_KEYS.clientes, defaultClientes);
-    }
-    return defaultClientes;
-  },
-  
-  getById: (id: number): ClienteResponse | undefined => {
-    const items = clientesAdapter.getAll();
-    return items.find(c => c.id === id);
-  },
-  
+  getAll: (): ClienteResponse[] => clone(clienteSeed),
+  getById: (id: number): ClienteResponse | undefined => clientesAdapter.getAll().find((cliente) => cliente.id === id),
   save: (data: ClienteResponse[]): void => {
-    saveToStorage(STORAGE_ENTITY_KEYS.clientes, data);
+    clienteSeed.splice(0, clienteSeed.length, ...clone(data));
   },
-  
   create: (cliente: Omit<ClienteResponse, 'id' | 'created_at' | 'updated_at'>): ClienteResponse => {
-    const items = clientesAdapter.getAll();
     const newCliente: ClienteResponse = {
       ...cliente,
-      id: Math.max(0, ...items.map(c => c.id)) + 1,
+      id: nextNumericId(clienteSeed),
       created_at: Date.now(),
       updated_at: Date.now(),
     };
-    items.push(newCliente);
-    clientesAdapter.save(items);
+
+    clienteSeed.push(clone(newCliente));
     return newCliente;
   },
-  
   update: (id: number, data: Partial<ClienteResponse>): ClienteResponse | undefined => {
-    const items = clientesAdapter.getAll();
-    const index = items.findIndex(c => c.id === id);
-    if (index >= 0) {
-      items[index] = { ...items[index], ...data, updated_at: Date.now() };
-      clientesAdapter.save(items);
-      return items[index];
-    }
-    return undefined;
+    const index = clienteSeed.findIndex((cliente) => cliente.id === id);
+    if (index < 0) return undefined;
+
+    const updated = { ...clienteSeed[index], ...data, updated_at: Date.now() };
+    clienteSeed[index] = clone(updated);
+    return updated;
   },
-  
   delete: (id: number): boolean => {
-    const items = clientesAdapter.getAll();
-    const filtered = items.filter(c => c.id !== id);
-    if (filtered.length !== items.length) {
-      clientesAdapter.save(filtered);
-      return true;
+    const initialLength = clienteSeed.length;
+    for (let index = clienteSeed.length - 1; index >= 0; index -= 1) {
+      if (clienteSeed[index]?.id === id) {
+        clienteSeed.splice(index, 1);
+      }
     }
-    return false;
+    return clienteSeed.length !== initialLength;
   },
 };
 
-/**
- * Adapter para dados de Oportunidades
- */
 export const oportunidadesAdapter = {
-  getAll: (): OportunidadeResponse[] => {
-    if (USE_MOCKS) {
-      return getFromStorage<OportunidadeResponse>(STORAGE_ENTITY_KEYS.oportunidades, defaultOportunidades);
-    }
-    return defaultOportunidades;
-  },
-  
-  getById: (id: number): OportunidadeResponse | undefined => {
-    const items = oportunidadesAdapter.getAll();
-    return items.find(o => o.id === id);
-  },
-  
+  getAll: (): OportunidadeResponse[] => clone(oportunidadeSeed),
+  getById: (id: number): OportunidadeResponse | undefined => oportunidadesAdapter.getAll().find((oportunidade) => oportunidade.id === id),
   save: (data: OportunidadeResponse[]): void => {
-    saveToStorage(STORAGE_ENTITY_KEYS.oportunidades, data);
+    oportunidadeSeed.splice(0, oportunidadeSeed.length, ...clone(data));
   },
-  
   create: (data: Omit<OportunidadeResponse, 'id' | 'created_at' | 'updated_at'>): OportunidadeResponse => {
-    const items = oportunidadesAdapter.getAll();
     const newItem: OportunidadeResponse = {
       ...data,
-      id: Math.max(0, ...items.map(o => o.id)) + 1,
+      id: nextNumericId(oportunidadeSeed),
       created_at: Date.now(),
       updated_at: Date.now(),
     };
-    items.push(newItem);
-    oportunidadesAdapter.save(items);
+
+    oportunidadeSeed.push(clone(newItem));
     return newItem;
   },
-  
   update: (id: number, data: Partial<OportunidadeResponse>): OportunidadeResponse | undefined => {
-    const items = oportunidadesAdapter.getAll();
-    const index = items.findIndex(o => o.id === id);
-    if (index >= 0) {
-      items[index] = { ...items[index], ...data, updated_at: Date.now() };
-      oportunidadesAdapter.save(items);
-      return items[index];
-    }
-    return undefined;
+    const index = oportunidadeSeed.findIndex((oportunidade) => oportunidade.id === id);
+    if (index < 0) return undefined;
+
+    const updated = { ...oportunidadeSeed[index], ...data, updated_at: Date.now() };
+    oportunidadeSeed[index] = clone(updated);
+    return updated;
   },
-  
   delete: (id: number): boolean => {
-    const items = oportunidadesAdapter.getAll();
-    const filtered = items.filter(o => o.id !== id);
-    if (filtered.length !== items.length) {
-      oportunidadesAdapter.save(filtered);
-      return true;
+    const initialLength = oportunidadeSeed.length;
+    for (let index = oportunidadeSeed.length - 1; index >= 0; index -= 1) {
+      if (oportunidadeSeed[index]?.id === id) {
+        oportunidadeSeed.splice(index, 1);
+      }
     }
-    return false;
+    return oportunidadeSeed.length !== initialLength;
   },
 };
-
-// ============================================
-// EXPORTS
-// ============================================
 
 export default {
   clientes: clientesAdapter,
