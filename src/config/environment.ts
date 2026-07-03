@@ -6,7 +6,6 @@
 // ============================================
 
 // SECURITY: Modo de desenvolvimento controlado por variável de ambiente
-// Em produção, FORçar uso de API real (não mocks)
 export const IS_DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
 // SECURITY: Validar API_BASE_URL obrigatória em produção
@@ -29,10 +28,7 @@ const getApiBaseUrl = (): string => {
   return 'http://localhost:8787';
 };
 
-// Use mocks/data local when API is not available (APENAS em modo DEV explícito)
-export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true' && IS_DEV_MODE;
 // SECURITY: Legacy auth fallback is only allowed in explicit development mode.
-// This prevents frontend mock users/passwords from becoming an implicit auth source.
 export const ENABLE_LEGACY_AUTH_FALLBACK =
   import.meta.env.VITE_ENABLE_LEGACY_AUTH_FALLBACK === 'true' && IS_DEV_MODE;
 
@@ -284,7 +280,6 @@ export const STORAGE_KEYS = {
 // ============================================
 
 export default {
-  USE_MOCKS,
   API_BASE_URL,
   IS_DEV,
   IS_PROD,

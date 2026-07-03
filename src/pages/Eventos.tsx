@@ -198,12 +198,11 @@ export default function Eventos() {
     setError(null);
     try {
       const dateRange = getDateRange();
-      
-      // Verificar se o método existe
+
       if (typeof (api as Record<string, unknown>).getEventos !== "function") {
-        console.warn("[EVENTOS] API getEventos não disponível, usando mock");
         setEvents([]);
         setTotal(0);
+        setError("API de eventos indisponível.");
         return;
       }
 
@@ -233,10 +232,8 @@ export default function Eventos() {
   const fetchStats = useCallback(async () => {
     try {
       const dateRange = getDateRange();
-      
-      // Verificar se o método existe
+
       if (typeof (api as Record<string, unknown>).getEventosStats !== "function") {
-        console.warn("[EVENTOS] API getEventosStats não disponível, usando mock");
         setStats({ total: 0, byType: {}, bySource: {} });
         return;
       }

@@ -5,7 +5,6 @@ import api from "../api/client";
 import useAppStore from "../store";
 import { Button, Input, Badge, StatusBadge, EmptyState, LoadingState, Modal, TextArea } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import { USE_MOCKS } from "../config/environment";
 
 // Tipos
 interface AudienceFilter {
@@ -107,18 +106,11 @@ export default function Audiencias() {
   const loadAudiencias = async () => {
     try {
       setLoading(true);
-      if (USE_MOCKS) {
-        setAudiencias([
-          { id: 1, name: "Leads Janeiro", description: "Importado do formulário", type: 'manual', totalContacts: 150, status: 'active', createdAt: Date.now() - 86400000 * 7, updatedAt: Date.now() - 86400000 },
-          { id: 2, name: "Clientes VIP", description: "Clientes com compras acima de R$1000", type: 'dynamic', filters: JSON.stringify({ minValue: 1000 }), totalContacts: 45, status: 'active', createdAt: Date.now() - 86400000 * 14, updatedAt: Date.now() - 86400000 * 2 },
-          { id: 3, name: "Newsletter", description: "Inscritos na newsletter", type: 'manual', totalContacts: 320, status: 'active', createdAt: Date.now() - 86400000 * 30, updatedAt: Date.now() - 86400000 * 5 },
-        ]);
-      } else {
-        const response = await api.get("/api/audiences");
-        setAudiencias(response.data.audiences || []);
-      }
+      const response = await api.get("/api/audiences");
+      setAudiencias(response.data.audiences || []);
     } catch (error) {
       console.error("Erro ao carregar audiências:", error);
+      setAudiencias([]);
     } finally {
       setLoading(false);
     }
@@ -127,18 +119,11 @@ export default function Audiencias() {
   const loadMembers = async (audienceId: number) => {
     try {
       setLoadingMembers(true);
-      if (USE_MOCKS) {
-        setMembers([
-          { id: 1, audienceId, clienteId: 1, status: 'active', cliente: { id: 1, nome: "João Silva", celular: "11999999999", email: "joao@email.com" } },
-          { id: 2, audienceId, clienteId: 2, status: 'active', cliente: { id: 2, nome: "Maria Santos", celular: "11988888888", email: "maria@email.com" } },
-          { id: 3, audienceId, clienteId: 3, status: 'active', cliente: { id: 3, nome: "Pedro Costa", celular: "11977777777", email: "pedro@email.com" } },
-        ]);
-      } else {
-        const response = await api.get(`/api/audiences/${audienceId}`);
-        setMembers(response.data.members || []);
-      }
+      const response = await api.get(`/api/audiences/${audienceId}`);
+      setMembers(response.data.members || []);
     } catch (error) {
       console.error("Erro ao carregar membros:", error);
+      setMembers([]);
     } finally {
       setLoadingMembers(false);
     }
@@ -148,26 +133,12 @@ export default function Audiencias() {
     if (!newAudienceName.trim()) return;
 
     try {
-      if (USE_MOCKS) {
-        const newAudience: Audience = {
-          id: Date.now(),
-          name: newAudienceName,
-          description: newAudienceDesc,
-          type: 'manual',
-          totalContacts: 0,
-          status: 'active',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setAudiencias([newAudience, ...audiencias]);
-      } else {
-        await api.post("/api/audiences", {
-          name: newAudienceName,
-          description: newAudienceDesc,
-          type: 'manual',
-        });
-        loadAudiencias();
-      }
+      await api.post("/api/audiences", {
+        name: newAudienceName,
+        description: newAudienceDesc,
+        type: 'manual',
+      });
+      loadAudiencias();
       setShowModal(false);
       setNewAudienceName("");
       setNewAudienceDesc("");
@@ -197,20 +168,13 @@ export default function Audiencias() {
 
     try {
       setCalculating(true);
-      if (USE_MOCKS) {
-        // Simulate calculation
-        setCalculatedTotal(Math.floor(Math.random() * 500) + 50);
-        setPreviewContacts([
-          { id: 1, nome: "João Silva", celular: "11999999999" },
-          { id: 2, nome: "Maria Santos", celular: "11988888888" },
-        ]);
-      } else {
-        const response = await api.post("/api/audiences/calculate", { filters });
-        setCalculatedTotal(response.data.total);
-        setPreviewContacts(response.data.contacts || []);
-      }
+      const response = await api.post("/api/audiences/calculate", { filters });
+      setCalculatedTotal(response.data.total);
+      setPreviewContacts(response.data.contacts || []);
     } catch (error) {
       console.error("Erro ao calcular audiência:", error);
+      setCalculatedTotal(0);
+      setPreviewContacts([]);
     } finally {
       setCalculating(false);
     }
@@ -223,28 +187,17 @@ export default function Audiencias() {
     try {
       setLoadingAllContacts(true);
       const pageSize = 20;
-      
-      if (USE_MOCKS) {
-        // Simulate pagination
-        const mockContacts = Array.from({ length: 20 }, (_, i) => ({
-          id: page * pageSize + i + 1,
-          nome: `Contato ${page * pageSize + i + 1}`,
-          celular: `119${String(page * pageSize + i + 1).padStart(8, '0')}`,
-          status: 'lead'
-        }));
-        setAllContacts(mockContacts);
-      } else {
-        const response = await api.post("/api/audiences/calculate", { 
-          filters,
-          page,
-          pageSize
-        });
-        setAllContacts(response.data.contacts || []);
-      }
+      const response = await api.post("/api/audiences/calculate", { 
+        filters,
+        page,
+        pageSize
+      });
+      setAllContacts(response.data.contacts || []);
       setAllContactsPage(page);
       setViewingAllContacts(true);
     } catch (error) {
       console.error("Erro ao carregar todos os contatos:", error);
+      setAllContacts([]);
     } finally {
       setLoadingAllContacts(false);
     }
@@ -255,28 +208,13 @@ export default function Audiencias() {
     if (!newAudienceName.trim() || filters.length === 0) return;
 
     try {
-      if (USE_MOCKS) {
-        const newAudience: Audience = {
-          id: Date.now(),
-          name: newAudienceName,
-          description: newAudienceDesc,
-          type: 'dynamic',
-          filters: JSON.stringify(filters),
-          totalContacts: calculatedTotal || 0,
-          status: 'active',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setAudiencias([newAudience, ...audiencias]);
-      } else {
-        await api.post("/api/audiences", {
-          name: newAudienceName,
-          description: newAudienceDesc,
-          type: 'dynamic',
-          filters: JSON.stringify(filters),
-        });
-        loadAudiencias();
-      }
+      await api.post("/api/audiences", {
+        name: newAudienceName,
+        description: newAudienceDesc,
+        type: 'dynamic',
+        filters: JSON.stringify(filters),
+      });
+      loadAudiencias();
       setShowDynamicModal(false);
       setNewAudienceName("");
       setNewAudienceDesc("");
@@ -292,9 +230,7 @@ export default function Audiencias() {
     if (!confirm("Tem certeza que deseja excluir esta audiência?")) return;
 
     try {
-      if (!USE_MOCKS) {
-        await api.delete(`/api/audiences/${id}`);
-      }
+      await api.delete(`/api/audiences/${id}`);
       setAudiencias(audiencias.filter(a => a.id !== id));
       if (selectedAudience?.id === id) {
         setSelectedAudience(null);
@@ -344,23 +280,18 @@ export default function Audiencias() {
         return;
       }
 
-      if (USE_MOCKS) {
-        setImportResult({ success: true, totalContacts: contacts.length, audienceName: newAudienceName || "Nova Audiência" });
-        loadAudiencias();
-      } else {
-        const response = await api.post("/api/audiences/import-csv", {
-          name: newAudienceName || `Audiência ${new Date().toLocaleDateString()}`,
-          description: newAudienceDesc,
-          contacts,
-        });
-        setImportResult({
-          success: true,
-          totalContacts: response.data.totalContacts,
-          audienceName: response.data.audienceName,
-          skipped: response.data.skipped,
-        });
-        loadAudiencias();
-      }
+      const response = await api.post("/api/audiences/import-csv", {
+        name: newAudienceName || `Audiência ${new Date().toLocaleDateString()}`,
+        description: newAudienceDesc,
+        contacts,
+      });
+      setImportResult({
+        success: true,
+        totalContacts: response.data.totalContacts,
+        audienceName: response.data.audienceName,
+        skipped: response.data.skipped,
+      });
+      loadAudiencias();
       
       setShowImportModal(false);
       setCsvData("");
