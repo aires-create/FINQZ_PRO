@@ -173,10 +173,14 @@ export const finqzAuth = {
   },
   logoutNative: async (): Promise<FinqzLogoutResult> => {
     if (!getAccessToken()) {
-      return {
-        success: false,
-        error: "Sessão nativa ausente.",
-      };
+      const refreshed = await refreshSessionTokens();
+
+      if (!refreshed || !getAccessToken()) {
+        return {
+          success: false,
+          error: "Sessão nativa ausente.",
+        };
+      }
     }
 
     try {
@@ -210,10 +214,14 @@ export const finqzAuth = {
   },
   getSession: async () => {
     if (!getAccessToken() && !getRefreshToken()) {
-      return {
-        data: null,
-        error: null,
-      };
+      const refreshed = await refreshSessionTokens();
+
+      if (!refreshed) {
+        return {
+          data: null,
+          error: null,
+        };
+      }
     }
 
     try {
@@ -260,21 +268,19 @@ export const finqzAuth = {
   },
   signOut: async () => {
     let nativeLogout: FinqzLogoutResult | undefined;
-    let fallbackError: unknown = null;
 
     try {
+      if (!getAccessToken()) {
+        await refreshSessionTokens();
+      }
+
       if (getAccessToken()) {
         nativeLogout = await finqzAuth.logoutNative();
       }
 
-      if (!nativeLogout?.success) {
-        const fallback = await finqzClient.auth.signOut();
-        fallbackError = fallback.error;
-      }
-
       return {
         data: null,
-        error: nativeLogout?.success ? null : nativeLogout?.error ?? fallbackError,
+        error: nativeLogout?.success ? null : nativeLogout?.error ?? null,
       };
     } finally {
       clearSession();

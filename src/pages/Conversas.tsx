@@ -1,7 +1,7 @@
 // FINQZ PRO - Conversas Page
 import React, { useEffect, useState, useRef } from "react";
 import { Search, Send, MessageCircle, Bot, User, ArrowLeft, Users, AlertCircle, Filter } from "lucide-react";
-import api from "../api/client";
+import { apiFetch } from "../api/http";
 import useAppStore from "../store";
 import { Button, EmptyState, LoadingState } from "../components/ui";
 import { SdrPanel } from "../components/ui/SdrPanel";
@@ -129,8 +129,10 @@ export default function Conversas() {
       const params = new URLSearchParams();
       if (statusFilter) params.append('conversationStatus', statusFilter);
 
-      const response = await api.get(`/api/conversations?${params.toString()}`);
-      setConversas(response.data.conversations || []);
+      const data = await apiFetch<{ conversations?: Conversation[] }>(`/api/conversations?${params.toString()}`, {
+        preserveApiPrefix: true,
+      });
+      setConversas(data.conversations || []);
     } catch (error) {
       console.error("Erro ao carregar conversas:", error);
       setConversas([]);
@@ -142,8 +144,10 @@ export default function Conversas() {
   const loadMensagens = async (conversationId: number) => {
     try {
       setLoadingMensagens(true);
-      const response = await api.get(`/api/conversations/${conversationId}/mensagens`);
-      setMensagens(response.data.mensagens || []);
+      const data = await apiFetch<{ mensagens?: Mensagem[] }>(`/api/conversations/${conversationId}/mensagens`, {
+        preserveApiPrefix: true,
+      });
+      setMensagens(data.mensagens || []);
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
       setMensagens([]);
@@ -162,8 +166,10 @@ export default function Conversas() {
 
     try {
       setSendingMessage(true);
-      await api.post(`/api/conversations/${selectedConversation.id}/resposta`, {
-        mensagem: novaMensagem,
+      await apiFetch(`/api/conversations/${selectedConversation.id}/resposta`, {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({ mensagem: novaMensagem }),
       });
       await loadMensagens(selectedConversation.id);
       setNovaMensagem("");
@@ -179,8 +185,10 @@ export default function Conversas() {
     if (!selectedConversation) return;
 
     try {
-      await api.put(`/api/conversations/${selectedConversation.id}`, {
-        conversationStatus,
+      await apiFetch(`/api/conversations/${selectedConversation.id}`, {
+        preserveApiPrefix: true,
+        method: "PUT",
+        body: JSON.stringify({ conversationStatus }),
       });
       setSelectedConversation({ ...selectedConversation, conversationStatus });
       loadConversas();
@@ -193,8 +201,10 @@ export default function Conversas() {
   const loadQueue = async () => {
     try {
       setLoadingQueue(true);
-      const response = await api.get(`/api/conversations/queue?sort=${queueFilter}`);
-      setQueueConversas(response.data.queue || []);
+      const data = await apiFetch<{ queue?: Conversation[] }>(`/api/conversations/queue?sort=${queueFilter}`, {
+        preserveApiPrefix: true,
+      });
+      setQueueConversas(data.queue || []);
     } catch (error) {
       console.error("Erro ao carregar fila:", error);
       setQueueConversas([]);
@@ -206,7 +216,10 @@ export default function Conversas() {
   // Assumir conversa
   const handleAssumeConversation = async (conv: Conversation) => {
     try {
-      await api.post(`/api/conversations/${conv.id}/assume`);
+      await apiFetch(`/api/conversations/${conv.id}/assume`, {
+        preserveApiPrefix: true,
+        method: "POST",
+      });
       // Atualizar a conversa na lista
       const updatedConv = { ...conv, assignedTo: 'current_user', conversationStatus: 'human' as const };
       setSelectedConversation(updatedConv);
@@ -220,7 +233,11 @@ export default function Conversas() {
   // Atualizar prioridade
   const handleUpdatePriority = async (conv: Conversation, priority: number) => {
     try {
-      await api.put(`/api/conversations/${conv.id}`, { priority });
+      await apiFetch(`/api/conversations/${conv.id}`, {
+        preserveApiPrefix: true,
+        method: "PUT",
+        body: JSON.stringify({ priority }),
+      });
       loadQueue();
     } catch (error) {
       console.error("Erro ao atualizar prioridade:", error);

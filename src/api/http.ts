@@ -247,23 +247,16 @@ const parseJsonPayload = async <T>(response: Response): Promise<T | null> => {
 const canRetryAfterRefresh = (endpoint: string, options: FinqzRequestInit): boolean => {
   return Boolean(
     !options.skipAuthRefresh &&
-      !isAuthControlEndpoint(endpoint) &&
-      getAccessToken() &&
-      getRefreshToken()
+      !isAuthControlEndpoint(endpoint)
   );
 };
 
 export const refreshSessionTokens = async (): Promise<boolean> => {
   const refreshToken = getRefreshToken();
-
-  if (!refreshToken) {
-    return false;
-  }
-
-  const body = JSON.stringify({ refreshToken });
   const requestId = generateRequestId();
   const headers = new Headers(API_CONFIG.DEFAULT_HEADERS);
   headers.set("X-Request-ID", requestId);
+  const body = refreshToken ? JSON.stringify({ refreshToken }) : undefined;
 
   try {
     const response = await fetch(buildApiUrl("/api/v1/auth/refresh", { preserveApiPrefix: true }), {

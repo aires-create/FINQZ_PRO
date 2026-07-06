@@ -1,7 +1,7 @@
 // FINQZ PRO - Audiências Page
 import React, { useEffect, useState, useRef } from "react";
 import { Search, Plus, Trash2, Users, Upload, FileText, X, Check, AlertCircle, Download, Filter, RefreshCw } from "lucide-react";
-import api from "../api/client";
+import { apiFetch } from "../api/http";
 import useAppStore from "../store";
 import { Button, Input, Badge, StatusBadge, EmptyState, LoadingState, Modal, TextArea } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -106,8 +106,10 @@ export default function Audiencias() {
   const loadAudiencias = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/api/audiences");
-      setAudiencias(response.data.audiences || []);
+      const data = await apiFetch<{ audiences?: Audience[] }>("/api/audiences", {
+        preserveApiPrefix: true,
+      });
+      setAudiencias(data.audiences || []);
     } catch (error) {
       console.error("Erro ao carregar audiências:", error);
       setAudiencias([]);
@@ -119,8 +121,10 @@ export default function Audiencias() {
   const loadMembers = async (audienceId: number) => {
     try {
       setLoadingMembers(true);
-      const response = await api.get(`/api/audiences/${audienceId}`);
-      setMembers(response.data.members || []);
+      const data = await apiFetch<{ members?: AudienceMember[] }>(`/api/audiences/${audienceId}`, {
+        preserveApiPrefix: true,
+      });
+      setMembers(data.members || []);
     } catch (error) {
       console.error("Erro ao carregar membros:", error);
       setMembers([]);
@@ -133,10 +137,14 @@ export default function Audiencias() {
     if (!newAudienceName.trim()) return;
 
     try {
-      await api.post("/api/audiences", {
-        name: newAudienceName,
-        description: newAudienceDesc,
-        type: 'manual',
+      await apiFetch("/api/audiences", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({
+          name: newAudienceName,
+          description: newAudienceDesc,
+          type: 'manual',
+        }),
       });
       loadAudiencias();
       setShowModal(false);
@@ -168,9 +176,13 @@ export default function Audiencias() {
 
     try {
       setCalculating(true);
-      const response = await api.post("/api/audiences/calculate", { filters });
-      setCalculatedTotal(response.data.total);
-      setPreviewContacts(response.data.contacts || []);
+      const data = await apiFetch<{ total?: number; contacts?: any[] }>("/api/audiences/calculate", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({ filters }),
+      });
+      setCalculatedTotal(data.total ?? 0);
+      setPreviewContacts(data.contacts || []);
     } catch (error) {
       console.error("Erro ao calcular audiência:", error);
       setCalculatedTotal(0);
@@ -187,12 +199,16 @@ export default function Audiencias() {
     try {
       setLoadingAllContacts(true);
       const pageSize = 20;
-      const response = await api.post("/api/audiences/calculate", { 
-        filters,
-        page,
-        pageSize
+      const data = await apiFetch<{ contacts?: any[] }>("/api/audiences/calculate", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({
+          filters,
+          page,
+          pageSize,
+        }),
       });
-      setAllContacts(response.data.contacts || []);
+      setAllContacts(data.contacts || []);
       setAllContactsPage(page);
       setViewingAllContacts(true);
     } catch (error) {
@@ -208,11 +224,15 @@ export default function Audiencias() {
     if (!newAudienceName.trim() || filters.length === 0) return;
 
     try {
-      await api.post("/api/audiences", {
-        name: newAudienceName,
-        description: newAudienceDesc,
-        type: 'dynamic',
-        filters: JSON.stringify(filters),
+      await apiFetch("/api/audiences", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({
+          name: newAudienceName,
+          description: newAudienceDesc,
+          type: 'dynamic',
+          filters: JSON.stringify(filters),
+        }),
       });
       loadAudiencias();
       setShowDynamicModal(false);
@@ -230,7 +250,10 @@ export default function Audiencias() {
     if (!confirm("Tem certeza que deseja excluir esta audiência?")) return;
 
     try {
-      await api.delete(`/api/audiences/${id}`);
+      await apiFetch(`/api/audiences/${id}`, {
+        preserveApiPrefix: true,
+        method: "DELETE",
+      });
       setAudiencias(audiencias.filter(a => a.id !== id));
       if (selectedAudience?.id === id) {
         setSelectedAudience(null);
@@ -280,16 +303,20 @@ export default function Audiencias() {
         return;
       }
 
-      const response = await api.post("/api/audiences/import-csv", {
-        name: newAudienceName || `Audiência ${new Date().toLocaleDateString()}`,
-        description: newAudienceDesc,
-        contacts,
+      const data = await apiFetch<{ totalContacts?: number; audienceName?: string; skipped?: number }>("/api/audiences/import-csv", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({
+          name: newAudienceName || `Audiência ${new Date().toLocaleDateString()}`,
+          description: newAudienceDesc,
+          contacts,
+        }),
       });
       setImportResult({
         success: true,
-        totalContacts: response.data.totalContacts,
-        audienceName: response.data.audienceName,
-        skipped: response.data.skipped,
+        totalContacts: data.totalContacts,
+        audienceName: data.audienceName,
+        skipped: data.skipped,
       });
       loadAudiencias();
       

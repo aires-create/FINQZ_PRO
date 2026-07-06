@@ -1,7 +1,7 @@
 // FINQZ PRO - Campanhas Page
 import React, { useEffect, useState } from "react";
 import { Plus, Search, Play, Pause, Trash2, X, Send, Clock, CheckCircle, XCircle, AlertCircle, Eye, BarChart3 } from "lucide-react";
-import api from "../api/client";
+import { apiFetch } from "../api/http";
 import { clientesApi } from "../api/modules/clientes.api";
 import useAppStore from "../store";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EmptyState, LoadingState, Modal, TextArea } from "../components/ui";
@@ -70,8 +70,10 @@ export default function Campanhas() {
   const loadCampanhas = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/api/campanhas");
-      setCampanhas(response.data.campanhas || []);
+      const data = await apiFetch<{ campanhas?: Campanha[] }>("/api/campanhas", {
+        preserveApiPrefix: true,
+      });
+      setCampanhas(data.campanhas || []);
     } catch (error) {
       console.error("Erro ao carregar campanhas:", error);
       setCampanhas([]);
@@ -97,7 +99,11 @@ export default function Campanhas() {
         scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).getTime() : null,
       };
 
-      await api.post("/api/campanhas", payload);
+      await apiFetch("/api/campanhas", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       await loadCampanhas();
       setShowModal(false);
       resetForm();
@@ -109,7 +115,11 @@ export default function Campanhas() {
   // Executar campanha
   const handleExecutar = async (campanha: Campanha) => {
     try {
-      await api.post(`/api/campanhas/${campanha.id}/executar`, {});
+      await apiFetch(`/api/campanhas/${campanha.id}/executar`, {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({}),
+      });
       await loadCampanhas();
     } catch (error) {
       console.error("Erro ao executar campanha:", error);
@@ -121,7 +131,10 @@ export default function Campanhas() {
     if (!confirm("Tem certeza que deseja excluir esta campanha?")) return;
     
     try {
-      await api.delete(`/api/campanhas/${id}`);
+      await apiFetch(`/api/campanhas/${id}`, {
+        preserveApiPrefix: true,
+        method: "DELETE",
+      });
       await loadCampanhas();
     } catch (error) {
       console.error("Erro ao deletar campanha:", error);
@@ -132,8 +145,10 @@ export default function Campanhas() {
   const handleViewStats = async (campanha: Campanha) => {
     setSelectedCampanha(campanha);
     try {
-      const response = await api.get(`/api/campanhas/${campanha.id}/stats`);
-      setStats(response.data);
+      const data = await apiFetch<CampaignStats>(`/api/campanhas/${campanha.id}/stats`, {
+        preserveApiPrefix: true,
+      });
+      setStats(data);
       setShowStatsModal(true);
     } catch (error) {
       console.error("Erro ao carregar estatísticas:", error);

@@ -305,6 +305,8 @@ export class AuthRepository {
         firstName: true,
         lastName: true,
         tenantId: true,
+        organizationId: true,
+        partnerId: true,
         tenant: {
           select: {
             id: true,
@@ -332,6 +334,39 @@ export class AuthRepository {
                     },
                   },
                 },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async findUserForTenantContext(
+    userId: string,
+    tenantId: string,
+    client?: Prisma.TransactionClient,
+  ) {
+    return this.getClient(client).user.findFirst({
+      where: {
+        id: userId,
+        tenantId,
+        deletedAt: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        organizationId: true,
+        partnerId: true,
+        userRoles: {
+          select: {
+            role: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                type: true,
               },
             },
           },

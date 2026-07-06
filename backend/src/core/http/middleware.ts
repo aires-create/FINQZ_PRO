@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticationError, AuthorizationError } from '../../types/index.js';
-import { prisma } from '../../core/prisma/client.js';
+import { authRepository } from '../../modules/auth/repositories/auth.repository.js';
 import type {
   JWTPayload,
   OwnershipMetadata,
@@ -120,32 +120,10 @@ const resolveScopeRole = (
 const resolveTenantContextFromDatabase = async (
   payload: JWTPayload,
 ): Promise<TenantContext | null> => {
-  const user = await prisma.user.findFirst({
-    where: {
-      id: payload.userId,
-      tenantId: payload.tenantId,
-      deletedAt: null,
-      isActive: true,
-    },
-    select: {
-      id: true,
-      tenantId: true,
-      organizationId: true,
-      partnerId: true,
-      userRoles: {
-        select: {
-          role: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              type: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  const user = await authRepository.findUserForTenantContext(
+    payload.userId,
+    payload.tenantId,
+  );
 
   if (!user) {
     return null;

@@ -31,42 +31,52 @@ export interface FinqzSessionSnapshot extends FinqzSession {
   source: "finqz";
 }
 
-const safeLocalStorageGet = (key: string): string | null => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
+const safeSessionStoreGet = (key: string): string | null => {
+  void key;
+  return null;
 };
 
-const safeLocalStorageSet = (key: string, value: string): void => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Storage may be unavailable in restricted browser contexts.
-  }
+const safeSessionStoreSet = (key: string, value: string): void => {
+  void key;
+  void value;
 };
 
-const safeLocalStorageRemove = (key: string): void => {
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    // Storage may be unavailable in restricted browser contexts.
-  }
+const safeSessionStoreRemove = (key: string): void => {
+  void key;
+};
+
+const sessionState = {
+  accessToken: null as string | null,
+  refreshToken: null as string | null,
 };
 
 const setTokenValue = (key: string, token: string | null | undefined): void => {
   const normalizedToken = token?.trim();
   if (!normalizedToken) {
-    safeLocalStorageRemove(key);
+    safeSessionStoreRemove(key);
+    if (key === STORAGE_KEYS.TOKEN) {
+      sessionState.accessToken = null;
+    }
+
+    if (key === STORAGE_KEYS.REFRESH_TOKEN) {
+      sessionState.refreshToken = null;
+    }
     return;
   }
 
-  safeLocalStorageSet(key, normalizedToken);
+  safeSessionStoreSet(key, normalizedToken);
+
+  if (key === STORAGE_KEYS.TOKEN) {
+    sessionState.accessToken = normalizedToken;
+  }
+
+  if (key === STORAGE_KEYS.REFRESH_TOKEN) {
+    sessionState.refreshToken = normalizedToken;
+  }
 };
 
 export const getAccessToken = (): string | null => {
-  return safeLocalStorageGet(STORAGE_KEYS.TOKEN);
+  return sessionState.accessToken ?? safeSessionStoreGet(STORAGE_KEYS.TOKEN);
 };
 
 export const setAccessToken = (token: string | null | undefined): void => {
@@ -74,7 +84,7 @@ export const setAccessToken = (token: string | null | undefined): void => {
 };
 
 export const getRefreshToken = (): string | null => {
-  return safeLocalStorageGet(STORAGE_KEYS.REFRESH_TOKEN);
+  return sessionState.refreshToken ?? safeSessionStoreGet(STORAGE_KEYS.REFRESH_TOKEN);
 };
 
 export const setRefreshToken = (token: string | null | undefined): void => {
@@ -114,8 +124,10 @@ export const storeSessionTokens = (tokens: {
 };
 
 export const clearSession = (): void => {
-  safeLocalStorageRemove(STORAGE_KEYS.TOKEN);
-  safeLocalStorageRemove(STORAGE_KEYS.REFRESH_TOKEN);
+  sessionState.accessToken = null;
+  sessionState.refreshToken = null;
+  safeSessionStoreRemove(STORAGE_KEYS.TOKEN);
+  safeSessionStoreRemove(STORAGE_KEYS.REFRESH_TOKEN);
 };
 
 export const getStoredAuthToken = getAccessToken;

@@ -10,7 +10,6 @@ import { config } from '../../config/app.js';
 import { swaggerSpec } from '../../config/swagger.js';
 import { logger, sanitizeLogText } from '../../shared/logger.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { prisma } from '../prisma/client.js';
 import { connectRedis } from '../redis/index.js';
 import {
   getPrometheusMetrics,
@@ -55,6 +54,7 @@ import {
   trustProxy,
 } from './security-governance.js';
 import { applyRequestCorrelation } from './request-correlation.js';
+import { testDatabaseConnection } from '../../database/prisma.js';
 
 const developmentCorsOrigins = [
   'http://localhost:5173',
@@ -537,7 +537,10 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
     let redis: 'connected' | 'disconnected' = 'connected';
 
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      const databaseReady = await testDatabaseConnection();
+      if (!databaseReady) {
+        throw new Error('Database readiness check failed');
+      }
     } catch (error) {
       database = 'disconnected';
       logger.warn(
