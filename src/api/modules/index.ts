@@ -6,9 +6,7 @@ export * from './base';
 
 // Modules
 export * from './clientes.api';
-export * from './parceiros.api';
 export * from './partners.api';
-export * from './oportunidades.api';
 export * from './pipelines.api';
 export * from './usuarios.api';
 export * from './roles.api';
