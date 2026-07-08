@@ -2316,7 +2316,7 @@ export const ClientesPage: React.FC = () => {
         onImport={handleImportClientes}
         columns={importColumns}
         title="Importar Clientes"
-        description="Importe clientes a partir de arquivos CSV ou XLSX. Campo obrigatório: nome."
+        description="Importe clientes por CSV, XLSX ou XLS. O campo Nome é obrigatório. Os demais campos são opcionais."
         acceptedTypes={['.csv', '.xlsx', '.xls']}
       />
 

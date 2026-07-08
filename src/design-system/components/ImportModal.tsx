@@ -303,6 +303,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const totalErrorRows = Object.keys(importErrors).length;
   const totalRows = totalValidRows + totalErrorRows;
   const requiredColumns = columns.filter((column) => column.required);
+  const optionalColumns = columns.filter((column) => !column.required);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title} size="xl">
@@ -343,25 +344,55 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </div>
 
           <div className="rounded-xl border border-slate-200/50 bg-white p-4 dark:border-slate-700/60 dark:bg-slate-900/70">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
               <FileSpreadsheet className="h-4 w-4 text-primary" />
               Campos do arquivo
             </div>
-            <div className="space-y-2">
-              {requiredColumns.length > 0 ? (
-                requiredColumns.map((column) => (
-                  <div key={column.key} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="text-slate-500 dark:text-slate-400">{column.label}</span>
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-600 dark:text-emerald-300">
-                      obrigatório
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Nenhum campo obrigatório configurado.
-                </p>
-              )}
+
+            <div className="space-y-4">
+              <div>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Obrigatórios
+                </div>
+                <div className="space-y-2">
+                  {requiredColumns.length > 0 ? (
+                    requiredColumns.map((column) => (
+                      <div key={column.key} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-slate-600 dark:text-slate-300">{column.label}</span>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-600 dark:text-emerald-300">
+                          obrigatório
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Nenhum campo obrigatório configurado.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200/70 pt-4 dark:border-slate-700/60">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Opcionais
+                </div>
+                <div className="space-y-2">
+                  {optionalColumns.length > 0 ? (
+                    optionalColumns.map((column) => (
+                      <div key={column.key} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="text-slate-600 dark:text-slate-300">{column.label}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          opcional
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Nenhum campo opcional configurado.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
