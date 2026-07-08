@@ -26,54 +26,69 @@ export interface ExportMenuProps {
   dropdownClassName?: string;
 }
 
-// Funções de exportação
-const exportToCSV = (data: any[], columns: { key: string; label: string }[], filename: string) => {
-  const headers = columns.map(col => col.label).join(',');
-  const rows = data.map(row =>
-    columns
-      .map(col => {
-        const value = row[col.key];
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value}"`;
-        }
-        return value ?? '';
-      })
-      .join(',')
-  );
+const EXPORT_DATE_SUFFIX = () => new Date().toISOString().split('T')[0];
 
-  const csv = [headers, ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`;
-  link.click();
+const escapeCsvValue = (value: unknown): string => {
+  const text = value === null || value === undefined ? '' : String(value);
+  if (!/[;"\n\r]/.test(text)) {
+    return text;
+  }
+
+  return `"${text.replace(/"/g, '""')}"`;
 };
 
-const exportToExcel = (data: any[], columns: { key: string; label: string }[], filename: string) => {
-  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>';
-  html += '<table border="1">';
+export const buildCsvExportContent = (
+  data: any[],
+  columns: { key: string; label: string }[],
+): string => {
+  const headerLine = columns.map((column) => escapeCsvValue(column.label)).join(';');
+  const rowLines = data.map((row) =>
+    columns.map((column) => escapeCsvValue(row[column.key])).join(';'),
+  );
 
-  html += '<tr>';
-  columns.forEach(col => {
-    html += `<th style="background:#000dff;color:white;font-weight:bold">${col.label}</th>`;
-  });
-  html += '</tr>';
+  return `\ufeff${[headerLine, ...rowLines].join('\r\n')}`;
+};
 
-  data.forEach(row => {
-    html += '<tr>';
-    columns.forEach(col => {
-      html += `<td>${row[col.key] ?? ''}</td>`;
-    });
-    html += '</tr>';
-  });
-
-  html += '</table></body></html>';
-
-  const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+const triggerDownload = (blob: Blob, filename: string, extension: string): void => {
   const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${filename}_${new Date().toISOString().split('T')[0]}.xls`;
+  const objectUrl = URL.createObjectURL(blob);
+
+  link.href = objectUrl;
+  link.download = `${filename}_${EXPORT_DATE_SUFFIX()}.${extension}`;
   link.click();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl);
+  }, 0);
+};
+
+const exportToCSV = (data: any[], columns: { key: string; label: string }[], filename: string) => {
+  const csv = buildCsvExportContent(data, columns);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  triggerDownload(blob, filename, 'csv');
+};
+
+const exportToExcel = async (
+  data: any[],
+  columns: { key: string; label: string }[],
+  filename: string,
+) => {
+  const { utils, write } = await import('xlsx');
+  const sheetData = [
+    columns.map((column) => column.label),
+    ...data.map((row) => columns.map((column) => row[column.key] ?? '')),
+  ];
+
+  const worksheet = utils.aoa_to_sheet(sheetData);
+  const workbook = utils.book_new();
+  utils.book_append_sheet(workbook, worksheet, 'Clientes');
+
+  const arrayBuffer = write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([arrayBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+
+  triggerDownload(blob, filename, 'xlsx');
 };
 
 const exportToJSON = (data: any[], filename: string) => {
@@ -168,7 +183,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
 
   const exportOptions = options || defaultOptions;
 
-  const handleExport = (format: string) => {
+  const handleExport = async (format: string) => {
     if (!data || data.length === 0) {
       alert('Nenhum dado para exportar');
       return;
@@ -183,7 +198,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           exportToCSV(data, columns, filename);
           break;
         case 'excel':
-          exportToExcel(data, columns, filename);
+          await exportToExcel(data, columns, filename);
           break;
         case 'pdf':
           exportToPDF(data, columns, filename);
@@ -258,7 +273,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
               {exportOptions.map((option) => (
                 <button
                   key={option.id}
-                  onClick={() => handleExport(option.format)}
+                  onClick={() => void handleExport(option.format)}
                   className={`
                     w-full flex items-center gap-3 px-3 py-2 rounded-lg
                     text-left text-sm font-medium

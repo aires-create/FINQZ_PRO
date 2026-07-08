@@ -28,37 +28,175 @@ export interface ImportModalProps {
   templateFileName?: string;
 }
 
-// Funções utilitárias
-const parseCSV = (text: string): string[][] => {
-  const lines = text.split('\n').filter(line => line.trim());
-  return lines.map(line => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    const delimiter = (line.match(/;/g)?.length || 0) > (line.match(/,/g)?.length || 0) ? ';' : ',';
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === delimiter && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    result.push(current.trim());
-    return result;
-  });
-};
-
-const normalizeColumnKey = (label: string): string => {
+export const normalizeColumnKey = (label: string): string => {
   return label
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '');
+};
+
+export const parseDelimitedRows = (text: string): string[][] => {
+  const cleanedText = text.replace(/^\uFEFF/, '');
+  const rows: string[][] = [];
+  const sampleLine = cleanedText.split(/\r\n|\n|\r/).find((line) => line.trim()) ?? '';
+  const semicolonCount = (sampleLine.match(/;/g)?.length ?? 0);
+  const commaCount = (sampleLine.match(/,/g)?.length ?? 0);
+  const delimiter = commaCount > semicolonCount ? ',' : ';';
+
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < cleanedText.length; i += 1) {
+    const char = cleanedText[i];
+    const next = cleanedText[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentCell += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && char === delimiter) {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+      continue;
+    }
+
+    if (!inQuotes && (char === '\n' || char === '\r')) {
+      if (char === '\r' && next === '\n') {
+        i += 1;
+      }
+
+      currentRow.push(currentCell.trim());
+      if (currentRow.some((value) => value.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
+      continue;
+    }
+
+    currentCell += char;
+  }
+
+  currentRow.push(currentCell.trim());
+  if (currentRow.some((value) => value.length > 0)) {
+    rows.push(currentRow);
+  }
+
+  return rows;
+};
+
+export interface ImportEvaluationResult {
+  data: any[];
+  rowErrors: Record<number, string>;
+  headerError: string | null;
+  mappedColumns: Record<number, string>;
+}
+
+export const evaluateImportRows = (
+  rows: string[][],
+  columns: ImportColumn[],
+): ImportEvaluationResult => {
+  if (rows.length < 2) {
+    return {
+      data: [],
+      rowErrors: {},
+      headerError: 'O arquivo precisa conter ao menos uma linha de cabeçalho e uma linha de dados.',
+      mappedColumns: {},
+    };
+  }
+
+  const headers = rows[0].map((header) => String(header ?? '').trim());
+  const mappedColumns: Record<number, string> = {};
+
+  headers.forEach((header, index) => {
+    const key = normalizeColumnKey(header);
+    const expectedColumn = columns.find(
+      (column) =>
+        normalizeColumnKey(column.label) === key ||
+        normalizeColumnKey(column.key) === key,
+    );
+
+    if (expectedColumn) {
+      mappedColumns[index] = expectedColumn.key;
+    }
+  });
+
+  const requiredColumns = columns.filter((column) => column.required);
+  const mappedKeys = new Set(Object.values(mappedColumns));
+  const missingRequiredColumns = requiredColumns.filter((column) => !mappedKeys.has(column.key));
+
+  if (Object.keys(mappedColumns).length === 0) {
+    return {
+      data: [],
+      rowErrors: {},
+      headerError: 'Nenhum cabeçalho reconhecido foi encontrado. Verifique se o arquivo usa os nomes esperados.',
+      mappedColumns,
+    };
+  }
+
+  if (missingRequiredColumns.length > 0) {
+    return {
+      data: [],
+      rowErrors: {},
+      headerError: `Cabeçalho incompleto. Campo(s) obrigatório(s) ausente(s): ${missingRequiredColumns
+        .map((column) => column.label)
+        .join(', ')}.`,
+      mappedColumns,
+    };
+  }
+
+  const dataRows = rows.slice(1);
+  const processedData: any[] = [];
+  const rowErrors: Record<number, string> = {};
+
+  dataRows.forEach((row, rowIndex) => {
+    const rowData: Record<string, string> = {};
+
+    row.forEach((cell, cellIndex) => {
+      const key = mappedColumns[cellIndex];
+      if (key) {
+        rowData[key] = cell;
+      }
+    });
+
+    let rowError: string | null = null;
+
+    columns.forEach((column) => {
+      const value = rowData[column.key];
+      if (column.required && !value) {
+        rowError = `Campo "${column.label}" é obrigatório.`;
+      }
+
+      if (!rowError && column.validate && value) {
+        const validationError = column.validate(value);
+        if (validationError) {
+          rowError = validationError;
+        }
+      }
+    });
+
+    if (rowError) {
+      rowErrors[rowIndex] = rowError;
+      return;
+    }
+
+    processedData.push(rowData);
+  });
+
+  return {
+    data: processedData,
+    rowErrors,
+    headerError: null,
+    mappedColumns,
+  };
 };
 
 export const ImportModal: React.FC<ImportModalProps> = ({
@@ -76,84 +214,70 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [importErrors, setImportErrors] = useState<Record<number, string>>({});
   const [importFileName, setImportFileName] = useState('');
   const [step, setStep] = useState<'upload' | 'preview'>('upload');
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
-  const handleFilesSelected = (files: File[]) => {
+  const handleFilesSelected = async (files: File[]) => {
     const file = files[0];
     if (!file) return;
 
     setImportFileName(file.name);
-    const reader = new FileReader();
+    setFeedbackMessage(null);
 
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      const rows = parseCSV(text);
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+      let rows: string[][] = [];
 
-      if (rows.length < 2) {
-        alert('Arquivo deve conter pelo menos cabeçalho e uma linha de dados');
+      if (extension === 'xlsx' || extension === 'xls') {
+        const { read, utils } = await import('xlsx');
+        const buffer = await file.arrayBuffer();
+        const workbook = read(buffer, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+
+        if (!sheetName) {
+          setFeedbackMessage('O arquivo selecionado não possui planilhas válidas.');
+          setStep('upload');
+          return;
+        }
+
+        const sheet = workbook.Sheets[sheetName];
+        rows = utils.sheet_to_json(sheet, { header: 1, defval: '' }) as string[][];
+      } else {
+        const text = await file.text();
+        rows = parseDelimitedRows(text);
+      }
+
+      const evaluation = evaluateImportRows(rows, columns);
+
+      if (evaluation.headerError) {
+        setImportData([]);
+        setImportErrors({});
+        setStep('upload');
+        setFeedbackMessage(evaluation.headerError);
         return;
       }
 
-      const headers = rows[0];
-      const dataRows = rows.slice(1);
+      setImportData(evaluation.data);
+      setImportErrors(evaluation.rowErrors);
 
-      // Mapear colunas
-      const columnMap: Record<number, string> = {};
-      headers.forEach((header, index) => {
-        const key = normalizeColumnKey(header);
-        const expectedCol = columns.find(
-          (ic) =>
-            normalizeColumnKey(ic.label) === key ||
-            normalizeColumnKey(ic.key) === key
-        );
-        if (expectedCol) {
-          columnMap[index] = expectedCol.key;
-        }
-      });
+      if (evaluation.data.length === 0) {
+        setStep('upload');
+        setFeedbackMessage('Nenhuma linha válida foi encontrada. Revise os dados do arquivo e tente novamente.');
+        return;
+      }
 
-      // Processar linhas
-      const processedData: Record<number, any> = {};
-      const errors: Record<number, string> = {};
-
-      dataRows.forEach((row, rowIndex) => {
-        const rowData: any = {};
-        let rowError = '';
-
-        row.forEach((cell, colIndex) => {
-          const key = columnMap[colIndex];
-          if (key) {
-            rowData[key] = cell;
-          }
-        });
-
-        // Validar
-        columns.forEach((col) => {
-          if (col.required && !rowData[col.key]) {
-            rowError = `Campo "${col.label}" é obrigatório`;
-          }
-          if (col.validate && rowData[col.key]) {
-            const error = col.validate(rowData[col.key]);
-            if (error) rowError = error;
-          }
-        });
-
-        if (rowError) {
-          errors[rowIndex] = rowError;
-        } else {
-          processedData[rowIndex] = rowData;
-        }
-      });
-
-      setImportData(Object.values(processedData));
-      setImportErrors(errors);
       setStep('preview');
-    };
-
-    reader.readAsText(file);
+    } catch (error) {
+      console.error('[ImportModal] Falha ao processar arquivo de importação:', error);
+      setImportData([]);
+      setImportErrors({});
+      setStep('upload');
+      setFeedbackMessage('Não foi possível ler o arquivo selecionado. Verifique o formato e tente novamente.');
+    }
   };
 
   const handleConfirmImport = () => {
     if (importData.length === 0) {
-      alert('Nenhum dado válido para importar');
+      setFeedbackMessage('Nenhum dado válido para importar.');
       return;
     }
 
@@ -167,6 +291,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     setImportErrors({});
     setImportFileName('');
     setStep('upload');
+    setFeedbackMessage(null);
   };
 
   const handleClose = () => {
@@ -182,6 +307,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title} size="xl">
       <div className="space-y-6">
+        {feedbackMessage && (
+          <div className="rounded-xl border border-amber-200/70 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>{feedbackMessage}</p>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
           <div className="rounded-xl border border-slate-200/50 bg-slate-50/70 p-4 dark:border-slate-700/60 dark:bg-slate-800/40">
             <div className="flex items-start gap-3">

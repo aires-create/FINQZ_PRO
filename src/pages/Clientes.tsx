@@ -4,7 +4,7 @@ import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Cale
 import { clientesApi } from "../api/modules/clientes.api";
 import { useLocation } from "react-router-dom";
 import type { Cliente } from "../types";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, ErrorState, KpiCard, ImportModal, ExportMenu, SegmentedControl } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, ErrorState, KpiCard, ImportModal, ExportMenu, SegmentedControl, Modal } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { fetchAddressByCEPWithStatus, formatCEP as formatCepMasked, isValidCEPFormat } from "../data/cepService";
 
@@ -56,6 +56,7 @@ export const ClientesPage: React.FC = () => {
   const tipoPessoaControlRef = useRef<HTMLDivElement | null>(null);
   const cepLookupRequestRef = useRef(0);
   const cepLookupLastResolvedRef = useRef("");
+  const loadClientesRequestRef = useRef(0);
   const [cepLookupStatus, setCepLookupStatus] = useState<"idle" | "loading" | "found" | "not_found" | "error">("idle");
   const [cepLookupMessage, setCepLookupMessage] = useState("");
   
@@ -70,6 +71,7 @@ export const ClientesPage: React.FC = () => {
   // Histórico de alterações
   const [showHistory, setShowHistory] = useState(false);
   const [historyCliente, setHistoryCliente] = useState<Cliente | null>(null);
+  const [deleteClienteTarget, setDeleteClienteTarget] = useState<Cliente | null>(null);
 
   // Import/Export
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -161,10 +163,15 @@ export const ClientesPage: React.FC = () => {
   }, [showModal]);
 
   const loadClientes = async () => {
+    const requestId = ++loadClientesRequestRef.current;
+
     try {
       setLoadError(null);
       setLoading(true);
       const clientesData = await clientesApi.getAll({ search });
+      if (requestId !== loadClientesRequestRef.current) {
+        return;
+      }
 
       const normalizedClientes = clientesData.map((cliente: any) => {
         let parsedAddress: any = null;
@@ -206,9 +213,17 @@ export const ClientesPage: React.FC = () => {
 
       setClientesLocal(normalizedClientes);
     } catch (error) {
+      if (requestId !== loadClientesRequestRef.current) {
+        return;
+      }
+
       console.error("Error loading clientes:", error);
       setLoadError("Não foi possível carregar a lista de clientes a partir da API oficial.");
     } finally {
+      if (requestId !== loadClientesRequestRef.current) {
+        return;
+      }
+
       setLoading(false);
     }
   };
@@ -998,16 +1013,23 @@ export const ClientesPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string | number) => {
-    if (confirm("Tem certeza que deseja excluir este cliente?")) {
-      try {
-        await clientesApi.delete(id);
-        await loadClientes();
-      } catch (apiError) {
-        console.error('API error deleting cliente:', apiError);
-        alert("Erro ao excluir cliente no servidor. Nenhuma alteração local foi aplicada.");
-        return;
-      }
+  const handleDelete = (cliente: Cliente) => {
+    setDeleteClienteTarget(cliente);
+  };
+
+  const confirmDeleteCliente = async () => {
+    if (!deleteClienteTarget?.id) {
+      setDeleteClienteTarget(null);
+      return;
+    }
+
+    try {
+      await clientesApi.delete(deleteClienteTarget.id);
+      setDeleteClienteTarget(null);
+      await loadClientes();
+    } catch (apiError) {
+      console.error('API error deleting cliente:', apiError);
+      alert("Erro ao excluir cliente no servidor. Nenhuma alteração local foi aplicada.");
     }
   };
 
@@ -1254,8 +1276,8 @@ export const ClientesPage: React.FC = () => {
             <Button
               variant="outline"
               size="sm"
-              disabled
-              title="Importação em implantação"
+              onClick={() => setImportModalOpen(true)}
+              title="Importar clientes"
               className="flex items-center gap-1"
             >
               <Upload size={14} />
@@ -1459,7 +1481,7 @@ export const ClientesPage: React.FC = () => {
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => handleDelete(cliente.id)}
+                          onClick={() => handleDelete(cliente)}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500/80 hover:text-red-600 hover:bg-red-500/10 transition-colors"
                           title="Excluir"
                         >
@@ -2294,9 +2316,57 @@ export const ClientesPage: React.FC = () => {
         onImport={handleImportClientes}
         columns={importColumns}
         title="Importar Clientes"
-        description="Importe clientes a partir de um arquivo CSV. Campo obrigatório: nome."
-        acceptedTypes={['.csv']}
+        description="Importe clientes a partir de arquivos CSV ou XLSX. Campo obrigatório: nome."
+        acceptedTypes={['.csv', '.xlsx', '.xls']}
       />
+
+      {deleteClienteTarget && (
+        <Modal
+          isOpen={Boolean(deleteClienteTarget)}
+          onClose={() => setDeleteClienteTarget(null)}
+          title="Excluir cliente"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="rounded-xl border border-red-200/60 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-100">
+              <p className="font-semibold">
+                Esta ação removerá o cliente de forma definitiva no ambiente oficial.
+              </p>
+              <p className="mt-1 text-sm text-red-800/90 dark:text-red-100/90">
+                Confirme apenas se desejar excluir <span className="font-semibold">{deleteClienteTarget.nome || "cliente sem nome"}</span>.
+              </p>
+            </div>
+
+            <div className="grid gap-2 rounded-xl border border-slate-200/70 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-200">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500 dark:text-slate-400">Cliente</span>
+                <span className="font-medium">{deleteClienteTarget.nome || "-"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500 dark:text-slate-400">CPF/CNPJ</span>
+                <span className="font-mono text-xs">{formatDocument(deleteClienteTarget.cpf_cnpj, deleteClienteTarget.personType)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteClienteTarget(null)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => void confirmDeleteCliente()}
+                className="flex-1"
+              >
+                Excluir cliente
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
