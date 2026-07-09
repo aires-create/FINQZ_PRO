@@ -1,10 +1,10 @@
 import type {
-  CatalogModalityReadModel,
-  CatalogProductReadModel,
-  CatalogSegmentReadModel,
-  CatalogSubproductReadModel,
-  MasterCatalogTreeReadModel,
-} from '../../domain/master-catalog.read-model.js';
+  CatalogModalityDto,
+  CatalogProductDto,
+  CatalogSegmentDto,
+  CatalogSubproductDto,
+  MasterCatalogTreeDto,
+} from '../../dto/master-catalog.dto.js';
 import type {
   MasterCatalogListQuery,
   MasterCatalogProductIdParams,
@@ -35,7 +35,7 @@ export type MasterCatalogHttpRouteContract =
       path: '/master-catalog/tree';
       permission: MasterCatalogHttpPermissionMap['readMasterCatalog'];
       query?: MasterCatalogListQuery;
-      response: MasterCatalogTreeReadModel;
+      response: MasterCatalogTreeDto;
       headers?: MasterCatalogHttpHeadersContract;
     }
   | {
@@ -43,7 +43,7 @@ export type MasterCatalogHttpRouteContract =
       path: '/master-catalog/segments';
       permission: MasterCatalogHttpPermissionMap['readMasterCatalog'];
       query?: MasterCatalogListQuery;
-      response: CatalogSegmentReadModel[];
+      response: CatalogSegmentDto[];
       headers?: MasterCatalogHttpHeadersContract;
     }
   | {
@@ -51,7 +51,7 @@ export type MasterCatalogHttpRouteContract =
       path: '/master-catalog/products';
       permission: MasterCatalogHttpPermissionMap['readMasterCatalog'];
       query?: MasterCatalogListQuery;
-      response: CatalogProductReadModel[];
+      response: CatalogProductDto[];
       headers?: MasterCatalogHttpHeadersContract;
     }
   | {
@@ -60,7 +60,7 @@ export type MasterCatalogHttpRouteContract =
       permission: MasterCatalogHttpPermissionMap['readMasterCatalog'];
       params: MasterCatalogProductIdParams;
       query?: MasterCatalogListQuery;
-      response: CatalogSubproductReadModel[];
+      response: CatalogSubproductDto[];
       headers?: MasterCatalogHttpHeadersContract;
     }
   | {
@@ -69,7 +69,7 @@ export type MasterCatalogHttpRouteContract =
       permission: MasterCatalogHttpPermissionMap['readMasterCatalog'];
       params: MasterCatalogSubproductIdParams;
       query?: MasterCatalogListQuery;
-      response: CatalogModalityReadModel[];
+      response: CatalogModalityDto[];
       headers?: MasterCatalogHttpHeadersContract;
     };
 

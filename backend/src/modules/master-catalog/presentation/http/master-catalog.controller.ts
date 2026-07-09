@@ -10,6 +10,7 @@ import {
 } from '../../validators/master-catalog.http.schema.js';
 import type { MasterCatalogServiceContract } from '../../services/master-catalog.service.contract.js';
 import { masterCatalogService } from '../../services/master-catalog.service.js';
+import { MasterCatalogRuntime } from '../../application/master-catalog.runtime.js';
 
 const isZodError = (error: unknown): error is ZodError => {
   return (
@@ -73,11 +74,15 @@ export class MasterCatalogController {
     private readonly service: MasterCatalogServiceContract = masterCatalogService,
   ) {}
 
+  private get runtime() {
+    return new MasterCatalogRuntime(this.service);
+  }
+
   getTree = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
-      const result = await this.service.getCatalogTree({
+      const result = await this.runtime.getCatalogTree({
         tenantId,
         ...(query.status !== undefined ? { status: query.status } : {}),
         ...(query.search !== undefined ? { search: query.search } : {}),
@@ -99,7 +104,7 @@ export class MasterCatalogController {
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
-      const result = await this.service.listSegments({
+      const result = await this.runtime.listSegments({
         tenantId,
         ...(query.status !== undefined ? { status: query.status } : {}),
         ...(query.search !== undefined ? { search: query.search } : {}),
@@ -121,7 +126,7 @@ export class MasterCatalogController {
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
-      const result = await this.service.listProducts({
+      const result = await this.runtime.listProducts({
         tenantId,
         ...(query.status !== undefined ? { status: query.status } : {}),
         ...(query.search !== undefined ? { search: query.search } : {}),
@@ -144,7 +149,7 @@ export class MasterCatalogController {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
       const params = MasterCatalogProductIdParamsSchema.parse(request.params);
-      const result = await this.service.listSubproductsByProduct({
+      const result = await this.runtime.listSubproductsByProduct({
         tenantId,
         productId: params.productId,
         ...(query.status !== undefined ? { status: query.status } : {}),
@@ -168,7 +173,7 @@ export class MasterCatalogController {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
       const params = MasterCatalogSubproductIdParamsSchema.parse(request.params);
-      const result = await this.service.listModalitiesBySubproduct({
+      const result = await this.runtime.listModalitiesBySubproduct({
         tenantId,
         subproductId: params.subproductId,
         ...(query.status !== undefined ? { status: query.status } : {}),
