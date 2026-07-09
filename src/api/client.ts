@@ -2,7 +2,7 @@
 // Client HTTP com interceptors e tratamento de erros
 import { finqzClient } from "./finqzClient";
 import { clientesApi } from "./modules/clientes.api";
-import { oportunidadesApi } from "./modules/oportunidades.api";
+import { opportunitiesApi } from "./modules/opportunities.api";
 import { partnersApi } from "./modules/partners.api";
 import { automacoesApi } from "./modules/automacoes.api";
 import { dashboardApi } from "./modules/dashboard.api";
@@ -66,12 +66,12 @@ export const api = {
 
   // Oportunidades
   getOportunidades: (params?: { status?: string; produto_id?: string; parceiro_id?: string }) => {
-    return oportunidadesApi.getAll(params as any);
+    return opportunitiesApi.getAll(params as any);
   },
-  getOportunidade: (id: number) => oportunidadesApi.getById(String(id)),
-  createOportunidade: (data: any) => oportunidadesApi.create(data),
-  updateOportunidade: (id: number, data: any) => oportunidadesApi.update(String(id), data),
-  deleteOportunidade: (id: number) => oportunidadesApi.delete(String(id)),
+  getOportunidade: (id: number) => opportunitiesApi.getById(String(id)),
+  createOportunidade: (data: any) => opportunitiesApi.create(data),
+  updateOportunidade: (id: number, data: any) => opportunitiesApi.update(String(id), data),
+  deleteOportunidade: (id: number) => opportunitiesApi.delete(String(id)),
 
   // Automações
   getAutomacoes: () => automacoesApi.getAll(),

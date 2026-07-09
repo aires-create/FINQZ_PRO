@@ -2,6 +2,8 @@
 
 ## Resumo Executivo
 
+> Atualizacao: esta execucao foi sucedida pelo corte de `backend/server` em EPC-W2-L. O runtime unico oficial agora e o backend Fastify em `backend/src`, com superficie oficial em `/api/v1/*`.
+
 A execucao controlada do corte legacy foi concluida para as APIs antigas de Opportunity e Partners:
 
 - `src/api/modules/oportunidades.api.ts` foi removido;

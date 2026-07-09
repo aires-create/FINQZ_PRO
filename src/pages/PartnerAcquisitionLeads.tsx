@@ -57,8 +57,11 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadLeadsRequestRef = React.useRef(0);
 
   const loadLeads = useCallback(async (options?: { refreshing?: boolean }) => {
+    const requestId = ++loadLeadsRequestRef.current;
+
     if (options?.refreshing) {
       setIsRefreshing(true);
     } else {
@@ -74,11 +77,23 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
         search: search.trim() || undefined,
       });
 
+      if (requestId !== loadLeadsRequestRef.current) {
+        return;
+      }
+
       setLeads(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
+      if (requestId !== loadLeadsRequestRef.current) {
+        return;
+      }
+
       setError(err instanceof Error ? err.message : "Erro ao carregar leads de aquisição.");
       setLeads([]);
     } finally {
+      if (requestId !== loadLeadsRequestRef.current) {
+        return;
+      }
+
       setIsLoading(false);
       setIsRefreshing(false);
     }

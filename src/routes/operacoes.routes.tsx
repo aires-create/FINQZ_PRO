@@ -17,70 +17,15 @@ const PartnerAcquisitionProspectDetailsPage = lazy(() => import("../pages/Partne
 
 export const operacoesRoutes = (
   <>
-    <Route
-      path="parceiros"
-      element={
-        <ProtectedRoute
-          requiredPermission="CUSTOMER_VIEW"
-          requiredModule="parceiros"
-          requiredAction="view"
-        >
-          <ParceirosPage />
-        </ProtectedRoute>
-      }
-    />
+    <Route path="parceiros" element={<Navigate to="/app/operacoes/parceiros" replace />} />
     <Route
       path="estrutura-comercial"
-      element={
-        <ProtectedRoute
-          requiredPermission="SALES_VIEW"
-          requiredModule="estrutura_comercial"
-          requiredAction="view"
-        >
-          <EstruturaComercialPage />
-        </ProtectedRoute>
-      }
+      element={<Navigate to="/app/operacoes/estrutura-comercial" replace />}
     />
-    <Route
-      path="roteiros-operacionais"
-      element={
-        <ProtectedRoute requiredModule="roteiros_operacionais" requiredAction="view">
-          <RoteirosOperacionaisPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="financeiro"
-      element={
-        <ProtectedRoute
-          requiredPermission="FINANCE_VIEW"
-          requiredModule="financeiro"
-          requiredAction="view"
-        >
-          <FinanceiroPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="conta-corrente"
-      element={
-        <ProtectedRoute requiredModule="conta_corrente" requiredAction="view">
-          <ContaCorrentePage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="relatorios"
-      element={
-        <ProtectedRoute
-          requiredPermission="REPORT_VIEW"
-          requiredModule="relatorios"
-          requiredAction="view"
-        >
-          <RelatoriosPage />
-        </ProtectedRoute>
-      }
-    />
+    <Route path="roteiros-operacionais" element={<Navigate to="/app/operacoes/roteiros" replace />} />
+    <Route path="financeiro" element={<Navigate to="/app/operacoes/financeiro" replace />} />
+    <Route path="conta-corrente" element={<Navigate to="/app/operacoes/conta-corrente" replace />} />
+    <Route path="relatorios" element={<Navigate to="/app/operacoes/relatorios" replace />} />
     <Route
       path="operacoes/parceiros"
       element={
@@ -197,18 +142,6 @@ export const operacoesRoutes = (
         </ProtectedRoute>
       }
     />
-    <Route path="parceiros" element={<Navigate to="/app/operacoes/parceiros" replace />} />
-    <Route
-      path="estrutura-comercial"
-      element={<Navigate to="/app/operacoes/estrutura-comercial" replace />}
-    />
-    <Route path="roteiros-operacionais" element={<Navigate to="/app/operacoes/roteiros" replace />} />
-    <Route path="financeiro" element={<Navigate to="/app/operacoes/financeiro" replace />} />
-    <Route
-      path="conta-corrente"
-      element={<Navigate to="/app/operacoes/conta-corrente" replace />}
-    />
-    <Route path="relatorios" element={<Navigate to="/app/operacoes/relatorios" replace />} />
   </>
 );
 

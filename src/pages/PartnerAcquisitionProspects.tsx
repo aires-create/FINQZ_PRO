@@ -60,8 +60,11 @@ const PartnerAcquisitionProspectsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const loadProspectsRequestRef = React.useRef(0);
 
   const loadProspects = useCallback(async (options?: { refreshing?: boolean }) => {
+    const requestId = ++loadProspectsRequestRef.current;
+
     if (options?.refreshing) {
       setIsRefreshing(true);
     } else {
@@ -77,11 +80,23 @@ const PartnerAcquisitionProspectsPage: React.FC = () => {
         search: search.trim() || undefined,
       });
 
+      if (requestId !== loadProspectsRequestRef.current) {
+        return;
+      }
+
       setProspects(Array.isArray(response.data) ? response.data : []);
     } catch (caughtError) {
+      if (requestId !== loadProspectsRequestRef.current) {
+        return;
+      }
+
       setError(caughtError instanceof Error ? caughtError.message : "Erro ao carregar prospects.");
       setProspects([]);
     } finally {
+      if (requestId !== loadProspectsRequestRef.current) {
+        return;
+      }
+
       setIsLoading(false);
       setIsRefreshing(false);
     }

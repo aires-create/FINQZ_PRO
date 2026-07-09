@@ -173,9 +173,22 @@ export const RANKING_TYPE_LABELS: Record<RankingType, string> = {
 // Repository
 // ============================================
 
-let simulationState: SimulationResult[] = [];
-let proposalState: SimulationProposal[] = [];
-let opportunityState: Array<Record<string, unknown>> = [];
+let simulationState: Map<string, SimulationResult> = new Map();
+let proposalState: Map<string, SimulationProposal> = new Map();
+
+const cloneSimulation = (simulation: SimulationResult): SimulationResult => ({
+  ...simulation,
+  customer: { ...simulation.customer },
+  creditOffers: simulation.creditOffers.map((offer) => ({ ...offer })),
+  energyOffers: simulation.energyOffers.map((offer) => ({ ...offer })),
+});
+
+const cloneProposal = (proposal: SimulationProposal): SimulationProposal => ({
+  ...proposal,
+  customer: { ...proposal.customer },
+  selectedCreditOffer: proposal.selectedCreditOffer ? { ...proposal.selectedCreditOffer } : undefined,
+  selectedEnergyOffer: proposal.selectedEnergyOffer ? { ...proposal.selectedEnergyOffer } : undefined,
+});
 
 export const simulatorRepository = {
   // Criar simulação
@@ -185,7 +198,7 @@ export const simulatorRepository = {
       id: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: Date.now()
     };
-    simulationState = [...simulationState, newSimulation];
+    simulationState.set(newSimulation.id, cloneSimulation(newSimulation));
     
     // Emitir evento
     emitAutomationEvent('SIMULATION_CREATED', { simulationId: newSimulation.id });
@@ -195,18 +208,20 @@ export const simulatorRepository = {
 
   // Listar simulações
   listSimulations(): SimulationResult[] {
-    return simulationState.map((simulation) => ({ ...simulation }));
+    return Array.from(simulationState.values()).map((simulation) => cloneSimulation(simulation));
   },
 
   // Obter simulação por ID
   getSimulationById(id: string): SimulationResult | undefined {
-    const simulations = this.listSimulations();
-    return simulations.find(s => s.id === id);
+    const simulation = simulationState.get(id);
+    return simulation ? cloneSimulation(simulation) : undefined;
   },
 
   // Salvar simulações
   saveSimulations(simulations: SimulationResult[]): void {
-    simulationState = simulations.map((simulation) => ({ ...simulation }));
+    simulationState = new Map(
+      simulations.map((simulation) => [simulation.id, cloneSimulation(simulation)]),
+    );
   },
 
   // Aceitar proposta
@@ -217,7 +232,7 @@ export const simulatorRepository = {
       acceptedAt: Date.now(),
       opportunityCreated: false
     };
-    proposalState = [...proposalState, newProposal];
+    proposalState.set(newProposal.id, cloneProposal(newProposal));
     
     // Emitir evento
     emitAutomationEvent('SIMULATION_PROPOSAL_ACCEPTED', { proposalId: newProposal.id });
@@ -227,18 +242,19 @@ export const simulatorRepository = {
 
   // Listar propostas
   listProposals(): SimulationProposal[] {
-    return proposalState.map((proposal) => ({ ...proposal }));
+    return Array.from(proposalState.values()).map((proposal) => cloneProposal(proposal));
   },
 
   // Salvar propostas
   saveProposals(proposals: SimulationProposal[]): void {
-    proposalState = proposals.map((proposal) => ({ ...proposal }));
+    proposalState = new Map(
+      proposals.map((proposal) => [proposal.id, cloneProposal(proposal)]),
+    );
   },
 
   // Criar oportunidade no pipeline a partir de proposta aceita
   createOpportunityFromAcceptedProposal(proposalId: string): string | null {
-    const proposals = this.listProposals();
-    const proposal = proposals.find(p => p.id === proposalId);
+    const proposal = proposalState.get(proposalId);
     
     if (!proposal) {
       console.error("Proposal not found:", proposalId);
@@ -257,30 +273,12 @@ export const simulatorRepository = {
       }
     }
 
-    const newOpportunity = {
-      id: opportunityId,
-      customerName: proposal.customer.name,
-      document: proposal.customer.document,
-      phone: proposal.customer.phone,
-      email: proposal.customer.email,
-      simulationType: proposal.simulationType,
-      selectedCreditOffer: proposal.selectedCreditOffer,
-      selectedEnergyOffer: proposal.selectedEnergyOffer,
-      totalEstimatedBenefit: proposal.totalEstimatedBenefit,
-      pipelineId,
-      stage: 'Novo Lead',
-      source: 'SIMULADOR',
-      status: 'ACCEPTED',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    opportunityState = [...opportunityState, newOpportunity];
-    
     // Marcar proposta como tendo oportunidade criada
-    proposal.opportunityCreated = true;
-    proposal.opportunityId = opportunityId;
-    proposalState = proposals.map((item) => item.id === proposal.id ? { ...item, opportunityCreated: true, opportunityId } : item);
+    proposalState.set(proposal.id, {
+      ...cloneProposal(proposal),
+      opportunityCreated: true,
+      opportunityId,
+    });
     
     return opportunityId;
   }
@@ -296,14 +294,6 @@ function getPipelines(): any[] {
     name: pipeline.nome,
     tipo: pipeline.tipo,
   }));
-}
-
-function getOpportunities(): any[] {
-  return opportunityState.map((opportunity) => ({ ...opportunity }));
-}
-
-function saveOpportunities(opportunities: any[]): void {
-  opportunityState = opportunities.map((opportunity) => ({ ...opportunity }));
 }
 
 // ============================================

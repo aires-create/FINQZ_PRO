@@ -63,7 +63,7 @@ import {
 import { Button, Card, Badge, Input, Modal, TextArea, Select } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { apiFetch } from "../api/http";
-import { oportunidadesApi } from "../api/modules/oportunidades.api";
+import { opportunitiesApi } from "../api/modules/opportunities.api";
 import useAppStore from "../store";
 
 // Types
@@ -907,7 +907,7 @@ export const SdrIaHubPage: React.FC = () => {
     
     setIsCreatingOpp(true);
     try {
-      await oportunidadesApi.create({
+      await opportunitiesApi.create({
         nome: oppData.nome,
         telefone: oppData.telefone,
         valor: oppData.valor,

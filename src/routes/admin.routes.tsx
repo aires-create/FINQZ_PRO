@@ -18,26 +18,8 @@ const BancosPage = lazy(() => import("../pages/admin/Bancos"));
 
 export const adminRoutes = (
   <>
-    <Route
-      path="auditoria"
-      element={
-        <ProtectedRoute
-          requiredPermission="AUDIT_VIEW"
-          requiredModule="auditoria"
-          requiredAction="view"
-        >
-          <AuditoriaPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="usuarios"
-      element={
-        <ProtectedRoute requiredModule="usuarios" requiredAction="view">
-          <UsuariosPage />
-        </ProtectedRoute>
-      }
-    />
+    <Route path="auditoria" element={<Navigate to="/app/admin/auditoria" replace />} />
+    <Route path="usuarios" element={<Navigate to="/app/admin/usuarios" replace />} />
     <Route
       path="admin/usuarios"
       element={
