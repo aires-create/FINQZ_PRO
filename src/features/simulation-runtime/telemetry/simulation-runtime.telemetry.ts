@@ -1,6 +1,7 @@
 import type { SimulationRuntimeComparison } from "../comparison/simulation-runtime.comparison.types";
 import type { SimulationRuntimeNormalizedResponse } from "../mappers/simulation-runtime-response.mapper";
 import type { SimulationRuntimeWorkspaceInput } from "../contracts/simulation-runtime.contract";
+import type { SimulationRuntimeRemoteEvidenceMetricsSnapshot } from "../evidence/remote/simulation-runtime-remote-evidence.metrics";
 
 export type SimulationRuntimeTelemetrySink = (event: SimulationRuntimeTelemetryEvent) => void;
 
@@ -90,6 +91,14 @@ export type SimulationRuntimeTelemetryEvent =
       correlationId: string;
       evidenceId: string;
       statusCode: number;
+    }
+  | {
+      type: "shadow_remote_evidence_metrics";
+      timestamp: string;
+      requestId?: string | null;
+      correlationId?: string | null;
+      evidenceId?: string | null;
+      metrics: SimulationRuntimeRemoteEvidenceMetricsSnapshot;
     }
   | {
       type: "shadow_remote_evidence_disabled";
@@ -206,6 +215,14 @@ export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetr
     });
   };
 
+  const emitRemoteEvidenceMetrics = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_metrics" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_metrics",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
   const emitRemoteEvidenceDisabled = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_disabled" }>, "type" | "timestamp">) => {
     sink({
       type: "shadow_remote_evidence_disabled",
@@ -233,6 +250,7 @@ export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetr
     emitRemoteEvidenceRetry,
     emitRemoteEvidenceFailure,
     emitRemoteEvidenceConflict,
+    emitRemoteEvidenceMetrics,
     emitRemoteEvidenceDisabled,
     emitSkipped,
   };

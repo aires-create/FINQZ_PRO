@@ -51,6 +51,7 @@ const createTelemetryRecorder = () => {
     emitRemoteEvidenceRetry: () => events.push("retry"),
     emitRemoteEvidenceFailure: () => events.push("failure"),
     emitRemoteEvidenceConflict: () => events.push("conflict"),
+    emitRemoteEvidenceMetrics: () => undefined,
     emitRemoteEvidenceDisabled: () => events.push("disabled"),
   };
 

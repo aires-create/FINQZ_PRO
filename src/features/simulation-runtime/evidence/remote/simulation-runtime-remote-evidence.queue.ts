@@ -1,5 +1,10 @@
 import { isNetworkError } from "../../../../api/http";
 import type { SimulationRuntimeEvidence } from "../simulation-runtime.evidence.types";
+import {
+  buildSimulationRuntimeRemoteEvidenceMetricsSnapshot,
+  createSimulationRuntimeRemoteEvidenceMetricsState,
+  type SimulationRuntimeRemoteEvidenceMetricsSnapshot,
+} from "./simulation-runtime-remote-evidence.metrics";
 import type {
   SimulationRuntimeRemoteEvidenceClient,
   SimulationRuntimeRemoteEvidenceQueueOptions,
@@ -40,6 +45,8 @@ export class SimulationRuntimeRemoteEvidenceQueue implements SimulationRuntimeRe
 
   private readonly idleWaiters = new Set<() => void>();
 
+  private readonly metricsState = createSimulationRuntimeRemoteEvidenceMetricsState();
+
   constructor(
     private readonly client: SimulationRuntimeRemoteEvidenceClient,
     private readonly telemetry?: SimulationRuntimeRemoteEvidenceTelemetry,
@@ -52,7 +59,16 @@ export class SimulationRuntimeRemoteEvidenceQueue implements SimulationRuntimeRe
       attempts: 0,
     });
 
+    this.metricsState.enqueuedCount += 1;
+    this.metricsState.currentQueueSize = this.items.length;
+
     this.telemetry?.emitRemoteEvidenceEnqueued({
+      requestId: evidence.requestId,
+      correlationId: evidence.correlationId,
+      evidenceId: evidence.evidenceId,
+    });
+
+    this.emitMetricsSnapshot({
       requestId: evidence.requestId,
       correlationId: evidence.correlationId,
       evidenceId: evidence.evidenceId,
@@ -77,6 +93,11 @@ export class SimulationRuntimeRemoteEvidenceQueue implements SimulationRuntimeRe
 
   private get baseDelayMs(): number {
     return this.options.baseDelayMs ?? DEFAULT_BASE_DELAY_MS;
+  }
+
+  getMetricsSnapshot(): SimulationRuntimeRemoteEvidenceMetricsSnapshot {
+    this.metricsState.currentQueueSize = this.items.length;
+    return buildSimulationRuntimeRemoteEvidenceMetricsSnapshot(this.metricsState);
   }
 
   private resolveIdleWaiters(): void {
@@ -115,40 +136,62 @@ export class SimulationRuntimeRemoteEvidenceQueue implements SimulationRuntimeRe
     const { evidence } = item;
 
     while (item.attempts <= this.maxRetries) {
+      const startedAt = Date.now();
+
       try {
         const result = await this.client.send(evidence);
+        this.recordSendDuration(startedAt);
 
         if (result.statusCode === 409) {
+          this.metricsState.conflictCount += 1;
           this.telemetry?.emitRemoteEvidenceConflict({
             requestId: evidence.requestId,
             correlationId: evidence.correlationId,
             evidenceId: evidence.evidenceId,
             statusCode: result.statusCode,
           });
+          this.emitMetricsSnapshot({
+            requestId: evidence.requestId,
+            correlationId: evidence.correlationId,
+            evidenceId: evidence.evidenceId,
+          });
           return;
         }
 
         if (result.statusCode >= 200 && result.statusCode < 300) {
+          this.metricsState.successCount += 1;
           this.telemetry?.emitRemoteEvidenceSuccess({
             requestId: evidence.requestId,
             correlationId: evidence.correlationId,
             evidenceId: evidence.evidenceId,
             statusCode: result.statusCode,
           });
+          this.emitMetricsSnapshot({
+            requestId: evidence.requestId,
+            correlationId: evidence.correlationId,
+            evidenceId: evidence.evidenceId,
+          });
           return;
         }
 
         if (isTerminalFailureStatusCode(result.statusCode) || item.attempts === this.maxRetries) {
+          this.metricsState.failureCount += 1;
           this.telemetry?.emitRemoteEvidenceFailure({
             requestId: evidence.requestId,
             correlationId: evidence.correlationId,
             evidenceId: evidence.evidenceId,
             reason: `http_${result.statusCode}`,
           });
+          this.emitMetricsSnapshot({
+            requestId: evidence.requestId,
+            correlationId: evidence.correlationId,
+            evidenceId: evidence.evidenceId,
+          });
           return;
         }
 
         item.attempts += 1;
+        this.metricsState.retryCount += 1;
         this.telemetry?.emitRemoteEvidenceRetry({
           requestId: evidence.requestId,
           correlationId: evidence.correlationId,
@@ -156,19 +199,32 @@ export class SimulationRuntimeRemoteEvidenceQueue implements SimulationRuntimeRe
           attempt: item.attempts,
           reason: `http_${result.statusCode}`,
         });
+        this.emitMetricsSnapshot({
+          requestId: evidence.requestId,
+          correlationId: evidence.correlationId,
+          evidenceId: evidence.evidenceId,
+        });
         await delay(this.baseDelayMs * 2 ** (item.attempts - 1));
       } catch (error) {
+        this.recordSendDuration(startedAt);
         if (!isRetryableError(error) || item.attempts === this.maxRetries) {
+          this.metricsState.failureCount += 1;
           this.telemetry?.emitRemoteEvidenceFailure({
             requestId: evidence.requestId,
             correlationId: evidence.correlationId,
             evidenceId: evidence.evidenceId,
             reason: error instanceof Error ? error.message : "remote_evidence_failed",
           });
+          this.emitMetricsSnapshot({
+            requestId: evidence.requestId,
+            correlationId: evidence.correlationId,
+            evidenceId: evidence.evidenceId,
+          });
           return;
         }
 
         item.attempts += 1;
+        this.metricsState.retryCount += 1;
         this.telemetry?.emitRemoteEvidenceRetry({
           requestId: evidence.requestId,
           correlationId: evidence.correlationId,
@@ -176,9 +232,34 @@ export class SimulationRuntimeRemoteEvidenceQueue implements SimulationRuntimeRe
           attempt: item.attempts,
           reason: error instanceof Error ? error.message : "remote_evidence_retry",
         });
+        this.emitMetricsSnapshot({
+          requestId: evidence.requestId,
+          correlationId: evidence.correlationId,
+          evidenceId: evidence.evidenceId,
+        });
         await delay(this.baseDelayMs * 2 ** (item.attempts - 1));
       }
     }
+  }
+
+  private recordSendDuration(startedAtMs: number): void {
+    this.metricsState.sendCount += 1;
+    this.metricsState.totalSendTimeMs += Math.max(0, Date.now() - startedAtMs);
+  }
+
+  private emitMetricsSnapshot(payload: {
+    requestId?: string | null;
+    correlationId?: string | null;
+    evidenceId?: string | null;
+  }): void {
+    this.metricsState.currentQueueSize = this.items.length;
+
+    this.telemetry?.emitRemoteEvidenceMetrics({
+      requestId: payload.requestId ?? null,
+      correlationId: payload.correlationId ?? null,
+      evidenceId: payload.evidenceId ?? null,
+      metrics: this.getMetricsSnapshot(),
+    });
   }
 }
 

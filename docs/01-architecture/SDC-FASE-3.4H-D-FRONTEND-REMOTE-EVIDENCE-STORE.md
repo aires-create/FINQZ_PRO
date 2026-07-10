@@ -38,6 +38,10 @@ A telemetria reaproveita a infraestrutura existente do Shadow Runtime e registra
 - conflict
 - disabled
 
+## Fase Seguinte
+
+A observabilidade operacional da fila foi detalhada na SDC FASE 3.4H-E.
+
 ## Feature Flag
 
 - Flag: `VITE_REMOTE_EVIDENCE_ENABLED`

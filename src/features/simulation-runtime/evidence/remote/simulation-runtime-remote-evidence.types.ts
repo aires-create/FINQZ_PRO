@@ -1,4 +1,5 @@
 import type { SimulationRuntimeEvidence } from "../simulation-runtime.evidence.types";
+import type { SimulationRuntimeRemoteEvidenceMetricsSnapshot } from "./simulation-runtime-remote-evidence.metrics";
 
 export interface SimulationRuntimeRemoteEvidenceClientResult {
   statusCode: number;
@@ -40,6 +41,12 @@ export interface SimulationRuntimeRemoteEvidenceTelemetry {
     evidenceId: string;
     statusCode: number;
   }): void;
+  emitRemoteEvidenceMetrics(payload: {
+    requestId?: string | null;
+    correlationId?: string | null;
+    evidenceId?: string | null;
+    metrics: SimulationRuntimeRemoteEvidenceMetricsSnapshot;
+  }): void;
   emitRemoteEvidenceDisabled(payload: {
     requestId?: string | null;
     correlationId?: string | null;
@@ -57,6 +64,7 @@ export interface SimulationRuntimeRemoteEvidenceQueueOptions {
 export interface SimulationRuntimeRemoteEvidenceQueue {
   enqueue(evidence: SimulationRuntimeEvidence): void;
   waitForIdle(): Promise<void>;
+  getMetricsSnapshot(): SimulationRuntimeRemoteEvidenceMetricsSnapshot;
 }
 
 export interface SimulationRuntimeRemoteEvidenceStoreOptions {
