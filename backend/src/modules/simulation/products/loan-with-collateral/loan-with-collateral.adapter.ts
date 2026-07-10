@@ -12,9 +12,11 @@ import { createSimulationExecutionEnvelope } from '../../execution/simulation-ex
 import { createSimulationSnapshotReference } from '../../value-objects/simulation-snapshot-reference.value-object.js';
 import type { SimulationProductAdapter } from '../base/index.js';
 import type { SimulationProductContext } from '../base/index.js';
+import { createSimulationProductValidationResult } from '../base/index.js';
 import { loanWithCollateralCapabilities } from './loan-with-collateral.capability.js';
 import { loanWithCollateralMetadata } from './loan-with-collateral.metadata.js';
 import { LoanWithCollateralValidator } from './loan-with-collateral.validator.js';
+import { loanWithCollateralSubflowRegistry } from './subflows/index.js';
 import type { LegacySimulationResult } from '../../acl/legacy-simulation.types.js';
 import { simulationRequestToLegacySimulationInputMapper } from '../../acl/simulation-request-to-legacy-simulation-input.mapper.js';
 import { legacySimulationResultToSimulationResultMapper } from '../../acl/legacy-simulation-result-to-simulation-result.mapper.js';
@@ -193,6 +195,17 @@ const normalizeProduct = async (
   };
 };
 
+const mergeValidationResults = (
+  ...results: Awaited<ReturnType<LoanWithCollateralValidator['validate']>>[]
+) => {
+  const issues = results.flatMap((result) => result.issues);
+
+  return createSimulationProductValidationResult(
+    issues.every((issue) => issue.severity !== 'error'),
+    issues,
+  );
+};
+
 export class LoanWithCollateralAdapter implements SimulationProductAdapter {
   readonly kind = 'loan-with-collateral';
 
@@ -204,35 +217,47 @@ export class LoanWithCollateralAdapter implements SimulationProductAdapter {
 
   private readonly legacyEngine = new SimulateOperationUseCase();
 
+  resolveSubflow(context: SimulationProductContext) {
+    return loanWithCollateralSubflowRegistry.resolveFromContext(context);
+  }
+
   identify(context: SimulationProductContext): boolean {
     return this.supports(context);
   }
 
   supports(context: SimulationProductContext): boolean {
-    const productTokens = [context.request.product.id, context.request.product.code, context.request.product.name].filter(Boolean) as string[];
-    const subproductTokens = [context.request.subproduct.id, context.request.subproduct.code, context.request.subproduct.name].filter(Boolean) as string[];
-
-    const supportedProduct = productTokens.some((token) =>
-      this.metadata.productAliases.includes(token),
-    );
-    const supportedSubproduct = this.metadata.subproducts.some((subproduct) =>
-      subproductTokens.some((token) =>
-        subproduct.id === token ||
-        subproduct.code === token ||
-        subproduct.name === token ||
-        (subproduct.aliases ?? []).includes(token),
-      ),
-    );
-
-    return supportedProduct && supportedSubproduct;
+    return Boolean(this.resolveSubflow(context));
   }
 
   validate(context: SimulationProductContext) {
-    return Promise.resolve(this.validator.validate(context));
+    const structural = this.validator.validate(context);
+    const subflow = this.resolveSubflow(context);
+
+    if (!subflow) {
+      return Promise.resolve(
+        mergeValidationResults(
+          structural,
+          createSimulationProductValidationResult(false, [
+            {
+              code: 'SUBFLOW_UNKNOWN',
+              message: 'Loan with collateral subflow is not supported',
+              severity: 'error',
+            },
+          ]),
+        ),
+      );
+    }
+
+    return Promise.resolve(
+      mergeValidationResults(structural, subflow.validate(context)),
+    );
   }
 
   async normalize(context: SimulationProductContext): Promise<SimulationProductContext> {
-    return normalizeProduct(context);
+    const normalized = await normalizeProduct(context);
+    const subflow = this.resolveSubflow(normalized);
+
+    return subflow ? subflow.prepareContext(normalized) : normalized;
   }
 
   async simulate(context: SimulationProductContext): Promise<SimulationResult> {

@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import type { MasterCatalogRuntimeContract } from '../../../modules/master-catalog/application/master-catalog.runtime.js';
 import type { SimulationProductContext } from '../../../modules/simulation/products/base/index.js';
 import {
+  autoEquitySubflow,
+  homeEquitySubflow,
+  loanWithCollateralSubflowRegistry,
+} from '../../../modules/simulation/products/loan-with-collateral/subflows/index.js';
+import {
   loanWithCollateralAdapter,
   simulationProductRegistry,
   simulationProductResolver,
@@ -231,6 +236,34 @@ const baseContext: SimulationProductContext = {
   },
 };
 
+const homeEquityContext: SimulationProductContext = {
+  ...baseContext,
+  request: {
+    ...baseContext.request,
+    subproduct: {
+      ...baseContext.request.subproduct,
+      id: 'subproduct-home-equity',
+      code: 'HOME_EQUITY',
+      name: 'Home Equity',
+      slug: 'home-equity',
+    },
+    property: {
+      id: 'property-1',
+      kind: 'property',
+      label: 'Imóvel principal',
+      value: 450000,
+    },
+    guarantees: [
+      {
+        id: 'property-1',
+        kind: 'property',
+        label: 'Imóvel principal',
+        value: 450000,
+      },
+    ],
+  },
+};
+
 describe('Loan With Collateral Product Adapter', () => {
   it('registers and resolves the official adapter for product and subproduct', () => {
     expect(simulationProductRegistry.list()).toContain(loanWithCollateralAdapter);
@@ -294,5 +327,46 @@ describe('Loan With Collateral Product Adapter', () => {
     expect(audit.requestHash).toBeDefined();
     expect(audit.snapshotReference.snapshotId).toBe('snapshot-1');
     expect(audit.recordedAt).toBe('2026-07-09T00:00:00.000Z');
+  });
+
+  it('resolves Auto Equity and Home Equity as internal subflows', () => {
+    expect(loanWithCollateralSubflowRegistry.resolveFromContext(baseContext)).toBe(autoEquitySubflow);
+    expect(loanWithCollateralSubflowRegistry.resolveFromContext(homeEquityContext)).toBe(homeEquitySubflow);
+  });
+
+  it('validates the structural collateral for each subflow', () => {
+    expect(autoEquitySubflow.validate(baseContext).valid).toBe(true);
+    expect(homeEquitySubflow.validate(homeEquityContext).valid).toBe(true);
+  });
+
+  it('keeps the official subflow capabilities explicit', () => {
+    expect(autoEquitySubflow.capability.supportsVehicle()).toBe(true);
+    expect(autoEquitySubflow.capability.supportsBank()).toBe(true);
+    expect(autoEquitySubflow.capability.supportsCorban()).toBe(true);
+    expect(autoEquitySubflow.capability.supportsProvider()).toBe(true);
+    expect(autoEquitySubflow.capability.supportsCollateral()).toBe(true);
+    expect(autoEquitySubflow.capability.supportsProposal()).toBe(true);
+    expect(homeEquitySubflow.capability.supportsProperty()).toBe(true);
+  });
+
+  it('returns a controlled validation error when the subflow is unknown', async () => {
+    const unknownContext: SimulationProductContext = {
+      ...baseContext,
+      request: {
+        ...baseContext.request,
+        subproduct: {
+          ...baseContext.request.subproduct,
+          id: 'subproduct-unknown',
+          code: 'UNKNOWN_SUBFLOW',
+          name: 'Unknown Subflow',
+          slug: 'unknown-subflow',
+        },
+      },
+    };
+
+    const validation = await loanWithCollateralAdapter.validate(unknownContext);
+
+    expect(validation.valid).toBe(false);
+    expect(validation.issues.some((issue) => issue.code === 'SUBFLOW_UNKNOWN')).toBe(true);
   });
 });
