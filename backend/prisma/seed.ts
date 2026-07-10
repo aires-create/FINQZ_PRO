@@ -630,6 +630,13 @@ async function createPermissions() {
       resource: 'simulations',
       action: PermissionAction.CREATE,
     },
+    {
+      name: 'Write Simulation Evidence',
+      slug: 'simulation:evidence:write',
+      description: 'Persist sanitized simulation runtime evidence',
+      resource: 'simulations',
+      action: PermissionAction.CREATE,
+    },
 
     // Bank Proposal permissions
     {

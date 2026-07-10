@@ -277,6 +277,7 @@ export class PermissionsService {
 
         // Simulation permissions
         { name: 'Execute Simulation', slug: 'simulation:execute', resource: 'simulations', action: 'CREATE' as PermissionAction },
+        { name: 'Write Simulation Evidence', slug: 'simulation:evidence:write', resource: 'simulations', action: 'CREATE' as PermissionAction },
 
         ...PARTNER_ACQUISITION_RBAC_PERMISSIONS,
 

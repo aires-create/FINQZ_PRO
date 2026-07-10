@@ -39,6 +39,7 @@ import { opportunitiesRoutes } from '../../modules/opportunities/routes.js';
 import { operationRoutes } from '../../modules/operation/presentation/http/operation.routes.js';
 import { masterCatalogRoutes } from '../../modules/master-catalog/presentation/http/master-catalog.routes.js';
 import { simulationRuntimeRoutes } from '../../modules/simulation/presentation/http/simulation-runtime.routes.js';
+import { simulationRuntimeEvidenceRoutes } from '../../modules/simulation/evidence/presentation/http/simulation-runtime-evidence.routes.js';
 import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
 import { partnerRoutes } from '../../modules/partners/presentation/http/partner.routes.js';
 import { partnerAcquisitionRoutes } from '../../modules/partner-acquisition/http/partner-acquisition.routes.js';
@@ -615,6 +616,7 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   await app.register(operationRoutes, { prefix: '/api/v1/operations' });
   await app.register(masterCatalogRoutes, { prefix: '/api/v1/master-catalog' });
   await app.register(simulationRuntimeRoutes, { prefix: '/api/v1/simulations' });
+  await app.register(simulationRuntimeEvidenceRoutes, { prefix: '/api/v1/simulations' });
   await app.register(edpRoutes, { prefix: '/api/v1/edp' });
 
   // Error handler
