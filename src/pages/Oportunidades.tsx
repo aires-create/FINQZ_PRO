@@ -17,6 +17,7 @@ import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
 import { KanbanColumn, formatCurrency } from "../components/pipeline";
+import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
 const mapKanbanOpportunityToCreateIntakePayload = (formData: any, oportunidade: any, selectedPipelineId: string, selectedStageId: string) => {
@@ -1807,6 +1808,25 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [novaFaseAposAceite, setNovaFaseAposAceite] = useState<string>('novo_lead');
   const [showFaseSelector, setShowFaseSelector] = useState(false);
+  const simulationRuntimeShadow = useSimulationRuntimeShadow({
+    opportunity: selectedLead,
+    simulationType: tipoSimulacao,
+    simulationFields: simuladorCampos,
+    selectedProduct: {
+      id: "product-emprestimo-com-garantia",
+      code: "EMPRESTIMO_COM_GARANTIA",
+      name: "Empréstimo com Garantia",
+    },
+    selectedSubproduct: {
+      id: "subproduct-auto-equity",
+      productId: "product-emprestimo-com-garantia",
+      code: "AUTO_EQUITY",
+      name: "Auto Equity",
+    },
+    tenantId: selectedLead?.tenantId ?? user?.tenant_id ?? null,
+    currentUserId: user?.id ?? null,
+    currentUserName: user?.nome ?? null,
+  });
   
   // Reset simulação quando o tipo muda
   React.useEffect(() => {
@@ -2119,6 +2139,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setSimulationAcceptedAt(null);
     setSimulationResult(null);
     setShowFaseSelector(false);
+    void simulationRuntimeShadow.runShadowExecution(resultado);
   };
   
   // Função para aceitar a simulação
