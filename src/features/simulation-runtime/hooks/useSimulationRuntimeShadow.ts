@@ -23,8 +23,12 @@ import { mapSimulationRuntimeResponse } from "../mappers/simulation-runtime-resp
 import {
   collectSimulationRuntimeEvidence,
   type SimulationRuntimeEvidenceStore,
-  defaultSimulationRuntimeEvidenceStore,
 } from "../evidence";
+import {
+  createSimulationRuntimeRemoteEvidenceClient,
+  createSimulationRuntimeRemoteEvidenceQueue,
+  createSimulationRuntimeRemoteEvidenceStore,
+} from "../evidence/remote";
 
 export interface UseSimulationRuntimeShadowOptions {
   telemetrySink?: SimulationRuntimeTelemetrySink;
@@ -78,7 +82,23 @@ export const useSimulationRuntimeShadow = (
     currentUserName: workspace.currentUserName ?? currentUser?.nome ?? null,
   }), [workspace, currentUser]);
 
-  const evidenceStore = useMemo<SimulationRuntimeEvidenceStore>(() => options.evidenceStore ?? defaultSimulationRuntimeEvidenceStore, [options.evidenceStore]);
+  const evidenceStore = useMemo<SimulationRuntimeEvidenceStore>(() => {
+    if (options.evidenceStore) {
+      return options.evidenceStore;
+    }
+
+    const client = createSimulationRuntimeRemoteEvidenceClient();
+    const queue = createSimulationRuntimeRemoteEvidenceQueue(client, telemetry, {
+      maxRetries: 3,
+      baseDelayMs: 50,
+    });
+
+    return createSimulationRuntimeRemoteEvidenceStore({
+      enabled: flags.remoteEvidenceEnabled,
+      queue,
+      telemetry,
+    });
+  }, [flags.remoteEvidenceEnabled, options.evidenceStore, telemetry]);
 
   const runShadowExecution = useCallback(async (legacyResult?: SimulationRuntimeLegacyResult | null) => {
     if (!flags.shadowEnabled) {
@@ -186,7 +206,7 @@ export const useSimulationRuntimeShadow = (
               fallbackUsed: false,
             });
 
-            await evidenceStore.save(evidence);
+            void evidenceStore.save(evidence).catch(() => undefined);
             telemetry.emitEvidenceStored({
               requestId,
               correlationId,

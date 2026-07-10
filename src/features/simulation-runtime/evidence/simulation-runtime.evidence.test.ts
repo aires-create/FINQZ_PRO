@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { SimulationRuntimeLegacyResult, SimulationRuntimeWorkspaceInput } from "../contracts/simulation-runtime.contract";
 import { createInMemorySimulationRuntimeEvidenceStore, collectSimulationRuntimeEvidence, sanitizeSimulationRuntimeEvidence, type SimulationRuntimeEvidenceStore } from "./index";
@@ -21,6 +21,7 @@ vi.mock("../config/simulation-runtime.flags", () => ({
     primaryEnabled: false,
     fallbackEnabled: true,
     evidenceEnabled: true,
+    remoteEvidenceEnabled: false,
   }),
 }));
 
@@ -117,6 +118,10 @@ const legacyResult: SimulationRuntimeLegacyResult = {
 describe("simulation runtime evidence", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("sanitizes evidence without sensitive payload fields", async () => {
@@ -266,6 +271,40 @@ describe("simulation runtime evidence", () => {
     });
 
     expect(comparison?.category).toBe("NONE");
+    expect(mockStore.save).toHaveBeenCalledTimes(1);
+    expect(telemetryEvents.some((event: any) => event.type === "shadow_evidence_stored")).toBe(true);
+  });
+
+  it("does not block shadow completion when remote evidence save is still pending", async () => {
+    vi.useFakeTimers();
+    executeSimulationRuntimeShadowMock.mockResolvedValueOnce(buildRuntimeResponse());
+    const telemetryEvents: unknown[] = [];
+    const mockStore: SimulationRuntimeEvidenceStore = {
+      save: vi.fn(() => new Promise<never>(() => undefined)),
+      findByEvidenceId: vi.fn(async () => null),
+      list: vi.fn(async () => []),
+    };
+
+    const { result } = renderHook(() => useSimulationRuntimeShadow(baseWorkspace, {
+      evidenceStore: mockStore,
+      telemetrySink: (event) => telemetryEvents.push(event),
+    }));
+
+    let comparisonPromise: ReturnType<typeof result.current.runShadowExecution>;
+    await act(async () => {
+      comparisonPromise = result.current.runShadowExecution(legacyResult);
+    });
+
+    const racePromise = Promise.race([
+      comparisonPromise!.then(() => "completed"),
+      new Promise<"blocked">((resolve) => setTimeout(() => resolve("blocked"), 5)),
+    ]);
+
+    await vi.advanceTimersByTimeAsync(5);
+
+    await expect(racePromise).resolves.toBe("completed");
+    await expect(comparisonPromise!).resolves.toMatchObject({ category: "NONE" });
+    expect(result.current.status).toBe("success");
     expect(mockStore.save).toHaveBeenCalledTimes(1);
     expect(telemetryEvents.some((event: any) => event.type === "shadow_evidence_stored")).toBe(true);
   });

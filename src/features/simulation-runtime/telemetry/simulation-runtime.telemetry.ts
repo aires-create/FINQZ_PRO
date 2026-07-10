@@ -10,7 +10,6 @@ export interface SimulationRuntimeTelemetryContext {
   requestedAmount?: number;
   term?: number;
   monthlyRate?: number;
-  tenantId?: string | null;
 }
 
 export type SimulationRuntimeTelemetryEvent =
@@ -24,7 +23,6 @@ export type SimulationRuntimeTelemetryEvent =
       requestedAmount?: number;
       term?: number;
       monthlyRate?: number;
-      tenantId?: string | null;
     }
   | {
       type: "shadow_completed";
@@ -54,6 +52,53 @@ export type SimulationRuntimeTelemetryEvent =
       reason: string;
     }
   | {
+      type: "shadow_remote_evidence_enqueued";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      evidenceId: string;
+    }
+  | {
+      type: "shadow_remote_evidence_success";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      evidenceId: string;
+      statusCode: number;
+    }
+  | {
+      type: "shadow_remote_evidence_retry";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      evidenceId: string;
+      attempt: number;
+      reason: string;
+    }
+  | {
+      type: "shadow_remote_evidence_failure";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      evidenceId: string;
+      reason: string;
+    }
+  | {
+      type: "shadow_remote_evidence_conflict";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      evidenceId: string;
+      statusCode: number;
+    }
+  | {
+      type: "shadow_remote_evidence_disabled";
+      timestamp: string;
+      requestId?: string | null;
+      correlationId?: string | null;
+      reason: string;
+    }
+  | {
       type: "shadow_failed";
       timestamp: string;
       requestId: string;
@@ -78,7 +123,6 @@ export const sanitizeTelemetryWorkspace = (
     : undefined,
   term: workspace.simulationFields?.prazo,
   monthlyRate: workspace.simulationFields?.taxaMes,
-  tenantId: workspace.tenantId ?? workspace.opportunity?.tenantId ?? null,
 });
 
 export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetrySink = () => undefined) => {
@@ -122,6 +166,54 @@ export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetr
     });
   };
 
+  const emitRemoteEvidenceEnqueued = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_enqueued" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_enqueued",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
+  const emitRemoteEvidenceSuccess = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_success" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_success",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
+  const emitRemoteEvidenceRetry = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_retry" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_retry",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
+  const emitRemoteEvidenceFailure = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_failure" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_failure",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
+  const emitRemoteEvidenceConflict = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_conflict" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_conflict",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
+  const emitRemoteEvidenceDisabled = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_remote_evidence_disabled" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_remote_evidence_disabled",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
   const emitSkipped = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_skipped" }>, "type" | "timestamp">) => {
     sink({
       type: "shadow_skipped",
@@ -136,6 +228,12 @@ export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetr
     emitFailed,
     emitEvidenceStored,
     emitEvidenceFailed,
+    emitRemoteEvidenceEnqueued,
+    emitRemoteEvidenceSuccess,
+    emitRemoteEvidenceRetry,
+    emitRemoteEvidenceFailure,
+    emitRemoteEvidenceConflict,
+    emitRemoteEvidenceDisabled,
     emitSkipped,
   };
 };

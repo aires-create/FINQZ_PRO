@@ -7,3 +7,4 @@ export * from "./simulation-runtime.evidence.aggregator";
 export * from "./simulation-runtime.evidence.report";
 export * from "./simulation-runtime.evidence.decision";
 export * from "./simulation-runtime.evidence.fixtures";
+export * from "./remote";

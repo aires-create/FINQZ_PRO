@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import useAppStore from "../../store";
 import { buildWorkspaceSimulationRuntimeRequest } from "./mappers/workspace-to-simulation-runtime.mapper";
 import { compareSimulationRuntimeResults } from "./comparison/simulation-runtime.comparator";
@@ -19,6 +19,8 @@ vi.mock("./config/simulation-runtime.flags", () => ({
     shadowEnabled: true,
     primaryEnabled: false,
     fallbackEnabled: true,
+    evidenceEnabled: false,
+    remoteEvidenceEnabled: false,
   }),
 }));
 
@@ -122,6 +124,10 @@ describe("simulation-runtime feature", () => {
     } as never);
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("builds the canonical Auto Equity runtime request from workspace state", () => {
     const request = buildWorkspaceSimulationRuntimeRequest(baseWorkspace);
 
@@ -216,5 +222,6 @@ describe("simulation-runtime feature", () => {
     expect(flags.shadowEnabled).toBe(true);
     expect(flags.primaryEnabled).toBe(false);
     expect(flags.fallbackEnabled).toBe(true);
+    expect(flags.remoteEvidenceEnabled).toBe(false);
   });
 });
