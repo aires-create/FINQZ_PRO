@@ -59,6 +59,7 @@ model Tenant {
   userRoles                             UserRole[]
   auditLogs                             AuditLog[]
   securityEventLogs                     SecurityEventLog[]
+  simulationRuntimeEvidences            SimulationRuntimeEvidence[]
   edpDecisions                          EdpDecision[]
   edpDecisionPolicies                   EdpDecisionPolicy[]
   edpDecisionStrategies                 EdpDecisionStrategy[]
@@ -78,6 +79,71 @@ model Tenant {
   @@index([isActive])
   @@index([deletedAt])
   @@map("tenants")
+}
+
+model SimulationRuntimeEvidence {
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId                   String   @db.Uuid
+  tenant                     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  evidenceId                 String
+  campaignId                 String
+  timestamp                  DateTime
+  environment                String
+
+  tenantIdHash               String?
+  opportunityIdHash          String?
+
+  requestId                  String
+  correlationId              String
+  executionId                String
+
+  productCode                String
+  subproductCode             String
+
+  legacyStatus               String?
+  canonicalStatus            String
+
+  comparisonStatus           String
+  divergenceCategory         String
+
+  divergenceCount            Int
+  financialCriticalCount     Int
+  financialMinorCount        Int
+  structuralCount            Int
+  missingCanonicalFieldCount Int
+  missingLegacyFieldCount    Int
+
+  mappingFailure             Boolean
+  runtimeFailure             Boolean
+  unsupportedScenario        Boolean
+
+  legacyDurationMs           Int?
+  runtimeDurationMs          Int?
+
+  fallbackUsed               Boolean
+  shadowMode                 Boolean
+
+  comparatorVersion          String
+  contractVersion            String
+  catalogVersion             String
+  engineVersion              String
+  policyVersion              String
+  strategyVersion            String
+
+  receivedByUserId           String?
+  receivedAt                 DateTime
+  createdAt                  DateTime @default(now())
+
+  @@unique([tenantId, campaignId, evidenceId])
+  @@index([tenantId])
+  @@index([tenantId, campaignId])
+  @@index([tenantId, campaignId, subproductCode])
+  @@index([tenantId, campaignId, comparisonStatus])
+  @@index([tenantId, campaignId, divergenceCategory])
+  @@index([tenantId, campaignId, timestamp])
+  @@index([tenantId, correlationId])
+  @@map("simulation_runtime_evidence")
 }
 
 model Organization {

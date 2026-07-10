@@ -4,3 +4,5 @@ export * from './domain/simulation-runtime-evidence.errors.js';
 export * from './domain/simulation-runtime-evidence.repository.js';
 export * from './domain/simulation-runtime-evidence.types.js';
 export * from './infrastructure/in-memory/simulation-runtime-evidence.in-memory.repository.js';
+export * from './infrastructure/prisma/simulation-runtime-evidence.prisma.mapper.js';
+export * from './infrastructure/prisma/simulation-runtime-evidence.prisma.repository.js';
