@@ -275,6 +275,9 @@ export class PermissionsService {
         { name: 'Update Lead', slug: 'lead:update', resource: 'leads', action: 'UPDATE' as PermissionAction },
         { name: 'Delete Lead', slug: 'lead:delete', resource: 'leads', action: 'DELETE' as PermissionAction },
 
+        // Simulation permissions
+        { name: 'Execute Simulation', slug: 'simulation:execute', resource: 'simulations', action: 'CREATE' as PermissionAction },
+
         ...PARTNER_ACQUISITION_RBAC_PERMISSIONS,
 
         // Report permissions

@@ -622,6 +622,15 @@ async function createPermissions() {
       action: PermissionAction.APPROVE,
     },
 
+    // Simulation permissions
+    {
+      name: 'Execute Simulation',
+      slug: 'simulation:execute',
+      description: 'Execute the official simulation runtime',
+      resource: 'simulations',
+      action: PermissionAction.CREATE,
+    },
+
     // Bank Proposal permissions
     {
       name: 'Create Bank Proposal',
