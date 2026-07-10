@@ -20,9 +20,15 @@ import type {
 } from "../contracts/simulation-runtime.contract";
 import type { SimulationRuntimeNormalizedResponse } from "../mappers/simulation-runtime-response.mapper";
 import { mapSimulationRuntimeResponse } from "../mappers/simulation-runtime-response.mapper";
+import {
+  collectSimulationRuntimeEvidence,
+  type SimulationRuntimeEvidenceStore,
+  defaultSimulationRuntimeEvidenceStore,
+} from "../evidence";
 
 export interface UseSimulationRuntimeShadowOptions {
   telemetrySink?: SimulationRuntimeTelemetrySink;
+  evidenceStore?: SimulationRuntimeEvidenceStore;
 }
 
 export interface UseSimulationRuntimeShadowResult {
@@ -71,6 +77,8 @@ export const useSimulationRuntimeShadow = (
     currentUserId: workspace.currentUserId ?? currentUser?.id ?? null,
     currentUserName: workspace.currentUserName ?? currentUser?.nome ?? null,
   }), [workspace, currentUser]);
+
+  const evidenceStore = useMemo<SimulationRuntimeEvidenceStore>(() => options.evidenceStore ?? defaultSimulationRuntimeEvidenceStore, [options.evidenceStore]);
 
   const runShadowExecution = useCallback(async (legacyResult?: SimulationRuntimeLegacyResult | null) => {
     if (!flags.shadowEnabled) {
@@ -163,6 +171,37 @@ export const useSimulationRuntimeShadow = (
           buildShadowCompletionTelemetry(requestId, correlationId, comparison, normalized),
         );
 
+        if (flags.evidenceEnabled) {
+          try {
+            const evidence = await collectSimulationRuntimeEvidence({
+              workspace: stableWorkspace,
+              legacyResult: shadowLegacyResult,
+              runtime: normalized,
+              comparison,
+              requestId,
+              correlationId,
+              executionId: workspaceRequest.execution?.executionId ?? requestId,
+              legacyDurationMs: null,
+              runtimeDurationMs: null,
+              fallbackUsed: false,
+            });
+
+            await evidenceStore.save(evidence);
+            telemetry.emitEvidenceStored({
+              requestId,
+              correlationId,
+              evidenceId: evidence.evidenceId,
+            });
+          } catch (evidenceError) {
+            const reason = evidenceError instanceof Error ? evidenceError.message : "evidence-storage-failed";
+            telemetry.emitEvidenceFailed({
+              requestId,
+              correlationId,
+              reason,
+            });
+          }
+        }
+
         return comparison;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Shadow runtime execution failed";
@@ -185,7 +224,7 @@ export const useSimulationRuntimeShadow = (
     inFlightRef.current = taskPromise;
     inFlightKeyRef.current = executionKey;
     return taskPromise;
-  }, [flags.shadowEnabled, stableWorkspace, telemetry]);
+  }, [flags.shadowEnabled, flags.evidenceEnabled, stableWorkspace, telemetry, evidenceStore]);
 
   return {
     flags,

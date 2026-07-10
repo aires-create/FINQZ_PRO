@@ -238,6 +238,8 @@ const resolveComparisonCategory = (
   return "NONE";
 };
 
+export const SIMULATION_RUNTIME_COMPARATOR_VERSION = "1.0.0";
+
 export const compareSimulationRuntimeResults = (
   legacyResult: SimulationRuntimeLegacyResult | null | undefined,
   runtime: SimulationRuntimeNormalizedResponse,

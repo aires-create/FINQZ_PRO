@@ -2,6 +2,7 @@ export interface SimulationRuntimeFlags {
   shadowEnabled: boolean;
   primaryEnabled: boolean;
   fallbackEnabled: boolean;
+  evidenceEnabled: boolean;
 }
 
 const readBooleanEnv = (value: string | undefined, fallback: boolean): boolean => {
@@ -29,5 +30,6 @@ export const getSimulationRuntimeFlags = (): SimulationRuntimeFlags => ({
   shadowEnabled: readBooleanEnv(import.meta.env.VITE_SIMULATION_RUNTIME_SHADOW_ENABLED, false),
   primaryEnabled: readBooleanEnv(import.meta.env.VITE_SIMULATION_RUNTIME_PRIMARY_ENABLED, false),
   fallbackEnabled: readBooleanEnv(import.meta.env.VITE_SIMULATION_RUNTIME_FALLBACK_ENABLED, true),
+  evidenceEnabled: readBooleanEnv(import.meta.env.VITE_SIMULATION_RUNTIME_EVIDENCE_ENABLED, false),
 });
 

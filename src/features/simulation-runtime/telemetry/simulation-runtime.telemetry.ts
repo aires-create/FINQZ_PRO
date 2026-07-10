@@ -40,6 +40,20 @@ export type SimulationRuntimeTelemetryEvent =
       proposalsCount: number;
     }
   | {
+      type: "shadow_evidence_stored";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      evidenceId: string;
+    }
+  | {
+      type: "shadow_evidence_failed";
+      timestamp: string;
+      requestId: string;
+      correlationId: string;
+      reason: string;
+    }
+  | {
       type: "shadow_failed";
       timestamp: string;
       requestId: string;
@@ -92,6 +106,22 @@ export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetr
     });
   };
 
+  const emitEvidenceStored = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_evidence_stored" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_evidence_stored",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
+  const emitEvidenceFailed = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_evidence_failed" }>, "type" | "timestamp">) => {
+    sink({
+      type: "shadow_evidence_failed",
+      timestamp: new Date().toISOString(),
+      ...payload,
+    });
+  };
+
   const emitSkipped = (payload: Omit<Extract<SimulationRuntimeTelemetryEvent, { type: "shadow_skipped" }>, "type" | "timestamp">) => {
     sink({
       type: "shadow_skipped",
@@ -104,6 +134,8 @@ export const createSimulationRuntimeTelemetry = (sink: SimulationRuntimeTelemetr
     emitStarted,
     emitCompleted,
     emitFailed,
+    emitEvidenceStored,
+    emitEvidenceFailed,
     emitSkipped,
   };
 };

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import useAppStore from "../../store";
 import { buildWorkspaceSimulationRuntimeRequest } from "./mappers/workspace-to-simulation-runtime.mapper";
@@ -194,7 +194,10 @@ describe("simulation-runtime feature", () => {
       mensagem: "Simulação válida",
     };
 
-    const comparison = await result.current.runShadowExecution(legacyResult);
+    let comparison: ReturnType<typeof result.current.runShadowExecution>;
+    await act(async () => {
+      comparison = await result.current.runShadowExecution(legacyResult);
+    });
 
     await waitFor(() => {
       expect(result.current.status).toBe("success");
