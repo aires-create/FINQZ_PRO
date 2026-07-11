@@ -24,6 +24,12 @@ Mapa completo da documentação do FINQZ PRO Enterprise, organizado por domínio
 | `docs/00-master/FINQZ-EOS-RUNTIME-GOVERNANCE-ARCHITECTURE.md` | FINQZ EOS - Runtime Governance Architecture | ACTIVE | Master | — |
 | `docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md` | FINQZ PRO Enterprise | ACTIVE | Master | — |
 
+## docs/01-architecture
+
+| Nome | Objetivo | Status | Owner | Documento sucessor |
+| --- | --- | --- | --- | --- |
+| `docs/01-architecture/EPC-W4-01-CONSUMER-CANONICAL-INVENTORY.md` | EPC-W4-01 - Consumer Canonical Inventory | ACTIVE | Architecture | — |
+
 ## docs/02-architecture
 
 | Nome | Objetivo | Status | Owner | Documento sucessor |
