@@ -35,16 +35,17 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
 3. `docs/08-governance/DOC-GOV-01-COMANDO-MESTRE-CONTINUIDADE-TECNICA.md`
 4. `docs/01-architecture/EPC-W4-01-CONSUMER-CANONICAL-INVENTORY.md`
 5. `docs/01-architecture/EPC-W4-01B-CATALOG-FREEZE.md`
-6. `docs/08-governance/EPC-DOC-03-DOCUMENTATION-GOVERNANCE-HUB.md`
-7. `docs/08-governance/DOCUMENT-MAP.md`
-8. `docs/08-governance/DOCUMENT-LIFECYCLE.md`
-9. `docs/08-governance/DOCUMENT-OWNERSHIP.md`
-10. `docs/08-governance/DOCUMENT-NAMING-STANDARD.md`
-11. `docs/08-governance/DOCUMENT-CHANGE-POLICY.md`
-12. `docs/08-governance/EPC-DOC-01-DOCUMENTATION-CONSISTENCY-AUDIT.md`
-13. `docs/08-governance/EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md`
-14. `docs/06-release/README.md`
-15. `docs/07-infrastructure/EPC-INFRA-01-INFRASTRUCTURE-READINESS-AUDIT.md`
+6. `docs/01-architecture/EPC-W4-02-MASTER-CATALOG-PROMOTION.md`
+7. `docs/08-governance/EPC-DOC-03-DOCUMENTATION-GOVERNANCE-HUB.md`
+8. `docs/08-governance/DOCUMENT-MAP.md`
+9. `docs/08-governance/DOCUMENT-LIFECYCLE.md`
+10. `docs/08-governance/DOCUMENT-OWNERSHIP.md`
+11. `docs/08-governance/DOCUMENT-NAMING-STANDARD.md`
+12. `docs/08-governance/DOCUMENT-CHANGE-POLICY.md`
+13. `docs/08-governance/EPC-DOC-01-DOCUMENTATION-CONSISTENCY-AUDIT.md`
+14. `docs/08-governance/EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md`
+15. `docs/06-release/README.md`
+16. `docs/07-infrastructure/EPC-INFRA-01-INFRASTRUCTURE-READINESS-AUDIT.md`
 
 ## Mapa textual da documentação
 
@@ -57,7 +58,7 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
   ├─ domain foundation
   ├─ workspace / opportunity
   ├─ operation domain
-  ├─ master catalog / commercial catalog
+  ├─ master catalog / commercial catalog / W4-02 promotion
   ├─ pipeline / stage / ownership
   └─ partner acquisition
 

@@ -30,6 +30,7 @@ Mapa completo da documentação do FINQZ PRO Enterprise, organizado por domínio
 | --- | --- | --- | --- | --- |
 | `docs/01-architecture/EPC-W4-01-CONSUMER-CANONICAL-INVENTORY.md` | EPC-W4-01 - Consumer Canonical Inventory | ACTIVE | Architecture | — |
 | `docs/01-architecture/EPC-W4-01B-CATALOG-FREEZE.md` | EPC-W4-01B - Catalog Freeze | ACTIVE | Architecture | — |
+| `docs/01-architecture/EPC-W4-02-MASTER-CATALOG-PROMOTION.md` | EPC-W4-02 - Master Catalog Promotion | ACTIVE | Architecture | — |
 
 ## docs/02-architecture
 
