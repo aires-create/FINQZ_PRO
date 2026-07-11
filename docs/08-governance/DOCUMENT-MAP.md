@@ -184,6 +184,7 @@ Mapa completo da documentação do FINQZ PRO Enterprise, organizado por domínio
 | `docs/05-adr/ADR-007-lead-customer-simulation-opportunity-model.md` | ADR-007 — Lead, Customer, Simulation and Opportunity Model | ACTIVE | ADR | — |
 | `docs/05-adr/ADR-008-revenue-distribution-engine.md` | ADR-008 — Revenue Distribution Engine | ACTIVE | ADR | — |
 | `docs/05-adr/ADR-009-operation-persistence.md` | ADR-009 - Operation Persistence and Financial Execution Aggregate | ACTIVE | ADR | — |
+| `docs/05-adr/ADR-010-loan-with-collateral-canonical-taxonomy.md` | ADR-010 - Loan With Collateral Canonical Taxonomy | Proposed | ADR | — |
 
 ## docs/06-release
 

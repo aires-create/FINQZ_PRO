@@ -76,6 +76,7 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
   ├─ commercial source of truth
   ├─ simulation source of truth
   ├─ master catalog
+  ├─ loan with collateral canonical taxonomy (proposed)
   └─ operation persistence
 
 06-release
