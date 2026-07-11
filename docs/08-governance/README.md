@@ -32,16 +32,17 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
 
 1. `docs/00-master/DCA-FINQZ-PRO-ENTERPRISE-v2.md`
 2. `docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md`
-3. `docs/08-governance/EPC-DOC-03-DOCUMENTATION-GOVERNANCE-HUB.md`
-4. `docs/08-governance/DOCUMENT-MAP.md`
-5. `docs/08-governance/DOCUMENT-LIFECYCLE.md`
-6. `docs/08-governance/DOCUMENT-OWNERSHIP.md`
-7. `docs/08-governance/DOCUMENT-NAMING-STANDARD.md`
-8. `docs/08-governance/DOCUMENT-CHANGE-POLICY.md`
-9. `docs/08-governance/EPC-DOC-01-DOCUMENTATION-CONSISTENCY-AUDIT.md`
-10. `docs/08-governance/EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md`
-11. `docs/06-release/README.md`
-12. `docs/07-infrastructure/EPC-INFRA-01-INFRASTRUCTURE-READINESS-AUDIT.md`
+3. `docs/08-governance/DOC-GOV-01-COMANDO-MESTRE-CONTINUIDADE-TECNICA.md`
+4. `docs/08-governance/EPC-DOC-03-DOCUMENTATION-GOVERNANCE-HUB.md`
+5. `docs/08-governance/DOCUMENT-MAP.md`
+6. `docs/08-governance/DOCUMENT-LIFECYCLE.md`
+7. `docs/08-governance/DOCUMENT-OWNERSHIP.md`
+8. `docs/08-governance/DOCUMENT-NAMING-STANDARD.md`
+9. `docs/08-governance/DOCUMENT-CHANGE-POLICY.md`
+10. `docs/08-governance/EPC-DOC-01-DOCUMENTATION-CONSISTENCY-AUDIT.md`
+11. `docs/08-governance/EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md`
+12. `docs/06-release/README.md`
+13. `docs/07-infrastructure/EPC-INFRA-01-INFRASTRUCTURE-READINESS-AUDIT.md`
 
 ## Mapa textual da documentação
 
@@ -91,6 +92,7 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
 08-governance
   ├─ consistency audit
   ├─ consolidation plan
+  ├─ DOC-GOV operational continuity guide
   ├─ map
   ├─ lifecycle
   ├─ ownership

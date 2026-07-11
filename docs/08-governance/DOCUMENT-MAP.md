@@ -207,6 +207,7 @@ Mapa completo da documentação do FINQZ PRO Enterprise, organizado por domínio
 | `docs/08-governance/DOCUMENT-MAP.md` | DOCUMENT-MAP | ACTIVE | Governance | — |
 | `docs/08-governance/DOCUMENT-NAMING-STANDARD.md` | Document Naming Standard | ACTIVE | Governance | — |
 | `docs/08-governance/DOCUMENT-OWNERSHIP.md` | Document Ownership | ACTIVE | Governance | — |
+| `docs/08-governance/DOC-GOV-01-COMANDO-MESTRE-CONTINUIDADE-TECNICA.md` | Comando Mestre de Continuidade Técnica - guia operacional subordinado para continuidade entre chats | ACTIVE | Governance | — |
 | `docs/08-governance/EPC-DOC-01-DOCUMENTATION-CONSISTENCY-AUDIT.md` | EPC-DOC-01 - Documentation Consistency & Governance Audit | ACTIVE | Governance | EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md |
 | `docs/08-governance/EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md` | EPC-DOC-02 - Documentation Consolidation Plan | ACTIVE | Governance | EPC-DOC-03-DOCUMENTATION-GOVERNANCE-HUB.md |
 | `docs/08-governance/EPC-DOC-03-DOCUMENTATION-GOVERNANCE-HUB.md` | EPC-DOC-03 - Documentation Governance Hub | ACTIVE | Governance | — |
