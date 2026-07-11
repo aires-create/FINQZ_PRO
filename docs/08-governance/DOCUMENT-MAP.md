@@ -196,6 +196,9 @@ Mapa completo da documentação do FINQZ PRO Enterprise, organizado por domínio
 | `docs/06-release/EPC-GO-LIVE-03A-AUDIT-TRAIL-STANDARD.md` | EPC-GO-LIVE-03A - Audit Trail & Evidence Standard | ACTIVE | Release | EPC-GO-LIVE-03B-STAGING-EVIDENCE-TEMPLATE.md |
 | `docs/06-release/EPC-GO-LIVE-03B-STAGING-EVIDENCE-TEMPLATE.md` | EPC-GO-LIVE-03B - Staging Evidence Execution Template | ACTIVE | Release | EPC-GO-LIVE-03C-STANDARDIZATION-REPORT.md |
 | `docs/06-release/EPC-GO-LIVE-03C-STANDARDIZATION-REPORT.md` | EPC-GO-LIVE-03C - Release Documentation Standardization Report | HISTORICAL | Release | — |
+| `docs/06-release/EPC-GO-LIVE-04-HML-DEPLOY-RUNBOOK.md` | EPC-GO-LIVE-04 - HML Deploy Runbook | ACTIVE | Release | EPC-GO-LIVE-05-HML-SMOKE-CHECKLIST.md |
+| `docs/06-release/EPC-GO-LIVE-05-HML-SMOKE-CHECKLIST.md` | EPC-GO-LIVE-05 - HML Smoke Checklist | ACTIVE | Release | EPC-GO-LIVE-06-HML-ROLLBACK-RUNBOOK.md |
+| `docs/06-release/EPC-GO-LIVE-06-HML-ROLLBACK-RUNBOOK.md` | EPC-GO-LIVE-06 - HML Rollback Runbook | ACTIVE | Release | — |
 | `docs/06-release/EPC-RELEASE-READINESS-AUDIT.md` | EPC-RELEASE-READINESS AUDIT | ACTIVE | Release | EPC-GO-LIVE-01-OPERATIONAL-CHECKLIST.md |
 | `docs/06-release/README.md` | Release Operations - FINQZ PRO Enterprise | ACTIVE | Release | — |
 

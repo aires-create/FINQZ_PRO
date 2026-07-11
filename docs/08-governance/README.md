@@ -45,7 +45,10 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
 13. `docs/08-governance/EPC-DOC-01-DOCUMENTATION-CONSISTENCY-AUDIT.md`
 14. `docs/08-governance/EPC-DOC-02-DOCUMENTATION-CONSOLIDATION-PLAN.md`
 15. `docs/06-release/README.md`
-16. `docs/07-infrastructure/EPC-INFRA-01-INFRASTRUCTURE-READINESS-AUDIT.md`
+16. `docs/06-release/EPC-GO-LIVE-04-HML-DEPLOY-RUNBOOK.md`
+17. `docs/06-release/EPC-GO-LIVE-05-HML-SMOKE-CHECKLIST.md`
+18. `docs/06-release/EPC-GO-LIVE-06-HML-ROLLBACK-RUNBOOK.md`
+19. `docs/07-infrastructure/EPC-INFRA-01-INFRASTRUCTURE-READINESS-AUDIT.md`
 
 ## Mapa textual da documentação
 
@@ -86,6 +89,9 @@ Ele organiza a documentação em uma estrutura navegável, auditável e sustent�
   ├─ playbook
   ├─ audit trail standard
   ├─ evidence template
+  ├─ HML deploy runbook
+  ├─ HML smoke checklist
+  ├─ HML rollback runbook
   └─ governance baseline
 
 07-infrastructure
