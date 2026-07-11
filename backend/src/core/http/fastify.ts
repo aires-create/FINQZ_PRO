@@ -532,6 +532,16 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
     uptime: process.uptime(),
   }));
 
+  // Liveness
+  app.get('/live', async () => ({
+    success: true,
+    status: 'live',
+    service: 'FINQZ PRO API',
+    environment: config.nodeEnv,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  }));
+
   // Readiness
   app.get('/ready', async (request, reply) => {
     const timestamp = new Date().toISOString();
