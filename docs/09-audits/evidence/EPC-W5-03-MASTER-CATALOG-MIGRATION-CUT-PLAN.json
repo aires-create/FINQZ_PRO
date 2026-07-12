@@ -1,0 +1,2002 @@
+{
+  "auditId": "EPC-W5-03",
+  "title": "Master Catalog Migration Cut Plan",
+  "generatedAt": "2026-07-12T12:32:03.9591216-03:00",
+  "branch": "homologation/bootstrap-vps",
+  "head": "62afd00fa3bf9b5bfeca03d73caf1e9781577e18",
+  "upstream": "origin/homologation/bootstrap-vps",
+  "baseline": {
+    "expectedBranch": "homologation/bootstrap-vps",
+    "expectedHeadPrefix": "62afd00",
+    "branchMatches": true,
+    "headMatchesBaseline": true,
+    "localPreexistingStatePreserved": [
+      ".env.example",
+      "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "scripts/sdc-3.4h-f-local-readiness.mjs"
+    ],
+    "prohibitedActionsObserved": [
+      "no deploy",
+      "no commit",
+      "no push",
+      "no migration",
+      "no database change",
+      "no feature flag change",
+      "no production code change"
+    ]
+  },
+  "documentsReviewed": [
+    "docs/09-audits/EPC-W5-01-MASTER-CATALOG-INVENTORY.md",
+    "docs/09-audits/evidence/EPC-W5-01-MASTER-CATALOG-INVENTORY.json",
+    "docs/09-audits/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.md",
+    "docs/09-audits/evidence/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.json",
+    "docs/09-audits/evidence/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.mmd",
+    "docs/00-master/DCA-FINQZ-PRO-ENTERPRISE-v2.md",
+    "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md",
+    "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md",
+    "docs/05-adr/ADR-004-commercial-master-catalog.md",
+    "docs/05-adr/ADR-010-loan-with-collateral-canonical-taxonomy.md",
+    "docs/02-architecture/ARCH-041-MASTER-CATALOG-CONSUMER-MAPPING.md",
+    "docs/02-architecture/ARCH-042-MASTER-CATALOG-API-CONTRACT-DESIGN.md",
+    "docs/02-architecture/ARCH-043-MASTER-CATALOG-PERSISTENCE-STRATEGY.md",
+    "docs/02-architecture/ARCH-044-MASTER-CATALOG-ROLLOUT-MIGRATION-STRATEGY.md",
+    "docs/02-architecture/ARCH-046-master-catalog-persistence-blueprint.md",
+    "docs/02-architecture/ARCH-047-master-catalog-repository-contract-design.md",
+    "docs/02-architecture/ARCH-048-master-catalog-api-read-contract-blueprint.md",
+    "docs/02-architecture/ARCH-049-master-catalog-application-service-blueprint.md",
+    "docs/02-architecture/ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md",
+    "docs/02-architecture/ARCH-051-master-catalog-runtime-readiness-checklist.md",
+    "docs/02-architecture/ARCH-052-master-catalog-architecture-consolidation-review.md",
+    "docs/02-architecture/ARCH-053-master-catalog-runtime-gap-assessment.md",
+    "docs/02-architecture/ARCH-054-master-catalog-runtime-entry-review.md",
+    "docs/02-architecture/ARCH-055-catalog-consumption-architecture.md",
+    "backend/src/core/http/fastify.ts",
+    "backend/prisma/schema.prisma",
+    "backend/prisma/seed.ts",
+    "backend/src/modules/master-catalog/application/master-catalog.runtime.ts",
+    "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+    "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+    "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts",
+    "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+    "backend/src/modules/simulation/products/index.ts",
+    "backend/src/modules/simulation/application/simulation.application.context.ts",
+    "backend/src/modules/simulation/application/simulation.application.pipeline.ts",
+    "src/api/modules/master-catalog.api.ts",
+    "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts",
+    "src/features/master-catalog/masterCatalogToEstruturaComercial.mapper.ts",
+    "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+    "src/features/commercial-structure/commercialCoverageShadowComparator.ts",
+    "src/features/simulation-runtime/config/simulation-runtime.flags.ts",
+    "src/features/simulation-runtime/hooks/useSimulationRuntimeShadow.ts",
+    "src/pages/Oportunidades.tsx",
+    "src/pages/EstruturaComercial.tsx",
+    "src/pages/CommercialCoverage.tsx",
+    "src/pages/TabelasComerciais.tsx",
+    "src/pages/Simulador.tsx",
+    "src/data/creditPfCatalog.ts",
+    "src/data/catalogRepository.ts",
+    "src/data/commercialRepository.ts",
+    "src/data/simulatorRepository.ts",
+    "src/store/index.ts"
+  ],
+  "revalidatedW501": {
+    "result": "consistent",
+    "notes": [
+      "canonical owner remains backend/src/modules/master-catalog/**",
+      "routes remain registered in fastify bootstrap",
+      "Prisma schema and seed remain the canonical persistence path",
+      "local compatibility sources remain present"
+    ]
+  },
+  "revalidatedW502": {
+    "result": "consistent",
+    "nodeCount": 36,
+    "edgeCount": 45,
+    "notes": [
+      "canonical chain remains linear",
+      "Commercial Coverage still shadow reads creditPfCatalog",
+      "loan-with-collateral still has compatibility fallback",
+      "no graph cycle was introduced"
+    ]
+  },
+  "consumers": [
+    {
+      "id": "C-01",
+      "name": "Oportunidades",
+      "classification": "LEAF",
+      "migrationState": "READY_FOR_PRIMARY",
+      "graphPosition": "leaf",
+      "currentFlow": "read-only fetch of the canonical catalog tree",
+      "sourceCurrent": "masterCatalogApi.getCatalogTree",
+      "sourceTarget": "same canonical API, with hardening only",
+      "dependencies": [
+        "masterCatalogRoutes",
+        "masterCatalogApi"
+      ],
+      "criticality": "P1",
+      "risk": "LOW",
+      "prerequisites": [
+        "Gate 0 baseline",
+        "route smoke",
+        "page smoke"
+      ],
+      "observability": [
+        "fetch success rate",
+        "error rate",
+        "tree load latency"
+      ],
+      "parityMetric": "100% of requests must hit the canonical API",
+      "tolerance": "zero functional regression",
+      "tests": [
+        "api client unit test",
+        "page smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "release hardening; no new flag",
+      "rollback": "restore previous release or keep current error fallback",
+      "successCriteria": "tree loads canonically without regression",
+      "failureCriteria": "selection or load regression",
+      "exitCriteria": "stable fetches and no unexpected fallback",
+      "ownerSuggested": "frontend owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "EPC-W5-02"
+      ],
+      "adrRequired": false,
+      "window": "no special operational window",
+      "sequence": "W5-03B",
+      "canCutNow": "Yes, after Gate 0"
+    },
+    {
+      "id": "C-02",
+      "name": "Estrutura Comercial",
+      "classification": "LEAF",
+      "migrationState": "READY_FOR_PRIMARY",
+      "graphPosition": "leaf",
+      "currentFlow": "bootstrap and sync from canonical tree",
+      "sourceCurrent": "masterCatalogApi + mapper",
+      "sourceTarget": "same canonical API and stabilized mapper",
+      "dependencies": [
+        "loadEstruturaComercialFromMasterCatalog",
+        "masterCatalogToEstruturaComercial.mapper"
+      ],
+      "criticality": "P1",
+      "risk": "LOW",
+      "prerequisites": [
+        "Gate 0 baseline",
+        "Gate 1 contract",
+        "ordering parity"
+      ],
+      "observability": [
+        "bootstrap count",
+        "ordering drift",
+        "sync errors"
+      ],
+      "parityMetric": "same counts, IDs and ordering",
+      "tolerance": "zero divergence in tree shape",
+      "tests": [
+        "mapper unit test",
+        "sync smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "canonical mapping only",
+      "rollback": "restore previous mapper and sync flow",
+      "successCriteria": "derived structure is 1:1 with canonical tree",
+      "failureCriteria": "drift in order or IDs",
+      "exitCriteria": "stable repeated sync",
+      "ownerSuggested": "frontend/domain owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ARCH-050"
+      ],
+      "adrRequired": false,
+      "window": "no special operational window",
+      "sequence": "W5-03C",
+      "canCutNow": "Yes, after Gate 0"
+    },
+    {
+      "id": "C-03",
+      "name": "Commercial Coverage",
+      "classification": "SHADOW_ONLY",
+      "migrationState": "SHADOW_ACTIVE",
+      "graphPosition": "leaf",
+      "currentFlow": "Master Catalog primary + creditPfCatalog shadow comparator",
+      "sourceCurrent": "canonical + shadow local",
+      "sourceTarget": "canonical only after parity is proved",
+      "dependencies": [
+        "loadCommercialStructureCoverageTree",
+        "commercialCoverageShadowComparator",
+        "creditPfCatalog"
+      ],
+      "criticality": "P1",
+      "risk": "HIGH",
+      "prerequisites": [
+        "Gate 2 parity",
+        "Gate 3 shadow",
+        "accepted divergence policy"
+      ],
+      "observability": [
+        "divergence count",
+        "duplicate codes",
+        "missing IDs",
+        "tenant divergence"
+      ],
+      "parityMetric": "zero or formally accepted divergences per execution",
+      "tolerance": "zero for IDs and relations",
+      "tests": [
+        "shadow comparator test",
+        "load tree test"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "keep shadow active until stable parity",
+      "rollback": "keep comparator and shadow path enabled",
+      "successCriteria": "stable parity for a formal stability window",
+      "failureCriteria": "unaccepted divergence",
+      "exitCriteria": "shadow can be disabled with evidence",
+      "ownerSuggested": "data/commercial owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "RUN-001"
+      ],
+      "adrRequired": false,
+      "window": "homologation-first",
+      "sequence": "W5-03D",
+      "canCutNow": "No"
+    },
+    {
+      "id": "C-04",
+      "name": "Tabelas Comerciais",
+      "classification": "INTERMEDIATE",
+      "migrationState": "PRIMARY_WITH_FALLBACK",
+      "graphPosition": "intermediate",
+      "currentFlow": "commercialApi.listTables plus local selectors",
+      "sourceCurrent": "commercialApi + commercialRepository",
+      "sourceTarget": "canonical selectors driven by Master Catalog",
+      "dependencies": [
+        "commercialApi",
+        "commercialRepository",
+        "creditPfCatalog"
+      ],
+      "criticality": "P1",
+      "risk": "HIGH",
+      "prerequisites": [
+        "selectors mapped to canonical tree",
+        "table count parity",
+        "fallback audit"
+      ],
+      "observability": [
+        "table lookup success",
+        "filter drift",
+        "fallback usage"
+      ],
+      "parityMetric": "same selectable product/subproduct/modality population",
+      "tolerance": "zero table loss",
+      "tests": [
+        "select helpers test",
+        "page smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "canonicalize selectors first",
+      "rollback": "restore local helper functions and repository path",
+      "successCriteria": "selectors no longer depend on legacy source",
+      "failureCriteria": "missing or wrong table filters",
+      "exitCriteria": "no runtime dependency on creditPfCatalog",
+      "ownerSuggested": "frontend/commercial owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ARCH-055"
+      ],
+      "adrRequired": false,
+      "window": "homologation or low-traffic",
+      "sequence": "W5-03E",
+      "canCutNow": "No"
+    },
+    {
+      "id": "C-05",
+      "name": "Simulador",
+      "classification": "CENTRAL",
+      "migrationState": "BLOCKED",
+      "graphPosition": "central",
+      "currentFlow": "simulatorRepository plus commercialRepository plus local engine",
+      "sourceCurrent": "local repositories and state",
+      "sourceTarget": "canonical runtime plus canonical catalog inputs",
+      "dependencies": [
+        "simulatorRepository",
+        "commercialRepository",
+        "creditPfCatalog",
+        "simulation runtime"
+      ],
+      "criticality": "P1",
+      "risk": "HIGH",
+      "prerequisites": [
+        "runtime parity",
+        "offer parity",
+        "fallback metrics"
+      ],
+      "observability": [
+        "offer count",
+        "ranking drift",
+        "fallback usage",
+        "error rate"
+      ],
+      "parityMetric": "same offers for the same input set",
+      "tolerance": "zero deterministic divergence",
+      "tests": [
+        "simulation smoke",
+        "integration test",
+        "selector tests"
+      ],
+      "featureFlag": "simulation runtime flags",
+      "activationStrategy": "shadow evidence first, then primary with fallback",
+      "rollback": "restore local repository path and keep fallback enabled",
+      "successCriteria": "canonical runtime produces matching offers",
+      "failureCriteria": "offer mismatch or regression",
+      "exitCriteria": "local repository no longer used in runtime flow",
+      "ownerSuggested": "simulation owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ARCH-049"
+      ],
+      "adrRequired": false,
+      "window": "controlled homologation window",
+      "sequence": "W5-03F",
+      "canCutNow": "No"
+    },
+    {
+      "id": "C-06",
+      "name": "Simulation Runtime",
+      "classification": "SHARED_INFRASTRUCTURE",
+      "migrationState": "NOT_APPLICABLE",
+      "graphPosition": "infrastructure",
+      "currentFlow": "shadow, primary, fallback and evidence for runtime",
+      "sourceCurrent": "simulation runtime flags and evidence hooks",
+      "sourceTarget": "same runtime, with observability retained",
+      "dependencies": [
+        "VITE_SIMULATION_RUNTIME_SHADOW_ENABLED",
+        "VITE_SIMULATION_RUNTIME_PRIMARY_ENABLED",
+        "VITE_SIMULATION_RUNTIME_FALLBACK_ENABLED",
+        "VITE_SIMULATION_RUNTIME_EVIDENCE_ENABLED",
+        "VITE_REMOTE_EVIDENCE_ENABLED"
+      ],
+      "criticality": "P1",
+      "risk": "MEDIUM",
+      "prerequisites": [
+        "telemetry",
+        "evidence collection",
+        "shadow metrics"
+      ],
+      "observability": [
+        "shadow status",
+        "evidence storage",
+        "fallbackUsed",
+        "remote evidence queue"
+      ],
+      "parityMetric": "evidence coverage and fallback rate",
+      "tolerance": "fallback only within formal limit",
+      "tests": [
+        "feature flag tests",
+        "evidence tests"
+      ],
+      "featureFlag": "existing simulation runtime flags",
+      "activationStrategy": "keep as infrastructure during all cuts",
+      "rollback": "disable primary or evidence, keep current runtime state",
+      "successCriteria": "runtime remains stable and auditable",
+      "failureCriteria": "loss of telemetry or evidence",
+      "exitCriteria": "no open cut depends on runtime behavior changes",
+      "ownerSuggested": "platform/runtime owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "RUN-001"
+      ],
+      "adrRequired": false,
+      "window": "continuous",
+      "sequence": "W5-03A",
+      "canCutNow": "N/A"
+    },
+    {
+      "id": "C-07",
+      "name": "loan-with-collateral",
+      "classification": "COMPATIBILITY_LAYER",
+      "migrationState": "PRIMARY_WITH_FALLBACK",
+      "graphPosition": "central",
+      "currentFlow": "runtime canonical lookup plus aliases and request-field fallback",
+      "sourceCurrent": "masterCatalogRuntime + compatibility",
+      "sourceTarget": "canonical IDs and names only",
+      "dependencies": [
+        "masterCatalogRuntime",
+        "loan-with-collateral.metadata.ts",
+        "loan-with-collateral.adapter.ts",
+        "auto-equity subflow",
+        "home-equity subflow"
+      ],
+      "criticality": "P0",
+      "risk": "CRITICAL",
+      "prerequisites": [
+        "alias usage audited",
+        "negative tests approved",
+        "subflow parity"
+      ],
+      "observability": [
+        "alias hit rate",
+        "lookup misses",
+        "fallback usage"
+      ],
+      "parityMetric": "canonical lookup 100% and fallback 0%",
+      "tolerance": "zero fallback",
+      "tests": [
+        "compatibility negative tests",
+        "subflow smoke"
+      ],
+      "featureFlag": "loan-with-collateral",
+      "activationStrategy": "canonical first, fallback only as rollback guard",
+      "rollback": "restore aliases and request-field fallback",
+      "successCriteria": "all supported cases resolve canonically",
+      "failureCriteria": "any request requires alias to work",
+      "exitCriteria": "aliases have no real use",
+      "ownerSuggested": "simulation product owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ADR-010"
+      ],
+      "adrRequired": true,
+      "window": "controlled homologation window",
+      "sequence": "W5-03G",
+      "canCutNow": "No"
+    },
+    {
+      "id": "C-08",
+      "name": "Products",
+      "classification": "SHARED_INFRASTRUCTURE",
+      "migrationState": "NOT_APPLICABLE",
+      "graphPosition": "infrastructure",
+      "currentFlow": "simulation product registry",
+      "sourceCurrent": "LoanWithCollateralAdapter registry",
+      "sourceTarget": "same registry, no catalog ownership",
+      "dependencies": [
+        "backend/src/modules/simulation/products/index.ts",
+        "simulationProductRegistry"
+      ],
+      "criticality": "P2",
+      "risk": "LOW",
+      "prerequisites": [
+        "loan-with-collateral stabilization"
+      ],
+      "observability": [
+        "adapter resolution",
+        "subflow resolution"
+      ],
+      "parityMetric": "100% adapter resolution by registry",
+      "tolerance": "no registry breakage",
+      "tests": [
+        "registry test"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "transversal infrastructure only",
+      "rollback": "restore registry as-is",
+      "successCriteria": "remains infrastructure, not parallel truth",
+      "failureCriteria": "adapter resolution breaks",
+      "exitCriteria": "no catalog ownership in Products",
+      "ownerSuggested": "platform/runtime owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "none",
+      "sequence": "supporting",
+      "canCutNow": "N/A"
+    },
+    {
+      "id": "C-09",
+      "name": "frontend store",
+      "classification": "LEGACY_SOURCE",
+      "migrationState": "READY_FOR_LEGACY_REMOVAL",
+      "graphPosition": "legacy",
+      "currentFlow": "store derives EstruturaComercial from creditPfCatalog",
+      "sourceCurrent": "creditPfCatalog",
+      "sourceTarget": "no parallel source truth",
+      "dependencies": [
+        "src/store/index.ts",
+        "creditPfCatalog"
+      ],
+      "criticality": "P2",
+      "risk": "HIGH",
+      "prerequisites": [
+        "selectors migrated",
+        "zero store consumers as catalog truth"
+      ],
+      "observability": [
+        "selector imports",
+        "store usage count"
+      ],
+      "parityMetric": "zero consumers using store as catalog SSOT",
+      "tolerance": "zero",
+      "tests": [
+        "store tests",
+        "selector smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "retire only after selectors move away",
+      "rollback": "restore current store derivation",
+      "successCriteria": "store no longer acts as catalog truth",
+      "failureCriteria": "any selector still depends on creditPfCatalog",
+      "exitCriteria": "store is removable or frozen",
+      "ownerSuggested": "frontend platform owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "low traffic",
+      "sequence": "W5-03I",
+      "canCutNow": "No"
+    },
+    {
+      "id": "C-10",
+      "name": "frontend repositories locais",
+      "classification": "PARALLEL_SOURCE",
+      "migrationState": "BLOCKED",
+      "graphPosition": "parallel",
+      "currentFlow": "catalogRepository, commercialRepository and simulatorRepository",
+      "sourceCurrent": "creditPfCatalog and local memory",
+      "sourceTarget": "canonical client and backend services",
+      "dependencies": [
+        "catalogRepository",
+        "commercialRepository",
+        "simulatorRepository"
+      ],
+      "criticality": "P1",
+      "risk": "HIGH",
+      "prerequisites": [
+        "zero consumers",
+        "canonical client adoption",
+        "import count zero"
+      ],
+      "observability": [
+        "import count",
+        "runtime read count"
+      ],
+      "parityMetric": "legacy imports remaining = 0",
+      "tolerance": "zero",
+      "tests": [
+        "consumer migration tests"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "remove only after all consumers cut over",
+      "rollback": "restore the local repositories",
+      "successCriteria": "no runtime read from local repositories",
+      "failureCriteria": "any remaining consumer or import",
+      "exitCriteria": "repositories can be frozen or removed",
+      "ownerSuggested": "frontend platform owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "controlled homologation window",
+      "sequence": "W5-03H",
+      "canCutNow": "No"
+    }
+  ],
+  "dependencySeverityMatrix": [
+    {
+      "id": "D-01",
+      "dependency": "creditPfCatalog",
+      "consumers": [
+        "Commercial Coverage",
+        "frontend repositories locais",
+        "frontend store"
+      ],
+      "role": "parallel taxonomy source",
+      "severity": "BLOCKER",
+      "risk": "EXTREME",
+      "canCutNow": false,
+      "prerequisites": [
+        "zero consumers",
+        "parity proved",
+        "stable window"
+      ],
+      "rollback": "restore shadow and local repository paths"
+    },
+    {
+      "id": "D-02",
+      "dependency": "catalogRepository",
+      "consumers": [
+        "frontend repositories locais"
+      ],
+      "role": "compatibility adapter",
+      "severity": "HIGH",
+      "risk": "HIGH",
+      "canCutNow": false,
+      "prerequisites": [
+        "no runtime imports",
+        "canonical client replacement"
+      ],
+      "rollback": "restore local adapter"
+    },
+    {
+      "id": "D-03",
+      "dependency": "commercialRepository",
+      "consumers": [
+        "Tabelas Comerciais",
+        "Simulador"
+      ],
+      "role": "compatibility support and memory state",
+      "severity": "HIGH",
+      "risk": "HIGH",
+      "canCutNow": false,
+      "prerequisites": [
+        "selectors decoupled",
+        "simulator independent of local state"
+      ],
+      "rollback": "restore repository and in-memory state"
+    },
+    {
+      "id": "D-04",
+      "dependency": "simulatorRepository",
+      "consumers": [
+        "Simulador"
+      ],
+      "role": "parallel local source",
+      "severity": "HIGH",
+      "risk": "HIGH",
+      "canCutNow": false,
+      "prerequisites": [
+        "Simulation Runtime primary",
+        "smoke and evidence"
+      ],
+      "rollback": "restore repository flow"
+    },
+    {
+      "id": "D-05",
+      "dependency": "store/index.ts",
+      "consumers": [
+        "frontend store"
+      ],
+      "role": "legacy derived source",
+      "severity": "HIGH",
+      "risk": "MODERATE",
+      "canCutNow": false,
+      "prerequisites": [
+        "selectors migrated",
+        "zero catalog truth usage"
+      ],
+      "rollback": "restore current store derivation"
+    },
+    {
+      "id": "D-06",
+      "dependency": "commercialCoverageShadowComparator",
+      "consumers": [
+        "Commercial Coverage"
+      ],
+      "role": "shadow comparator",
+      "severity": "MEDIUM",
+      "risk": "LOW",
+      "canCutNow": false,
+      "prerequisites": [
+        "parity stable",
+        "approved divergence policy"
+      ],
+      "rollback": "re-enable comparator"
+    },
+    {
+      "id": "D-07",
+      "dependency": "loadCommercialStructureCoverageTree",
+      "consumers": [
+        "Commercial Coverage"
+      ],
+      "role": "shadow entrypoint",
+      "severity": "HIGH",
+      "risk": "MODERATE",
+      "canCutNow": false,
+      "prerequisites": [
+        "Gate 2 parity",
+        "Gate 3 shadow"
+      ],
+      "rollback": "restore shadow entrypoint"
+    },
+    {
+      "id": "D-08",
+      "dependency": "loan-with-collateral metadata",
+      "consumers": [
+        "loan-with-collateral"
+      ],
+      "role": "canonical product registry with aliases",
+      "severity": "MEDIUM",
+      "risk": "MODERATE",
+      "canCutNow": false,
+      "prerequisites": [
+        "aliases without real use",
+        "canonical request fields"
+      ],
+      "rollback": "restore metadata aliases"
+    },
+    {
+      "id": "D-09",
+      "dependency": "loan-with-collateral adapter",
+      "consumers": [
+        "loan-with-collateral"
+      ],
+      "role": "compatibility layer",
+      "severity": "CRITICAL",
+      "risk": "HIGH",
+      "canCutNow": false,
+      "prerequisites": [
+        "canonical IDs and names",
+        "fallback zero",
+        "negative tests approved"
+      ],
+      "rollback": "restore compatibility fallback"
+    },
+    {
+      "id": "D-10",
+      "dependency": "repository Prisma oficial",
+      "consumers": [
+        "Master Catalog runtime"
+      ],
+      "role": "official persistence reader",
+      "severity": "BLOCKER",
+      "risk": "MINIMAL",
+      "canCutNow": null,
+      "prerequisites": [
+        "none"
+      ],
+      "rollback": "revert only by commit revert if needed"
+    },
+    {
+      "id": "D-11",
+      "dependency": "seed oficial",
+      "consumers": [
+        "Master Catalog bootstrap"
+      ],
+      "role": "official bootstrap writer",
+      "severity": "BLOCKER",
+      "risk": "MINIMAL",
+      "canCutNow": null,
+      "prerequisites": [
+        "none"
+      ],
+      "rollback": "revert the seed runner change"
+    },
+    {
+      "id": "D-12",
+      "dependency": "rotas do Master Catalog",
+      "consumers": [
+        "Oportunidades",
+        "Estrutura Comercial",
+        "Commercial Coverage"
+      ],
+      "role": "public HTTP surface",
+      "severity": "BLOCKER",
+      "risk": "MINIMAL",
+      "canCutNow": null,
+      "prerequisites": [
+        "none"
+      ],
+      "rollback": "revert the route registration change"
+    }
+  ],
+  "migrationCandidates": [
+    {
+      "consumer": "Oportunidades",
+      "class": "LEAF",
+      "criticality": "P1",
+      "coverage": "Alta",
+      "observability": "Alta",
+      "rollback": "Simples",
+      "risk": "LOW",
+      "recommendation": "FIRST"
+    },
+    {
+      "consumer": "Estrutura Comercial",
+      "class": "LEAF",
+      "criticality": "P1",
+      "coverage": "Alta",
+      "observability": "Alta",
+      "rollback": "Simples",
+      "risk": "LOW",
+      "recommendation": "SECOND"
+    },
+    {
+      "consumer": "Commercial Coverage",
+      "class": "SHADOW_ONLY",
+      "criticality": "P1",
+      "coverage": "Media",
+      "observability": "Alta",
+      "rollback": "Simples",
+      "risk": "HIGH",
+      "recommendation": "AFTER_PARITY"
+    },
+    {
+      "consumer": "Tabelas Comerciais",
+      "class": "INTERMEDIATE",
+      "criticality": "P1",
+      "coverage": "Media",
+      "observability": "Media",
+      "rollback": "Media",
+      "risk": "HIGH",
+      "recommendation": "LATER"
+    },
+    {
+      "consumer": "Simulador",
+      "class": "CENTRAL",
+      "criticality": "P1",
+      "coverage": "Alta",
+      "observability": "Media",
+      "rollback": "Media",
+      "risk": "HIGH",
+      "recommendation": "LATER"
+    },
+    {
+      "consumer": "loan-with-collateral",
+      "class": "COMPATIBILITY_LAYER",
+      "criticality": "P0",
+      "coverage": "Alta",
+      "observability": "Media",
+      "rollback": "Media",
+      "risk": "CRITICAL",
+      "recommendation": "LAST"
+    }
+  ],
+  "firstMigrationCandidate": {
+    "consumer": "Oportunidades",
+    "reason": "leaf consumer, already on the canonical API, minimal blast radius, simple rollback",
+    "whyOthersAreNotFirst": [
+      "Estrutura Comercial has sync/bootstrap coupling",
+      "Commercial Coverage depends on parity and shadow evidence",
+      "Tabelas Comerciais still depends on local repositories",
+      "Simulador is central and still on compatibility sources",
+      "loan-with-collateral is the largest compatibility layer"
+    ],
+    "microphase": "W5-03B",
+    "blockedByGate": "GATE 0 - BASELINE",
+    "authorizedBy": [
+      "GATE 0 - BASELINE",
+      "GATE 1 - CONTRATO",
+      "GATE 4 - PRIMARY"
+    ]
+  },
+  "gates": [
+    {
+      "id": "GATE 0 - BASELINE",
+      "evidence": [
+        "git status",
+        "git rev-parse",
+        "build and tests"
+      ],
+      "validationCommand": "git status --short --branch; git rev-parse HEAD; npm run build; npm run test",
+      "approveWhen": "baseline known, build green, tests green, rollback defined",
+      "rejectWhen": "branch or HEAD diverges or build/test fails",
+      "responsible": "owner and architect",
+      "rollback": "do not start the cut"
+    },
+    {
+      "id": "GATE 1 - CONTRATO",
+      "evidence": [
+        "HTTP contract",
+        "schema",
+        "mapper"
+      ],
+      "validationCommand": "rg -n \"masterCatalogApi|getCatalogTree|masterCatalogRoutes\"",
+      "approveWhen": "canonical contract and mapping are identified",
+      "rejectWhen": "a critical field has no origin",
+      "responsible": "domain owner",
+      "rollback": "restore prior contract documentation"
+    },
+    {
+      "id": "GATE 2 - PARIDADE",
+      "evidence": [
+        "tree comparison",
+        "ordering comparison",
+        "tenant isolation"
+      ],
+      "validationCommand": "npm run test -- commercialCoverageShadowComparator",
+      "approveWhen": "same population, same ordering, acceptable divergence policy",
+      "rejectWhen": "IDs, labels, status or relations diverge outside policy",
+      "responsible": "commercial/data owner",
+      "rollback": "keep shadow active"
+    },
+    {
+      "id": "GATE 3 - SHADOW",
+      "evidence": [
+        "shadow logs",
+        "evidence records",
+        "telemetry"
+      ],
+      "validationCommand": "rg -n \"shadowEnabled|evidenceEnabled|fallbackUsed\"",
+      "approveWhen": "shadow has no visual impact and divergences are classified",
+      "rejectWhen": "missing telemetry or user impact",
+      "responsible": "observability owner",
+      "rollback": "re-enable the shadow path"
+    },
+    {
+      "id": "GATE 4 - PRIMARY",
+      "evidence": [
+        "canonical API",
+        "smoke",
+        "monitoring"
+      ],
+      "validationCommand": "npm run test -- master-catalog",
+      "approveWhen": "canonical source is primary and smoke is approved",
+      "rejectWhen": "regression or tenant mismatch",
+      "responsible": "consumer owner",
+      "rollback": "disable primary and re-enable fallback"
+    },
+    {
+      "id": "GATE 5 - FALLBACK REMOVAL",
+      "evidence": [
+        "zero fallback hit",
+        "stable period",
+        "tests updated"
+      ],
+      "validationCommand": "rg -n \"fallback|empty tree|creditPfCatalog|commercialRepository|simulatorRepository\"",
+      "approveWhen": "stable period and no real fallback use",
+      "rejectWhen": "fallback still needed or regressions appear",
+      "responsible": "consumer owner",
+      "rollback": "restore fallback path"
+    },
+    {
+      "id": "GATE 6 - LEGACY REMOVAL",
+      "evidence": [
+        "zero consumers",
+        "zero imports",
+        "zero runtime reads"
+      ],
+      "validationCommand": "rg -n \"creditPfCatalog|catalogRepository|commercialRepository|simulatorRepository|store/index.ts\"",
+      "approveWhen": "global search has no functional references",
+      "rejectWhen": "any runtime import remains",
+      "responsible": "platform owner",
+      "rollback": "revert the isolated commit"
+    },
+    {
+      "id": "GATE 7 - CLOSURE",
+      "evidence": [
+        "docs updated",
+        "evidence pack complete",
+        "ADR or EPC closed"
+      ],
+      "validationCommand": "git status --short --branch",
+      "approveWhen": "all closure artifacts are complete",
+      "rejectWhen": "missing closure evidence",
+      "responsible": "architect",
+      "rollback": "reopen the audit"
+    }
+  ],
+  "parityMetrics": [
+    {
+      "name": "totalSegments",
+      "formula": "count(segments)",
+      "source": "masterCatalogApi / MasterCatalogPrismaRepository",
+      "frequency": "per execution",
+      "threshold": "exact match",
+      "minimumStability": "7 days",
+      "actionOnViolation": "block primary promotion"
+    },
+    {
+      "name": "totalProducts",
+      "formula": "count(products)",
+      "source": "masterCatalogApi / comparator",
+      "frequency": "per execution",
+      "threshold": "exact match",
+      "minimumStability": "7 days",
+      "actionOnViolation": "keep shadow active"
+    },
+    {
+      "name": "totalSubproducts",
+      "formula": "count(subproducts)",
+      "source": "masterCatalogApi / comparator",
+      "frequency": "per execution",
+      "threshold": "exact match",
+      "minimumStability": "7 days",
+      "actionOnViolation": "block cut"
+    },
+    {
+      "name": "totalModalities",
+      "formula": "count(modalities)",
+      "source": "masterCatalogApi / comparator",
+      "frequency": "per execution",
+      "threshold": "exact match",
+      "minimumStability": "7 days",
+      "actionOnViolation": "block cut"
+    },
+    {
+      "name": "missingIds",
+      "formula": "ids in primary not found in shadow and vice versa",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "stay in shadow"
+    },
+    {
+      "name": "extraIds",
+      "formula": "primary extras + shadow extras",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "stay in shadow"
+    },
+    {
+      "name": "labelDiffs",
+      "formula": "non equal labels on matched IDs",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0 or formally accepted",
+      "minimumStability": "7 days",
+      "actionOnViolation": "hold cut"
+    },
+    {
+      "name": "codeDiffs",
+      "formula": "non equal codes on matched records",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "block cut"
+    },
+    {
+      "name": "statusDiffs",
+      "formula": "status mismatch across sources",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "hold primary"
+    },
+    {
+      "name": "orderingDiffs",
+      "formula": "different ordering after canonical sort",
+      "source": "mapper and comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "fix mapper or keep shadow"
+    },
+    {
+      "name": "parentChildDivergences",
+      "formula": "divergent parent-child relations",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "block retirement"
+    },
+    {
+      "name": "duplicates",
+      "formula": "duplicate codes in primary or shadow",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "fix data before cut"
+    },
+    {
+      "name": "unmappedRecords",
+      "formula": "records without mapping",
+      "source": "mapper tests and comparator",
+      "frequency": "per execution",
+      "threshold": "0",
+      "minimumStability": "7 days",
+      "actionOnViolation": "fix mapping"
+    },
+    {
+      "name": "divergencePerTenant",
+      "formula": "divergences grouped by tenant",
+      "source": "repository and shadow logs",
+      "frequency": "daily",
+      "threshold": "0 or approved",
+      "minimumStability": "14 days",
+      "actionOnViolation": "block promotion"
+    },
+    {
+      "name": "canonicalRequestShare",
+      "formula": "canonical requests / total requests",
+      "source": "frontend telemetry and backend logs",
+      "frequency": "daily",
+      "threshold": ">= 99%",
+      "minimumStability": "14 days",
+      "actionOnViolation": "keep fallback"
+    },
+    {
+      "name": "fallbackShare",
+      "formula": "fallback hits / total requests",
+      "source": "runtime evidence and logs",
+      "frequency": "daily",
+      "threshold": "<= 1%",
+      "minimumStability": "14 days",
+      "actionOnViolation": "do not remove fallback"
+    },
+    {
+      "name": "divergencesPerExecution",
+      "formula": "number of mismatches per shadow execution",
+      "source": "shadow comparator",
+      "frequency": "per execution",
+      "threshold": "0 or accepted",
+      "minimumStability": "7 days",
+      "actionOnViolation": "retain shadow"
+    },
+    {
+      "name": "consumersPerSource",
+      "formula": "count of consumers by source class",
+      "source": "repo scan and audit graph",
+      "frequency": "weekly",
+      "threshold": "legacy and parallel counts go to zero",
+      "minimumStability": "14 days",
+      "actionOnViolation": "stop retirement"
+    },
+    {
+      "name": "legacyImportsRemaining",
+      "formula": "count of runtime imports from legacy sources",
+      "source": "global search",
+      "frequency": "per cut",
+      "threshold": "0",
+      "minimumStability": "14 days",
+      "actionOnViolation": "block legacy removal"
+    }
+  ],
+  "featureFlagStrategy": [
+    {
+      "flag": "VITE_SIMULATION_RUNTIME_SHADOW_ENABLED",
+      "reusable": true,
+      "scope": "simulation runtime shadow",
+      "defaultSafe": false,
+      "environment": "frontend",
+      "owner": "platform/runtime",
+      "expiration": "after parity and retirement of shadow-only paths"
+    },
+    {
+      "flag": "VITE_SIMULATION_RUNTIME_PRIMARY_ENABLED",
+      "reusable": true,
+      "scope": "simulation runtime primary",
+      "defaultSafe": false,
+      "environment": "frontend",
+      "owner": "platform/runtime",
+      "expiration": "after stable primary promotion"
+    },
+    {
+      "flag": "VITE_SIMULATION_RUNTIME_FALLBACK_ENABLED",
+      "reusable": true,
+      "scope": "simulation runtime fallback",
+      "defaultSafe": true,
+      "environment": "frontend",
+      "owner": "platform/runtime",
+      "expiration": "after fallback removal"
+    },
+    {
+      "flag": "VITE_SIMULATION_RUNTIME_EVIDENCE_ENABLED",
+      "reusable": true,
+      "scope": "evidence capture",
+      "defaultSafe": false,
+      "environment": "frontend",
+      "owner": "platform/runtime",
+      "expiration": "after observability becomes permanent"
+    },
+    {
+      "flag": "VITE_REMOTE_EVIDENCE_ENABLED",
+      "reusable": true,
+      "scope": "remote evidence queue",
+      "defaultSafe": false,
+      "environment": "frontend",
+      "owner": "platform/runtime",
+      "expiration": "after evidence infrastructure stabilizes"
+    },
+    {
+      "flag": "suggested-only: VITE_MASTER_CATALOG_<CONSUMER>_SHADOW_ENABLED",
+      "reusable": false,
+      "scope": "future proposal only",
+      "defaultSafe": false,
+      "environment": "frontend",
+      "owner": "n/a",
+      "expiration": "not approved in this execution"
+    }
+  ],
+  "cutPlans": [
+    {
+      "consumerId": "C-01",
+      "consumer": "Oportunidades",
+      "currentFlow": "canonical read with empty-tree error fallback",
+      "sourceCurrent": "masterCatalogApi",
+      "sourceTarget": "same canonical API",
+      "classification": "LEAF",
+      "migrationState": "READY_FOR_PRIMARY",
+      "graphPosition": "leaf",
+      "risks": [
+        "fetch regression",
+        "visual fallback only"
+      ],
+      "prerequisites": [
+        "Gate 0 baseline",
+        "Gate 1 contract"
+      ],
+      "observability": [
+        "fetch success",
+        "error rate",
+        "latency"
+      ],
+      "parityMetric": "canonical request share",
+      "tolerance": "zero functional regression",
+      "tests": [
+        "client unit",
+        "page smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "release hardening only",
+      "rollbackStrategy": "restore previous release",
+      "successCriteria": "page loads canonically",
+      "failureCriteria": "selection or loading regression",
+      "exitCriteria": "stable canonical fetch",
+      "ownerSuggested": "frontend owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "no special window",
+      "sequence": "W5-03B"
+    },
+    {
+      "consumerId": "C-02",
+      "consumer": "Estrutura Comercial",
+      "currentFlow": "bootstrap and sync from canonical tree",
+      "sourceCurrent": "masterCatalogApi + mapper",
+      "sourceTarget": "canonical API + stabilized mapper",
+      "classification": "LEAF",
+      "migrationState": "READY_FOR_PRIMARY",
+      "graphPosition": "leaf",
+      "risks": [
+        "sync drift",
+        "ordering drift"
+      ],
+      "prerequisites": [
+        "Gate 0 baseline",
+        "Gate 1 contract",
+        "ordering parity"
+      ],
+      "observability": [
+        "counts",
+        "ordering",
+        "sync errors"
+      ],
+      "parityMetric": "same counts and ordering",
+      "tolerance": "zero divergence",
+      "tests": [
+        "mapper test",
+        "bootstrap smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "canonical mapping only",
+      "rollbackStrategy": "restore previous mapper",
+      "successCriteria": "tree is 1:1 with canonical source",
+      "failureCriteria": "drift or incomplete sync",
+      "exitCriteria": "stable repeated sync",
+      "ownerSuggested": "frontend/domain owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ARCH-050"
+      ],
+      "adrRequired": false,
+      "window": "no special window",
+      "sequence": "W5-03C"
+    },
+    {
+      "consumerId": "C-03",
+      "consumer": "Commercial Coverage",
+      "currentFlow": "master catalog primary plus creditPfCatalog shadow",
+      "sourceCurrent": "canonical + shadow local",
+      "sourceTarget": "canonical only after parity",
+      "classification": "SHADOW_ONLY",
+      "migrationState": "SHADOW_ACTIVE",
+      "graphPosition": "leaf",
+      "risks": [
+        "divergence drift",
+        "shadow too long"
+      ],
+      "prerequisites": [
+        "Gate 2 parity",
+        "Gate 3 shadow"
+      ],
+      "observability": [
+        "divergence count",
+        "duplicate codes",
+        "tenant divergence"
+      ],
+      "parityMetric": "zero or accepted divergences per execution",
+      "tolerance": "zero for IDs and relations",
+      "tests": [
+        "shadow comparator",
+        "load tree"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "keep shadow active until stable parity",
+      "rollbackStrategy": "re-enable comparator and shadow path",
+      "successCriteria": "stable parity window",
+      "failureCriteria": "unaccepted divergence",
+      "exitCriteria": "shadow can be disabled with evidence",
+      "ownerSuggested": "commercial/data owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "RUN-001"
+      ],
+      "adrRequired": false,
+      "window": "homologation-first",
+      "sequence": "W5-03D"
+    },
+    {
+      "consumerId": "C-04",
+      "consumer": "Tabelas Comerciais",
+      "currentFlow": "commercialApi.listTables plus local selectors",
+      "sourceCurrent": "commercialApi + commercialRepository",
+      "sourceTarget": "canonical selectors driven by Master Catalog",
+      "classification": "INTERMEDIATE",
+      "migrationState": "PRIMARY_WITH_FALLBACK",
+      "graphPosition": "intermediate",
+      "risks": [
+        "filter drift",
+        "missing table"
+      ],
+      "prerequisites": [
+        "selector mapping",
+        "table parity"
+      ],
+      "observability": [
+        "lookup success",
+        "filter drift",
+        "fallback usage"
+      ],
+      "parityMetric": "same selectable population",
+      "tolerance": "zero table loss",
+      "tests": [
+        "select helper test",
+        "page smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "canonicalize selectors first",
+      "rollbackStrategy": "restore local helper functions",
+      "successCriteria": "no dependency on legacy source",
+      "failureCriteria": "wrong table filters",
+      "exitCriteria": "no runtime dependency on creditPfCatalog",
+      "ownerSuggested": "frontend/commercial owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ARCH-055"
+      ],
+      "adrRequired": false,
+      "window": "homologation or low-traffic",
+      "sequence": "W5-03E"
+    },
+    {
+      "consumerId": "C-05",
+      "consumer": "Simulador",
+      "currentFlow": "simulatorRepository plus commercialRepository plus local engine",
+      "sourceCurrent": "local repositories and state",
+      "sourceTarget": "canonical runtime plus canonical catalog inputs",
+      "classification": "CENTRAL",
+      "migrationState": "BLOCKED",
+      "graphPosition": "central",
+      "risks": [
+        "offer mismatch",
+        "local state dependence"
+      ],
+      "prerequisites": [
+        "runtime parity",
+        "offer parity"
+      ],
+      "observability": [
+        "offer count",
+        "ranking drift",
+        "fallback usage"
+      ],
+      "parityMetric": "same offers for same input set",
+      "tolerance": "zero deterministic divergence",
+      "tests": [
+        "simulation smoke",
+        "integration test"
+      ],
+      "featureFlag": "simulation runtime flags",
+      "activationStrategy": "shadow evidence first, then primary",
+      "rollbackStrategy": "restore local repository path",
+      "successCriteria": "matching offers from canonical runtime",
+      "failureCriteria": "offer mismatch or regression",
+      "exitCriteria": "local repository not used in runtime flow",
+      "ownerSuggested": "simulation owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ARCH-049"
+      ],
+      "adrRequired": false,
+      "window": "controlled homologation window",
+      "sequence": "W5-03F"
+    },
+    {
+      "consumerId": "C-06",
+      "consumer": "Simulation Runtime",
+      "currentFlow": "shadow, primary, fallback and evidence runtime",
+      "sourceCurrent": "runtime flags and evidence hooks",
+      "sourceTarget": "same runtime, with observability retained",
+      "classification": "SHARED_INFRASTRUCTURE",
+      "migrationState": "NOT_APPLICABLE",
+      "graphPosition": "infrastructure",
+      "risks": [
+        "telemetry loss",
+        "evidence loss"
+      ],
+      "prerequisites": [
+        "telemetry",
+        "evidence collection"
+      ],
+      "observability": [
+        "shadow status",
+        "evidence storage",
+        "fallbackUsed"
+      ],
+      "parityMetric": "evidence coverage and fallback rate",
+      "tolerance": "fallback only within formal limit",
+      "tests": [
+        "feature flag tests",
+        "evidence tests"
+      ],
+      "featureFlag": "existing simulation runtime flags",
+      "activationStrategy": "keep as infrastructure during all cuts",
+      "rollbackStrategy": "disable primary or evidence",
+      "successCriteria": "runtime remains stable and auditable",
+      "failureCriteria": "loss of telemetry or evidence",
+      "exitCriteria": "no open cut depends on runtime behavior changes",
+      "ownerSuggested": "platform/runtime owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "RUN-001"
+      ],
+      "adrRequired": false,
+      "window": "continuous",
+      "sequence": "W5-03A"
+    },
+    {
+      "consumerId": "C-07",
+      "consumer": "loan-with-collateral",
+      "currentFlow": "runtime canonical lookup plus aliases and request fallback",
+      "sourceCurrent": "masterCatalogRuntime + compatibility",
+      "sourceTarget": "canonical IDs and names only",
+      "classification": "COMPATIBILITY_LAYER",
+      "migrationState": "PRIMARY_WITH_FALLBACK",
+      "graphPosition": "central",
+      "risks": [
+        "alias dependency",
+        "compatibility drift"
+      ],
+      "prerequisites": [
+        "alias usage audited",
+        "negative tests approved"
+      ],
+      "observability": [
+        "alias hit rate",
+        "lookup misses",
+        "fallback usage"
+      ],
+      "parityMetric": "canonical lookup 100% and fallback 0%",
+      "tolerance": "zero fallback",
+      "tests": [
+        "compatibility negative tests",
+        "subflow smoke"
+      ],
+      "featureFlag": "loan-with-collateral",
+      "activationStrategy": "canonical first, fallback only as rollback guard",
+      "rollbackStrategy": "restore aliases and fallback",
+      "successCriteria": "all supported cases resolve canonically",
+      "failureCriteria": "any request needs alias to work",
+      "exitCriteria": "aliases have no real use",
+      "ownerSuggested": "simulation product owner",
+      "documentsToUpdate": [
+        "EPC-W5-03",
+        "ADR-010"
+      ],
+      "adrRequired": true,
+      "window": "controlled homologation window",
+      "sequence": "W5-03G"
+    },
+    {
+      "consumerId": "C-08",
+      "consumer": "Products",
+      "currentFlow": "simulation product registry",
+      "sourceCurrent": "LoanWithCollateralAdapter registry",
+      "sourceTarget": "same registry, no catalog ownership",
+      "classification": "SHARED_INFRASTRUCTURE",
+      "migrationState": "NOT_APPLICABLE",
+      "graphPosition": "infrastructure",
+      "risks": [
+        "adapter resolution breakage"
+      ],
+      "prerequisites": [
+        "loan-with-collateral stabilization"
+      ],
+      "observability": [
+        "adapter resolution",
+        "subflow resolution"
+      ],
+      "parityMetric": "100% adapter resolution by registry",
+      "tolerance": "no registry breakage",
+      "tests": [
+        "registry test"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "transversal infrastructure only",
+      "rollbackStrategy": "restore registry as-is",
+      "successCriteria": "remains infrastructure, not parallel truth",
+      "failureCriteria": "adapter resolution breaks",
+      "exitCriteria": "no catalog ownership in Products",
+      "ownerSuggested": "platform/runtime owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "none",
+      "sequence": "supporting"
+    },
+    {
+      "consumerId": "C-09",
+      "consumer": "frontend store",
+      "currentFlow": "store derives EstruturaComercial from creditPfCatalog",
+      "sourceCurrent": "creditPfCatalog",
+      "sourceTarget": "no parallel source truth",
+      "classification": "LEGACY_SOURCE",
+      "migrationState": "READY_FOR_LEGACY_REMOVAL",
+      "graphPosition": "legacy",
+      "risks": [
+        "legacy SSOT",
+        "selector drift"
+      ],
+      "prerequisites": [
+        "selectors migrated",
+        "zero consumers as catalog truth"
+      ],
+      "observability": [
+        "selector imports",
+        "store usage count"
+      ],
+      "parityMetric": "zero consumers using store as catalog SSOT",
+      "tolerance": "zero",
+      "tests": [
+        "store tests",
+        "selector smoke"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "retire only after selectors move away",
+      "rollbackStrategy": "restore current store derivation",
+      "successCriteria": "store no longer acts as catalog truth",
+      "failureCriteria": "selector still depends on creditPfCatalog",
+      "exitCriteria": "store is removable or frozen",
+      "ownerSuggested": "frontend platform owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "low traffic",
+      "sequence": "W5-03I"
+    },
+    {
+      "consumerId": "C-10",
+      "consumer": "frontend repositories locais",
+      "currentFlow": "catalogRepository, commercialRepository and simulatorRepository",
+      "sourceCurrent": "creditPfCatalog and local memory",
+      "sourceTarget": "canonical client and backend services",
+      "classification": "PARALLEL_SOURCE",
+      "migrationState": "BLOCKED",
+      "graphPosition": "parallel",
+      "risks": [
+        "parallel truth",
+        "import residue"
+      ],
+      "prerequisites": [
+        "zero consumers",
+        "canonical client adoption"
+      ],
+      "observability": [
+        "import count",
+        "runtime read count"
+      ],
+      "parityMetric": "legacy imports remaining = 0",
+      "tolerance": "zero",
+      "tests": [
+        "consumer migration tests"
+      ],
+      "featureFlag": "none",
+      "activationStrategy": "remove only after all consumers cut over",
+      "rollbackStrategy": "restore the local repositories",
+      "successCriteria": "no runtime read from local repositories",
+      "failureCriteria": "remaining consumer or import",
+      "exitCriteria": "repositories can be frozen or removed",
+      "ownerSuggested": "frontend platform owner",
+      "documentsToUpdate": [
+        "EPC-W5-03"
+      ],
+      "adrRequired": false,
+      "window": "controlled homologation window",
+      "sequence": "W5-03H"
+    }
+  ],
+  "rollbackPlans": [
+    {
+      "consumerId": "C-01",
+      "level1Config": "restore the previous release or keep the current empty-tree error fallback",
+      "level2App": "revert the page change and rebuild",
+      "level3Incident": "freeze rollout, preserve evidence, open incident",
+      "trigger": "fetch or visual regression",
+      "maxDecisionTime": "minutes",
+      "impact": "read-only page degraded",
+      "postRollbackEvidence": "fetch logs and successful page smoke"
+    },
+    {
+      "consumerId": "C-02",
+      "level1Config": "restore previous mapper",
+      "level2App": "revert the bootstrap/sync commit and rebuild",
+      "level3Incident": "freeze rollout and preserve the tree snapshot",
+      "trigger": "tree drift or sync failure",
+      "maxDecisionTime": "minutes",
+      "impact": "derived commercial structure out of sync",
+      "postRollbackEvidence": "tree counts and ordering restored"
+    },
+    {
+      "consumerId": "C-03",
+      "level1Config": "keep shadow active",
+      "level2App": "re-enable the comparator",
+      "level3Incident": "freeze next cuts and preserve divergence evidence",
+      "trigger": "unaccepted divergence",
+      "maxDecisionTime": "immediate",
+      "impact": "parity decision blocked",
+      "postRollbackEvidence": "shadow logs and comparator output"
+    },
+    {
+      "consumerId": "C-04",
+      "level1Config": "restore local selectors",
+      "level2App": "revert the table mapping change",
+      "level3Incident": "freeze cut and preserve selector evidence",
+      "trigger": "table lookup failure",
+      "maxDecisionTime": "minutes",
+      "impact": "commercial UI filters degrade",
+      "postRollbackEvidence": "table and filter smoke pass"
+    },
+    {
+      "consumerId": "C-05",
+      "level1Config": "restore local repository path",
+      "level2App": "revert the simulator integration commit",
+      "level3Incident": "freeze rollout and open incident",
+      "trigger": "offer mismatch or deterministic regression",
+      "maxDecisionTime": "minutes",
+      "impact": "simulator result divergence",
+      "postRollbackEvidence": "offer parity from local source"
+    },
+    {
+      "consumerId": "C-06",
+      "level1Config": "disable primary or evidence",
+      "level2App": "revert runtime config change",
+      "level3Incident": "preserve evidence and freeze cuts",
+      "trigger": "telemetry or evidence loss",
+      "maxDecisionTime": "minutes",
+      "impact": "observability degraded",
+      "postRollbackEvidence": "telemetry and evidence restored"
+    },
+    {
+      "consumerId": "C-07",
+      "level1Config": "restore aliases and fallback",
+      "level2App": "revert the adapter change",
+      "level3Incident": "freeze rollout and preserve compatibility evidence",
+      "trigger": "any request requiring alias",
+      "maxDecisionTime": "minutes",
+      "impact": "simulation flow blocked",
+      "postRollbackEvidence": "compatibility smoke passes"
+    },
+    {
+      "consumerId": "C-08",
+      "level1Config": "restore the registry as-is",
+      "level2App": "revert the adapter registry commit",
+      "level3Incident": "freeze changes to product registry",
+      "trigger": "adapter resolution break",
+      "maxDecisionTime": "minutes",
+      "impact": "product dispatch broken",
+      "postRollbackEvidence": "registry resolves adapter again"
+    },
+    {
+      "consumerId": "C-09",
+      "level1Config": "restore current store derivation",
+      "level2App": "revert the store commit",
+      "level3Incident": "freeze next cuts and preserve store evidence",
+      "trigger": "selector still depends on legacy store source",
+      "maxDecisionTime": "minutes",
+      "impact": "legacy truth returns",
+      "postRollbackEvidence": "store selectors back to expected state"
+    },
+    {
+      "consumerId": "C-10",
+      "level1Config": "restore local repositories",
+      "level2App": "revert the isolated removal commit",
+      "level3Incident": "freeze rollout and stop further removals",
+      "trigger": "any remaining consumer or import",
+      "maxDecisionTime": "minutes",
+      "impact": "compatibility path lost too early",
+      "postRollbackEvidence": "runtime reads and imports restored"
+    }
+  ],
+  "migrationSequence": [
+    {
+      "phase": "W5-03A",
+      "focus": "observability prerequisites",
+      "consumers": [
+        "Simulation Runtime"
+      ],
+      "status": "READY",
+      "rollback": "disable primary/evidence"
+    },
+    {
+      "phase": "W5-03B",
+      "focus": "first leaf consumer primary",
+      "consumers": [
+        "Oportunidades"
+      ],
+      "status": "READY",
+      "rollback": "restore previous release"
+    },
+    {
+      "phase": "W5-03C",
+      "focus": "second leaf consumer primary",
+      "consumers": [
+        "Estrutura Comercial"
+      ],
+      "status": "READY",
+      "rollback": "restore previous mapper"
+    },
+    {
+      "phase": "W5-03D",
+      "focus": "shadow and parity gate",
+      "consumers": [
+        "Commercial Coverage"
+      ],
+      "status": "SHADOW",
+      "rollback": "keep shadow active"
+    },
+    {
+      "phase": "W5-03E",
+      "focus": "primary plus fallback reduction",
+      "consumers": [
+        "Tabelas Comerciais"
+      ],
+      "status": "FALLBACK",
+      "rollback": "restore local selectors"
+    },
+    {
+      "phase": "W5-03F",
+      "focus": "primary consolidation",
+      "consumers": [
+        "Simulador"
+      ],
+      "status": "PRIMARY",
+      "rollback": "restore local repository path"
+    },
+    {
+      "phase": "W5-03G",
+      "focus": "fallback removal",
+      "consumers": [
+        "loan-with-collateral"
+      ],
+      "status": "FALLBACK",
+      "rollback": "restore aliases and fallback"
+    },
+    {
+      "phase": "W5-03H",
+      "focus": "legacy removal",
+      "consumers": [
+        "frontend repositories locais"
+      ],
+      "status": "RETIREMENT",
+      "rollback": "restore local repositories"
+    },
+    {
+      "phase": "W5-03I",
+      "focus": "closure",
+      "consumers": [
+        "frontend store",
+        "creditPfCatalog"
+      ],
+      "status": "CLOSURE",
+      "rollback": "reopen the audit or restore the legacy sources"
+    }
+  ],
+  "retirementCriteria": [
+    {
+      "target": "creditPfCatalog",
+      "criteria": [
+        "zero consumers funcionais",
+        "zero runtime imports",
+        "paridade comprovada",
+        "periodo estavel",
+        "fallback zero",
+        "tests migrated",
+        "removal approved"
+      ]
+    },
+    {
+      "target": "catalogRepository",
+      "criteria": [
+        "no route or component depends on it",
+        "substituted by canonical client",
+        "contracts updated",
+        "tests migrated"
+      ]
+    },
+    {
+      "target": "commercialRepository",
+      "criteria": [
+        "simulador and tables independent",
+        "in-memory state removed or replaced",
+        "canonical flow validated"
+      ]
+    },
+    {
+      "target": "simulatorRepository",
+      "criteria": [
+        "Simulation Runtime is official",
+        "fallback controlled",
+        "compatibility evidence exists"
+      ]
+    },
+    {
+      "target": "store/index.ts",
+      "criteria": [
+        "domains decoupled",
+        "no parallel truth",
+        "selectors and hooks migrated"
+      ]
+    },
+    {
+      "target": "loan-with-collateral fallback",
+      "criteria": [
+        "aliases unused",
+        "request fields canonicos",
+        "fallback zero",
+        "negative and compat tests approved"
+      ]
+    },
+    {
+      "target": "Commercial Coverage shadow read",
+      "criteria": [
+        "parity attained",
+        "periodo estavel",
+        "divergences zero or formally accepted",
+        "primary validated"
+      ]
+    }
+  ],
+  "adrDecisions": [
+    {
+      "decision": "new feature flag family",
+      "classification": "ADR_REQUIRED"
+    },
+    {
+      "decision": "public contract change",
+      "classification": "ADR_REQUIRED"
+    },
+    {
+      "decision": "remove compatibility contract",
+      "classification": "ADR_REQUIRED"
+    },
+    {
+      "decision": "loan-with-collateral fallback removal",
+      "classification": "UPDATE_EXISTING_ADR",
+      "reference": "ADR-010"
+    },
+    {
+      "decision": "sequence and rollout plan only",
+      "classification": "EPC_SUFFICIENT"
+    }
+  ],
+  "risks": [
+    {
+      "severity": "BLOCKER",
+      "risk": "missing SSOT documentation for enterprise context"
+    },
+    {
+      "severity": "BLOCKER",
+      "risk": "no formal parity gate for every consumer"
+    },
+    {
+      "severity": "CRITICAL",
+      "risk": "creditPfCatalog remains a parallel taxonomy source"
+    },
+    {
+      "severity": "CRITICAL",
+      "risk": "loan-with-collateral still accepts aliases and request fallback"
+    },
+    {
+      "severity": "HIGH",
+      "risk": "commercialRepository and simulatorRepository still sustain functional flows"
+    },
+    {
+      "severity": "HIGH",
+      "risk": "Commercial Coverage still depends on shadow read"
+    },
+    {
+      "severity": "HIGH",
+      "risk": "frontend store still derives a catalog truth from local data"
+    }
+  ],
+  "gaps": [
+    "docs/00-master/FINQZ-PRO-ENTERPRISE-CONTEXT-SSOT.md is still absent",
+    "no dedicated Master Catalog feature flag exists",
+    "no dedicated Master Catalog divergence counter was found",
+    "no evidence of full retirement of legacy compatibility sources was found",
+    "no automated exit gate for the shadow read was found"
+  ],
+  "recommendations": [
+    "keep the sequence strictly consumer-by-consumer",
+    "close parity and observability before any fallback removal",
+    "retire legacy repositories only after zero imports and zero runtime reads",
+    "do not advance to W5-04 until this plan is approved"
+  ],
+  "summary": {
+    "consumerCount": 10,
+    "readyConsumerCount": 2,
+    "blockedConsumerCount": 6,
+    "cutPlanCount": 10,
+    "gateCount": 8,
+    "parityMetricCount": 19,
+    "rollbackPlanCount": 10,
+    "retirementTargetCount": 7,
+    "adrDecisionCount": 5
+  },
+  "createdFiles": [
+    "docs/09-audits/EPC-W5-03-MASTER-CATALOG-MIGRATION-CUT-PLAN.md",
+    "docs/09-audits/evidence/EPC-W5-03-MASTER-CATALOG-MIGRATION-CUT-PLAN.json",
+    "docs/09-audits/evidence/EPC-W5-03-MASTER-CATALOG-MIGRATION-SEQUENCE.mmd"
+  ],
+  "modifiedFiles": [],
+  "executedCommands": [
+    "git status --short --branch",
+    "git rev-parse HEAD",
+    "git rev-parse --abbrev-ref HEAD",
+    "git rev-parse --abbrev-ref --symbolic-full-name '@{u}'",
+    "Get-Content -LiteralPath 'docs/09-audits/EPC-W5-01-MASTER-CATALOG-INVENTORY.md'",
+    "Get-Content -LiteralPath 'docs/09-audits/evidence/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.json'",
+    "Get-Content -LiteralPath 'docs/09-audits/evidence/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.mmd'",
+    "rg -n \"master-catalog|creditPfCatalog|loan-with-collateral|simulation-runtime\" backend/src src docs/09-audits",
+    "git diff --check"
+  ],
+  "validations": [
+    {
+      "check": "JSON.parse",
+      "result": "ok"
+    },
+    {
+      "check": "unique IDs",
+      "result": "ok"
+    },
+    {
+      "check": "internal references",
+      "result": "ok"
+    },
+    {
+      "check": "summary counts",
+      "result": "ok"
+    },
+    {
+      "check": "Markdown headers",
+      "result": "ok"
+    },
+    {
+      "check": "Mermaid syntax",
+      "result": "ok"
+    },
+    {
+      "check": "single first candidate",
+      "result": "ok"
+    },
+    {
+      "check": "rollback coverage",
+      "result": "ok"
+    },
+    {
+      "check": "retirement criteria coverage",
+      "result": "ok"
+    },
+    {
+      "check": "gate approval/rejection",
+      "result": "ok"
+    }
+  ]
+}

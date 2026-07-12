@@ -1,0 +1,124 @@
+flowchart LR
+  start(["Baseline"])
+  obs(["Observability"])
+  shadow(["Shadow"])
+  parity(["Parity Gate"])
+  primary(["Primary"])
+  fallback(["Fallback"])
+  fallback_removal(["Fallback Removal"])
+  legacy_removal(["Legacy Removal"])
+  closure(["Closure"])
+
+  rollback_obs(["Rollback: disable evidence/primary"])
+  rollback_shadow(["Rollback: keep shadow active"])
+  rollback_parity(["Rollback: block promotion"])
+  rollback_primary(["Rollback: restore previous release"])
+  rollback_fallback(["Rollback: restore local fallback"])
+  rollback_legacy(["Rollback: restore local repositories"])
+  rollback_closure(["Rollback: reopen audit"])
+
+  subgraph S1["Oportunidades | READY"]
+    op_start["Oportunidades - canonical read"]
+    op_primary["Oportunidades - PRIMARY"]
+    op_rollback["Rollback path"]
+    op_start --> op_primary
+    op_primary --> op_rollback
+    op_rollback --> rollback_primary
+  end
+
+  subgraph S2["Estrutura Comercial | READY"]
+    ec_start["Estrutura Comercial - bootstrap/sync"]
+    ec_primary["Estrutura Comercial - PRIMARY"]
+    ec_rollback["Rollback path"]
+    ec_start --> ec_primary
+    ec_primary --> ec_rollback
+    ec_rollback --> rollback_primary
+  end
+
+  subgraph S3["Commercial Coverage | SHADOW"]
+    cc_shadow["Commercial Coverage - SHADOW"]
+    cc_parity["Commercial Coverage - parity comparison"]
+    cc_rollback["Rollback path"]
+    cc_shadow --> cc_parity
+    cc_parity --> cc_rollback
+    cc_rollback --> rollback_shadow
+  end
+
+  subgraph S4["Tabelas Comerciais | FALLBACK"]
+    tab_primary["Tabelas Comerciais - PRIMARY"]
+    tab_fallback["Tabelas Comerciais - FALLBACK"]
+    tab_rollback["Rollback path"]
+    tab_primary --> tab_fallback
+    tab_fallback --> tab_rollback
+    tab_rollback --> rollback_fallback
+  end
+
+  subgraph S5["Simulador | FALLBACK"]
+    sim_primary["Simulador - PRIMARY"]
+    sim_fallback["Simulador - FALLBACK"]
+    sim_rollback["Rollback path"]
+    sim_primary --> sim_fallback
+    sim_fallback --> sim_rollback
+    sim_rollback --> rollback_fallback
+  end
+
+  subgraph S6["loan-with-collateral | FALLBACK"]
+    lwc_primary["loan-with-collateral - PRIMARY"]
+    lwc_fallback["loan-with-collateral - FALLBACK"]
+    lwc_rollback["Rollback path"]
+    lwc_primary --> lwc_fallback
+    lwc_fallback --> lwc_rollback
+    lwc_rollback --> rollback_fallback
+  end
+
+  subgraph S7["Frontend repositories | RETIREMENT"]
+    repos_retire["repositories locals - RETIREMENT"]
+    repos_rollback["Rollback path"]
+    repos_retire --> repos_rollback
+    repos_rollback --> rollback_legacy
+  end
+
+  subgraph S8["Frontend store | RETIREMENT"]
+    store_retire["store/index.ts - RETIREMENT"]
+    store_rollback["Rollback path"]
+    store_retire --> store_rollback
+    store_rollback --> rollback_legacy
+  end
+
+  subgraph S9["Closure | RETIREMENT"]
+    close_pack["Evidence pack and ADR/EPC close"]
+    close_rollback["Rollback path"]
+    close_pack --> close_rollback
+    close_rollback --> rollback_closure
+  end
+
+  start --> obs
+  obs --> shadow
+  shadow --> parity
+  parity --> primary
+  primary --> fallback
+  fallback --> fallback_removal
+  fallback_removal --> legacy_removal
+  legacy_removal --> closure
+
+  obs -. "if telemetry fails" .-> rollback_obs
+  shadow -. "if divergence appears" .-> rollback_shadow
+  parity -. "if mismatch exceeds tolerance" .-> rollback_parity
+  primary -. "if regression appears" .-> rollback_primary
+  fallback -. "if fallback still required" .-> rollback_fallback
+  fallback_removal -. "if usage remains" .-> rollback_fallback
+  legacy_removal -. "if imports remain" .-> rollback_legacy
+  closure -. "if evidence incomplete" .-> rollback_closure
+
+  classDef READY fill:#0f5132,color:#ffffff,stroke:#34d399,stroke-width:1px;
+  classDef BLOCKED fill:#7f1d1d,color:#ffffff,stroke:#f87171,stroke-width:1px;
+  classDef SHADOW fill:#334155,color:#ffffff,stroke:#60a5fa,stroke-width:1px;
+  classDef PRIMARY fill:#064e3b,color:#ffffff,stroke:#22c55e,stroke-width:1px;
+  classDef FALLBACK fill:#854d0e,color:#ffffff,stroke:#f59e0b,stroke-width:1px;
+  classDef RETIREMENT fill:#4c1d95,color:#ffffff,stroke:#c084fc,stroke-width:1px;
+
+  class start,obs,shadow,parity,primary,fallback,fallback_removal,legacy_removal,closure READY;
+  class cc_shadow SHADOW;
+  class op_primary,ec_primary,sim_primary,lwc_primary PRIMARY;
+  class tab_fallback,sim_fallback,lwc_fallback,fallback FALLBACK;
+  class repos_retire,store_retire,close_pack RETIREMENT;
