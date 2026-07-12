@@ -1,0 +1,20 @@
+flowchart TD
+  A[W5-01 Inventory] --> H[Review Hub]
+  B[W5-02 Dependency Graph] --> H
+  C[W5-03 Cut Plan] --> H
+  H --> D[READINESS_W5_OVERALL: GO WITH RESTRICTIONS]
+  H --> E[READINESS_W5_03A_OBSERVABILITY: AUTHORIZED]
+  H --> F[READINESS_W5_03B_OPPORTUNITIES: DEFERRED_PENDING_GATES]
+  H --> G[READINESS_FIRST_FUNCTIONAL_CUT: DEFERRED_PENDING_GATES]
+  H --> I[READINESS_LEGACY_REMOVAL: NO_GO]
+  H --> J[READINESS_LOAN_WITH_COLLATERAL_FALLBACK_REMOVAL: NO_GO]
+  H --> K[READINESS_CREDIT_PF_CATALOG_RETIREMENT: NO_GO]
+  H --> L[Documental/Governance blocker: SSOT missing]
+  H --> M[Functional blocker: shadow and fallback retirement paths still live]
+  H --> N[First-cut blocker: measurable observability and parity gates missing]
+  E --> O[Authorize only observability prerequisites]
+  F --> P[Keep Opportunities as first candidate, but deferred]
+  G --> Q[No first functional cut before gates]
+  I --> R[Legacy removal remains blocked]
+  J --> S[Fallback removal remains blocked]
+  K --> T[creditPfCatalog retirement remains blocked]

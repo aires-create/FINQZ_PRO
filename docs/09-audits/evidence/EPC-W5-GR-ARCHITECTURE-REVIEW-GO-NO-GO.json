@@ -1,0 +1,338 @@
+{
+  "auditId": "EPC-W5-GR",
+  "title": "EPC-W5-GR Architecture Review Go/No-Go",
+  "status": "COMPLETE",
+  "verdict": "GO WITH RESTRICTIONS",
+  "baseline": "225c14d9137dd41477076f28d0be2c8f347559ba",
+  "documentsReviewed": [
+    "docs/09-audits/EPC-W5-01-MASTER-CATALOG-INVENTORY.md",
+    "docs/09-audits/evidence/EPC-W5-01-MASTER-CATALOG-INVENTORY.json",
+    "docs/09-audits/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.md",
+    "docs/09-audits/evidence/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.json",
+    "docs/09-audits/evidence/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.mmd",
+    "docs/09-audits/EPC-W5-03-MASTER-CATALOG-MIGRATION-CUT-PLAN.md",
+    "docs/09-audits/evidence/EPC-W5-03-MASTER-CATALOG-MIGRATION-CUT-PLAN.json",
+    "docs/09-audits/evidence/EPC-W5-03-MASTER-CATALOG-MIGRATION-SEQUENCE.mmd",
+    "docs/00-master/FINQZ-PRO-ENTERPRISE-CONTEXT-SSOT.md",
+    "backend/src/core/http/fastify.ts",
+    "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts",
+    "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts",
+    "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+    "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+    "backend/prisma/schema.prisma",
+    "backend/prisma/seed.ts",
+    "backend/src/modules/master-catalog/domain/master-catalog.seed.ts",
+    "src/api/modules/master-catalog.api.ts",
+    "src/pages/Oportunidades.tsx",
+    "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts",
+    "src/pages/EstruturaComercial.tsx",
+    "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+    "src/features/commercial-structure/commercialCoverageShadowComparator.ts",
+    "src/pages/CommercialCoverage.tsx",
+    "src/data/creditPfCatalog.ts",
+    "src/data/catalogRepository.ts",
+    "src/data/commercialRepository.ts",
+    "src/data/simulatorRepository.ts",
+    "src/store/index.ts",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+    "backend/src/modules/simulation/application/simulation.application.context.ts",
+    "backend/src/modules/simulation/application/simulation.application.pipeline.ts",
+    "backend/src/modules/simulation/products/index.ts",
+    "src/features/simulation-runtime/config/simulation-runtime.flags.ts",
+    "src/features/simulation-runtime/hooks/useSimulationRuntimeShadow.ts"
+  ],
+  "governanceReview": {
+    "status": "OPEN",
+    "blockerType": "DOCUMENTAL_GOVERNANCE",
+    "missingDocuments": [
+      "docs/00-master/FINQZ-PRO-ENTERPRISE-CONTEXT-SSOT.md"
+    ],
+    "decision": "DOES_NOT_BLOCK_CATALOG_EXECUTION_BUT_BLOCKS_GOVERNANCE_CLOSURE"
+  },
+  "functionalReview": {
+    "status": "OPEN",
+    "blockerType": "FUNCTIONAL",
+    "blockedAreas": [
+      "Commercial Coverage shadow retirement",
+      "loan-with-collateral fallback removal",
+      "creditPfCatalog retirement",
+      "legacy removal"
+    ],
+    "decision": "NO_GO_FOR_RETIREMENT_PATHS"
+  },
+  "firstCutReview": {
+    "status": "DEFERRED_PENDING_GATES",
+    "blockerType": "FIRST_CUT",
+    "requiredPrerequisites": [
+      "measurable observability baseline",
+      "formal parity gate",
+      "shadow/fallback retirement gate",
+      "release telemetry"
+    ],
+    "decision": "FIRST_FUNCTIONAL_CUT_NOT_AUTHORIZED"
+  },
+  "w5_01_review": {
+    "verdict": "GO WITH RESTRICTIONS",
+    "findingsReviewed": 3,
+    "confirmedFindings": [
+      "Master Catalog is the canonical backend owner.",
+      "Compatibility and fallback paths still exist in the frontend and simulation surfaces.",
+      "The absence of the enterprise-context SSOT remains a governance gap."
+    ]
+  },
+  "w5_02_review": {
+    "verdict": "GO WITH RESTRICTIONS",
+    "findingsReviewed": 3,
+    "confirmedFindings": [
+      "The dependency graph correctly separates canonical-core, shadow-read, compatibility, and legacy edges.",
+      "Commercial Coverage still depends on a shadow comparison against creditPfCatalog.",
+      "loan-with-collateral still carries aliases and fallback behavior."
+    ]
+  },
+  "w5_03_review": {
+    "verdict": "GO WITH RESTRICTIONS",
+    "findingsReviewed": 3,
+    "confirmedFindings": [
+      "Oportunidades remains the first candidate, but deferred pending gates.",
+      "The cut plan is staged and rollback-aware.",
+      "The retirement posture still requires parity proof and release gates."
+    ]
+  },
+  "candidateReview": {
+    "firstCandidate": "Oportunidades",
+    "decision": "DEFERRED_PENDING_GATES",
+    "reason": "It is still the best first candidate, but it cannot be authorized until the observability and parity gates exist."
+  },
+  "observabilityReview": {
+    "status": "AUTHORIZED",
+    "nextStage": "READINESS_W5_03A_OBSERVABILITY",
+    "microphases": [
+      "telemetry baseline",
+      "parity metrics",
+      "shadow-retirement gate"
+    ],
+    "decision": "NEXT_AUTHORIZABLE_STEP"
+  },
+  "rollbackReview": {
+    "status": "AVAILABLE",
+    "rollbackPaths": [
+      "restore shadow read for Commercial Coverage",
+      "restore compatibility alias resolution for loan-with-collateral",
+      "keep empty-tree error fallback for Oportunidades during controlled rollout"
+    ]
+  },
+  "readinessDecisions": [
+    {
+      "id": "READINESS_W5_OVERALL",
+      "status": "GO_WITH_RESTRICTIONS",
+      "reason": "The canonical core is ready, but the wave still requires controlled execution and no blanket retirement."
+    },
+    {
+      "id": "READINESS_W5_03A_OBSERVABILITY",
+      "status": "AUTHORIZED",
+      "reason": "Observability prerequisites are the next authorized step and must precede any functional cut."
+    },
+    {
+      "id": "READINESS_W5_03B_OPPORTUNITIES",
+      "status": "DEFERRED_PENDING_GATES",
+      "reason": "Oportunidades remains the first candidate, but it cannot be promoted until the gates and telemetry are in place."
+    },
+    {
+      "id": "READINESS_FIRST_FUNCTIONAL_CUT",
+      "status": "DEFERRED_PENDING_GATES",
+      "reason": "The first functional cut is blocked until measurable observability and formal parity gates exist."
+    },
+    {
+      "id": "READINESS_LEGACY_REMOVAL",
+      "status": "NO_GO",
+      "reason": "Legacy removal cannot proceed while compatibility paths and retirement proof are still required."
+    },
+    {
+      "id": "READINESS_LOAN_WITH_COLLATERAL_FALLBACK_REMOVAL",
+      "status": "NO_GO",
+      "reason": "Fallback removal remains unsafe until alias-hit and lookup-miss evidence is zeroed out."
+    },
+    {
+      "id": "READINESS_CREDIT_PF_CATALOG_RETIREMENT",
+      "status": "NO_GO",
+      "reason": "creditPfCatalog retirement is blocked until parity proof and a retirement gate are in place."
+    }
+  ],
+  "goNoGoMatrix": [
+    {
+      "id": "READINESS_W5_OVERALL",
+      "decision": "GO_WITH_RESTRICTIONS",
+      "reason": "Wave-level execution is allowed, but only with controlled rollout and no blanket retirement."
+    },
+    {
+      "id": "READINESS_W5_03A_OBSERVABILITY",
+      "decision": "AUTHORIZED",
+      "reason": "This is the next authorized step."
+    },
+    {
+      "id": "READINESS_W5_03B_OPPORTUNITIES",
+      "decision": "DEFERRED_PENDING_GATES",
+      "reason": "Still the best first candidate, but the gates are not ready."
+    },
+    {
+      "id": "READINESS_FIRST_FUNCTIONAL_CUT",
+      "decision": "DEFERRED_PENDING_GATES",
+      "reason": "No functional cut before measurable observability and parity gates exist."
+    },
+    {
+      "id": "READINESS_LEGACY_REMOVAL",
+      "decision": "NO_GO",
+      "reason": "Legacy removal is not authorized while compatibility paths remain live."
+    },
+    {
+      "id": "READINESS_LOAN_WITH_COLLATERAL_FALLBACK_REMOVAL",
+      "decision": "NO_GO",
+      "reason": "Fallback removal is not authorized while alias and fallback evidence remains active."
+    },
+    {
+      "id": "READINESS_CREDIT_PF_CATALOG_RETIREMENT",
+      "decision": "NO_GO",
+      "reason": "Retirement is not authorized without parity proof and a formal retirement gate."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B-01",
+      "category": "DOCUMENTAL_GOVERNANCE",
+      "scope": "docs/00-master/FINQZ-PRO-ENTERPRISE-CONTEXT-SSOT.md",
+      "status": "OPEN",
+      "impact": "Governance closure is incomplete, but catalog execution is not automatically blocked."
+    },
+    {
+      "id": "B-02",
+      "category": "FUNCTIONAL",
+      "scope": "shadow/fallback retirement paths",
+      "status": "OPEN",
+      "impact": "Commercial Coverage, loan-with-collateral fallback removal, creditPfCatalog retirement, and legacy removal remain NO_GO."
+    },
+    {
+      "id": "B-03",
+      "category": "FIRST_CUT",
+      "scope": "first functional cut authorization",
+      "status": "OPEN",
+      "impact": "No first functional cut may be authorized before observability and measurable gates exist."
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-01",
+      "severity": "BLOCKER",
+      "category": "documental_governance",
+      "finding": "The enterprise-context SSOT file is missing.",
+      "decision": "BLOCK_GOVERNANCE_CLOSURE_ONLY"
+    },
+    {
+      "id": "F-02",
+      "severity": "BLOCKER",
+      "category": "first_cut",
+      "finding": "There is no formal measurable parity, shadow, and fallback gate for the first functional cut.",
+      "decision": "DEFER_FIRST_FUNCTIONAL_CUT"
+    },
+    {
+      "id": "F-03",
+      "severity": "CRITICAL",
+      "category": "shadow_read",
+      "finding": "Commercial Coverage still depends on a shadow read against creditPfCatalog.",
+      "decision": "NO_GO_FOR_RETIREMENT"
+    },
+    {
+      "id": "F-04",
+      "severity": "CRITICAL",
+      "category": "compatibility",
+      "finding": "loan-with-collateral still uses aliases and fallback resolution.",
+      "decision": "NO_GO_FOR_FALLBACK_REMOVAL"
+    },
+    {
+      "id": "F-05",
+      "severity": "HIGH",
+      "category": "candidate",
+      "finding": "Oportunidades remains the first candidate but must stay deferred pending gates.",
+      "decision": "DEFERRED_PENDING_GATES"
+    },
+    {
+      "id": "F-06",
+      "severity": "HIGH",
+      "category": "retirement",
+      "finding": "Legacy removal is not ready because compatibility and retirement proof are still required.",
+      "decision": "NO_GO"
+    },
+    {
+      "id": "F-07",
+      "severity": "HIGH",
+      "category": "retirement",
+      "finding": "creditPfCatalog retirement is not ready because parity proof and a formal retirement gate do not exist yet.",
+      "decision": "NO_GO"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R-01",
+      "name": "Shadow comparison can mask permanent dependency on creditPfCatalog",
+      "level": "CRITICAL"
+    },
+    {
+      "id": "R-02",
+      "name": "Compatibility fallback can keep obsolete aliases alive longer than intended",
+      "level": "CRITICAL"
+    },
+    {
+      "id": "R-03",
+      "name": "Empty-tree fallback can hide availability issues if telemetry is weak",
+      "level": "HIGH"
+    },
+    {
+      "id": "R-04",
+      "name": "First functional cut without measurable gates would create an under-evidenced release",
+      "level": "HIGH"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G-01",
+      "name": "Enterprise-context SSOT absent",
+      "kind": "governance"
+    },
+    {
+      "id": "G-02",
+      "name": "No formal measured parity baseline for shadow retirement",
+      "kind": "evidence"
+    },
+    {
+      "id": "G-03",
+      "name": "No retirement gate that binds observability to cutover",
+      "kind": "process"
+    }
+  ],
+  "nextAuthorizedStep": {
+    "id": "READINESS_W5_03A_OBSERVABILITY",
+    "label": "W5-03A Observability Prerequisites"
+  },
+  "recommendations": [
+    "Keep the canonical backend as the owner of truth.",
+    "Authorize W5-03A Observability Prerequisites next.",
+    "Keep Oportunidades deferred pending gates.",
+    "Keep Commercial Coverage on shadow until parity is measured.",
+    "Delay retirement of compatibility fallbacks until the evidence is explicit."
+  ],
+  "summary": {
+    "w5_01_findingsReviewed": 3,
+    "w5_02_findingsReviewed": 3,
+    "w5_03_findingsReviewed": 3,
+    "blockerCount": 3,
+    "criticalCount": 2,
+    "highCount": 3,
+    "goCount": 0,
+    "goWithRestrictionsCount": 1,
+    "authorizedCount": 1,
+    "deferredPendingGatesCount": 2,
+    "noGoCount": 3,
+    "readinessCount": 7,
+    "gapsCount": 3
+  }
+}
