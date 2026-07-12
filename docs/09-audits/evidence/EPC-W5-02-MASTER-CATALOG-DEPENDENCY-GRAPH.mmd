@@ -1,0 +1,105 @@
+flowchart LR
+  %% Canonical chain
+  http_bootstrap["HTTP bootstrap"]
+  master_catalog_routes["master-catalog routes"]
+  master_catalog_controller["master-catalog controller"]
+  master_catalog_runtime["master-catalog runtime"]
+  master_catalog_service["master-catalog service"]
+  master_catalog_prisma_repository["master-catalog Prisma repository"]
+  master_catalog_repository_contract["repository contract"]
+  master_catalog_service_contract["service contract"]
+  master_catalog_dto["DTO layer"]
+  master_catalog_http_contract["HTTP contract"]
+  master_catalog_http_schema["HTTP schema"]
+  master_catalog_domain_contract["domain contract"]
+  master_catalog_read_model["read model"]
+  master_catalog_mapper["domain mapper"]
+  master_catalog_seed["master-catalog seed"]
+  backend_prisma_seed["Prisma seed runner"]
+  backend_prisma_schema["Prisma schema"]
+
+  %% Consumer and adapter chain
+  master_catalog_api_client["Master Catalog API client"]
+  oportunidades_page["Oportunidades"]
+  load_estrutura_comercial_from_master_catalog["load Estrutura Comercial"]
+  master_catalog_to_estrutura_comercial_mapper["Estrutura Comercial mapper"]
+  estrutura_comercial_page["Estrutura Comercial"]
+  commercial_structure_backend_mapper["commercial-structure backend mapper"]
+  load_commercial_structure_coverage_tree["load Commercial Coverage"]
+  commercial_structure_coverage_mapper["commercial coverage mapper"]
+  commercial_coverage_page["Commercial Coverage"]
+  commercial_coverage_shadow_comparator["shadow comparator"]
+  credit_pf_catalog["creditPfCatalog"]
+  loan_with_collateral_metadata["loan-with-collateral metadata"]
+  loan_with_collateral_adapter["loan-with-collateral adapter"]
+
+  %% Compatibility / legacy chain
+  catalog_repository["catalogRepository"]
+  commercial_repository["commercialRepository"]
+  simulator_repository["simulatorRepository"]
+  store_index["store/index.ts"]
+  tabelas_comerciais_page["Tabelas Comerciais"]
+  simulador_page["Simulador"]
+
+  http_bootstrap --> master_catalog_routes
+  master_catalog_routes --> master_catalog_controller
+  master_catalog_routes --> master_catalog_http_schema
+  master_catalog_controller --> master_catalog_runtime
+  master_catalog_controller --> master_catalog_http_schema
+  master_catalog_runtime --> master_catalog_service
+  master_catalog_runtime --> master_catalog_service_contract
+  master_catalog_runtime --> master_catalog_dto
+  master_catalog_service --> master_catalog_prisma_repository
+  master_catalog_service --> master_catalog_service_contract
+  master_catalog_prisma_repository --> master_catalog_repository_contract
+  master_catalog_prisma_repository --> master_catalog_domain_contract
+  master_catalog_prisma_repository --> master_catalog_read_model
+  master_catalog_prisma_repository --> master_catalog_mapper
+  master_catalog_dto --> master_catalog_read_model
+  master_catalog_http_contract --> master_catalog_dto
+  master_catalog_http_contract --> master_catalog_http_schema
+  master_catalog_http_schema --> master_catalog_domain_contract
+  master_catalog_mapper --> master_catalog_read_model
+  master_catalog_seed --> master_catalog_read_model
+  backend_prisma_seed --> master_catalog_seed
+  backend_prisma_seed --> backend_prisma_schema
+
+  master_catalog_api_client --> master_catalog_routes
+  oportunidades_page --> master_catalog_api_client
+  load_estrutura_comercial_from_master_catalog --> master_catalog_api_client
+  load_estrutura_comercial_from_master_catalog --> master_catalog_to_estrutura_comercial_mapper
+  master_catalog_to_estrutura_comercial_mapper --> master_catalog_api_client
+  estrutura_comercial_page --> load_estrutura_comercial_from_master_catalog
+  commercial_structure_backend_mapper --> master_catalog_read_model
+  load_commercial_structure_coverage_tree --> master_catalog_api_client
+  load_commercial_structure_coverage_tree --> commercial_structure_coverage_mapper
+  load_commercial_structure_coverage_tree --> commercial_coverage_shadow_comparator
+  load_commercial_structure_coverage_tree --> credit_pf_catalog
+  commercial_structure_coverage_mapper --> master_catalog_api_client
+  commercial_coverage_page --> load_commercial_structure_coverage_tree
+  commercial_coverage_shadow_comparator --> master_catalog_api_client
+  commercial_coverage_shadow_comparator --> credit_pf_catalog
+
+  loan_with_collateral_adapter --> master_catalog_runtime
+  loan_with_collateral_adapter --> loan_with_collateral_metadata
+
+  catalog_repository --> credit_pf_catalog
+  commercial_repository --> credit_pf_catalog
+  simulator_repository --> commercial_repository
+  store_index --> credit_pf_catalog
+  tabelas_comerciais_page --> commercial_repository
+  simulador_page --> simulator_repository
+
+  classDef canonical fill:#0f172a,color:#ffffff,stroke:#94a3b8,stroke-width:1px;
+  classDef consumer fill:#064e3b,color:#ffffff,stroke:#34d399,stroke-width:1px;
+  classDef compatibility fill:#4c1d95,color:#ffffff,stroke:#c4b5fd,stroke-width:1px;
+  classDef legacy fill:#78350f,color:#ffffff,stroke:#f59e0b,stroke-width:1px;
+  classDef shadow fill:#7f1d1d,color:#ffffff,stroke:#f87171,stroke-width:1px;
+  classDef persistence fill:#1d4ed8,color:#ffffff,stroke:#93c5fd,stroke-width:1px;
+
+  class http_bootstrap,master_catalog_routes,master_catalog_controller,master_catalog_runtime,master_catalog_service,master_catalog_prisma_repository,master_catalog_repository_contract,master_catalog_service_contract,master_catalog_dto,master_catalog_http_contract,master_catalog_http_schema,master_catalog_domain_contract,master_catalog_read_model,master_catalog_mapper,master_catalog_seed canonical;
+  class backend_prisma_seed,backend_prisma_schema persistence;
+  class master_catalog_api_client,oportunidades_page,load_estrutura_comercial_from_master_catalog,master_catalog_to_estrutura_comercial_mapper,estrutura_comercial_page,commercial_structure_backend_mapper,loan_with_collateral_metadata,loan_with_collateral_adapter consumer;
+  class load_commercial_structure_coverage_tree,commercial_structure_coverage_mapper,commercial_coverage_page,commercial_coverage_shadow_comparator shadow;
+  class catalog_repository,commercial_repository,simulator_repository,store_index,tabelas_comerciais_page,simulador_page compatibility;
+  class credit_pf_catalog legacy;
