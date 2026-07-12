@@ -1,0 +1,508 @@
+{
+  "auditId": "EPC-W5-01",
+  "title": "Master Catalog Complete Inventory",
+  "generatedAt": "2026-07-12T12:10:52.8676410-03:00",
+  "branch": "homologation/bootstrap-vps",
+  "head": "54f8388138ce0ed3f87e691976a7efda7a434d22",
+  "documentsReviewed": [
+    "docs/00-master/DCA-FINQZ-PRO-ENTERPRISE-v2.md",
+    "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md",
+    "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md",
+    "docs/05-adr/ADR-004-commercial-master-catalog.md",
+    "docs/05-adr/ADR-010-loan-with-collateral-canonical-taxonomy.md",
+    "docs/01-architecture/EPC-W4-01-CONSUMER-CANONICAL-INVENTORY.md",
+    "docs/01-architecture/EPC-W4-02-MASTER-CATALOG-PROMOTION.md",
+    "docs/01-architecture/SDC-FASE-2.7-MASTER-CATALOG-CANONICALIZATION-BLUEPRINT.md",
+    "docs/01-architecture/SDC-FASE-3.1-MASTER-CATALOG-RUNTIME.md",
+    "docs/01-architecture/SDC-FASE-3.2A-SIMULATION-CONTRACT-ADOPTION-AUDIT.md",
+    "docs/02-architecture/ARCH-041-MASTER-CATALOG-CONSUMER-MAPPING.md",
+    "docs/02-architecture/ARCH-042-MASTER-CATALOG-API-CONTRACT-DESIGN.md",
+    "docs/02-architecture/ARCH-043-MASTER-CATALOG-PERSISTENCE-STRATEGY.md",
+    "docs/02-architecture/ARCH-044-MASTER-CATALOG-ROLLOUT-MIGRATION-STRATEGY.md",
+    "docs/02-architecture/ARCH-046-master-catalog-persistence-blueprint.md",
+    "docs/02-architecture/ARCH-047-master-catalog-repository-contract-design.md",
+    "docs/02-architecture/ARCH-048-master-catalog-api-read-contract-blueprint.md",
+    "docs/02-architecture/ARCH-049-master-catalog-application-service-blueprint.md",
+    "docs/02-architecture/ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md",
+    "docs/02-architecture/ARCH-051-master-catalog-runtime-readiness-checklist.md",
+    "docs/02-architecture/ARCH-052-master-catalog-architecture-consolidation-review.md",
+    "docs/02-architecture/ARCH-053-master-catalog-runtime-gap-assessment.md",
+    "docs/02-architecture/ARCH-054-master-catalog-runtime-entry-review.md",
+    "docs/02-architecture/ARCH-055-catalog-consumption-architecture.md"
+  ],
+  "officialCatalog": {
+    "owner": "backend/src/modules/master-catalog",
+    "runtime": "backend/src/modules/master-catalog/application/master-catalog.runtime.ts",
+    "service": "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+    "repository": "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+    "seed": "backend/src/modules/master-catalog/domain/master-catalog.seed.ts",
+    "contract": "backend/src/modules/master-catalog/domain/master-catalog.contract.ts",
+    "readModel": "backend/src/modules/master-catalog/domain/master-catalog.read-model.ts",
+    "httpRoutes": [
+      "GET /api/v1/master-catalog/tree",
+      "GET /api/v1/master-catalog/segments",
+      "GET /api/v1/master-catalog/products",
+      "GET /api/v1/master-catalog/products/:productId/subproducts",
+      "GET /api/v1/master-catalog/subproducts/:subproductId/modalities"
+    ],
+    "permission": "master-catalog:read",
+    "runtimeMetadata": {
+      "version": "3.1.0",
+      "compatibilityMode": "CANONICAL",
+      "source": "backend/master-catalog"
+    },
+    "treeSummary": {
+      "segments": 6,
+      "products": 5,
+      "subproducts": 5,
+      "modalities": 10
+    },
+    "persistence": {
+      "models": [
+        "MasterCatalogSegment",
+        "MasterCatalogProduct",
+        "MasterCatalogSubproduct",
+        "MasterCatalogModality"
+      ],
+      "statusEnum": "CatalogStatus",
+      "tenantScoped": true,
+      "readOnlySurface": true
+    }
+  },
+  "consumers": [
+    {
+      "id": "C-01",
+      "module": "Oportunidades",
+      "file": "src/pages/Oportunidades.tsx",
+      "role": "HTTP consumer",
+      "dependency": "masterCatalogApi.getCatalogTree",
+      "status": "MIGRATED",
+      "criticality": "P1",
+      "evidence": [
+        "import at line 7",
+        "fetch at line 1068",
+        "fallback only to empty tree on error"
+      ]
+    },
+    {
+      "id": "C-02",
+      "module": "Estrutura Comercial",
+      "file": "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts; src/pages/EstruturaComercial.tsx",
+      "role": "HTTP consumer / bootstrap consumer",
+      "dependency": "masterCatalogApi.getCatalogTree + mapper",
+      "status": "MIGRATED",
+      "criticality": "P1",
+      "evidence": [
+        "bootstrap from Master Catalog",
+        "sync action calls same canonical API"
+      ]
+    },
+    {
+      "id": "C-03",
+      "module": "Commercial Coverage",
+      "file": "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts; src/pages/CommercialCoverage.tsx",
+      "role": "shadow read consumer",
+      "dependency": "masterCatalogApi.getCatalogTree + creditPfCatalog shadow",
+      "status": "SHADOW_READ",
+      "criticality": "P1",
+      "evidence": [
+        "primary source is Master Catalog",
+        "shadow comparator reads creditPfCatalog",
+        "logs divergence to console"
+      ]
+    },
+    {
+      "id": "C-04",
+      "module": "Commercial Structure mapper backend",
+      "file": "backend/src/modules/commercial-structure/domain/commercial-structure.mapper.ts",
+      "role": "adapter consumer",
+      "dependency": "MasterCatalogTreeReadModel",
+      "status": "MIGRATED",
+      "criticality": "P1",
+      "evidence": [
+        "backend consumer of canonical tree",
+        "no local catalog source"
+      ]
+    },
+    {
+      "id": "C-05",
+      "module": "Loan with collateral adapter",
+      "file": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+      "role": "adapter consumer",
+      "dependency": "masterCatalogRuntime.findProductByCode / findSubproductByCode",
+      "status": "PARTIALLY_MIGRATED",
+      "criticality": "P0",
+      "evidence": [
+        "runtime canonical metadata lookup",
+        "fallback to request fields remains present",
+        "alias-based subflow resolution remains present"
+      ]
+    },
+    {
+      "id": "C-06",
+      "module": "Tabelas Comerciais",
+      "file": "src/pages/TabelasComerciais.tsx",
+      "role": "service consumer",
+      "dependency": "commercialApi.listTables + commercialRepository helpers",
+      "status": "PARTIALLY_MIGRATED",
+      "criticality": "P1",
+      "evidence": [
+        "backend API for tables exists",
+        "local helpers still drive selectors",
+        "fallback message indicates no local fallback for tables fetch, but catalog helpers remain local"
+      ]
+    },
+    {
+      "id": "C-07",
+      "module": "Simulador",
+      "file": "src/pages/Simulador.tsx",
+      "role": "parallel source consumer",
+      "dependency": "simulatorRepository + commercialRepository",
+      "status": "PARALLEL_SOURCE",
+      "criticality": "P1",
+      "evidence": [
+        "page still bound to local simulator state",
+        "commercialRepository remains part of runtime path"
+      ]
+    },
+    {
+      "id": "C-08",
+      "module": "catalogRepository",
+      "file": "src/data/catalogRepository.ts",
+      "role": "static data consumer / compatibility adapter",
+      "dependency": "creditPfCatalog",
+      "status": "LEGACY",
+      "criticality": "P2",
+      "evidence": [
+        "header says it returns local catalog data",
+        "no backend read path"
+      ]
+    },
+    {
+      "id": "C-09",
+      "module": "commercialRepository",
+      "file": "src/data/commercialRepository.ts",
+      "role": "static data consumer / compatibility support",
+      "dependency": "creditPfCatalog + local memory state",
+      "status": "PARALLEL_SOURCE",
+      "criticality": "P1",
+      "evidence": [
+        "declared as source for UI comercial and simulator",
+        "depends on creditPfCatalog",
+        "uses in-memory provider/table/condition state"
+      ]
+    },
+    {
+      "id": "C-10",
+      "module": "Store local",
+      "file": "src/store/index.ts",
+      "role": "static data consumer",
+      "dependency": "creditPfCatalog",
+      "status": "LEGACY",
+      "criticality": "P2",
+      "evidence": [
+        "builds EstruturaComercial from creditPfCatalog",
+        "explicit comments say it uses creditPfCatalog as source"
+      ]
+    }
+  ],
+  "parallelSources": [
+    {
+      "file": "src/data/creditPfCatalog.ts",
+      "role": "local taxonomy source",
+      "classification": "LEGACY",
+      "evidence": [
+        "contains EMPRESTIMO_COM_GARANTIA, AUTO_EQUITY and HOME_EQUITY",
+        "used by catalogRepository, commercialRepository, store and shadow comparator"
+      ]
+    },
+    {
+      "file": "src/data/catalogRepository.ts",
+      "role": "compatibility adapter",
+      "classification": "LEGACY"
+    },
+    {
+      "file": "src/data/commercialRepository.ts",
+      "role": "parallel commercial source",
+      "classification": "PARALLEL_SOURCE"
+    },
+    {
+      "file": "src/data/simulatorRepository.ts",
+      "role": "in-memory simulator support",
+      "classification": "PARALLEL_SOURCE"
+    },
+    {
+      "file": "src/store/index.ts",
+      "role": "derived local store",
+      "classification": "LEGACY"
+    }
+  ],
+  "repositories": [
+    {
+      "file": "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+      "type": "official",
+      "status": "ACTIVE"
+    },
+    {
+      "file": "src/data/catalogRepository.ts",
+      "type": "compatibility",
+      "status": "ACTIVE"
+    },
+    {
+      "file": "src/data/commercialRepository.ts",
+      "type": "compatibility",
+      "status": "ACTIVE"
+    },
+    {
+      "file": "src/data/simulatorRepository.ts",
+      "type": "compatibility",
+      "status": "ACTIVE"
+    }
+  ],
+  "seeds": [
+    {
+      "file": "backend/src/modules/master-catalog/domain/master-catalog.seed.ts",
+      "type": "official",
+      "status": "ACTIVE",
+      "evidence": [
+        "MASTER_CATALOG_INITIAL_TREE contains the canonical tree",
+        "tests assert 6 segments, Consignado, and expected modalities"
+      ]
+    },
+    {
+      "file": "backend/prisma/seed.ts",
+      "type": "runner",
+      "status": "ACTIVE",
+      "evidence": [
+        "upserts masterCatalogSegment, masterCatalogProduct, masterCatalogSubproduct and masterCatalogModality",
+        "seedMasterCatalog is invoked from the main seed flow"
+      ]
+    }
+  ],
+  "featureFlags": [
+    {
+      "name": "VITE_SIMULATION_RUNTIME_SHADOW_ENABLED",
+      "scope": "frontend simulation runtime",
+      "defaultValue": false,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "VITE_SIMULATION_RUNTIME_PRIMARY_ENABLED",
+      "scope": "frontend simulation runtime",
+      "defaultValue": false,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "VITE_SIMULATION_RUNTIME_FALLBACK_ENABLED",
+      "scope": "frontend simulation runtime",
+      "defaultValue": true,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "VITE_SIMULATION_RUNTIME_EVIDENCE_ENABLED",
+      "scope": "frontend simulation runtime",
+      "defaultValue": false,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "VITE_REMOTE_EVIDENCE_ENABLED",
+      "scope": "frontend simulation runtime",
+      "defaultValue": false,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "loan-with-collateral",
+      "scope": "backend product metadata",
+      "defaultValue": true,
+      "status": "ACTIVE"
+    }
+  ],
+  "shadowReads": [
+    {
+      "file": "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+      "primarySource": "Master Catalog",
+      "shadowSource": "creditPfCatalog",
+      "status": "ACTIVE"
+    },
+    {
+      "file": "src/features/simulation-runtime/hooks/useSimulationRuntimeShadow.ts",
+      "primarySource": "legacy simulation result",
+      "shadowSource": "runtime execution",
+      "status": "ACTIVE"
+    }
+  ],
+  "tests": [
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.contract.test.ts",
+      "coverage": "domain contract"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.read-model.test.ts",
+      "coverage": "read model"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.mapper.test.ts",
+      "coverage": "normalization"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.seed.test.ts",
+      "coverage": "official seed"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.service.test.ts",
+      "coverage": "service contract"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.runtime.test.ts",
+      "coverage": "runtime facade"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.controller.test.ts",
+      "coverage": "controller"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.routes.test.ts",
+      "coverage": "HTTP routes"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.http.contract.test.ts",
+      "coverage": "HTTP contract"
+    },
+    {
+      "file": "backend/src/tests/unit/master-catalog/master-catalog.validator.test.ts",
+      "coverage": "validator"
+    },
+    {
+      "file": "src/features/master-catalog/masterCatalogToEstruturaComercial.mapper.test.ts",
+      "coverage": "frontend mapper"
+    },
+    {
+      "file": "src/features/commercial-structure/commercialStructureCoverage.mapper.test.ts",
+      "coverage": "frontend coverage mapper"
+    },
+    {
+      "file": "src/features/commercial-structure/commercialCoverageShadowComparator.test.ts",
+      "coverage": "shadow comparator"
+    },
+    {
+      "file": "src/features/simulation-runtime/simulation-runtime.feature.test.ts",
+      "coverage": "simulation shadow runtime"
+    }
+  ],
+  "observability": [
+    {
+      "file": "backend/src/infra/observability/*",
+      "type": "backend observability"
+    },
+    {
+      "file": "backend/src/core/http/request-correlation.ts",
+      "type": "request correlation"
+    },
+    {
+      "file": "backend/src/modules/audit/*",
+      "type": "audit trail"
+    },
+    {
+      "file": "backend/src/modules/simulation/evidence/*",
+      "type": "simulation evidence"
+    },
+    {
+      "file": "src/features/simulation-runtime/telemetry/simulation-runtime.telemetry.ts",
+      "type": "frontend telemetry"
+    },
+    {
+      "file": "src/features/commercial-structure/commercialCoverageShadowComparator.ts",
+      "type": "shadow divergence logging"
+    }
+  ],
+  "risks": [
+    {
+      "severity": "CRITICAL",
+      "risk": "creditPfCatalog remains a parallel SSOT for products PF",
+      "evidence": [
+        "src/data/creditPfCatalog.ts",
+        "src/store/index.ts",
+        "src/data/catalogRepository.ts",
+        "src/data/commercialRepository.ts"
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "risk": "commercialRepository still supports Simulador and Tabelas Comerciais",
+      "evidence": [
+        "src/pages/Simulador.tsx",
+        "src/pages/TabelasComerciais.tsx"
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "risk": "loan-with-collateral adapter still uses aliases and fallback request fields",
+      "evidence": [
+        "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+        "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts"
+      ]
+    },
+    {
+      "severity": "MEDIUM",
+      "risk": "CommercialCoverage relies on shadow comparison against the local catalog",
+      "evidence": [
+        "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+        "src/features/commercial-structure/commercialCoverageShadowComparator.ts"
+      ]
+    },
+    {
+      "severity": "MEDIUM",
+      "risk": "Oportunidades falls back to an empty tree on catalog error",
+      "evidence": [
+        "src/pages/Oportunidades.tsx"
+      ]
+    },
+    {
+      "severity": "MEDIUM",
+      "risk": "No dedicated master catalog rollout flag was found",
+      "evidence": [
+        "repo-wide search for master-catalog flags"
+      ]
+    }
+  ],
+  "gaps": [
+    "docs/00-master/FINQZ-PRO-ENTERPRISE-CONTEXT-SSOT.md is absent",
+    "No dedicated master catalog adoption metric was found",
+    "No evidence of complete removal of creditPfCatalog/catalogRepository/commercialRepository",
+    "No proof that Simulador and Tabelas Comerciais are fully source-of-truth agnostic",
+    "No master-catalog-specific divergence metric or counter was found"
+  ],
+  "recommendations": [
+    "Keep Master Catalog backend as the only canonical taxonomic owner.",
+    "Classify creditPfCatalog, catalogRepository and commercialRepository formally as compatibility only.",
+    "Move Simulador and Tabelas Comerciais to canonical read paths before removal of legacy helpers.",
+    "Reduce alias/fallback reliance in loan-with-collateral adapter by ADR-backed decision.",
+    "Add observable adoption metrics for each consumer before W5-02."
+  ],
+  "migrationCandidates": [
+    "src/data/creditPfCatalog.ts",
+    "src/data/catalogRepository.ts",
+    "src/data/commercialRepository.ts",
+    "src/data/simulatorRepository.ts",
+    "src/store/index.ts",
+    "src/pages/Simulador.tsx",
+    "src/pages/TabelasComerciais.tsx",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+    "src/features/commercial-structure/commercialCoverageShadowComparator.ts",
+    "src/pages/Oportunidades.tsx"
+  ],
+  "summary": {
+    "consumerCount": 10,
+    "distribution": {
+      "MIGRATED": 3,
+      "PARTIALLY_MIGRATED": 2,
+      "SHADOW_READ": 1,
+      "LEGACY": 2,
+      "PARALLEL_SOURCE": 2,
+      "UNKNOWN": 0,
+      "NOT_APPLICABLE": 0
+    },
+    "officialImplementation": "backend/src/modules/master-catalog",
+    "verdict": "GO WITH RESTRICTIONS"
+  }
+}
