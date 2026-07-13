@@ -1,0 +1,32 @@
+graph TD
+  ENV[process.env]
+  ENVFILES[backend/.env via test bootstrap only]
+  APP[backend/src/config/app.ts]
+  REDIS_CLIENT[backend/src/core/redis/redis.client.ts]
+  READY[GET /ready in backend/src/core/http/fastify.ts]
+  HEALTH[GET /health]
+  LIVE[GET /live]
+  RATELIMIT[backend/src/core/http/plugins/rate-limit.plugin.ts]
+  DOCKER[backend/docker-compose.yml]
+  REDISSVC[(redis service)]
+  STAGINGDOC[backend/docs/staging-smoke-checklist.md]
+  MASTERDOC[docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md]
+  AUTH[backend/src/modules/auth/*]
+  MASTERCAT[backend/src/modules/master-catalog/*]
+
+  ENV --> APP
+  ENVFILES --> APP
+  APP --> REDIS_CLIENT
+  REDIS_CLIENT --> READY
+  REDIS_CLIENT --> RATELIMIT
+  APP --> HEALTH
+  APP --> LIVE
+  DOCKER --> REDISSVC
+  REDISSVC --> READY
+  REDISSVC --> RATELIMIT
+  STAGINGDOC --> READY
+  MASTERDOC --> READY
+  MASTERDOC --> REDISSVC
+
+  AUTH -. no direct Redis dependency observed .-> REDIS_CLIENT
+  MASTERCAT -. no direct Redis dependency observed .-> REDIS_CLIENT
