@@ -3,11 +3,16 @@ import type { ZodError } from 'zod';
 
 import { AppError } from '../../../../shared/errors/AppError.js';
 import { logger } from '../../../../shared/logger.js';
+import { ErrorCategory, EventSeverity } from '../../../../shared/telemetry/enums.js';
 import {
   MasterCatalogListQuerySchema,
   MasterCatalogProductIdParamsSchema,
   MasterCatalogSubproductIdParamsSchema,
 } from '../../validators/master-catalog.http.schema.js';
+import {
+  createMasterCatalogTelemetryEmitter,
+  MasterCatalogEventName,
+} from '../../telemetry/index.js';
 import type { MasterCatalogServiceContract } from '../../services/master-catalog.service.contract.js';
 import { masterCatalogService } from '../../services/master-catalog.service.js';
 import { MasterCatalogRuntime } from '../../application/master-catalog.runtime.js';
@@ -33,6 +38,75 @@ const getTenantId = (request: FastifyRequest) => {
   }
 
   return tenantId;
+};
+
+const resolveTelemetryFailure = (error: unknown) => {
+  if (isZodError(error)) {
+    return {
+      errorCategory: ErrorCategory.VALIDATION,
+      errorCode: 'VALIDATION_ERROR',
+      errorMessage: 'Validation error',
+    };
+  }
+
+  if (error instanceof AppError) {
+    switch (error.code) {
+      case 'BAD_REQUEST':
+      case 'VALIDATION_ERROR':
+        return {
+          errorCategory: ErrorCategory.VALIDATION,
+          errorCode: error.code,
+          errorMessage: error.message,
+        };
+      case 'UNAUTHORIZED':
+        return {
+          errorCategory: ErrorCategory.AUTHENTICATION,
+          errorCode: error.code,
+          errorMessage: error.message,
+        };
+      case 'FORBIDDEN':
+        return {
+          errorCategory: ErrorCategory.AUTHORIZATION,
+          errorCode: error.code,
+          errorMessage: error.message,
+        };
+      case 'CONFLICT':
+      case 'NOT_FOUND':
+        return {
+          errorCategory: ErrorCategory.CONTRACT,
+          errorCode: error.code,
+          errorMessage: error.message,
+        };
+      default:
+        return {
+          errorCategory: ErrorCategory.UNKNOWN,
+          errorCode: error.code,
+          errorMessage: error.message,
+        };
+    }
+  }
+
+  if (error instanceof Error) {
+    return {
+      errorCategory: ErrorCategory.UNKNOWN,
+      errorCode: 'INTERNAL_ERROR',
+      errorMessage: error.message || 'Internal server error',
+    };
+  }
+
+  return {
+    errorCategory: ErrorCategory.UNKNOWN,
+    errorCode: 'INTERNAL_ERROR',
+    errorMessage: 'Internal server error',
+  };
+};
+
+const emitTelemetrySafely = (emit: () => void) => {
+  try {
+    emit();
+  } catch {
+    return;
+  }
 };
 
 const handleControllerError = (error: unknown, reply: FastifyReply) => {
@@ -78,21 +152,81 @@ export class MasterCatalogController {
     return new MasterCatalogRuntime(this.service);
   }
 
+  private async executeWithTelemetry<T>(
+    telemetry: ReturnType<typeof createMasterCatalogTelemetryEmitter>,
+    startedAt: number,
+    execute: () => Promise<T>,
+    mapResult: (value: T) => 'SUCCESS' | 'EMPTY' | 'MATCH' | 'MISMATCH' | 'DEFERRED',
+  ): Promise<T> {
+    const result = await execute();
+    emitTelemetrySafely(() => {
+      telemetry.primaryUsed({
+        eventName: MasterCatalogEventName.PRIMARY_USED,
+        severity: EventSeverity.INFO,
+        usageCount: 1,
+      });
+    });
+    emitTelemetrySafely(() => {
+      telemetry.requestFinished({
+        eventName: MasterCatalogEventName.REQUEST_FINISHED,
+        severity: EventSeverity.INFO,
+        latencyMs: Math.max(Date.now() - startedAt, 0),
+        result: mapResult(result),
+      });
+    });
+
+    return result;
+  }
+
   getTree = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    const telemetry = createMasterCatalogTelemetryEmitter(request, {
+      source: 'master-catalog.controller',
+    });
+    const startedAt = Date.now();
+
+    emitTelemetrySafely(() => {
+      telemetry.requestStarted({
+        eventName: MasterCatalogEventName.REQUEST_STARTED,
+        severity: EventSeverity.INFO,
+        operation: 'getTree',
+        httpMethod: request.method,
+        httpRoute: request.url,
+      });
+    });
+
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
-      const result = await this.runtime.getCatalogTree({
-        tenantId,
-        ...(query.status !== undefined ? { status: query.status } : {}),
-        ...(query.search !== undefined ? { search: query.search } : {}),
-      });
+      const result = await this.executeWithTelemetry(
+        telemetry,
+        startedAt,
+        () =>
+          this.runtime.getCatalogTree({
+            tenantId,
+            ...(query.status !== undefined ? { status: query.status } : {}),
+            ...(query.search !== undefined ? { search: query.search } : {}),
+          }),
+        () => 'SUCCESS',
+      );
 
       return reply.send({
         success: true,
         data: result,
       });
     } catch (error) {
+      const failure = resolveTelemetryFailure(error);
+
+      emitTelemetrySafely(() => {
+        telemetry.requestFailed({
+          eventName: MasterCatalogEventName.REQUEST_FAILED,
+          severity: EventSeverity.ERROR,
+          latencyMs: Math.max(Date.now() - startedAt, 0),
+          errorCategory: failure.errorCategory,
+          errorCode: failure.errorCode,
+          errorMessage: failure.errorMessage,
+        });
+      });
+
       return handleControllerError(error, reply);
     }
   };
@@ -101,20 +235,54 @@ export class MasterCatalogController {
     request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
+    const telemetry = createMasterCatalogTelemetryEmitter(request, {
+      source: 'master-catalog.controller',
+    });
+    const startedAt = Date.now();
+
+    emitTelemetrySafely(() => {
+      telemetry.requestStarted({
+        eventName: MasterCatalogEventName.REQUEST_STARTED,
+        severity: EventSeverity.INFO,
+        operation: 'listSegments',
+        httpMethod: request.method,
+        httpRoute: request.url,
+      });
+    });
+
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
-      const result = await this.runtime.listSegments({
-        tenantId,
-        ...(query.status !== undefined ? { status: query.status } : {}),
-        ...(query.search !== undefined ? { search: query.search } : {}),
-      });
+      const result = await this.executeWithTelemetry(
+        telemetry,
+        startedAt,
+        () =>
+          this.runtime.listSegments({
+            tenantId,
+            ...(query.status !== undefined ? { status: query.status } : {}),
+            ...(query.search !== undefined ? { search: query.search } : {}),
+          }),
+        (value) => (value.length > 0 ? 'SUCCESS' : 'EMPTY'),
+      );
 
       return reply.send({
         success: true,
         data: result,
       });
     } catch (error) {
+      const failure = resolveTelemetryFailure(error);
+
+      emitTelemetrySafely(() => {
+        telemetry.requestFailed({
+          eventName: MasterCatalogEventName.REQUEST_FAILED,
+          severity: EventSeverity.ERROR,
+          latencyMs: Math.max(Date.now() - startedAt, 0),
+          errorCategory: failure.errorCategory,
+          errorCode: failure.errorCode,
+          errorMessage: failure.errorMessage,
+        });
+      });
+
       return handleControllerError(error, reply);
     }
   };
@@ -123,20 +291,54 @@ export class MasterCatalogController {
     request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
+    const telemetry = createMasterCatalogTelemetryEmitter(request, {
+      source: 'master-catalog.controller',
+    });
+    const startedAt = Date.now();
+
+    emitTelemetrySafely(() => {
+      telemetry.requestStarted({
+        eventName: MasterCatalogEventName.REQUEST_STARTED,
+        severity: EventSeverity.INFO,
+        operation: 'listProducts',
+        httpMethod: request.method,
+        httpRoute: request.url,
+      });
+    });
+
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
-      const result = await this.runtime.listProducts({
-        tenantId,
-        ...(query.status !== undefined ? { status: query.status } : {}),
-        ...(query.search !== undefined ? { search: query.search } : {}),
-      });
+      const result = await this.executeWithTelemetry(
+        telemetry,
+        startedAt,
+        () =>
+          this.runtime.listProducts({
+            tenantId,
+            ...(query.status !== undefined ? { status: query.status } : {}),
+            ...(query.search !== undefined ? { search: query.search } : {}),
+          }),
+        (value) => (value.length > 0 ? 'SUCCESS' : 'EMPTY'),
+      );
 
       return reply.send({
         success: true,
         data: result,
       });
     } catch (error) {
+      const failure = resolveTelemetryFailure(error);
+
+      emitTelemetrySafely(() => {
+        telemetry.requestFailed({
+          eventName: MasterCatalogEventName.REQUEST_FAILED,
+          severity: EventSeverity.ERROR,
+          latencyMs: Math.max(Date.now() - startedAt, 0),
+          errorCategory: failure.errorCategory,
+          errorCode: failure.errorCode,
+          errorMessage: failure.errorMessage,
+        });
+      });
+
       return handleControllerError(error, reply);
     }
   };
@@ -145,22 +347,56 @@ export class MasterCatalogController {
     request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
+    const telemetry = createMasterCatalogTelemetryEmitter(request, {
+      source: 'master-catalog.controller',
+    });
+    const startedAt = Date.now();
+
+    emitTelemetrySafely(() => {
+      telemetry.requestStarted({
+        eventName: MasterCatalogEventName.REQUEST_STARTED,
+        severity: EventSeverity.INFO,
+        operation: 'listSubproductsByProduct',
+        httpMethod: request.method,
+        httpRoute: request.url,
+      });
+    });
+
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
       const params = MasterCatalogProductIdParamsSchema.parse(request.params);
-      const result = await this.runtime.listSubproductsByProduct({
-        tenantId,
-        productId: params.productId,
-        ...(query.status !== undefined ? { status: query.status } : {}),
-        ...(query.search !== undefined ? { search: query.search } : {}),
-      });
+      const result = await this.executeWithTelemetry(
+        telemetry,
+        startedAt,
+        () =>
+          this.runtime.listSubproductsByProduct({
+            tenantId,
+            productId: params.productId,
+            ...(query.status !== undefined ? { status: query.status } : {}),
+            ...(query.search !== undefined ? { search: query.search } : {}),
+          }),
+        (value) => (value.length > 0 ? 'SUCCESS' : 'EMPTY'),
+      );
 
       return reply.send({
         success: true,
         data: result,
       });
     } catch (error) {
+      const failure = resolveTelemetryFailure(error);
+
+      emitTelemetrySafely(() => {
+        telemetry.requestFailed({
+          eventName: MasterCatalogEventName.REQUEST_FAILED,
+          severity: EventSeverity.ERROR,
+          latencyMs: Math.max(Date.now() - startedAt, 0),
+          errorCategory: failure.errorCategory,
+          errorCode: failure.errorCode,
+          errorMessage: failure.errorMessage,
+        });
+      });
+
       return handleControllerError(error, reply);
     }
   };
@@ -169,22 +405,56 @@ export class MasterCatalogController {
     request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
+    const telemetry = createMasterCatalogTelemetryEmitter(request, {
+      source: 'master-catalog.controller',
+    });
+    const startedAt = Date.now();
+
+    emitTelemetrySafely(() => {
+      telemetry.requestStarted({
+        eventName: MasterCatalogEventName.REQUEST_STARTED,
+        severity: EventSeverity.INFO,
+        operation: 'listModalitiesBySubproduct',
+        httpMethod: request.method,
+        httpRoute: request.url,
+      });
+    });
+
     try {
       const tenantId = getTenantId(request);
       const query = MasterCatalogListQuerySchema.parse(request.query);
       const params = MasterCatalogSubproductIdParamsSchema.parse(request.params);
-      const result = await this.runtime.listModalitiesBySubproduct({
-        tenantId,
-        subproductId: params.subproductId,
-        ...(query.status !== undefined ? { status: query.status } : {}),
-        ...(query.search !== undefined ? { search: query.search } : {}),
-      });
+      const result = await this.executeWithTelemetry(
+        telemetry,
+        startedAt,
+        () =>
+          this.runtime.listModalitiesBySubproduct({
+            tenantId,
+            subproductId: params.subproductId,
+            ...(query.status !== undefined ? { status: query.status } : {}),
+            ...(query.search !== undefined ? { search: query.search } : {}),
+          }),
+        (value) => (value.length > 0 ? 'SUCCESS' : 'EMPTY'),
+      );
 
       return reply.send({
         success: true,
         data: result,
       });
     } catch (error) {
+      const failure = resolveTelemetryFailure(error);
+
+      emitTelemetrySafely(() => {
+        telemetry.requestFailed({
+          eventName: MasterCatalogEventName.REQUEST_FAILED,
+          severity: EventSeverity.ERROR,
+          latencyMs: Math.max(Date.now() - startedAt, 0),
+          errorCategory: failure.errorCategory,
+          errorCode: failure.errorCode,
+          errorMessage: failure.errorMessage,
+        });
+      });
+
       return handleControllerError(error, reply);
     }
   };

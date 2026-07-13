@@ -1,15 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ErrorCategory, EventSeverity } from '../../../shared/telemetry/enums.js';
 import {
   MASTER_CATALOG_TELEMETRY_EVENT_VERSION,
   MasterCatalogConsumer,
   MasterCatalogEventName,
   MasterCatalogSourceType,
+  createMasterCatalogTelemetryEmitter,
   masterCatalogTelemetryEventSchema,
   masterCatalogRequestFailedEventSchema,
   validateTelemetryContext,
   validateTelemetryEvent,
 } from '../../../modules/master-catalog/telemetry/index.js';
+
+const validatedPayloads: unknown[] = [];
+
+vi.mock('../../../modules/master-catalog/telemetry/validation.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../../../modules/master-catalog/telemetry/validation.js')
+  >('../../../modules/master-catalog/telemetry/validation.js');
+
+  return {
+    ...actual,
+    validateTelemetryEvent: vi.fn((value: unknown) => {
+      validatedPayloads.push(value);
+      return actual.validateTelemetryEvent(value);
+    }),
+  };
+});
 
 describe('master catalog telemetry', () => {
   const baseEvent = {
@@ -175,5 +192,94 @@ describe('master catalog telemetry', () => {
     });
 
     expect(context.success).toBe(true);
+  });
+
+  it('emits passive lifecycle events when request identifiers are available', () => {
+    const emitter = createMasterCatalogTelemetryEmitter({
+      id: 'req-123',
+      requestId: 'req-123',
+      correlationId: 'corr-123',
+      method: 'GET',
+      url: '/master-catalog/segments',
+      headers: {},
+      currentTenant: { tenantId: 'tenant-1' },
+    } as never);
+
+    const started = emitter.requestStarted({
+      eventName: MasterCatalogEventName.REQUEST_STARTED,
+      severity: EventSeverity.INFO,
+      operation: 'listSegments',
+      httpMethod: 'GET',
+      httpRoute: '/master-catalog/segments',
+    });
+
+    const primary = emitter.primaryUsed({
+      eventName: MasterCatalogEventName.PRIMARY_USED,
+      severity: EventSeverity.INFO,
+      usageCount: 1,
+    });
+
+    expect(started.success).toBe(true);
+    expect(primary.success).toBe(true);
+  });
+
+  it('preserves requestId and tenantId without synthesizing trace identifiers', () => {
+    validatedPayloads.length = 0;
+
+    const emitter = createMasterCatalogTelemetryEmitter({
+      requestId: 'req-456',
+      correlationId: undefined,
+      headers: {},
+      currentTenant: { tenantId: 'tenant-2' },
+      method: 'GET',
+      url: '/master-catalog/products',
+    } as never);
+
+    emitter.requestStarted({
+      eventName: MasterCatalogEventName.REQUEST_STARTED,
+      severity: EventSeverity.INFO,
+      operation: 'listProducts',
+      httpMethod: 'GET',
+      httpRoute: '/master-catalog/products',
+    });
+
+    const emitted = validatedPayloads[0] as {
+      requestId?: string;
+      tenantId?: string;
+      correlationId?: string;
+      traceId?: string;
+      spanId?: string;
+    };
+
+    expect(emitted.requestId).toBe('req-456');
+    expect(emitted.tenantId).toBe('tenant-2');
+    expect(emitted.correlationId).toBeUndefined();
+    expect(emitted.traceId).toBeUndefined();
+    expect(emitted.spanId).toBeUndefined();
+  });
+
+  it('returns SAFE_RESULT when validation fails', () => {
+    vi.mocked(validateTelemetryEvent).mockImplementationOnce(() => {
+      throw new Error('validation boom');
+    });
+
+    const emitter = createMasterCatalogTelemetryEmitter({
+      requestId: 'req-789',
+      headers: {},
+      currentTenant: { tenantId: 'tenant-3' },
+      method: 'GET',
+      url: '/master-catalog/segments',
+    } as never);
+
+    const result = emitter.requestStarted({
+      eventName: MasterCatalogEventName.REQUEST_STARTED,
+      severity: EventSeverity.INFO,
+      operation: 'listSegments',
+      httpMethod: 'GET',
+      httpRoute: '/master-catalog/segments',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.mode).toBe('SAFE_RESULT');
   });
 });

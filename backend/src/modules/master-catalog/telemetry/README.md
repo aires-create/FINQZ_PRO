@@ -11,6 +11,7 @@ This module owns the Master Catalog-specific telemetry vocabulary.
 - event payloads specific to Master Catalog
 - event schemas and validation specific to Master Catalog
 - discriminated unions for Master Catalog telemetry events
+- the passive in-process emitter used by Master Catalog handlers
 
 ## What does not belong here
 
@@ -43,3 +44,7 @@ This module owns the Master Catalog-specific telemetry vocabulary.
 
 The bounded-context vocabulary stays in this module so `shared` does not become a registry for all domains.
 
+## Passive integration
+
+The emitter in this module is intentionally synchronous, fail-safe, and side-effect free.
+It validates and sanitizes event records locally and does not publish logs, metrics, traces, queues, or persistent telemetry.
