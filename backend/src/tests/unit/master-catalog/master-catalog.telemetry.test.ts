@@ -1,13 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorCategory, EventSeverity } from '../../../shared/telemetry/enums.js';
 import {
   MASTER_CATALOG_TELEMETRY_EVENT_VERSION,
   MasterCatalogConsumer,
   MasterCatalogEventName,
   MasterCatalogSourceType,
+  NoopObservabilitySink,
+  createObservabilityAdapter,
   createMasterCatalogTelemetryEmitter,
   masterCatalogTelemetryEventSchema,
   masterCatalogRequestFailedEventSchema,
+  resolveObservabilitySink,
   validateTelemetryContext,
   validateTelemetryEvent,
 } from '../../../modules/master-catalog/telemetry/index.js';
@@ -26,6 +29,11 @@ vi.mock('../../../modules/master-catalog/telemetry/validation.js', async () => {
       return actual.validateTelemetryEvent(value);
     }),
   };
+});
+
+beforeEach(() => {
+  validatedPayloads.length = 0;
+  vi.mocked(validateTelemetryEvent).mockClear();
 });
 
 describe('master catalog telemetry', () => {
@@ -281,5 +289,88 @@ describe('master catalog telemetry', () => {
 
     expect(result.success).toBe(false);
     expect(result.mode).toBe('SAFE_RESULT');
+  });
+
+  it('routes valid events through the adapter and noop sink', () => {
+    const sink = {
+      write: vi.fn((event: unknown) => ({
+        success: true,
+        mode: 'SAFE_RESULT' as const,
+        data: event,
+        errors: [],
+      })),
+    };
+
+    const adapter = createObservabilityAdapter(sink);
+    const result = adapter.receive({
+      eventVersion: MASTER_CATALOG_TELEMETRY_EVENT_VERSION,
+      eventName: MasterCatalogEventName.REQUEST_STARTED,
+      severity: EventSeverity.INFO,
+      timestamp: '2026-07-12T12:34:56.789Z',
+      requestId: 'req-900',
+      consumer: MasterCatalogConsumer.MASTER_CATALOG,
+      sourceType: MasterCatalogSourceType.HTTP_CONTROLLER,
+      source: 'master-catalog.controller',
+      tenantId: 'tenant-900',
+      payload: {
+        primary: false,
+        fallback: false,
+        shadow: false,
+        operation: 'listSegments',
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(sink.write).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects invalid events before they reach the sink', () => {
+    const sink = {
+      write: vi.fn(),
+    };
+
+    const adapter = createObservabilityAdapter(sink);
+    const result = adapter.receive({
+      eventVersion: '2.0.0',
+      eventName: MasterCatalogEventName.REQUEST_STARTED,
+      severity: EventSeverity.INFO,
+      timestamp: '2026-07-12T12:34:56.789Z',
+      requestId: 'req-901',
+      consumer: MasterCatalogConsumer.MASTER_CATALOG,
+      sourceType: MasterCatalogSourceType.HTTP_CONTROLLER,
+      source: 'master-catalog.controller',
+      tenantId: 'tenant-901',
+      payload: {
+        primary: false,
+        fallback: false,
+        shadow: false,
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(sink.write).not.toHaveBeenCalled();
+  });
+
+  it('uses the noop sink as the default resolver', () => {
+    const sink = resolveObservabilitySink();
+    const result = sink.write({
+      eventVersion: MASTER_CATALOG_TELEMETRY_EVENT_VERSION,
+      eventName: MasterCatalogEventName.REQUEST_STARTED,
+      severity: EventSeverity.INFO,
+      timestamp: '2026-07-12T12:34:56.789Z',
+      requestId: 'req-902',
+      consumer: MasterCatalogConsumer.MASTER_CATALOG,
+      sourceType: MasterCatalogSourceType.HTTP_CONTROLLER,
+      source: 'master-catalog.controller',
+      tenantId: 'tenant-902',
+      payload: {
+        primary: false,
+        fallback: false,
+        shadow: false,
+      },
+    } as never);
+
+    expect(sink).toBeInstanceOf(NoopObservabilitySink);
+    expect(result.success).toBe(true);
   });
 });

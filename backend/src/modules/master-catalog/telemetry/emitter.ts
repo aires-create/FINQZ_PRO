@@ -1,6 +1,5 @@
 import type { FastifyRequest } from 'fastify';
 
-import { sanitizeTelemetryContext } from '../../../shared/telemetry/sanitize.js';
 import type { TelemetryValidationResult } from '../../../shared/telemetry/contracts.js';
 import { ErrorCategory, EventSeverity } from '../../../shared/telemetry/enums.js';
 import {
@@ -9,8 +8,9 @@ import {
   MasterCatalogEventName,
   MasterCatalogSourceType,
 } from './enums.js';
+import { createObservabilityAdapter } from './observability-adapter.js';
+import { resolveObservabilitySink } from './observability-factory.js';
 import type { MasterCatalogTelemetryEventSchemaValue } from './validation.js';
-import { validateTelemetryEvent } from './validation.js';
 
 const DEFAULT_SOURCE = 'master-catalog.controller';
 
@@ -68,49 +68,6 @@ const buildBaseEvent = (
   spanId: resolveSpanId(request),
 });
 
-const emitTelemetryEvent = (
-  event: Record<string, unknown>,
-): TelemetryValidationResult<MasterCatalogTelemetryEventSchemaValue> => {
-  try {
-    const sanitized = sanitizeTelemetryContext(event);
-
-    return validateTelemetryEvent({
-      ...sanitized,
-      requestId:
-        typeof event.requestId === 'string' && event.requestId.trim()
-          ? event.requestId
-          : sanitized.requestId,
-      tenantId:
-        typeof event.tenantId === 'string' && event.tenantId.trim()
-          ? event.tenantId
-          : sanitized.tenantId,
-      correlationId:
-        typeof event.correlationId === 'string' && event.correlationId.trim()
-          ? event.correlationId
-          : sanitized.correlationId,
-      traceId:
-        typeof event.traceId === 'string' && event.traceId.trim()
-          ? event.traceId
-          : sanitized.traceId,
-      spanId:
-        typeof event.spanId === 'string' && event.spanId.trim()
-          ? event.spanId
-          : sanitized.spanId,
-    });
-  } catch {
-    return {
-      success: false,
-      mode: 'SAFE_RESULT',
-      errors: [
-        {
-          path: 'event',
-          message: 'Telemetry emission failed safely',
-        },
-      ],
-    };
-  }
-};
-
 export interface MasterCatalogTelemetryEmitter {
   requestStarted(input: {
     eventName: MasterCatalogEventName.REQUEST_STARTED;
@@ -152,10 +109,11 @@ export const createMasterCatalogTelemetryEmitter = (
 ): MasterCatalogTelemetryEmitter => {
   const source = options?.source ?? DEFAULT_SOURCE;
   const sourceType = options?.sourceType ?? MasterCatalogSourceType.HTTP_CONTROLLER;
+  const adapter = createObservabilityAdapter(resolveObservabilitySink());
 
   return {
     requestStarted: (input) =>
-      emitTelemetryEvent({
+      adapter.receive({
         ...buildBaseEvent(request, sourceType, source),
         eventName: input.eventName,
         severity: input.severity,
@@ -170,7 +128,7 @@ export const createMasterCatalogTelemetryEmitter = (
         },
       }),
     primaryUsed: (input) =>
-      emitTelemetryEvent({
+      adapter.receive({
         ...buildBaseEvent(request, sourceType, source),
         eventName: input.eventName,
         severity: input.severity,
@@ -183,7 +141,7 @@ export const createMasterCatalogTelemetryEmitter = (
         },
       }),
     requestFinished: (input) =>
-      emitTelemetryEvent({
+      adapter.receive({
         ...buildBaseEvent(request, sourceType, source),
         eventName: input.eventName,
         severity: input.severity,
@@ -197,7 +155,7 @@ export const createMasterCatalogTelemetryEmitter = (
         },
       }),
     requestFailed: (input) =>
-      emitTelemetryEvent({
+      adapter.receive({
         ...buildBaseEvent(request, sourceType, source),
         eventName: input.eventName,
         severity: input.severity,

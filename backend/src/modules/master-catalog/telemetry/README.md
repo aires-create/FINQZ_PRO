@@ -12,6 +12,9 @@ This module owns the Master Catalog-specific telemetry vocabulary.
 - event schemas and validation specific to Master Catalog
 - discriminated unions for Master Catalog telemetry events
 - the passive in-process emitter used by Master Catalog handlers
+- the Observability Runtime Adapter
+- the `NoopObservabilitySink`
+- the sink resolution factory
 
 ## What does not belong here
 
@@ -47,4 +50,6 @@ The bounded-context vocabulary stays in this module so `shared` does not become 
 ## Passive integration
 
 The emitter in this module is intentionally synchronous, fail-safe, and side-effect free.
-It validates and sanitizes event records locally and does not publish logs, metrics, traces, queues, or persistent telemetry.
+It passes events to the Observability Runtime Adapter, which validates and sanitizes event records locally before forwarding them to the current sink.
+
+The default sink is `NoopObservabilitySink`, which accepts the event and returns success without publishing logs, metrics, traces, queues, or persistent telemetry.
