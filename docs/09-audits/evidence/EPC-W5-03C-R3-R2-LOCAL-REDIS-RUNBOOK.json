@@ -1,0 +1,136 @@
+{
+  "auditId": "EPC-W5-03C-R3-R2",
+  "title": "Local Redis Runbook",
+  "repository": "FINQZ_PRO",
+  "branch": "homologation/bootstrap-vps",
+  "head": "9904a0f",
+  "classification": "REDIS_REQUIRED_RUNTIME_ENVIRONMENTS",
+  "runtimePolicy": {
+    "development": "REQUIRED",
+    "test": "NOT_USED",
+    "homologation": "REQUIRED",
+    "production": "REQUIRED",
+    "dockerLocal": "REQUIRED",
+    "vps": "REQUIRED",
+    "ci": "UNKNOWN"
+  },
+  "startupOptions": [
+    {
+      "name": "redisOnly",
+      "command": "cd backend && docker compose up -d redis",
+      "confidence": "inferredFromCompose",
+      "reason": "The Redis service exists in backend/docker-compose.yml and has no upstream dependency."
+    },
+    {
+      "name": "fullStack",
+      "command": "cd backend && docker compose up --build",
+      "confidence": "documentedForBackendStack",
+      "reason": "Referenced by existing backend documentation and alignment plans for the stack."
+    }
+  ],
+  "composeEvidence": {
+    "file": "backend/docker-compose.yml",
+    "service": "redis",
+    "image": "redis:7-alpine",
+    "containerName": "finqz-pro-redis",
+    "command": "redis-server --appendonly yes",
+    "port": "6379:6379",
+    "volume": "redis_data:/data",
+    "restart": "unless-stopped",
+    "network": "finqz_pro_network",
+    "healthcheck": "redis-cli ping",
+    "dependsOn": [
+      "api -> redis (service_healthy)",
+      "api -> postgres (service_healthy)"
+    ],
+    "aliases": [],
+    "hostname": null
+  },
+  "redisEvidence": {
+    "discoveryPath": [
+      "backend/src/config/app.ts",
+      "backend/src/core/redis/redis.client.ts",
+      "backend/src/core/http/fastify.ts"
+    ],
+    "envInputs": [
+      "REDIS_URL",
+      "REDIS_HOST",
+      "REDIS_PORT",
+      "REDIS_TLS",
+      "REDIS_PASSWORD",
+      "REDIS_DB"
+    ],
+    "clientBehavior": {
+      "library": "ioredis",
+      "lazyConnect": true,
+      "enableOfflineQueue": false,
+      "maxRetriesPerRequest": 1,
+      "connectTimeoutMs": 500,
+      "commandTimeoutMs": 500,
+      "retryStrategy": "bounded"
+    },
+    "readinessBehavior": {
+      "httpStatusWhenRedisOffline": 503,
+      "statusWhenRedisOffline": "not_ready",
+      "databaseField": "connected",
+      "redisField": "disconnected"
+    }
+  },
+  "validationResults": {
+    "dockerComposeConfig": "PASS_RENDERED",
+    "dockerComposePs": "FAIL_ENGINE_UNAVAILABLE",
+    "dockerPs": "FAIL_ENGINE_UNAVAILABLE",
+    "dockerDesktop": "UNAVAILABLE",
+    "redisStartAttempted": false,
+    "healthChecked": false,
+    "liveChecked": false,
+    "readyChecked": false
+  },
+  "gapAnalysis": {
+    "exists": [
+      "Redis service is declared in compose.",
+      "Healthcheck and restart policy exist.",
+      "Readiness contract already requires Redis.",
+      "Documentation already references Docker Compose and Redis as operational infrastructure."
+    ],
+    "missing": [
+      "Single explicit redis-only runbook command in a dedicated doc.",
+      "Operational confirmation with Docker Engine running on this host.",
+      "Evidence of redis-local startup in this environment."
+    ],
+    "operational": [
+      "Compose definition",
+      "Redis healthcheck",
+      "Redis discovery in the backend",
+      "Readiness gating"
+    ],
+    "operatorDependent": [
+      "Docker Desktop / Docker Engine availability",
+      "Port 6379 availability",
+      "Starting the compose stack"
+    ]
+  },
+  "riskRegister": [
+    {
+      "severity": "BLOCKER",
+      "risk": "Docker Engine unavailable prevents Redis local startup."
+    },
+    {
+      "severity": "CRITICAL",
+      "risk": "Without Redis, /ready remains 503 not_ready."
+    },
+    {
+      "severity": "HIGH",
+      "risk": "If the operator does not follow the compose-based path, local onboarding becomes inconsistent."
+    }
+  ],
+  "nextStep": "PREPARE_LOCAL_REDIS_RUNBOOK",
+  "notes": {
+    "noFunctionalCodeChanged": true,
+    "noComposeFilesChanged": true,
+    "noDockerfilesChanged": true,
+    "noEnvFilesChanged": true,
+    "noScriptsCreated": true
+  }
+}
+
