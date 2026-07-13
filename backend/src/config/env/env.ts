@@ -22,8 +22,15 @@ const backendEnvPath = resolve(
   '../../../.env',
 );
 
+const isDevelopmentRuntime =
+  process.env.NODE_ENV === 'development' ||
+  (process.env.NODE_ENV === undefined &&
+    process.env.npm_lifecycle_event === 'dev');
+
 if (
-  process.env.NODE_ENV === 'development' &&
+  isDevelopmentRuntime &&
+  process.env.NODE_ENV !== 'test' &&
+  process.env.NODE_ENV !== 'production' &&
   process.env.APP_ENV !== 'production' &&
   process.env.APP_ENV !== 'homologation'
 ) {

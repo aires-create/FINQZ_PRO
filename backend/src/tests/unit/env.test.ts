@@ -256,6 +256,35 @@ describe('environment bootstrap contract', () => {
     expect(process.env.PORT).toBe('4567');
   });
 
+  it('loads backend/.env when NODE_ENV is absent and npm_lifecycle_event=dev', async () => {
+    Object.assign(process.env, validEnv, {
+      PORT: '4567',
+      npm_lifecycle_event: 'dev',
+    });
+    delete process.env.NODE_ENV;
+    delete process.env.APP_ENV;
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(dotenvConfigMock).toHaveBeenCalledWith({
+      path: expectedBackendEnvPath,
+      override: false,
+    });
+  });
+
+  it('does not load backend/.env when npm_lifecycle_event is not dev', async () => {
+    Object.assign(process.env, validEnv, {
+      npm_lifecycle_event: 'test',
+    });
+    delete process.env.NODE_ENV;
+    delete process.env.APP_ENV;
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
+  });
+
   it('uses the test setup bootstrap to load backend/.env deterministically', async () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'test',
@@ -308,6 +337,7 @@ describe('environment bootstrap contract', () => {
   it('does not load a local .env in test', async () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'test',
+      npm_lifecycle_event: 'dev',
     });
 
     await loadFreshEnvModule();
@@ -319,6 +349,7 @@ describe('environment bootstrap contract', () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'production',
       APP_ENV: 'production',
+      npm_lifecycle_event: 'dev',
       JWT_SECRET: 'prod-secure-alpha-abcdefghijklmnopqrstuvwxyz123456',
       JWT_REFRESH_SECRET: 'prod-secure-beta-abcdefghijklmnopqrstuvwxyz654321',
       PORT: '4000',
@@ -346,6 +377,7 @@ describe('environment bootstrap contract', () => {
   it('does not consider root .env or src/.env in the test bootstrap', async () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'test',
+      npm_lifecycle_event: 'dev',
     });
 
     await loadFreshTestSetupModule();
@@ -372,6 +404,7 @@ describe('environment bootstrap contract', () => {
   it('keeps tests working when backend/.env is absent and process.env is complete', async () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'test',
+      npm_lifecycle_event: 'dev',
     });
 
     dotenvConfigMock.mockImplementation(() => ({ parsed: {} }));
@@ -384,6 +417,7 @@ describe('environment bootstrap contract', () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'development',
       APP_ENV: 'homologation',
+      npm_lifecycle_event: 'dev',
     });
 
     await loadFreshEnvModule();
@@ -394,6 +428,7 @@ describe('environment bootstrap contract', () => {
   it('preserves variables already injected into process.env when the local file is absent', async () => {
     Object.assign(process.env, validEnv, {
       NODE_ENV: 'development',
+      npm_lifecycle_event: 'dev',
       PORT: '4321',
     });
 
@@ -409,6 +444,20 @@ describe('environment bootstrap contract', () => {
 
     expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
     expect(process.env.PORT).toBe('4321');
+  });
+
+  it('does not load backend/.env for node dist/server.js without dev lifecycle context', async () => {
+    Object.assign(process.env, validEnv, {
+      PORT: '4000',
+      HOST: '0.0.0.0',
+    });
+    delete process.env.NODE_ENV;
+    delete process.env.APP_ENV;
+    delete process.env.npm_lifecycle_event;
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
   });
 
   it('continues to validate normally when required variables are missing', () => {
