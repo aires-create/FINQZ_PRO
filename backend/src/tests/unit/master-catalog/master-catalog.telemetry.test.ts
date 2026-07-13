@@ -5,17 +5,25 @@ import {
   MasterCatalogConsumer,
   MasterCatalogEventName,
   MasterCatalogSourceType,
-  NoopObservabilitySink,
   createObservabilityAdapter,
   createMasterCatalogTelemetryEmitter,
   masterCatalogTelemetryEventSchema,
   masterCatalogRequestFailedEventSchema,
   resolveObservabilitySink,
+  StructuredLoggerObservabilitySink,
   validateTelemetryContext,
   validateTelemetryEvent,
 } from '../../../modules/master-catalog/telemetry/index.js';
 
 const validatedPayloads: unknown[] = [];
+
+const createLoggerMock = () => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  http: vi.fn(),
+  debug: vi.fn(),
+});
 
 vi.mock('../../../modules/master-catalog/telemetry/validation.js', async () => {
   const actual = await vi.importActual<
@@ -351,8 +359,14 @@ describe('master catalog telemetry', () => {
     expect(sink.write).not.toHaveBeenCalled();
   });
 
-  it('uses the noop sink as the default resolver', () => {
+  it('uses the structured logger sink as the default resolver', () => {
     const sink = resolveObservabilitySink();
+    expect(sink).toBeInstanceOf(StructuredLoggerObservabilitySink);
+  });
+
+  it('writes structured telemetry through the official logger sink', () => {
+    const logger = createLoggerMock();
+    const sink = new StructuredLoggerObservabilitySink(logger);
     const result = sink.write({
       eventVersion: MASTER_CATALOG_TELEMETRY_EVENT_VERSION,
       eventName: MasterCatalogEventName.REQUEST_STARTED,
@@ -367,10 +381,77 @@ describe('master catalog telemetry', () => {
         primary: false,
         fallback: false,
         shadow: false,
+        operation: 'listSegments',
       },
     } as never);
 
-    expect(sink).toBeInstanceOf(NoopObservabilitySink);
     expect(result.success).toBe(true);
+    expect(logger.info).toHaveBeenCalledTimes(1);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.stringContaining(MasterCatalogEventName.REQUEST_STARTED),
+      expect.objectContaining({
+        telemetry: expect.objectContaining({
+          requestId: 'req-902',
+          tenantId: 'tenant-902',
+          eventName: MasterCatalogEventName.REQUEST_STARTED,
+        }),
+      }),
+    );
+    expect(logger.warn).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('falls back to noop behavior when the structured logger sink fails', () => {
+    const fallback = {
+      write: vi.fn((event: unknown) => ({
+        success: true,
+        mode: 'SAFE_RESULT' as const,
+        data: event,
+        errors: [],
+      })),
+    };
+    const logger = {
+      error: vi.fn(() => {
+        throw new Error('logger failed');
+      }),
+      warn: vi.fn(),
+      info: vi.fn(),
+      http: vi.fn(),
+      debug: vi.fn(),
+    };
+    const sink = new StructuredLoggerObservabilitySink(logger, fallback);
+    const result = sink.write({
+      eventVersion: MASTER_CATALOG_TELEMETRY_EVENT_VERSION,
+      eventName: MasterCatalogEventName.REQUEST_FAILED,
+      severity: EventSeverity.ERROR,
+      timestamp: '2026-07-12T12:34:56.789Z',
+      requestId: 'req-903',
+      consumer: MasterCatalogConsumer.MASTER_CATALOG,
+      sourceType: MasterCatalogSourceType.HTTP_CONTROLLER,
+      source: 'master-catalog.controller',
+      tenantId: 'tenant-903',
+      payload: {
+        primary: true,
+        fallback: false,
+        shadow: false,
+        errorCategory: ErrorCategory.CONTRACT,
+        errorCode: 'ERR-903',
+        errorMessage: 'boom',
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining(MasterCatalogEventName.REQUEST_FAILED),
+      expect.objectContaining({
+        telemetry: expect.objectContaining({
+          requestId: 'req-903',
+          tenantId: 'tenant-903',
+          eventName: MasterCatalogEventName.REQUEST_FAILED,
+        }),
+      }),
+    );
+    expect(fallback.write).toHaveBeenCalledTimes(1);
   });
 });

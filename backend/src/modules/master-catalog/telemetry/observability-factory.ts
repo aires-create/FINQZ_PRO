@@ -1,5 +1,8 @@
-import { NoopObservabilitySink, type ObservabilitySink } from './observability-sink.js';
+import {
+  StructuredLoggerObservabilitySink,
+  type ObservabilitySink,
+} from './observability-sink.js';
 
 export const resolveObservabilitySink = (): ObservabilitySink => {
-  return new NoopObservabilitySink();
+  return new StructuredLoggerObservabilitySink();
 };
