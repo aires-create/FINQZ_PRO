@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
 import { rawEnvSchema } from './env.schema.js';
@@ -15,7 +17,21 @@ import {
   validateUrls,
 } from './env.validation.js';
 
-dotenv.config();
+const backendEnvPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../.env',
+);
+
+if (
+  process.env.NODE_ENV === 'development' &&
+  process.env.APP_ENV !== 'production' &&
+  process.env.APP_ENV !== 'homologation'
+) {
+  dotenv.config({
+    path: backendEnvPath,
+    override: false,
+  });
+}
 
 export const envSchema = rawEnvSchema
   .superRefine((input, context) => {

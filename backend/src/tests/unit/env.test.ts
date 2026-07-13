@@ -1,6 +1,73 @@
-import { describe, expect, it } from 'vitest';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
+
+vi.hoisted(() => {
+  process.env.NODE_ENV = 'test';
+  process.env.APP_ENV = 'local';
+  process.env.DATABASE_URL =
+    'postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_test?schema=public';
+  process.env.JWT_SECRET =
+    'test-only-jwt-secret-change-before-runtime-use-32chars';
+  process.env.JWT_REFRESH_SECRET =
+    'test-only-refresh-secret-change-before-runtime-use-32chars';
+  process.env.CORS_ORIGIN = 'http://localhost:5173';
+});
+
+const dotenvConfigMock = vi.hoisted(() => vi.fn(() => ({ parsed: {} })));
+
+vi.mock('dotenv', () => ({
+  default: {
+    config: dotenvConfigMock,
+  },
+}));
 
 import { parseEnv } from '../../config/env.js';
+
+const testFileDir = path.dirname(fileURLToPath(import.meta.url));
+const backendRoot = path.resolve(testFileDir, '../../../');
+const workspaceRoot = path.dirname(backendRoot);
+const expectedBackendEnvPath = path.resolve(backendRoot, '.env');
+const expectedRootEnvPath = path.resolve(workspaceRoot, '.env');
+const expectedSrcEnvPath = path.resolve(backendRoot, 'src/.env');
+
+const snapshotEnv = () => {
+  return { ...process.env };
+};
+
+const restoreEnv = (snapshot: NodeJS.ProcessEnv) => {
+  for (const key of Object.keys(process.env)) {
+    if (!(key in snapshot)) {
+      delete process.env[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(snapshot)) {
+    if (value === undefined) {
+      delete process.env[key];
+      continue;
+    }
+
+    process.env[key] = value;
+  }
+};
+
+const loadFreshEnvModule = async () => {
+  vi.resetModules();
+  return await import('../../config/env.js');
+};
+
+const loadFreshTestSetupModule = async () => {
+  vi.resetModules();
+  return await import('../../tests/setup.ts');
+};
 
 const validEnv = {
   NODE_ENV: 'test',
@@ -15,6 +82,26 @@ const validEnv = {
   JWT_REFRESH_SECRET: 'test-only-refresh-secret-change-before-runtime-use-32chars',
   CORS_ORIGIN: 'http://localhost:5173',
 };
+
+let envSnapshot: NodeJS.ProcessEnv;
+let cwdSnapshot = process.cwd();
+
+beforeEach(() => {
+  envSnapshot = snapshotEnv();
+  cwdSnapshot = process.cwd();
+  dotenvConfigMock.mockClear();
+  dotenvConfigMock.mockImplementation(() => ({ parsed: {} }));
+});
+
+afterEach(() => {
+  restoreEnv(envSnapshot);
+
+  if (process.cwd() !== cwdSnapshot) {
+    process.chdir(cwdSnapshot);
+  }
+
+  vi.restoreAllMocks();
+});
 
 describe('parseEnv', () => {
   it('normalizes a valid isolated test environment', () => {
@@ -140,5 +227,193 @@ describe('parseEnv', () => {
     expect(env.nodeEnv).toBe('production');
     expect(env.appEnv).toBe('production');
     expect(env.externalEffectsEnabled).toBe(true);
+  });
+});
+
+describe('environment bootstrap contract', () => {
+  it('loads backend/.env in development without overriding existing process.env values', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'development',
+      PORT: '4567',
+    });
+    process.env.PORT = '4567';
+
+    dotenvConfigMock.mockImplementation(({ path: configPath, override }) => {
+      expect(configPath).toBe(expectedBackendEnvPath);
+      expect(override).toBe(false);
+
+      if (override) {
+        process.env.PORT = '9999';
+      }
+
+      return { parsed: {} };
+    });
+
+    const module = await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(module.env.port).toBe(4567);
+    expect(process.env.PORT).toBe('4567');
+  });
+
+  it('uses the test setup bootstrap to load backend/.env deterministically', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'test',
+      PORT: '4321',
+    });
+
+    dotenvConfigMock.mockImplementation(({ path: configPath, override }) => {
+      expect(configPath).toBe(expectedBackendEnvPath);
+      expect(override).toBe(false);
+      return { parsed: {} };
+    });
+
+    await loadFreshTestSetupModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(process.env.PORT).toBe('4321');
+  });
+
+  it.each([
+    ['workspace root', workspaceRoot],
+    ['backend directory', backendRoot],
+  ])('resolves the same backend/.env from %s cwd', async (_label, cwd) => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'development',
+    });
+    process.chdir(cwd);
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(dotenvConfigMock).toHaveBeenCalledWith({
+      path: expectedBackendEnvPath,
+      override: false,
+    });
+  });
+
+  it('does not depend on process.cwd', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'development',
+    });
+
+    const cwdSpy = vi.spyOn(process, 'cwd');
+
+    await loadFreshEnvModule();
+
+    expect(cwdSpy).not.toHaveBeenCalled();
+    cwdSpy.mockRestore();
+  });
+
+  it('does not load a local .env in test', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'test',
+    });
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
+  });
+
+  it('does not load a local .env in production', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'production',
+      APP_ENV: 'production',
+      JWT_SECRET: 'prod-secure-alpha-abcdefghijklmnopqrstuvwxyz123456',
+      JWT_REFRESH_SECRET: 'prod-secure-beta-abcdefghijklmnopqrstuvwxyz654321',
+      PORT: '4000',
+      HOST: '0.0.0.0',
+    });
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the compiled dist contract aligned with backend/.env', () => {
+    const compiledEnvModulePath = path.resolve(
+      backendRoot,
+      'dist/config/env/env.js',
+    );
+    const compiledBackendEnvPath = path.resolve(
+      path.dirname(compiledEnvModulePath),
+      '../../../.env',
+    );
+
+    expect(compiledBackendEnvPath).toBe(expectedBackendEnvPath);
+  });
+
+  it('does not consider root .env or src/.env in the test bootstrap', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'test',
+    });
+
+    await loadFreshTestSetupModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(dotenvConfigMock).toHaveBeenCalledWith({
+      path: expectedBackendEnvPath,
+      override: false,
+    });
+    expect(expectedBackendEnvPath).not.toBe(expectedRootEnvPath);
+    expect(expectedBackendEnvPath).not.toBe(expectedSrcEnvPath);
+  });
+
+  it('runs before config imports in the test bootstrap', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'test',
+    });
+
+    await loadFreshTestSetupModule();
+
+    await expect(import('../../config/app.js')).resolves.toBeDefined();
+  });
+
+  it('keeps tests working when backend/.env is absent and process.env is complete', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'test',
+    });
+
+    dotenvConfigMock.mockImplementation(() => ({ parsed: {} }));
+
+    await loadFreshTestSetupModule();
+    await expect(loadFreshEnvModule()).resolves.toBeDefined();
+  });
+
+  it('does not load a local .env in homologation', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'development',
+      APP_ENV: 'homologation',
+    });
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves variables already injected into process.env when the local file is absent', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'development',
+      PORT: '4321',
+    });
+
+    dotenvConfigMock.mockImplementation(({ override }) => {
+      if (override) {
+        process.env.PORT = '9999';
+      }
+
+      return { parsed: {} };
+    });
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(process.env.PORT).toBe('4321');
+  });
+
+  it('continues to validate normally when required variables are missing', () => {
+    expect(() => parseEnv({ NODE_ENV: 'test' })).toThrow(
+      /DATABASE_URL is required/,
+    );
   });
 });
