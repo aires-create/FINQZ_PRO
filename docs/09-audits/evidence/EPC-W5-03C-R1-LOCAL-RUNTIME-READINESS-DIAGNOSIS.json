@@ -1,0 +1,372 @@
+{
+  "auditId": "EPC-W5-03C-R1",
+  "title": "Local Runtime Readiness Diagnosis",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "7dce49757a0c2b2dff7dbb229ec0fc43e2052bbe",
+    "commit": "docs(audit): add W5-03C observability baseline and release gates",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "statusAtCapture": [
+      "M .env.example",
+      "?? docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "?? scripts/sdc-3.4h-f-local-readiness.mjs"
+    ]
+  },
+  "versions": {
+    "node": "v24.15.0",
+    "npm": "11.12.1",
+    "openssl": "3.5.5",
+    "prismaCliReported": "5.22.0",
+    "prismaCliNote": "npx prisma --version printed the Prisma version and then failed to spawn schema-engine-windows.exe with EPERM"
+  },
+  "envFiles": [
+    {
+      "path": ".env",
+      "size": 44,
+      "lastWriteTime": "2026-06-02T09:59:28",
+      "sha256": "82233CF489B6F63853F165F5F49C818AC739E534CC032A78D5AB414EDAF0F70C"
+    },
+    {
+      "path": ".env.example",
+      "size": 1480,
+      "lastWriteTime": "2026-07-10T18:18:23",
+      "sha256": "33FD8EF65E4B339B3AE7486E2BBC4E6A9C6C12BA13838D648D91E317583DC245"
+    },
+    {
+      "path": "src/.env",
+      "size": 34,
+      "lastWriteTime": "2026-05-05T12:21:54",
+      "sha256": "A53E4CC38209A8CECBA6BAE6515CEAC216012A768C902A96FF15FD2A2BFA99FC"
+    },
+    {
+      "path": "backend/.env",
+      "size": 1099,
+      "lastWriteTime": "2026-05-31T16:05:48",
+      "sha256": "51ED24A9DAC11CE1AF2C376C8EB6D133723E1CC80CA75F0A55F0B26676E71734"
+    },
+    {
+      "path": "backend/.env.example",
+      "size": 2764,
+      "lastWriteTime": "2026-05-31T16:07:10",
+      "sha256": "9D1384BA50390EE1B3AC2CC2AA43E9D658D5063051A702BD74AEF6FD7B4F5967"
+    }
+  ],
+  "cwd": {
+    "root": "C:\\Projects\\FINQZ_PRO",
+    "backend": "C:\\Projects\\FINQZ_PRO\\backend"
+  },
+  "loaders": {
+    "runtime": "dotenv.config() from src/config/env/env.ts -> parseEnv() -> src/database/prisma.ts -> PrismaClient",
+    "tests": "test setup seeds NODE_ENV, HOST, PORT, Redis, JWT, CORS, and logging before Prisma import"
+  },
+  "sanitizedConnectionMetadata": {
+    "hostClass": "managed_postgresql_pooler",
+    "poolerPort": 6543,
+    "directPort": 5432,
+    "databaseClass": "default_postgres_database",
+    "dnsResolution": "PASS",
+    "tcpPoolerConnectivity": "PASS",
+    "queryParamNames": [
+      "pgbouncer"
+    ],
+    "pgbouncer": true,
+    "sslmode": null
+  },
+  "scenarios": [
+    {
+      "id": "R1",
+      "cwd": "C:\\Projects\\FINQZ_PRO",
+      "loader": "dotenv.config() from repo root",
+      "beforeEnv": {
+        "nodeEnv": null,
+        "hasDatabaseUrl": false,
+        "hasDirectUrl": false,
+        "hasPort": false,
+        "hasHost": false
+      },
+      "result": {
+        "connect": "not_reached",
+        "select1": "not_reached",
+        "error": {
+          "name": "Error",
+          "message": "Environment validation failed before Prisma because the repo-root cwd did not resolve the required backend env variables."
+        }
+      },
+      "durationMs": null,
+      "attempts": 1
+    },
+    {
+      "id": "R2",
+      "cwd": "C:\\Projects\\FINQZ_PRO\\backend",
+      "loader": "dotenv.config() from backend cwd",
+      "beforeEnv": {
+        "nodeEnv": null,
+        "hasDatabaseUrl": false,
+        "hasDirectUrl": false,
+        "hasPort": false,
+        "hasHost": false
+      },
+      "afterImportEnv": {
+        "nodeEnv": "development",
+        "hasDatabaseUrl": true,
+        "hasDirectUrl": true,
+        "hasPort": true,
+        "hasHost": true
+      },
+      "result": {
+        "connect": "ok",
+        "select1": [
+          {
+            "value": 1
+          }
+        ],
+        "error": null
+      },
+      "durationMs": 661,
+      "attempts": 1
+    },
+    {
+      "id": "R3",
+      "cwd": "C:\\Projects\\FINQZ_PRO\\backend",
+      "loader": "runtime readiness path",
+      "beforeEnv": {
+        "nodeEnv": null,
+        "hasDatabaseUrl": false,
+        "hasDirectUrl": false,
+        "hasPort": false,
+        "hasHost": false
+      },
+      "afterImportEnv": {
+        "nodeEnv": "development",
+        "hasDatabaseUrl": true,
+        "hasDirectUrl": true,
+        "hasPort": true,
+        "hasHost": true
+      },
+      "result": {
+        "runtimeReady": true,
+        "connect": "ok",
+        "select1": [
+          {
+            "value": 1
+          }
+        ],
+        "error": null
+      },
+      "durationMs": 542,
+      "attempts": 1
+    },
+    {
+      "id": "R4",
+      "cwd": "C:\\Projects\\FINQZ_PRO\\backend",
+      "loader": "test loader emulation",
+      "beforeEnv": {
+        "nodeEnv": null,
+        "hasDatabaseUrl": false,
+        "hasDirectUrl": false,
+        "hasPort": false,
+        "hasHost": false,
+        "hasRedisUrl": false,
+        "hasJwtSecret": false,
+        "hasJwtRefreshSecret": false
+      },
+      "afterSetupEnv": {
+        "nodeEnv": "test",
+        "hasDatabaseUrl": false,
+        "hasDirectUrl": false,
+        "hasPort": true,
+        "hasHost": true,
+        "hasRedisUrl": true,
+        "hasJwtSecret": true,
+        "hasJwtRefreshSecret": true
+      },
+      "afterImportEnv": {
+        "nodeEnv": "test",
+        "hasDatabaseUrl": true,
+        "hasDirectUrl": true,
+        "hasPort": true,
+        "hasHost": true,
+        "hasRedisUrl": true,
+        "hasJwtSecret": true,
+        "hasJwtRefreshSecret": true
+      },
+      "result": {
+        "runtimeReady": true,
+        "connect": "ok",
+        "select1": [
+          {
+            "value": 1
+          }
+        ],
+        "error": null
+      },
+      "durationMs": 1406,
+      "attempts": 1
+    }
+  ],
+  "postgreSqlTests": [
+    "backend/src/tests/integration/edp.persistence.prisma.test.ts",
+    "backend/src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts"
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "text": "Resolved environment changes with cwd and loader",
+      "classification": "CONFIRMED"
+    },
+    {
+      "id": "H2",
+      "text": "cwd determines where dotenv.config() finds the default env file",
+      "classification": "CONFIRMED"
+    },
+    {
+      "id": "H3",
+      "text": "PowerShell environment variables override the local env file",
+      "classification": "INSUFFICIENT_EVIDENCE"
+    },
+    {
+      "id": "H4",
+      "text": "The test loader is defective",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H5",
+      "text": "PostgreSQL DNS resolution is broken",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H6",
+      "text": "TCP to port 6543 is blocked",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H7",
+      "text": "Prisma $connect fails from backend cwd",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H8",
+      "text": "SELECT 1 fails after connect",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H9",
+      "text": "Multiple loaders are present and matter to the diagnosis",
+      "classification": "LIKELY"
+    },
+    {
+      "id": "H10",
+      "text": "dotenv.config() resolves before validation based on cwd",
+      "classification": "CONFIRMED"
+    },
+    {
+      "id": "H11",
+      "text": "Missing sslmode is the blocker",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H12",
+      "text": "Direct URL is malformed",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H13",
+      "text": "Live PostgreSQL is unreachable from this machine",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H14",
+      "text": "Failure is transient rather than deterministic",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H15",
+      "text": "The issue is a database outage",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H16",
+      "text": "Connection limits or pooler behavior are the current cause",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H17",
+      "text": "DNS and TCP are the cause of the current failure",
+      "classification": "REJECTED"
+    },
+    {
+      "id": "H18",
+      "text": "Structured Logger Sink participates in the pre-listen bootstrap failure",
+      "classification": "REJECTED"
+    }
+  ],
+  "rootCause": {
+    "status": "CONFIRMED",
+    "primaryCause": "cwd-dependent environment resolution during local backend startup",
+    "summary": "Running from the repository root does not resolve the backend env file and environment validation aborts before PostgreSQL readiness. Running from backend cwd succeeds, and the test-loader emulation also succeeds. The earlier TLS evidence is stale or not reproduced on baseline 7dce497.",
+    "confidence": "high",
+    "contributors": [
+      "multiple .env files in the repository",
+      "cwd-dependent dotenv resolution",
+      "test setup that seeds env vars before import",
+      "earlier TLS evidence classified as STALE_OR_NOT_REPRODUCED on baseline 7dce497"
+    ]
+  },
+  "rejectedExplanations": [
+    "PostgreSQL outage",
+    "DNS failure",
+    "TCP port blockage",
+    "Prisma client misconfiguration",
+    "pgbouncer=true as the blocking condition",
+    "missing sslmode as the blocking condition"
+  ],
+  "gates": [
+    {
+      "gate": "A",
+      "status": "PASS_BY_TEST_AND_STATIC_EVIDENCE"
+    },
+    {
+      "gate": "B",
+      "status": "PASS_BY_TEST_NOT_LIVE_VALIDATED"
+    },
+    {
+      "gate": "C",
+      "status": "FAIL_NO_LIVE_EVIDENCE"
+    },
+    {
+      "gate": "D",
+      "status": "NOT_APPLICABLE"
+    },
+    {
+      "gate": "E",
+      "status": "NOT_APPLICABLE"
+    },
+    {
+      "gate": "F",
+      "status": "FAIL_NO_LIVE_EVIDENCE"
+    },
+    {
+      "gate": "G",
+      "status": "FAIL_NO_LIVE_EVIDENCE"
+    },
+    {
+      "gate": "H",
+      "status": "PASS_BY_DOCUMENTATION_AND_TEST"
+    }
+  ],
+  "nextStep": {
+    "id": "W5-03C-R2",
+    "title": "RUNTIME_BOOTSTRAP_ALIGNMENT_PLAN",
+    "subtitle": "Official Startup Launch-Path and Environment Resolution Review",
+    "objective": "Define the official startup command, official cwd, and explicit environment-loading strategy while preserving compatibility across local, Docker, homologation, and production."
+  },
+  "compliance": {
+    "noCodeChanged": true,
+    "noEnvFilesEdited": true,
+    "noMigration": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true
+  }
+}
+
