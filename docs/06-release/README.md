@@ -99,7 +99,7 @@ HML deployment standardization
 Executar a partir da pasta `backend/`:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --build
+FINQZ_BACKEND_IMAGE=<IMAGEM_IMUTAVEL> docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps --no-build api
 ```
 
 ### Variáveis canônicas
@@ -111,8 +111,9 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 
 ### Regras
 
-- `backend/docker-compose.yml` permanece genérico;
-- `backend/docker-compose.hml.yml` concentra apenas overrides de HML;
+- `backend/docker-compose.yml` permanece genérico e preserva o build local;
+- `backend/docker-compose.hml.yml` concentra apenas overrides de HML e exige `FINQZ_BACKEND_IMAGE`;
+- a primeira release imutavel usa transporte air-gapped por `docker save` / `docker load`;
 - `ready` nao e exposto publicamente;
 - `health` e `live` podem ser expostos publicamente;
 - `smoke` e `rollback` sao obrigatorios antes de qualquer expansao de trafego.

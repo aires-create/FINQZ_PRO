@@ -22,14 +22,14 @@
 
 ## 1. Objetivo
 
-Padronizar o deploy HML do FINQZ PRO Enterprise com um fluxo reproduzivel, auditavel e minimo.
+Padronizar o deploy HML do FINQZ PRO Enterprise com um fluxo reproduzivel, auditavel e minimo, usando uma imagem backend imutavel previamente validada e transportada por canal seguro aprovado.
 
 ## 2. Escopo
 
 - preparar o ambiente HML;
 - validar branch e commit;
-- executar build;
-- subir a stack HML;
+- validar a imagem backend imutavel;
+- subir a stack HML sem build;
 - validar `health`, `live` e `ready`;
 - executar smoke tests;
 - orientar rollback controlado.
@@ -53,6 +53,8 @@ Padronizar o deploy HML do FINQZ PRO Enterprise com um fluxo reproduzivel, audit
 - Compose base: `backend/docker-compose.yml`
 - Override HML: `backend/docker-compose.hml.yml`
 - Env file de execucao: `.env.production` ou materializacao equivalente fora do Git
+- Imagem backend: `FINQZ_BACKEND_IMAGE` com tag imutavel ou digest
+- Transporte: `docker save` -> SHA-256 do TAR -> transferencia segura -> `docker load`
 - Portal de release: `docs/06-release/README.md`
 
 ## 5. Variaveis Canonicas
@@ -71,7 +73,7 @@ Padronizar o deploy HML do FINQZ PRO Enterprise com um fluxo reproduzivel, audit
 Executar a partir da pasta `backend/`:
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --build
+FINQZ_BACKEND_IMAGE=<IMAGEM_IMUTAVEL> docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps --no-build api
 ```
 
 ## 7. Pre-Check
@@ -83,6 +85,7 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 5. Confirmar disponibilidade do env file seguro.
 6. Confirmar existencia do override HML.
 7. Confirmar que o compose base permanece genérico.
+8. Confirmar que `FINQZ_BACKEND_IMAGE` esta definido e aponta para uma imagem imutavel.
 
 ## 8. Fluxo Oficial
 
@@ -93,10 +96,10 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 - validar worktree;
 - registrar qualquer drift preexistente.
 
-### 8.2 Build
+### 8.2 Imagem
 
-- executar build do backend e do frontend conforme a janela HML;
-- confirmar que os artefatos estao atualizados;
+- confirmar a imagem backend previamente validada;
+- nao reconstruir a imagem durante o deploy;
 - nao alterar o source nesta fase.
 
 ### 8.3 Deploy
@@ -104,7 +107,8 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 - aplicar o compose base com o override HML;
 - manter `APP_ENV=homologation`;
 - manter `NODE_ENV=production`;
-- subir a stack com `up -d --build`.
+- subir somente o `api` com `--no-deps --no-build`;
+- nao recriar PostgreSQL, Redis, Nginx ou frontend.
 
 ### 8.4 Health e Live
 
@@ -128,6 +132,8 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 ## 9. Critérios de Aprovação
 
 - compose HML sobe com sucesso;
+- a variavel `FINQZ_BACKEND_IMAGE` foi fornecida;
+- o `api` sobe sem `build:` no override HML;
 - `health` e `live` respondem;
 - `ready` responde apenas internamente;
 - smoke checklist concluido;
@@ -139,7 +145,7 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 - branch divergente;
 - commit divergente;
 - env file ausente ou inseguro;
-- build falhou;
+- imagem imutavel ausente ou invalida;
 - `health` ou `live` falhou;
 - `ready` falhou internamente;
 - smoke falhou;

@@ -1,0 +1,186 @@
+{
+  "id": "EPC-W5-03B-R8A",
+  "title": "Immutable Release Architecture",
+  "phase": "EPC-W5-03B-R8A",
+  "verdict": "IMMUTABLE_RELEASE_ARCHITECTURE_READY_FOR_STAGING",
+  "evidenceClassification": "PARTIAL_LOCAL_EVIDENCE_ONLY",
+  "context": {
+    "repo": "C:\\Projects\\FINQZ_PRO",
+    "branch": "homologation/bootstrap-vps",
+    "head": "874a3a827e061ffad0490c934c418da2afbecb84",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "lastCommit": "fix(nginx): route readiness probe to backend",
+    "rollbackImageId": "sha256:f945b26ed54242be14736dcc10e21a5a59e7984288a9892cbae7d2d0ae81a898",
+    "frontendFingerprint": "eb28ef5941f70b773cebad0e41da50e335e7760e8b930a710963f040417bbbed"
+  },
+  "inventory": {
+    "composeBase": "backend/docker-compose.yml",
+    "composeHml": "backend/docker-compose.hml.yml",
+    "dockerfile": "backend/Dockerfile",
+    "dockerignore": "backend/.dockerignore",
+    "releaseDocs": [
+      "docs/06-release/EPC-GO-LIVE-04-HML-DEPLOY-RUNBOOK.md",
+      "docs/06-release/EPC-GO-LIVE-06-HML-ROLLBACK-RUNBOOK.md",
+      "docs/06-release/README.md"
+    ],
+    "consumers": {
+      "LOCAL_DEVELOPMENT": [
+        "backend/docker-compose.yml"
+      ],
+      "HML_RELEASE": [
+        "backend/docker-compose.hml.yml"
+      ],
+      "PRODUCTION_RELEASE": [],
+      "LEGACY": [
+        "docs/06-release/EPC-GO-LIVE-04-HML-DEPLOY-RUNBOOK.md",
+        "docs/06-release/EPC-GO-LIVE-06-HML-ROLLBACK-RUNBOOK.md",
+        "docs/06-release/README.md"
+      ],
+      "DOCUMENTATION_ONLY": [
+        "docs/09-audits/EPC-W5-03B-R8A-IMMUTABLE-RELEASE-ARCHITECTURE.md",
+        "docs/09-audits/evidence/EPC-W5-03B-R8A-IMMUTABLE-RELEASE-ARCHITECTURE.json",
+        "docs/09-audits/evidence/EPC-W5-03B-R8A-BUILD-VALIDATE-DEPLOY-ROLLBACK.mmd"
+      ],
+      "UNKNOWN": []
+    }
+  },
+  "mergeProof": {
+    "composeVersion": "v5.1.3",
+    "imageOnlyRemovesBuild": false,
+    "buildNullRemovesBuildInRepoMerge": false,
+    "buildResetRemovesBuildInRepoMerge": true,
+    "buildOverrideSuitable": false,
+    "missingImageVariableFailsValidation": true,
+    "finalMergedApiBuildPresent": false,
+    "finalMergedApiImagePresent": true,
+    "finalMergedApiPullPolicy": "never"
+  },
+  "decision": {
+    "selectedOption": "OPTION_D_EFFECTIVE_SPLIT_BASE_PLUS_HML_OVERRIDE",
+    "rationale": [
+      "preserves local build",
+      "removes build from HML merged config",
+      "keeps release identity explicit via FINQZ_BACKEND_IMAGE",
+      "minimizes drift compared with a full duplicate HML compose"
+    ]
+  },
+  "composeTarget": {
+    "hmlApi": {
+      "image": "${FINQZ_BACKEND_IMAGE:?FINQZ_BACKEND_IMAGE is required}",
+      "build": null,
+      "pullPolicy": "never"
+    },
+    "preservedServices": [
+      "postgres",
+      "redis",
+      "nginx"
+    ]
+  },
+  "localDevelopment": {
+    "preserved": true,
+    "baseComposeBuild": true,
+    "localCommand": "docker compose -f backend/docker-compose.yml up -d --build"
+  },
+  "buildContract": {
+    "buildOnce": true,
+    "validateOnce": true,
+    "deploySameImage": true,
+    "mutableTagsProhibited": [
+      "latest"
+    ],
+    "ociLabels": [
+      "org.opencontainers.image.revision",
+      "org.opencontainers.image.source",
+      "org.opencontainers.image.created",
+      "org.opencontainers.image.version",
+      "org.opencontainers.image.title"
+    ]
+  },
+  "artifactManifest": {
+    "gitSha": "874a3a827e061ffad0490c934c418da2afbecb84",
+    "imageTag": "finqz-pro-backend:hml-874a3a8-r8c",
+    "imageId": "PENDING_EVIDENCE",
+    "manifestDigestLocal": "PENDING_EVIDENCE",
+    "dockerfileSha256": "8A8E44977C64C11932DD514AF23B2E5B0DF2CBFCF3432905C507B778C8C78C5C",
+    "packageLockSha256": "97DC963BBBE7E65FDC2E3BC03496965F60BD7687A80205998A27ED39A4F515E7",
+    "schemaSha256": "6A9462B36AEEF0DBFB8EF1C522E31D8166E4264638BD554FE37A373705299B89",
+    "migrationSha256": "E33323AF5C08600B1663DABC4B37299DF22228135B1C011528B583FD560B64D9",
+    "tarSha256": "PENDING_EVIDENCE",
+    "tarSize": "PENDING_EVIDENCE",
+    "timestampUtc": "PENDING_EVIDENCE",
+    "platform": "PENDING_EVIDENCE",
+    "node": "v24.15.0",
+    "npm": "11.12.1",
+    "openssl": "PENDING_EVIDENCE",
+    "prisma": "PENDING_EVIDENCE"
+  },
+  "deployContract": {
+    "service": "api",
+    "noDeps": true,
+    "noBuild": true,
+    "noFrontend": true,
+    "noDatabaseRecreate": true,
+    "noRedisRecreate": true,
+    "noNginxRecreate": true,
+    "command": "FINQZ_BACKEND_IMAGE=<IMAGEM_IMUTAVEL> docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps --no-build api"
+  },
+  "rollbackContract": {
+    "imageId": "sha256:f945b26ed54242be14736dcc10e21a5a59e7984288a9892cbae7d2d0ae81a898",
+    "noBuild": true,
+    "noLatest": true,
+    "command": "FINQZ_BACKEND_IMAGE=<ROLLBACK_IMAGE_REFERENCE_IMUTAVEL> docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps --no-build api"
+  },
+  "registryStatus": "DEFERRED_TO_PLATFORM_PHASE",
+  "transportStatus": "AIR_GAPPED_TRANSFER_APPROVED",
+  "security": {
+    "secretExposure": false,
+    "composeSecrets": false,
+    "docsSecrets": false,
+    "latestAsReleaseIdentity": false,
+    "buildInHml": false,
+    "frontendChanged": false,
+    "databaseChanged": false
+  },
+  "validations": {
+    "gitBaseline": {
+      "branch": "homologation/bootstrap-vps",
+      "head": "874a3a827e061ffad0490c934c418da2afbecb84",
+      "upstream": "origin/homologation/bootstrap-vps",
+      "leftRight": "0 0"
+    },
+    "composeValidationWithImage": {
+      "result": "pass",
+      "apiBuild": null,
+      "apiImage": "finqz-pro-backend:hml-874a3a8-r8a",
+      "apiPullPolicy": "never"
+    },
+    "composeValidationWithoutImage": {
+      "result": "fail",
+      "error": "required variable FINQZ_BACKEND_IMAGE is missing a value"
+    }
+  },
+  "risks": [
+    "registry owner and target are not approved yet",
+    "Docker daemon was unavailable for a real image build in this session",
+    "HML SSH evidence was not captured in this session",
+    "legacy runbooks previously said --build and required alignment"
+  ],
+  "gates": {
+    "baseline": "pass",
+    "inventory": "pass",
+    "mergeProof": "pass",
+    "decision": "pass",
+    "hmlCompose": "pass",
+    "localDevelopment": "pass",
+    "deployContract": "pass",
+    "rollbackContract": "pass",
+    "security": "pass",
+    "documentation": "pass"
+  },
+  "documents": {
+    "markdown": "docs/09-audits/EPC-W5-03B-R8A-IMMUTABLE-RELEASE-ARCHITECTURE.md",
+    "json": "docs/09-audits/evidence/EPC-W5-03B-R8A-IMMUTABLE-RELEASE-ARCHITECTURE.json",
+    "mermaid": "docs/09-audits/evidence/EPC-W5-03B-R8A-BUILD-VALIDATE-DEPLOY-ROLLBACK.mmd"
+  },
+  "nextStep": "Proceed to the implementation commit phase with the immutable release contract preserved and the air-gapped transport path reserved for the next image build."
+}

@@ -21,6 +21,7 @@
 ## 1. Objetivo
 
 Padronizar um rollback reproduzivel para HML, preservando o comportamento conhecido e reduzindo improviso operacional.
+O rollback da primeira release imutavel continua dependente da imagem exata preservada, sem rebuild e sem `latest`.
 
 ## 2. Gatilhos de Rollback
 
@@ -48,7 +49,7 @@ Padronizar um rollback reproduzivel para HML, preservando o comportamento conhec
 ### 3.3 Reaplicacao da stack HML
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --build
+FINQZ_BACKEND_IMAGE=<IMAGEM_DE_ROLLBACK_IMUTAVEL> docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps --no-build api
 ```
 
 ### 3.4 Validacao do edge
@@ -76,6 +77,7 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 ## 4. Critérios de Sucesso
 
 - stack HML voltou a responder;
+- rollback usou a imagem exata e imutavel;
 - `health` e `live` responderam;
 - `ready` interno voltou a responder;
 - smoke passou;

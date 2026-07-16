@@ -4,6 +4,9 @@
 
 services:
   api:
+    image: ${FINQZ_BACKEND_IMAGE:?FINQZ_BACKEND_IMAGE is required}
+    build: !reset null
+    pull_policy: never
     environment:
       APP_ENV: ${APP_ENV:-homologation}
       LOG_LEVEL: ${LOG_LEVEL:-info}
