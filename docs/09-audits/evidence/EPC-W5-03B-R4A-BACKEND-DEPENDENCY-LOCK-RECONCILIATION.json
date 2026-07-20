@@ -1,0 +1,128 @@
+{
+  "auditId": "EPC-W5-03B-R4A",
+  "title": "Backend Dependency Lock Reconciliation",
+  "repository": "FINQZ_PRO",
+  "branch": "homologation/bootstrap-vps",
+  "headLocal": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+  "headHml": "957e2fc696d9ec067683f26335756ecaf72b0290",
+  "upstream": "origin/homologation/bootstrap-vps",
+  "worktree": "C:\\Projects\\FINQZ_PRO\\_worktrees\\w5-03b-r4-cce8840",
+  "verdict": "DEFERRED_PENDING_RECONCILIATION",
+  "goNoGo": "DEFERRED_PENDING_RECONCILIATION",
+  "diagnosis": {
+    "classification": "TRANSITIVE_DEPENDENCY_MISSING_FROM_LOCK",
+    "findings": [
+      "backend/package.json did not declare yaml before reconciliation",
+      "backend/package-lock.json contained yaml@2.0.0-1 transitively via swagger-jsdoc",
+      "vitest requires yaml ^2.4.2",
+      "npm ci initially failed with Missing: yaml@2.9.0 from lock file"
+    ]
+  },
+  "packageFiles": {
+    "packageJsonChanged": true,
+    "packageLockChanged": true,
+    "changeScope": [
+      "backend/package.json",
+      "backend/package-lock.json"
+    ],
+    "diffClassification": [
+      "EXPECTED",
+      "EXPECTED"
+    ]
+  },
+  "fix": {
+    "summary": [
+      "Added yaml@^2.9.0 as a backend devDependency",
+      "Regenerated package-lock.json only",
+      "Did not change functional code"
+    ],
+    "npmInstallCommand": "npm install --package-lock-only --ignore-scripts --no-audit",
+    "npmCiCommand": "npm ci"
+  },
+  "validation": {
+    "npmCi": {
+      "status": "PASS",
+      "exitCode": 0,
+      "environment": "Linux Docker container",
+      "command": "docker run --rm -e NODE_ENV=test -e APP_ENV=local -e DATABASE_URL=postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_dev?schema=public -e DIRECT_URL=postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_dev?schema=public -e JWT_SECRET=test-only-jwt-secret-change-before-runtime-use-32chars -e JWT_REFRESH_SECRET=test-only-refresh-secret-change-before-runtime-use-32chars -e CORS_ORIGIN=http://localhost:5173 -e EXTERNAL_EFFECTS_ENABLED=false -v C:\\Projects\\FINQZ_PRO\\_worktrees\\w5-03b-r4-cce8840\\backend:/app -w /app node:20-bookworm-slim sh -lc 'npm ci'"
+    },
+    "npmTest": {
+      "status": "FAIL",
+      "exitCode": 1,
+      "environment": "Linux Docker container",
+      "command": "docker run --rm -e NODE_ENV=test -e APP_ENV=local -e DATABASE_URL=postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_dev?schema=public -e DIRECT_URL=postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_dev?schema=public -e JWT_SECRET=test-only-jwt-secret-change-before-runtime-use-32chars -e JWT_REFRESH_SECRET=test-only-refresh-secret-change-before-runtime-use-32chars -e CORS_ORIGIN=http://localhost:5173 -e EXTERNAL_EFFECTS_ENABLED=false -v C:\\Projects\\FINQZ_PRO\\_worktrees\\w5-03b-r4-cce8840\\backend:/app -w /app node:20-bookworm-slim sh -lc 'npm ci >/dev/null 2>&1 && npx vitest run --reporter=json --outputFile=vitest-results.json'",
+      "summary": {
+        "numTotalTestSuites": 268,
+        "numPassedTestSuites": 262,
+        "numFailedTestSuites": 6,
+        "numTotalTests": 863,
+        "numPassedTests": 859,
+        "numFailedTests": 4
+      },
+      "failure": "PrismaClientInitializationError: Unable to require libquery_engine-debian-openssl-1.1.x.so.node because libssl.so.1.1 is missing"
+    },
+    "npmBuild": {
+      "status": "PASS",
+      "exitCode": 0,
+      "environment": "local and Linux Docker container",
+      "command": "npm run build"
+    }
+  },
+  "images": {
+    "currentBackend": {
+      "container": "finqz-pro-api",
+      "tag": "backend-api:latest",
+      "imageId": "sha256:f945b26ed54242be14736dcc10e21a5a59e7984288a9892cbae7d2d0ae81a898",
+      "sizeBytes": 218475096
+    },
+    "candidateBackend": {
+      "tag": "finqz-pro-backend:hml-cce8840",
+      "imageId": "sha256:9fd64615f722c576afd50d615a96b2f1eb31bfdb09b68e4766c77849cc45767b",
+      "digest": "finqz-pro-backend@sha256:9fd64615f722c576afd50d615a96b2f1eb31bfdb09b68e4766c77849cc45767b",
+      "sizeBytes": 219787912,
+      "createdAt": "2026-07-14T14:05:57.672097868Z",
+      "entrypoint": [
+        "docker-entrypoint.sh"
+      ],
+      "cmd": [
+        "node",
+        "dist/server.js"
+      ],
+      "healthcheck": null,
+      "repoDigests": [
+        "finqz-pro-backend@sha256:9fd64615f722c576afd50d615a96b2f1eb31bfdb09b68e4766c77849cc45767b"
+      ]
+    },
+    "rollback": {
+      "tag": "backend-api:rollback-f945b26"
+    }
+  },
+  "frontend": {
+    "fingerprint": "eb28ef5941f70b773cebad0e41da50e335e7760e8b930a710963f040417bbbed",
+    "preserved": true,
+    "source": "/opt/finqz/FINQZ_PRO/dist",
+    "mount": "/usr/share/nginx/html"
+  },
+  "migration": {
+    "classification": "SAFE_ADDITIVE",
+    "reference": "backend/prisma/migrations/20260710120000_sdc_3_4h_b_simulation_runtime_evidence/migration.sql",
+    "executed": false
+  },
+  "compose": {
+    "service": "api",
+    "futureDeployCommand": "cd /opt/finqz/FINQZ_PRO/backend && docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps api",
+    "rollbackCommand": "cd /opt/finqz/FINQZ_PRO/backend && docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps api",
+    "bindingStrategy": "PENDING_RECONCILIATION"
+  },
+  "risks": [
+    "Prisma engine requires libssl.so.1.1 in the Linux validation container",
+    "Windows Vitest loading showed a separate spawn EPERM symptom before the Linux validation path was used",
+    "Remote HML /ready reconciliation still needs confirmation",
+    "No deploy was executed"
+  ],
+  "notes": [
+    "No restart, migration, deploy, commit, or push was executed.",
+    "The candidate image tag was produced successfully.",
+    "The container image was verified to exclude the frontend dist path."
+  ]
+}

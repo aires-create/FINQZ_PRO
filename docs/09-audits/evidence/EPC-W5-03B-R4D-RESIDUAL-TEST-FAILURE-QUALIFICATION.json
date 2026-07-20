@@ -1,0 +1,100 @@
+{
+  "phase": "EPC-W5-03B-R4D",
+  "title": "Residual Test Failure Qualification and Release Safety Gate",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "candidateHead": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+    "hmlHead": "957e2fc696d9ec067683f26335756ecaf72b0290",
+    "worktree": "C:\\Projects\\FINQZ_PRO\\_worktrees\\w5-03b-r4-cce8840"
+  },
+  "validation": {
+    "linuxContainer": "node:20-bookworm-slim",
+    "npmCi": "PASS",
+    "npmTest": "PASS",
+    "npmRunBuild": "PASS",
+    "summary": {
+      "testSuitesTotal": 270,
+      "testSuitesPassed": 270,
+      "testSuitesFailed": 0,
+      "testsTotal": 872,
+      "testsPassed": 872,
+      "testsFailed": 0
+    }
+  },
+  "residualFailures": [],
+  "integrityFindings": [
+    {
+      "file": "backend/src/tests/integration/edp.persistence.prisma.test.ts",
+      "classification": "INVALID_TEST_TRANSFORMATION",
+      "evidence": [
+        "createInMemoryEdpAggregateRepository",
+        "createInMemoryEdpEventStore",
+        "createInMemoryEdpOutbox",
+        "createInMemoryEdpAuditRepository",
+        "createInMemoryEdpIdempotencyRepository",
+        "createInMemoryEdpCorrelationRepository"
+      ],
+      "impact": "Does not exercise Prisma or PostgreSQL."
+    },
+    {
+      "file": "backend/src/tests/integration/edp.runtime.e2e.test.ts",
+      "classification": "UNITIZED_BY_MOCKING",
+      "evidence": [
+        "createFakePrismaClient",
+        "InMemoryEdpUnitOfWork",
+        "vi.mock('../../database/prisma.js')",
+        "vi.mock('../../core/prisma/client.js')",
+        "vi.mock('../../modules/edp/composition/index.js')"
+      ],
+      "impact": "Route-level flow is no longer a real Prisma-backed E2E path."
+    },
+    {
+      "file": "backend/src/tests/integration/simulation-runtime-evidence.http.test.ts",
+      "classification": "PARTIALLY_DEGRADED",
+      "evidence": [
+        "createFakePrismaClient",
+        "InMemorySimulationRuntimeEvidenceRepository",
+        "vi.mock('../../database/prisma.js')",
+        "vi.mock('../../config/app.js')",
+        "vi.mock('../../modules/security-events/index.js')"
+      ],
+      "impact": "HTTP behavior is still exercised, but persistence is fake and bootstrap dependencies are mocked."
+    },
+    {
+      "file": "backend/src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts",
+      "classification": "INVALID_TEST_TRANSFORMATION",
+      "evidence": [
+        "InMemorySimulationRuntimeEvidenceRepository"
+      ],
+      "impact": "No Prisma or PostgreSQL interaction remains in the named persistence suite."
+    }
+  ],
+  "candidateImage": {
+    "tag": "finqz-pro-backend:hml-cce8840",
+    "id": "sha256:9fd64615f722c576afd50d615a96b2f1eb31bfdb09b68e4766c77849cc45767b",
+    "digest": "finqz-pro-backend@sha256:9fd64615f722c576afd50d615a96b2f1eb31bfdb09b68e4766c77849cc45767b",
+    "created": "2026-07-14T14:05:57.672097868Z",
+    "size": 219787912,
+    "entrypoint": [
+      "docker-entrypoint.sh"
+    ],
+    "cmd": [
+      "node",
+      "dist/server.js"
+    ],
+    "healthcheck": null
+  },
+  "rollback": {
+    "sourceTag": "backend-api:latest",
+    "sourceId": "sha256:c573f01f3ca9751b1b60ff8af252eab101885e7c9ec7af0d170a2bd7d0768d08",
+    "requiredFutureTag": "backend-api:rollback-f945b26",
+    "executed": false
+  },
+  "migration": {
+    "status": "SAFE_ADDITIVE",
+    "executed": false,
+    "reference": "backend/prisma/migrations/20260710120000_sdc_3_4h_b_simulation_runtime_evidence/migration.sql"
+  },
+  "releaseGate": "NO_GO",
+  "releaseReason": "The Linux runner is clean, but the wave degraded Prisma-backed integration semantics by replacing real persistence with fake or in-memory harnesses without an equivalent real-database coverage path."
+}

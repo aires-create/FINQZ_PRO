@@ -1,0 +1,100 @@
+{
+  "auditId": "EPC-W5-03B-R3",
+  "title": "HML Backend-Only Release Candidate",
+  "repository": "FINQZ_PRO",
+  "branch": "homologation/bootstrap-vps",
+  "head": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+  "upstream": "origin/homologation/bootstrap-vps",
+  "verdict": "DEFERRED_PENDING_HML_ACCESS",
+  "goNoGo": "NO_GO",
+  "decision": {
+    "frontendHml": "CONGELADO_E_PRESERVADO_POR_POLITICA",
+    "frontendLocal": "NAO_PUBLICAR",
+    "backend": "CANDIDATO_A_ATUALIZACAO_CONTROLADA",
+    "production": "NAO_ALTERAR"
+  },
+  "gitFetch": {
+    "origin": "PASS",
+    "vps": "FAIL_PERMISSION_DENIED"
+  },
+  "hmlAccess": {
+    "verified": false,
+    "networkReachable": true,
+    "dns": {
+      "hml.finqz.com.br": "72.60.130.32",
+      "api-hml.finqz.com.br": "72.60.130.32"
+    },
+    "ports": {
+      "22": true,
+      "443": true
+    },
+    "sshAttempt": "Permission denied (publickey,password).",
+    "publicHttpProbe": "blocked by local execution path with 127.0.0.1:9 refusal"
+  },
+  "composeTarget": {
+    "backendService": "api",
+    "composeFiles": [
+      "backend/docker-compose.yml",
+      "backend/docker-compose.hml.yml"
+    ],
+    "candidateBuildCommand": "cd backend && docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml build api",
+    "candidateDeployCommand": "cd backend && docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps api"
+  },
+  "frontendPreservation": {
+    "classification": "FRONTEND_ORIGIN_UNKNOWN",
+    "fingerprintCaptured": false,
+    "restorationMechanismVerified": false
+  },
+  "localValidation": {
+    "frontendTest": "FAIL",
+    "frontendBuild": "PASS",
+    "backendTest": "FAIL",
+    "backendBuild": "PASS",
+    "frontendTestSummary": {
+      "testFilesFailed": 3,
+      "testsFailed": 5,
+      "testsPassed": 107
+    },
+    "backendTestSummary": {
+      "testFilesFailed": 5,
+      "testsFailed": 5,
+      "testsPassed": 867
+    }
+  },
+  "migrations": {
+    "classification": "UNKNOWN",
+    "localEvidence": "backend/prisma schema and migrations exist locally, but HML applied state was not verified",
+    "drift": "UNKNOWN"
+  },
+  "rollbackPlan": {
+    "required": true,
+    "notes": [
+      "Restore previous backend image and container",
+      "Keep frontend HML untouched",
+      "Validate health/live/ready before leaving the window",
+      "Restore database only after an approved migration plan and backup"
+    ]
+  },
+  "backupPlan": {
+    "required": true,
+    "notes": [
+      "Capture current HML SHA",
+      "Capture current backend image and tag",
+      "Capture current compose config",
+      "Capture frontend fingerprint and static path once SSH access is available",
+      "Capture database backup only after approval"
+    ]
+  },
+  "risks": [
+    "HML SSH access unavailable",
+    "Frontend HML origin unknown",
+    "Local tests not green",
+    "Deploying without reconciliation could overwrite a divergent remote runtime"
+  ],
+  "nextStep": "DEFERRED_PENDING_HML_ACCESS",
+  "notes": [
+    "No deploy was executed.",
+    "No code, compose, Dockerfile, or frontend files were modified.",
+    "No commit or push was executed."
+  ]
+}

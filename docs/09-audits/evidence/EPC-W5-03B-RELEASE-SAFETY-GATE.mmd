@@ -1,0 +1,9 @@
+flowchart TD
+  A[R4D audit] --> B[Disposable Linux container]
+  B --> C[npm ci PASS]
+  C --> D[npm test PASS]
+  D --> E[270 suites, 872 tests]
+  E --> F[Integrity audit of changed suites]
+  F --> G[Prisma-backed flows replaced with in-memory or fake Prisma harnesses]
+  G --> H[No equivalent real-database coverage path]
+  H --> I[NO_GO]

@@ -1,0 +1,104 @@
+{
+  "id": "EPC-W5-03B-R8C",
+  "title": "Candidate Image Build and Freeze",
+  "phase": "EPC-W5-03B-R8C",
+  "verdict": "CANDIDATE_IMAGE_FROZEN_READY_FOR_TRANSPORT",
+  "evidenceClassification": "FULL_LOCAL_EVIDENCE_ONLY",
+  "context": {
+    "repo": "C:\\Projects\\FINQZ_PRO",
+    "branch": "homologation/bootstrap-vps",
+    "head": "feb93ba696d8362030c7a57b18a0a0ea7a6d997b",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "lastCommit": "feat(release): enforce immutable backend deployment",
+    "candidateTag": "finqz-pro-backend:hml-feb93ba-r8c",
+    "candidateImageId": "sha256:b887f858a5a9a952754188cca9b3eaa3c1a7807d0e744071d2c8e9c043980060",
+    "candidateRepoDigest": "finqz-pro-backend@sha256:b887f858a5a9a952754188cca9b3eaa3c1a7807d0e744071d2c8e9c043980060",
+    "freezeDirectory": "C:\\Projects\\FINQZ_PRO_RELEASE_ARTIFACTS\\feb93ba-r8c",
+    "freezeTar": "C:\\Projects\\FINQZ_PRO_RELEASE_ARTIFACTS\\feb93ba-r8c\\finqz-pro-backend-hml-feb93ba-r8c.tar",
+    "freezeManifest": "C:\\Projects\\FINQZ_PRO_RELEASE_ARTIFACTS\\feb93ba-r8c\\finqz-pro-backend-hml-feb93ba-r8c.manifest.json"
+  },
+  "inventory": {
+    "inputs": [
+      "backend/package.json",
+      "backend/package-lock.json",
+      "backend/Dockerfile",
+      "backend/.dockerignore",
+      "backend/docker-compose.yml",
+      "backend/docker-compose.hml.yml",
+      "backend/prisma/schema.prisma",
+      "backend/prisma/migrations/20260710120000_sdc_3_4h_b_simulation_runtime_evidence/migration.sql",
+      "backend/infra/nginx/nginx.conf"
+    ],
+    "outputs": [
+      "docs/09-audits/EPC-W5-03B-R8C-CANDIDATE-IMAGE-BUILD-AND-FREEZE.md",
+      "docs/09-audits/evidence/EPC-W5-03B-R8C-CANDIDATE-IMAGE-BUILD-AND-FREEZE.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R8C-BUILD-VALIDATE-FREEZE.mmd"
+    ]
+  },
+  "artifact": {
+    "tarFile": "finqz-pro-backend-hml-feb93ba-r8c.tar",
+    "tarSha256": "3c563926c9df552c92cc4c973baf8af96d734464ddefb595007b8bcd877521b2",
+    "tarSizeBytes": 219811328,
+    "freezeTimestampUtc": "2026-07-16T19:43:46Z"
+  },
+  "image": {
+    "tag": "finqz-pro-backend:hml-feb93ba-r8c",
+    "id": "sha256:b887f858a5a9a952754188cca9b3eaa3c1a7807d0e744071d2c8e9c043980060",
+    "repoDigest": "finqz-pro-backend@sha256:b887f858a5a9a952754188cca9b3eaa3c1a7807d0e744071d2c8e9c043980060",
+    "os": "linux",
+    "architecture": "amd64",
+    "created": "2026-07-16T18:53:43.783346655Z",
+    "labels": {
+      "org.opencontainers.image.title": "FINQZ PRO Backend",
+      "org.opencontainers.image.revision": "feb93ba696d8362030c7a57b18a0a0ea7a6d997b",
+      "org.opencontainers.image.version": "hml-feb93ba-r8c",
+      "org.opencontainers.image.source": "https://github.com/aires-create/FINQZ_PRO",
+      "org.opencontainers.image.created": "2026-07-16T18:52:43Z",
+      "org.opencontainers.image.description": "FINQZ PRO immutable HML backend candidate"
+    }
+  },
+  "contract": {
+    "buildOnce": true,
+    "validateSameImage": true,
+    "freezeSameImage": true,
+    "transportSameImage": true,
+    "deploySameImage": true,
+    "noVpcDeployNow": true,
+    "noHmlAccess": true,
+    "noRemoteTransport": true
+  },
+  "validations": {
+    "localRuntime": "pass",
+    "linuxBuild": "pass",
+    "linuxValidate": "pass",
+    "disposablePostgresMigration": "pass",
+    "disposableSmoke": "pass",
+    "integrationSuite": "pass_with_vitest_teardown_warnings",
+    "fullTestSuite": "pass_with_vitest_teardown_warnings"
+  },
+  "manifest": {
+    "path": "C:\\Projects\\FINQZ_PRO_RELEASE_ARTIFACTS\\feb93ba-r8c\\finqz-pro-backend-hml-feb93ba-r8c.manifest.json",
+    "canonicalForFreeze": true
+  },
+  "gates": {
+    "build": "pass",
+    "validate": "pass",
+    "freeze": "pass",
+    "transport": "not_executed",
+    "deploy": "not_executed",
+    "security": "pass",
+    "documentation": "pass"
+  },
+  "risks": [
+    "Vitest teardown warnings remain in two suites even though all tests pass",
+    "transport to VPS has not been executed yet",
+    "HML deployment has not been executed yet",
+    "registry strategy remains deferred to the platform phase"
+  ],
+  "documents": {
+    "markdown": "docs/09-audits/EPC-W5-03B-R8C-CANDIDATE-IMAGE-BUILD-AND-FREEZE.md",
+    "json": "docs/09-audits/evidence/EPC-W5-03B-R8C-CANDIDATE-IMAGE-BUILD-AND-FREEZE.json",
+    "mermaid": "docs/09-audits/evidence/EPC-W5-03B-R8C-BUILD-VALIDATE-FREEZE.mmd"
+  },
+  "nextStep": "Proceed to the next authorized transport phase only after an explicit release decision is made."
+}

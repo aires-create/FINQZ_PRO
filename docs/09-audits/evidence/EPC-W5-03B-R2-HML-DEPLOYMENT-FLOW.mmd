@@ -1,0 +1,12 @@
+flowchart TD
+  A[Developer] --> B[Local Git]
+  B --> C[Compare local vs vps-tracking ref]
+  C --> D[Check HML SSH access]
+  D -->|Denied| E[HML state not verified]
+  D -->|Granted| F[Inventory host/runtime]
+  F --> G[Compose HML stack]
+  G --> H[Validate health/live/ready]
+  E --> I[DEFERRED_PENDING_RECONCILIATION]
+  H --> J{GO_FOR_HML_DEPLOY?}
+  J -->|No| K[Stop: DEFERRED_PENDING_RECONCILIATION]
+  J -->|Yes| L[Prepare release candidate]

@@ -1,0 +1,171 @@
+{
+  "auditId": "EPC-W5-03B-R2",
+  "title": "HML Release Reconciliation and Controlled Deployment",
+  "repository": "FINQZ_PRO",
+  "branch": "homologation/bootstrap-vps",
+  "head": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+  "upstream": "origin/homologation/bootstrap-vps",
+  "verdict": "DEFERRED_PENDING_RECONCILIATION",
+  "goNoGo": "NO_GO",
+  "productionState": "PRODUCTION_STATE_NOT_VERIFIED",
+  "hmlState": {
+    "verified": false,
+    "candidateProxyRef": "remotes/vps/homologation/bootstrap-vps",
+    "candidateProxySha": "db97dedadcb3428e2a140bf9f808438e10f5aa06",
+    "reason": [
+      "SSH authentication denied from this session",
+      "public HTTPS probe blocked by local 127.0.0.1:9 refusal",
+      "no official SSH config was present in the local environment"
+    ]
+  },
+  "deployMechanism": {
+    "file": "backend/docker-compose.yml",
+    "overrideFile": "backend/docker-compose.hml.yml",
+    "command": "cd backend && docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --build"
+  },
+  "networkEvidence": {
+    "dns": {
+      "hml.finqz.com.br": "72.60.130.32",
+      "api-hml.finqz.com.br": "72.60.130.32"
+    },
+    "tcp": {
+      "22": true,
+      "443": true
+    },
+    "sshAttempt": "Permission denied (publickey,password).",
+    "httpAttempt": "blocked by local execution path with 127.0.0.1:9 refusal"
+  },
+  "gitReconciliation": {
+    "mergeBaseWithVpsProxy": "b774d26e2423f3d624a100dc349aafbd49e5a3e6",
+    "localVsVpsProxy": {
+      "behind": 1,
+      "ahead": 371
+    },
+    "localVsOriginMain": {
+      "behind": 0,
+      "ahead": 377
+    },
+    "localExclusiveCommits": [
+      "cce8840 docs(audit): add W5-03C-R3 live runtime validation",
+      "f1995f7 docs(runbook): add local Redis startup procedure",
+      "9904a0f fix(bootstrap): recognize official dev launch context",
+      "8bb3582 docs(audit): add Redis readiness policy diagnosis",
+      "852c10d fix(bootstrap): make environment loading cwd-independent"
+    ],
+    "vpsProxyExclusiveCommits": [
+      "db97ded fix(deps): sync backend lockfile for docker build"
+    ],
+    "productionExclusiveCommits": []
+  },
+  "localValidation": {
+    "rootBuild": "PASS",
+    "backendBuild": "PASS",
+    "rootTest": {
+      "status": "FAIL",
+      "failedFiles": 3,
+      "failedTests": 5,
+      "passedTests": 107,
+      "summary": "admin pipelines stage archive/edit/reorder tests failed"
+    },
+    "backendTest": {
+      "status": "FAIL",
+      "failedFiles": 5,
+      "failedTests": 5,
+      "passedTests": 867,
+      "summary": "integration session/memberships/operation/provider-runtime/users reset-password tests failed"
+    }
+  },
+  "migrations": {
+    "classification": "UNKNOWN",
+    "localEvidence": "backend/prisma migrations are present in the repository, but HML application state could not be verified",
+    "drift": "UNKNOWN"
+  },
+  "matrixSummary": {
+    "winner": "LOCAL",
+    "unknownAreas": [
+      "HML implanted runtime",
+      "production runtime",
+      "PM2/systemd",
+      "database drift",
+      "applied migrations"
+    ]
+  },
+  "riskRegister": [
+    {
+      "severity": "BLOCKER",
+      "risk": "No authenticated SSH access to the HML host from this session."
+    },
+    {
+      "severity": "BLOCKER",
+      "risk": "Public HTTP probe is blocked by the local execution environment."
+    },
+    {
+      "severity": "CRITICAL",
+      "risk": "Local root and backend test suites are not green."
+    },
+    {
+      "severity": "HIGH",
+      "risk": "Deploying from the local worktree without remote reconciliation could overwrite a divergent HML runtime."
+    }
+  ],
+  "functionalSurfacesToPreserve": [
+    "layout principal",
+    "navegação",
+    "Dashboard",
+    "Clientes",
+    "Pipeline",
+    "Oportunidades",
+    "detalhe da oportunidade",
+    "tarefas",
+    "anotações",
+    "simulador",
+    "anexos",
+    "histórico",
+    "tags",
+    "ações rápidas",
+    "saúde operacional",
+    "Master Catalog",
+    "autenticação",
+    "permissões",
+    "Redis",
+    "readiness",
+    "telemetry",
+    "environment bootstrap",
+    "Prisma schema",
+    "migrations",
+    "seed",
+    "API contracts",
+    "frontend API client",
+    "feature flags",
+    "Docker",
+    "Nginx",
+    "PM2/systemd",
+    "artefatos estáticos"
+  ],
+  "backupPlan": {
+    "required": true,
+    "notes": [
+      "Capture SHA current do HML when SSH is available",
+      "Capture current image/container metadata",
+      "Capture static frontend artifact version",
+      "Capture Nginx config snapshot",
+      "Capture database backup only after migration approval"
+    ]
+  },
+  "rollbackPlan": {
+    "required": true,
+    "notes": [
+      "Return to the last verified safe SHA",
+      "Re-apply the official compose stack",
+      "Validate health/live/internal ready",
+      "Restore prior frontend artifact if needed",
+      "Restore database only when approved and backed up"
+    ]
+  },
+  "nextStep": "DEFERRED_PENDING_RECONCILIATION",
+  "notes": [
+    "No functional code was modified.",
+    "No deploy, commit, or push was executed.",
+    "Existing untracked audit files and .env.example were preserved."
+  ]
+}

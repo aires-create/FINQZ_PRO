@@ -1,0 +1,113 @@
+{
+  "epc": "EPC-W5-03B-R9",
+  "title": "Functional Validation (HML)",
+  "gate": "R9-GATE-01",
+  "environment": "HML",
+  "branch": "homologation/bootstrap-vps",
+  "baselineCommit": "feb93ba696d8362030c7a57b18a0a0ea7a6d997b",
+  "remoteCommit": "feb93ba696d8362030c7a57b18a0a0ea7a6d997b",
+  "timestamp": "2026-07-20T11:02:38.2986167-03:00",
+  "workingTree": {
+    "clean": false,
+    "modifiedFiles": [
+      ".env.example"
+    ],
+    "untrackedFiles": [
+      "_worktrees/w5-03b-r4-cce8840/",
+      "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "docs/09-audits/EPC-W5-03B-FIRST-FUNCTIONAL-CUT.md",
+      "docs/09-audits/EPC-W5-03B-R1-FRONTEND-SPAWN-EPERM-DIAGNOSIS.md",
+      "docs/09-audits/EPC-W5-03B-R2-HML-RECONCILIATION.md",
+      "docs/09-audits/EPC-W5-03B-R3-HML-BACKEND-ONLY-RELEASE-CANDIDATE.md",
+      "docs/09-audits/EPC-W5-03B-R4A-BACKEND-DEPENDENCY-LOCK-RECONCILIATION.md",
+      "docs/09-audits/EPC-W5-03B-R4B-PRISMA-LINUX-OPENSSL-ALIGNMENT.md",
+      "docs/09-audits/EPC-W5-03B-R4D-RESIDUAL-TEST-FAILURE-QUALIFICATION.md",
+      "docs/09-audits/EPC-W5-03B-R5C-FULL-LINUX-TEST-STACK-VALIDATION.md",
+      "docs/09-audits/EPC-W5-03B-R6D-RELEASE-MANIFEST-FREEZE-AND-HML-READINESS.md",
+      "docs/09-audits/EPC-W5-03B-R7D-FINAL-BACKEND-ONLY-HML-DEPLOYMENT-READINESS.md",
+      "docs/09-audits/EPC-W5-03B-R8C-CANDIDATE-IMAGE-BUILD-AND-FREEZE.md",
+      "docs/09-audits/EPC-W5-03B-R8D-IMAGE-TRANSPORT-AND-HML-AVAILABILITY.md",
+      "docs/09-audits/EPC-W5-03B-R9-FUNCTIONAL-VALIDATION-HML.md",
+      "docs/09-audits/evidence/EPC-W5-03B-FIRST-FUNCTIONAL-CUT.json",
+      "docs/09-audits/evidence/EPC-W5-03B-OPPORTUNITIES-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R1-FRONTEND-SPAWN-EPERM-DIAGNOSIS.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R1-VITE-STARTUP-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R2-HML-DEPLOYMENT-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R2-HML-RECONCILIATION.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R3-BACKEND-ONLY-DEPLOYMENT.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R3-HML-BACKEND-ONLY-RELEASE-CANDIDATE.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R4A-BACKEND-DEPENDENCY-LOCK-RECONCILIATION.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R4A-REPRODUCIBLE-BUILD-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R4B-PRISMA-ENGINE-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R4B-PRISMA-LINUX-OPENSSL-ALIGNMENT.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R4D-RESIDUAL-TEST-FAILURE-QUALIFICATION.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R5C-DISPOSABLE-TEST-TOPOLOGY.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R5C-FULL-LINUX-TEST-STACK-VALIDATION.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R6D-BACKEND-ONLY-RELEASE-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R6D-RELEASE-MANIFEST-FREEZE-AND-HML-READINESS.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R7D-BACKEND-ONLY-DEPLOYMENT-SEQUENCE.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R7D-FINAL-BACKEND-ONLY-HML-DEPLOYMENT-READINESS.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R8A-BUILD-VALIDATE-DEPLOY-ROLLBACK.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R8A-IMMUTABLE-RELEASE-ARCHITECTURE.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R8C-BUILD-VALIDATE-FREEZE.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R8C-CANDIDATE-IMAGE-BUILD-AND-FREEZE.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R8D-IMAGE-TRANSPORT-AND-HML-AVAILABILITY.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R8D-TRANSFER-HASH-LOAD-VERIFY.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R9-FUNCTIONAL-VALIDATION-FLOW.mmd",
+      "docs/09-audits/evidence/EPC-W5-03B-R9-FUNCTIONAL-VALIDATION-HML.json",
+      "docs/09-audits/evidence/EPC-W5-03B-RELEASE-SAFETY-GATE.mmd",
+      "scripts/sdc-3.4h-f-local-readiness.mjs"
+    ]
+  },
+  "envExampleReview": {
+    "status": "SAFE_PLACEHOLDER",
+    "findings": [
+      "Added simulation runtime toggles are documentation-only placeholders and are not production credentials.",
+      "Added remote evidence toggle is a safe boolean flag with no secret material.",
+      "No secret-like value was present in the reviewed .env.example diff."
+    ]
+  },
+  "worktreesReview": {
+    "status": "VALID_GIT_WORKTREE",
+    "findings": [
+      "_worktrees/w5-03b-r4-cce8840 exists as a full Git worktree with its own .git entry.",
+      "git worktree list confirms the worktree and shows a detached HEAD at cce88408a42c7816b5f5aefbfe91b22a91182f91.",
+      "The directory contains a full repo copy, build outputs, node_modules, docs, and visual-review artifacts, so it should remain excluded from accidental promotion."
+    ]
+  },
+  "documentationReview": {
+    "status": "PASS",
+    "findings": [
+      "R1 through R8 audit artifacts are present and their naming is consistent with the EPC-W5-03B sequence.",
+      "No R9 artifact existed before this initialization.",
+      "Sampled R8 documents and evidence files were structurally coherent and aligned on branch and baseline commit references."
+    ]
+  },
+  "securityReview": {
+    "status": "PASS",
+    "potentialSecretsDetected": false,
+    "findings": [
+      "No POTENTIAL_SECRET_DETECTED event was required.",
+      "No real credential value was recorded in the report.",
+      "The modified .env.example contains placeholders and safe toggles only."
+    ]
+  },
+  "r9Artifacts": {
+    "existing": false,
+    "created": [
+      "docs/09-audits/EPC-W5-03B-R9-FUNCTIONAL-VALIDATION-HML.md",
+      "docs/09-audits/evidence/EPC-W5-03B-R9-FUNCTIONAL-VALIDATION-HML.json",
+      "docs/09-audits/evidence/EPC-W5-03B-R9-FUNCTIONAL-VALIDATION-FLOW.mmd"
+    ]
+  },
+  "decision": "GO_DOCUMENT_PROMOTION",
+  "restrictions": [
+    "No runtime change",
+    "No deploy",
+    "No database change",
+    "No Redis change",
+    "No container restart",
+    "No code functional change"
+  ],
+  "nextAuthorizedStep": "EPC-W5-03B-R9 Functional Validation (HML)"
+}

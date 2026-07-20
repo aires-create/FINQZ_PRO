@@ -1,0 +1,114 @@
+{
+  "id": "EPC-W5-03B-R5C",
+  "title": "Full Linux Test Stack Validation",
+  "objective": "Validate the backend and frontend in a disposable Linux stack, recheck the EDP timeout fix, and capture the candidate backend image metadata without touching production or HML.",
+  "topology": {
+    "network": "finqz-r5c-test-network",
+    "containers": [
+      "finqz-r5c-postgres",
+      "finqz-r5c-redis",
+      "finqz-r5c-backend-tests"
+    ],
+    "image": "finqz-pro-backend:hml-cce8840-r5c"
+  },
+  "connectivity": {
+    "postgres": {
+      "dns": "pass",
+      "tcp_5432": "pass",
+      "auth": "pass",
+      "select_1": "pass"
+    },
+    "redis": {
+      "dns": "pass",
+      "tcp_6379": "pass",
+      "ping": "pass"
+    }
+  },
+  "prisma_bootstrap": {
+    "npm_ci": "pass",
+    "validate": "pass",
+    "generate": "pass",
+    "migrate_deploy": "pass",
+    "migrate_status": "pass",
+    "binary_target": "debian-openssl-3.0.x"
+  },
+  "edp_runtime_fix": {
+    "file": "backend/src/tests/integration/edp.runtime.e2e.test.ts",
+    "root_cause": "The test was forcing repeated cold app bootstrap through module resets and an unstable Prisma mock, which pushed the first EDP case into the Vitest timeout window.",
+    "remediation": [
+      "keep one hoisted fake Prisma client",
+      "reset the shared fake client between tests",
+      "import createApp through the normal static path",
+      "stop resetting the module graph between cases"
+    ],
+    "stability_runs": [
+      { "run": 1, "result": "pass", "tests": 7 },
+      { "run": 2, "result": "pass", "tests": 7 },
+      { "run": 3, "result": "pass", "tests": 7 },
+      { "run": 4, "result": "pass", "tests": 7 },
+      { "run": 5, "result": "pass", "tests": 7 }
+    ]
+  },
+  "integration": {
+    "prisma_backed_files": [
+      "src/tests/integration/edp.persistence.prisma.test.ts",
+      "src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts",
+      "src/tests/integration/simulation-runtime-evidence.http.test.ts"
+    ],
+    "memory_files": [
+      "src/tests/integration/edp.persistence.memory.test.ts",
+      "src/tests/integration/edp.runtime.memory.test.ts",
+      "src/tests/integration/simulation-runtime-evidence.memory.test.ts",
+      "src/tests/integration/simulation-runtime-evidence.persistence.memory.test.ts"
+    ],
+    "full_backend_integration": {
+      "command": "npm run test:integration",
+      "result": "pass",
+      "files": 17,
+      "tests": 76
+    },
+    "full_backend_suite": {
+      "command": "npm test",
+      "result": "pass",
+      "files": 132,
+      "tests": 887
+    },
+    "backend_build": {
+      "command": "npm run build",
+      "result": "pass"
+    }
+  },
+  "frontend": {
+    "validation_mode": "linux_container",
+    "npm_ci": "pass",
+    "npm_test": {
+      "result": "pass",
+      "files": 26,
+      "tests": 112
+    },
+    "npm_build": "pass",
+    "host_runner_note": "The Windows runner in this workspace failed early with an esbuild spawn EPERM config-loading error, so the authoritative frontend validation was completed in Linux."
+  },
+  "candidate_image": {
+    "tag": "finqz-pro-backend:hml-cce8840-r5c",
+    "id": "sha256:853ab9caf941dcb535d657d5e573329f97764c95e996842e0d88e2b75003f8a1",
+    "digest": "finqz-pro-backend@sha256:853ab9caf941dcb535d657d5e573329f97764c95e996842e0d88e2b75003f8a1",
+    "architecture": "amd64",
+    "os": "linux",
+    "size_bytes": 219789643,
+    "created": "2026-07-14T20:11:06.501092619Z"
+  },
+  "verdict": "pass",
+  "constraints": {
+    "no_deploy": true,
+    "no_hml_migration": true,
+    "no_commit": true,
+    "no_push": true,
+    "no_official_stack_changes": true
+  },
+  "notes": [
+    "The disposable stack was isolated on a private Docker network.",
+    "The candidate image was built locally only for validation.",
+    "The backend runtime target observed in Linux was debian-openssl-3.0.x."
+  ]
+}

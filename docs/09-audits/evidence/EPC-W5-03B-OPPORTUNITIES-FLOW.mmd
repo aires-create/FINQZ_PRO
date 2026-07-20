@@ -1,0 +1,9 @@
+flowchart TD
+  A[Backend available] --> B[Login succeeds]
+  B --> C[GET /api/v1/opportunities = 200]
+  C --> D[GET /api/v1/pipelines = 200]
+  D --> E[GET /api/v1/master-catalog/products = 200]
+  E --> F[Frontend build passes]
+  F --> G[Vite dev server start]
+  G --> H[FAIL: spawn EPERM in vite.config.ts]
+  H --> I[Browser validation blocked]

@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  participant W as Isolated Worktree
+  participant N as npm
+  participant D as Docker
+  participant A as Audit Docs
+
+  W->>N: inspect package.json, package-lock.json, npm and node versions
+  W->>N: declare yaml@^2.9.0 and regenerate package-lock only
+  N-->>W: lockfile reconciled
+  W->>N: npm ci
+  N-->>W: PASS in Linux container
+  W->>N: npm test
+  N-->>W: 262 suites passed, 6 suites failed
+  N-->>W: Prisma/OpenSSL runtime mismatch on libssl.so.1.1
+  W->>N: npm run build
+  N-->>W: PASS
+  W->>D: docker build finqz-pro-backend:hml-cce8840
+  D-->>W: image built successfully
+  W->>D: inspect candidate image metadata
+  D-->>W: image ID, digest, entrypoint, cmd, size captured
+  W->>D: verify frontend dist absence in candidate image
+  D-->>W: frontend-dist-absent
+  W->>A: write lock reconciliation evidence
+  W-->>A: verdict = DEFERRED_PENDING_RECONCILIATION

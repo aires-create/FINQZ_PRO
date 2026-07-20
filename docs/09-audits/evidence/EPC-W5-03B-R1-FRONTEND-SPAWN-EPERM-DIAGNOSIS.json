@@ -1,0 +1,116 @@
+{
+  "artifact": "EPC-W5-03B-R1-FRONTEND-SPAWN-EPERM-DIAGNOSIS",
+  "verdict": "FRONTEND_RUNTIME_VALIDATION_BLOCKED",
+  "branch": "homologation/bootstrap-vps",
+  "head": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+  "aheadCommit": {
+    "sha": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+    "short": "cce8840",
+    "subject": "docs(audit): add W5-03C-R3 live runtime validation"
+  },
+  "baseline": {
+    "workingDirectory": "C:\\Projects\\FINQZ_PRO",
+    "nodeVersion": "v24.15.0",
+    "npmVersion": "11.12.1",
+    "viteVersion": "7.3.0",
+    "esbuildPackageVersion": "0.27.2",
+    "esbuildBinary": "C:\\Projects\\FINQZ_PRO\\node_modules\\@esbuild\\win32-x64\\esbuild.exe"
+  },
+  "reproduction": {
+    "command": "npm run dev",
+    "pid": 20564,
+    "exitCode": 1,
+    "durationSeconds": 2,
+    "openedPort": null,
+    "openedBeforeFailure": false,
+    "failurePhase": "config loading / esbuild service startup",
+    "stackTop": "failed to load config from C:\\Projects\\FINQZ_PRO\\vite.config.ts"
+  },
+  "esbuildDiagnostics": {
+    "exists": true,
+    "length": 11365376,
+    "lastWriteTime": "2026-06-14T19:43:21",
+    "zoneIdentifierPresent": false,
+    "directExecution": {
+      "command": "\"C:\\Projects\\FINQZ_PRO\\node_modules\\@esbuild\\win32-x64\\esbuild.exe\" --version",
+      "result": "0.27.2"
+    },
+    "aclResult": "readable and executable in current user context"
+  },
+  "processAndPortChecks": {
+    "listenPorts": [],
+    "esbuildProcessActive": false,
+    "nodeProcessesSeen": [
+      5836,
+      7544,
+      11652,
+      13652,
+      18780,
+      18912,
+      20156,
+      22352,
+      25692,
+      26124,
+      27604
+    ],
+    "classification": "no residual Vite listener identified; node.exe processes were present but not attributable from the available command-line evidence"
+  },
+  "viteDiagnostics": {
+    "devScript": "vite",
+    "viteConfig": "C:\\Projects\\FINQZ_PRO\\vite.config.ts",
+    "sameFailureWithHost": true,
+    "buildPasses": true,
+    "devFails": true
+  },
+  "hypotheses": {
+    "F_H1": "REJECTED",
+    "F_H2": "UNLIKELY",
+    "F_H3": "REJECTED",
+    "F_H4": "LIKELY",
+    "F_H5": "POSSIBLE",
+    "F_H6": "REJECTED",
+    "F_H7": "LIKELY",
+    "F_H8": "POSSIBLE",
+    "F_H9": "REJECTED",
+    "F_H10": "REJECTED",
+    "F_H11": "REJECTED",
+    "F_H12": "REJECTED",
+    "F_H13": "REJECTED",
+    "F_H14": "REJECTED",
+    "F_H15": "REJECTED",
+    "F_H16": "POSSIBLE",
+    "F_H17": "POSSIBLE",
+    "F_H18": "INSUFFICIENT_EVIDENCE"
+  },
+  "conclusion": {
+    "mostLikelyCause": "Windows-local block against child-process startup used by Vite/esbuild during config bundling",
+    "confidence": "medium",
+    "blockType": "FRONTEND_RUNTIME_VALIDATION_BLOCKED",
+    "nextStep": "REVIEW_WINDOWS_SECURITY_POLICY"
+  },
+  "differentiation": {
+    "opportunitiesFunctionalFailure": false,
+    "frontendRuntimeValidationBlocked": true,
+    "projectConfigurationDefect": false,
+    "localMachineOperationalDefect": true,
+    "codexExecutionEnvironmentLimitation": false
+  },
+  "validatedCommands": {
+    "jsonParse": "PASS",
+    "mermaidValidation": "PASS",
+    "gitDiffCheck": "PASS_WITH_EXISTING_WARNINGS",
+    "gitStatus": "PASS"
+  },
+  "preservedArtifacts": [
+    ".env.example",
+    "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+    "scripts/sdc-3.4h-f-local-readiness.mjs",
+    "docs/09-audits/EPC-W5-03B-FIRST-FUNCTIONAL-CUT.md",
+    "docs/09-audits/evidence/EPC-W5-03B-FIRST-FUNCTIONAL-CUT.json",
+    "docs/09-audits/evidence/EPC-W5-03B-OPPORTUNITIES-FLOW.mmd"
+  ],
+  "notes": [
+    "No functional source code was modified.",
+    "No commit, push, or deploy was executed."
+  ]
+}

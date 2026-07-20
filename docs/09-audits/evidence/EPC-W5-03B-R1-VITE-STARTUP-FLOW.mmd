@@ -1,0 +1,9 @@
+flowchart TD
+  A[User runs npm run dev] --> B[vite]
+  B --> C[load config from vite.config.ts]
+  C --> D[esbuild service startup]
+  D --> E{spawn succeeds?}
+  E -->|No| F[EPERM]
+  F --> G[dev server exits before listen]
+  E -->|Yes| H[dev server listens]
+  H --> I[browser validation possible]

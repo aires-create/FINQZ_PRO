@@ -1,0 +1,12 @@
+flowchart TD
+  A[Git SHA 874a3a827e061ffad0490c934c418da2afbecb84] --> B[Backend build candidate]
+  B --> C[Local validation]
+  C --> D[Candidate image finqz-pro-backend:hml-874a3a8-r7d]
+  D --> E[HML compose inventory]
+  E --> F[Preserved rollback image]
+  F --> G[PostgreSQL backup future]
+  G --> H[Migration validation future]
+  H --> I[API-only recreate future]
+  I --> J[Smoke plan]
+  J --> K{GO or rollback}
+  K --> L[DEFERRED_PENDING_COMPOSE_IMAGE_PINNING]
