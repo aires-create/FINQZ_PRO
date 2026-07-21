@@ -1,0 +1,228 @@
+{
+  "epc": "EPC-W5-03C",
+  "title": "Authentication Runtime Validation",
+  "environment": "HML",
+  "mode": "READ_ONLY_DISCOVERY",
+  "status": "READY_FOR_COMMIT_REVIEW",
+  "static_source": {
+    "root": "C:\\Projects\\FINQZ_PRO",
+    "branch": "homologation/bootstrap-vps",
+    "commit": "2d843dd5f29133a462622e4e24c15e9890896785"
+  },
+  "runtime_source": {
+    "root": "HML brief and prior validation context",
+    "branch": "homologation/bootstrap-vps",
+    "commit": "not revalidated in this pass"
+  },
+  "gates": {
+    "03C-G01": {
+      "name": "Authentication Inventory",
+      "status": "STATIC_CONFIRMED",
+      "basis": "Current code inventory reconciled with session, store, guard and HTTP flow."
+    },
+    "03C-G02": {
+      "name": "Endpoint Contract",
+      "status": "STATIC_CONFIRMED",
+      "basis": "Login, refresh, profile, logout and logout-all contracts match the frontend references."
+    },
+    "03C-G03": {
+      "name": "Valid Login",
+      "status": "STATIC_AND_TEST_CONFIRMED",
+      "basis": "Login stores access and refresh tokens and the auth tests cover the happy path."
+    },
+    "03C-G04": {
+      "name": "Invalid Login",
+      "status": "STATIC_CONFIRMED_RUNTIME_PENDING",
+      "basis": "Error path exists, but live HML proof was not re-run in this pass."
+    },
+    "03C-G05": {
+      "name": "Authenticated Session",
+      "status": "STATIC_AND_TEST_CONFIRMED",
+      "basis": "Session hydrates from profile and the auth tests cover token-only snapshot behavior."
+    },
+    "03C-G06": {
+      "name": "Refresh",
+      "status": "STATIC_AND_TEST_CONFIRMED",
+      "basis": "Refresh 400/401/403 invalidates local session and local tests cover the 400 and 401 cases."
+    },
+    "03C-G07": {
+      "name": "Expiration and Revocation",
+      "status": "STATIC_CONFIRMED_RUNTIME_PENDING",
+      "basis": "Backend revocation is documented, but no live HML probe was executed here."
+    },
+    "03C-G08": {
+      "name": "Logout",
+      "status": "STATIC_AND_TEST_CONFIRMED",
+      "basis": "Logout cleanup is idempotent, clears tokens/store and redirects via the listener."
+    },
+    "03C-G09": {
+      "name": "Cookies and Security Headers",
+      "status": "STATIC_CONFIRMED_RUNTIME_PENDING",
+      "basis": "Cookie and header contract is visible in backend code, but no live revalidation was run."
+    },
+    "03C-G10": {
+      "name": "CORS and Reverse Proxy",
+      "status": "PARTIALLY_CONFIRMED",
+      "basis": "CORS and proxy behavior are documented statically; live preflight was not rerun."
+    },
+    "03C-G11": {
+      "name": "Rate Limiting",
+      "status": "STATIC_CONFIRMED_RUNTIME_PENDING",
+      "basis": "Rate limit is registered in bootstrap and depends on Redis."
+    },
+    "03C-G12": {
+      "name": "Company/Tenant Context",
+      "status": "STATIC_CONFIRMED_RUNTIME_PENDING",
+      "basis": "Tenant is embedded in user state and the frontend filters by that user context."
+    },
+    "03C-G13": {
+      "name": "Persistence and Redis",
+      "status": "STATIC_CONFIRMED_RUNTIME_PENDING",
+      "basis": "Refresh tokens persist in backend storage and Redis backs rate-limit/readiness."
+    },
+    "03C-G14": {
+      "name": "Observability",
+      "status": "PARTIALLY_CONFIRMED",
+      "basis": "Request correlation and error handling are visible, but runtime health was not revalidated."
+    },
+    "03C-G15": {
+      "name": "Regression",
+      "status": "STATIC_AND_TEST_CONFIRMED",
+      "basis": "Logout, auth:error and refresh 400 have direct test coverage."
+    }
+  },
+  "findings": [
+    {
+      "id": "SOURCE_REVISION_MISMATCH",
+      "classification": "RESOLVED",
+      "severity": "HIGH",
+      "status": "RESOLVED",
+      "summary": "The document set now points to the current repository commit.",
+      "evidence": [
+        "STATIC_COMMIT=2d843dd5f29133a462622e4e24c15e9890896785"
+      ],
+      "action": "No further action required in this documentation pass."
+    },
+    {
+      "id": "HML_ENVIRONMENT_IDENTITY_MISMATCH",
+      "classification": "CONFLICT",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "summary": "HML identity was not revalidated in this pass.",
+      "evidence": [
+        "Runtime not revalidated in this pass"
+      ],
+      "action": "Keep open until a live HML probe is executed."
+    },
+    {
+      "id": "NGINX_CONTAINER_HEALTHCHECK_UNHEALTHY",
+      "classification": "CONFLICT",
+      "severity": "MEDIUM",
+      "status": "OPEN",
+      "summary": "Internal Nginx healthcheck remains outside this review scope.",
+      "evidence": [
+        "Runtime not revalidated in this pass"
+      ],
+      "action": "Investigate separately from the auth contract."
+    },
+    {
+      "id": "CSRF_EXPLICIT_MIDDLEWARE_NOT_FOUND",
+      "classification": "INFERRED",
+      "severity": "LOW",
+      "status": "OPEN",
+      "summary": "No explicit CSRF middleware was found in the reviewed code.",
+      "evidence": [
+        "backend/src/modules/auth/controller.ts",
+        "backend/src/modules/auth/jwt.plugin.ts"
+      ],
+      "action": "Document as residual risk until runtime validation exercises cookie-backed flows."
+    },
+    {
+      "id": "AUTH-F-02",
+      "classification": "CONFIRMED",
+      "severity": "MEDIUM",
+      "status": "CONFIRMED",
+      "summary": "Refresh tokens are persisted and rotated by the backend.",
+      "evidence": [
+        "backend/src/modules/auth/service.ts",
+        "backend/prisma/schema.prisma"
+      ],
+      "action": "No change required in this documentation pass."
+    },
+    {
+      "id": "TENANT_STATE_EMBEDDED_IN_USER",
+      "classification": "CONFIRMED",
+      "severity": "LOW",
+      "status": "CONFIRMED",
+      "summary": "Tenant lives inside the user payload and is not a separate store slice.",
+      "evidence": [
+        "src/store/index.ts",
+        "src/auth/userMapper.ts",
+        "src/hooks/useTenantFilter.ts"
+      ],
+      "action": "Logout cleanup must clear user and derived caches."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "static",
+      "item": "AuthProvider listens for auth:logout and performs the only navigation to /login after local cleanup.",
+      "source": [
+        "src/auth/AuthProvider.tsx",
+        "src/auth/logout.ts"
+      ]
+    },
+    {
+      "kind": "static",
+      "item": "Frontend session is token-only and buildRequestHeaders injects Authorization only when an access token exists.",
+      "source": [
+        "src/auth/session.ts",
+        "src/api/http.ts"
+      ]
+    },
+    {
+      "kind": "static",
+      "item": "Refresh 400/401/403 invalidates local auth and emits auth:error without an infinite retry loop.",
+      "source": [
+        "src/api/http.ts",
+        "src/api/http.test.ts"
+      ]
+    },
+    {
+      "kind": "static",
+      "item": "ProtectedRoute redirects unauthenticated users and logout-flow tests cover redirect after logout and auth:error.",
+      "source": [
+        "src/auth/guards.tsx",
+        "src/auth/logout-flow.test.tsx"
+      ]
+    },
+    {
+      "kind": "static",
+      "item": "Tenant is embedded in user state and used by the tenant filter hook.",
+      "source": [
+        "src/store/index.ts",
+        "src/auth/userMapper.ts",
+        "src/hooks/useTenantFilter.ts"
+      ]
+    },
+    {
+      "kind": "static",
+      "item": "Backend auth contract still includes login, refresh, profile, logout and logout-all.",
+      "source": [
+        "backend/src/modules/auth/auth.routes.ts",
+        "backend/src/modules/auth/service.ts",
+        "backend/src/modules/auth/controller.ts"
+      ]
+    }
+  ],
+  "secrets_redacted": true,
+  "branch": "homologation/bootstrap-vps",
+  "commit": "2d843dd5f29133a462622e4e24c15e9890896785",
+  "utc_date": "2026-07-21T00:00:00Z",
+  "notes": [
+    "Read-only discovery only.",
+    "No credentials were used.",
+    "No functional code was modified.",
+    "The JSON intentionally contains no passwords, tokens, cookies or Authorization values."
+  ]
+}
