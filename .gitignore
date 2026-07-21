@@ -61,3 +61,7 @@ dist-hml-*.tar.gz
 # Generated runtime validation evidence
 /release/runtime-validation/*
 !/release/runtime-validation/.gitkeep
+
+# Generated release gate evidence
+/release/gate/*
+!/release/gate/.gitkeep

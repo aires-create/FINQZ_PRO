@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "environments": {
+    "local": {
+      "allowWarnings": true,
+      "allowHttpSkipped": true,
+      "requireCleanGitTree": false,
+      "requiredStages": [
+        "releaseVerification",
+        "deployDryRun",
+        "runtimeValidation"
+      ]
+    },
+    "hml": {
+      "allowWarnings": true,
+      "allowHttpSkipped": false,
+      "requireCleanGitTree": false,
+      "requiredStages": [
+        "releaseVerification",
+        "deployDryRun",
+        "runtimeValidation"
+      ]
+    },
+    "production": {
+      "allowWarnings": false,
+      "allowHttpSkipped": false,
+      "requireCleanGitTree": true,
+      "requiredStages": [
+        "releaseVerification",
+        "deployDryRun",
+        "runtimeValidation"
+      ]
+    }
+  },
+  "blockingStatuses": [
+    "FAIL",
+    "BLOCKED"
+  ],
+  "blockingSecuritySeverities": [
+    "CRITICAL",
+    "HIGH"
+  ]
+}

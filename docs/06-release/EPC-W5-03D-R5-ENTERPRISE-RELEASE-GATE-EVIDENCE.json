@@ -1,0 +1,83 @@
+{
+  "releaseGateVersion": "1.0.0",
+  "epc": "EPC-W5-03D-R5",
+  "status": "PASS_WITH_WARNINGS",
+  "environment": "local",
+  "dryRun": true,
+  "strict": false,
+  "skipHttp": true,
+  "workspace": {
+    "root": "<REPOSITORY_ROOT>",
+    "gitBranch": "homologation/bootstrap-vps",
+    "gitCommit": "6880f1b",
+    "treeDirty": true
+  },
+  "artifact": {
+    "path": "<TEMP_FIXTURE>/frontend-6880f1b.tar.gz",
+    "version": "1.0.0-fixture",
+    "sha256": "23708c3dfccfd29bafff9acac2ecd860b5ca77fab70e2c81c729f81da5b9054e"
+  },
+  "policy": {
+    "path": "release/policies/release-gate-policy.json",
+    "version": "1.0.0",
+    "hash": "881d8aae3cba506076cdc233c1a3e3742677d302483a3fc7ca4fb84c120f795d",
+    "allowWarnings": true,
+    "allowHttpSkipped": true,
+    "requireCleanGitTree": false
+  },
+  "executions": [
+    {
+      "name": "release-verification",
+      "command": "scripts/release/verify-release.sh <artifact-dir>",
+      "result": "PASS",
+      "exitCode": 0
+    },
+    {
+      "name": "deploy-dry-run",
+      "command": "scripts/deploy/deploy-engine.sh --dry-run",
+      "result": "PASS",
+      "exitCode": 0
+    },
+    {
+      "name": "runtime-validation",
+      "command": "scripts/runtime/runtime-validator.sh --skip-http",
+      "result": "PASS_WITH_WARNINGS",
+      "exitCode": 0,
+      "warnings": [
+        "HTTP validation skipped by request",
+        "nginx unavailable: spawnSync nginx ENOENT"
+      ]
+    },
+    {
+      "name": "release-gate",
+      "command": "scripts/gate/release-gate.sh --environment local --dry-run --skip-http",
+      "result": "PASS_WITH_WARNINGS",
+      "exitCode": 2
+    }
+  ],
+  "negativeChecks": [
+    {
+      "name": "strict-local",
+      "command": "scripts/gate/release-gate.sh --environment local --dry-run --skip-http --strict",
+      "result": "FAIL",
+      "exitCode": 19
+    },
+    {
+      "name": "hml-skip-http",
+      "command": "scripts/gate/release-gate.sh --environment hml --dry-run --skip-http",
+      "result": "FAIL",
+      "exitCode": 16
+    }
+  ],
+  "generatedArtifacts": [
+    "release/gate/<CORRELATION_ID>/stage-results.json",
+    "release/gate/<CORRELATION_ID>/policy-evaluation.json",
+    "release/gate/<CORRELATION_ID>/execution-metadata.json",
+    "release/gate/<CORRELATION_ID>/release-gate-summary.json",
+    "release/gate/<CORRELATION_ID>/release-gate-report.md"
+  ],
+  "notes": [
+    "No password, token, cookie, or Authorization value is stored here.",
+    "Windows Bash wrapper normalized the visible shell exit code for warnings; the JSON exitCode is authoritative."
+  ]
+}

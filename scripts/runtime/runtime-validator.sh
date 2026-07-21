@@ -10,6 +10,7 @@ base_url="${RUNTIME_HTTP_BASE_URL:-http://127.0.0.1:4000}"
 environment="${RUNTIME_ENVIRONMENT:-production}"
 output_dir="${repo_root}/release/runtime-validation"
 verbose="false"
+skip_http="false"
 failure_code=0
 report_written=0
 commit=""
@@ -28,7 +29,7 @@ log_line() {
 usage() {
   cat <<'EOF'
 Usage:
-  runtime-validator.sh --artifact <path|dir> [--manifest <path>] [--base-url <url>] [--environment <name>] [--output <dir>] [--verbose]
+  runtime-validator.sh --artifact <path|dir> [--manifest <path>] [--base-url <url>] [--environment <name>] [--output <dir>] [--skip-http] [--verbose]
 EOF
 }
 
@@ -125,10 +126,15 @@ const errors = [
   ...(compatibility.erros ?? []),
 ];
 
-const status =
-  [frontend, bundle, http, security, compatibility].every((item) => item.status === 'PASS')
-    ? 'PASS'
-    : 'FAIL';
+const stages = [frontend, bundle, http, security, compatibility];
+const hasBlockingFailure = stages.some((item) => !['PASS', 'SKIPPED'].includes(item.status));
+const hasWarnings = warnings.length > 0;
+
+const status = hasBlockingFailure
+  ? 'FAIL'
+  : hasWarnings
+    ? 'PASS_WITH_WARNINGS'
+    : 'PASS';
 
 const summary = {
   status,
@@ -184,7 +190,7 @@ const markdown = [
   '- runtime-validator.sh orquestra os validadores.',
   '- frontend-validator.sh confere arquivos obrigatórios e manifest.',
   '- bundle-validator.sh confere referências de assets em index.html.',
-  '- http-validator.sh executa GET /, GET /health e GET /ready.',
+  '- http-validator.sh executa GET /, GET /health e GET /ready, salvo quando o skip explícito é solicitado.',
   '- security-validator.sh varre bundle, manifests e textos por riscos e segredos.',
   '- compatibility-validator.sh confere ambiente local e permissões.',
   '',
@@ -276,6 +282,35 @@ run_validator() {
   fi
 }
 
+record_http_skip() {
+  local target_json="${output_dir}/http-validation.json"
+  mkdir -p "${output_dir}"
+  ARTIFACT_PATH="${artifact_path}" \
+  OUTPUT_DIR="${output_dir}" \
+  BASE_URL="${base_url}" \
+  node <<'NODE'
+const fs = require('fs');
+const path = require('path');
+
+const payload = {
+  status: 'SKIPPED',
+  timestamp: new Date().toISOString(),
+  commit: null,
+  branch: null,
+  artefato: process.env.ARTIFACT_PATH,
+  resultado: 'HTTP_SKIPPED',
+  erros: [],
+  avisos: ['HTTP validation skipped by request'],
+  endpoints: {},
+};
+
+fs.mkdirSync(process.env.OUTPUT_DIR, { recursive: true });
+fs.writeFileSync(path.join(process.env.OUTPUT_DIR, 'http-validation.json'), `${JSON.stringify(payload, null, 2)}\n`);
+NODE
+
+  log_line INFO "http-validator.sh skipped by request"
+}
+
 main() {
   while (($#)); do
     case "$1" in
@@ -306,6 +341,10 @@ main() {
         ;;
       --verbose)
         verbose="true"
+        shift
+        ;;
+      --skip-http)
+        skip_http="true"
         shift
         ;;
       --help|-h)
@@ -344,13 +383,21 @@ main() {
   if [[ "${verbose}" == "true" ]]; then
     run_validator "frontend-validator.sh" --artifact "${artifact_path}" --manifest "${manifest_path}" --output "${output_dir}" --verbose
     run_validator "bundle-validator.sh" --artifact "${artifact_path}" --output "${output_dir}" --verbose
-    run_validator "http-validator.sh" --base-url "${base_url}" --output "${output_dir}" --verbose
+    if [[ "${skip_http}" == "true" ]]; then
+      record_http_skip
+    else
+      run_validator "http-validator.sh" --base-url "${base_url}" --output "${output_dir}" --verbose
+    fi
     run_validator "security-validator.sh" --artifact "${artifact_path}" --environment "${environment}" --output "${output_dir}" --verbose
     run_validator "compatibility-validator.sh" --artifact "${artifact_path}" --output "${output_dir}" --verbose
   else
     run_validator "frontend-validator.sh" --artifact "${artifact_path}" --manifest "${manifest_path}" --output "${output_dir}"
     run_validator "bundle-validator.sh" --artifact "${artifact_path}" --output "${output_dir}"
-    run_validator "http-validator.sh" --base-url "${base_url}" --output "${output_dir}"
+    if [[ "${skip_http}" == "true" ]]; then
+      record_http_skip
+    else
+      run_validator "http-validator.sh" --base-url "${base_url}" --output "${output_dir}"
+    fi
     run_validator "security-validator.sh" --artifact "${artifact_path}" --environment "${environment}" --output "${output_dir}"
     run_validator "compatibility-validator.sh" --artifact "${artifact_path}" --output "${output_dir}"
   fi

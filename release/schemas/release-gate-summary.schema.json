@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finqz-pro.local/schemas/release-gate-summary.schema.json",
+  "title": "FINQZ PRO Enterprise Release Gate Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "releaseGateVersion",
+    "correlationId",
+    "status",
+    "environment",
+    "dryRun",
+    "strict",
+    "explain",
+    "skipHttp",
+    "startedAt",
+    "finishedAt",
+    "durationMs",
+    "git",
+    "artifact",
+    "stages",
+    "warnings",
+    "errors",
+    "decisionReasons",
+    "policy",
+    "evidence"
+  ],
+  "properties": {
+    "releaseGateVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "correlationId": {
+      "type": "string",
+      "pattern": "^gate-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7,12}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "PASS_WITH_WARNINGS",
+        "FAIL",
+        "BLOCKED"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "local",
+        "hml",
+        "production"
+      ]
+    },
+    "dryRun": {
+      "type": "boolean"
+    },
+    "strict": {
+      "type": "boolean"
+    },
+    "explain": {
+      "type": "boolean"
+    },
+    "skipHttp": {
+      "type": "boolean"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "commit",
+        "treeDirty"
+      ],
+      "properties": {
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "treeDirty": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "releaseVerification",
+        "deployDryRun",
+        "runtimeValidation"
+      ],
+      "properties": {
+        "releaseVerification": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "deployDryRun": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "runtimeValidation": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decisionReasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "version",
+        "hash",
+        "allowWarnings",
+        "allowHttpSkipped",
+        "requireCleanGitTree",
+        "requiredStages"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hash": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allowWarnings": {
+          "type": "boolean"
+        },
+        "allowHttpSkipped": {
+          "type": "boolean"
+        },
+        "requireCleanGitTree": {
+          "type": "boolean"
+        },
+        "requiredStages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory",
+        "stageResultsPath",
+        "policyEvaluationPath",
+        "executionMetadataPath"
+      ],
+      "properties": {
+        "directory": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stageResultsPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policyEvaluationPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "executionMetadataPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "logs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "releaseVerification": {
+              "type": "string"
+            },
+            "deployDryRun": {
+              "type": "string"
+            },
+            "runtimeValidation": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
