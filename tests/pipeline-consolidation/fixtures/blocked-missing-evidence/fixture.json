@@ -1,0 +1,13 @@
+{
+  "id": "blocked-missing-evidence",
+  "description": "Missing runtime evidence blocks the evidence validator",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "BLOCKED",
+    "contractStatus": "PASS",
+    "evidenceStatus": "BLOCKED",
+    "portabilityStatus": "PASS"
+  }
+}

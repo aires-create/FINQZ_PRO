@@ -1,0 +1,13 @@
+{
+  "id": "fail-runtime",
+  "description": "Runtime validation failure is surfaced by the consolidation summary",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "FAIL",
+    "contractStatus": "PASS",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

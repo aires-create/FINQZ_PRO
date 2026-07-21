@@ -1,0 +1,13 @@
+{
+  "id": "strict-warning",
+  "description": "Warnings become blocking under strict mode",
+  "environment": "local",
+  "strict": true,
+  "skipHttp": true,
+  "expected": {
+    "summaryStatus": "FAIL",
+    "contractStatus": "FAIL",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

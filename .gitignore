@@ -65,3 +65,7 @@ dist-hml-*.tar.gz
 # Generated release gate evidence
 /release/gate/*
 !/release/gate/.gitkeep
+
+# Generated consolidation evidence
+/release/consolidation/*
+!/release/consolidation/.gitkeep

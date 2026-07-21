@@ -1,0 +1,13 @@
+{
+  "id": "blocked-invalid-json",
+  "description": "Corrupted evidence JSON is detected before report generation",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "BLOCKED",
+    "contractStatus": "PASS",
+    "evidenceStatus": "BLOCKED",
+    "portabilityStatus": "SKIPPED"
+  }
+}

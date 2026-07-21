@@ -1,0 +1,13 @@
+{
+  "id": "blocked-invalid-contract",
+  "description": "Contract mismatch between status and exit code blocks consolidation",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "BLOCKED",
+    "contractStatus": "BLOCKED",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

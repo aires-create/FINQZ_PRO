@@ -1,0 +1,13 @@
+{
+  "id": "blocked-correlation-mismatch",
+  "description": "Correlation mismatch across stage records blocks contract validation",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "BLOCKED",
+    "contractStatus": "BLOCKED",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

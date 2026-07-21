@@ -1,0 +1,13 @@
+{
+  "id": "pass",
+  "description": "Baseline passing consolidation fixture",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "PASS",
+    "contractStatus": "PASS",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

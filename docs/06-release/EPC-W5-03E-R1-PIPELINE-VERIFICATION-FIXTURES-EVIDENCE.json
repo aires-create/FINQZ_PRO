@@ -1,0 +1,71 @@
+{
+  "epc": "EPC-W5-03E-R1",
+  "title": "Pipeline Verification Fixtures",
+  "suiteStatus": "PASS",
+  "generatedAt": "2026-07-21T20:01:39.193Z",
+  "summary": {
+    "total": 12,
+    "pass": 1,
+    "passWithWarnings": 1,
+    "fail": 4,
+    "blocked": 6
+  },
+  "fixtures": [
+    { "id": "blocked-correlation-mismatch", "actual": "BLOCKED", "expected": "BLOCKED" },
+    { "id": "blocked-invalid-contract", "actual": "BLOCKED", "expected": "BLOCKED" },
+    { "id": "blocked-invalid-json", "actual": "BLOCKED", "expected": "BLOCKED" },
+    { "id": "blocked-missing-evidence", "actual": "BLOCKED", "expected": "BLOCKED" },
+    { "id": "blocked-unknown-status", "actual": "BLOCKED", "expected": "BLOCKED" },
+    { "id": "fail-checksum", "actual": "FAIL", "expected": "FAIL" },
+    { "id": "fail-gate", "actual": "FAIL", "expected": "FAIL" },
+    { "id": "fail-runtime", "actual": "FAIL", "expected": "FAIL" },
+    { "id": "pass-with-warnings", "actual": "PASS_WITH_WARNINGS", "expected": "PASS_WITH_WARNINGS" },
+    { "id": "pass", "actual": "PASS", "expected": "PASS" },
+    { "id": "skipped-without-reason", "actual": "BLOCKED", "expected": "BLOCKED" },
+    { "id": "strict-warning", "actual": "FAIL", "expected": "FAIL" }
+  ],
+  "filesModified": [
+    "scripts/consolidation/contract-validator.sh",
+    "tests/pipeline-consolidation/fixture-builder.sh",
+    "tests/pipeline-consolidation/fixtures/pass/fixture.json",
+    "tests/pipeline-consolidation/fixtures/pass-with-warnings/fixture.json",
+    "tests/pipeline-consolidation/fixtures/fail-checksum/fixture.json",
+    "tests/pipeline-consolidation/fixtures/fail-runtime/fixture.json",
+    "tests/pipeline-consolidation/fixtures/fail-gate/fixture.json",
+    "tests/pipeline-consolidation/fixtures/blocked-missing-evidence/fixture.json",
+    "tests/pipeline-consolidation/fixtures/blocked-invalid-contract/fixture.json",
+    "tests/pipeline-consolidation/fixtures/blocked-unknown-status/fixture.json",
+    "tests/pipeline-consolidation/fixtures/blocked-invalid-json/fixture.json",
+    "tests/pipeline-consolidation/fixtures/blocked-correlation-mismatch/fixture.json",
+    "tests/pipeline-consolidation/fixtures/skipped-without-reason/fixture.json",
+    "tests/pipeline-consolidation/fixtures/strict-warning/fixture.json",
+    "docs/06-release/EPC-W5-03E-R1-PIPELINE-VERIFICATION-FIXTURES.md"
+  ],
+  "testsExecuted": [
+    {
+      "command": "bash -n tests/pipeline-consolidation/fixture-builder.sh tests/pipeline-consolidation/fixture-assertions.sh tests/pipeline-consolidation/run-fixtures.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "bash -n scripts/consolidation/contract-validator.sh scripts/consolidation/evidence-validator.sh scripts/consolidation/portability-validator.sh scripts/consolidation/consolidation-report.sh",
+      "result": "PASS"
+    },
+    {
+      "command": "tests/pipeline-consolidation/run-fixtures.sh --all",
+      "result": "PASS"
+    }
+  ],
+  "risksResidual": [
+    "A semântica de warnings do contract validator e do report final ainda define quando o pipeline sobe para PASS_WITH_WARNINGS.",
+    "O caso de JSON corrompido depende de verificação direta de parse para não ser mascarado por uma escrita subsequente do validator."
+  ],
+  "serverSideAccessTokenRevocationOutOfScope": true,
+  "hmlRevalidationPlan": [
+    "Executar a mesma matriz em HML.",
+    "Confirmar que PASS, FAIL e BLOCKED continuam semanticamente separados.",
+    "Revisar novamente os fixtures de warning se o contract validator ou o report mudarem de semântica."
+  ],
+  "noDeploy": true,
+  "noCommit": true,
+  "noPush": true
+}

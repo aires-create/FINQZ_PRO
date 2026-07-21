@@ -1,0 +1,13 @@
+{
+  "id": "pass-with-warnings",
+  "description": "Passing consolidation fixture with HTTP skipped and preserved warnings",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": true,
+  "expected": {
+    "summaryStatus": "PASS_WITH_WARNINGS",
+    "contractStatus": "PASS_WITH_WARNINGS",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}
