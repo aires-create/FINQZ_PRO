@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finqz-pro.local/schemas/manifest.schema.json",
+  "title": "FINQZ PRO Enterprise Release Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "application",
+    "artifactVersion",
+    "environment",
+    "branch",
+    "commit",
+    "release",
+    "createdAt",
+    "frontend",
+    "backend"
+  ],
+  "properties": {
+    "application": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1
+    },
+    "commit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release": {
+      "type": "string",
+      "minLength": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "frontend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "framework",
+        "bundler"
+      ],
+      "properties": {
+        "framework": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bundler": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image"
+      ],
+      "properties": {
+        "image": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "runtimeCompatibility": {
+      "description": "Optional runtime compatibility metadata captured by later release phases.",
+      "type": [
+        "object",
+        "string"
+      ]
+    }
+  }
+}

@@ -5,6 +5,8 @@ node_modules/
 dist/
 build/
 .out/
+!scripts/build/
+!scripts/build/build-frontend.sh
 
 # Environment
 .env
@@ -55,3 +57,7 @@ dist-hml-*.tar.gz
 
 # Local Git worktrees
 /_worktrees/
+
+# Generated runtime validation evidence
+/release/runtime-validation/*
+!/release/runtime-validation/.gitkeep
