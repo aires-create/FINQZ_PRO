@@ -40,7 +40,7 @@ const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestI
   if (response.status === 401 && !requestOptions.skipAuthRefresh) {
     const refreshed = await refreshSessionTokens();
 
-    if (refreshed) {
+    if (refreshed.refreshed) {
       const retry = await httpRequest(endpoint, {
         ...requestOptions,
         preserveApiPrefix: requestOptions.preserveApiPrefix ?? true,

@@ -5,7 +5,7 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, Info, Zap } from 'lucide-react';
 import { ApiException, isAuthError, isPermissionError, isValidationError, getErrorMessage } from '../api/http';
-import { finqzAuth } from '../auth/finqzAuth';
+import { useAuth } from '../auth';
 
 // ============================================
 // ERROR TYPES
@@ -26,7 +26,7 @@ export interface ErrorNotification {
  * Hook para tratamento global de erros da API
  */
 export const useApiErrorHandler = () => {
-  const navigate = useNavigate();
+  const { logout } = useAuth();
 
   /**
    * trata erro da API
@@ -45,8 +45,7 @@ export const useApiErrorHandler = () => {
 
     // Erro de autenticação
     if (isAuthError(status)) {
-      void finqzAuth.signOut();
-      navigate('/', { replace: true });
+      void logout();
 
       return {
         type: 'warning',
@@ -89,7 +88,7 @@ export const useApiErrorHandler = () => {
       title: 'Erro',
       message: getErrorMessage(status, message),
     };
-  }, [navigate]);
+  }, [logout]);
 
   /**
    * Registra listener para eventos de erro de autenticação

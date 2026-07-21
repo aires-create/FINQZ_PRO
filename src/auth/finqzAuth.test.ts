@@ -136,4 +136,36 @@ describe("auth/finqzAuth", () => {
     expect(getRefreshToken()).toBeNull();
     expect(getCurrentUser()).toBeNull();
   });
+
+  it("clears local session even when logout network fails", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+
+    finqzClientMock.post.mockRejectedValueOnce(new Error("network down"));
+
+    const result = await finqzAuth.signOut();
+
+    expect(result.error).toBe("Não foi possível encerrar a sessão nativa.");
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(getCurrentUser()).toBeNull();
+  });
+
+  it("is idempotent when sign out runs more than once", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+
+    finqzClientMock.post.mockResolvedValue({ data: { success: true } });
+
+    await finqzAuth.signOut();
+    await finqzAuth.signOut();
+
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(finqzClientMock.post).toHaveBeenCalled();
+  });
 });

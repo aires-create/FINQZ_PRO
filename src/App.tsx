@@ -46,7 +46,8 @@ const AppRoutes = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        <Route path="/" element={<AuthLandingRoute />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<AuthLandingRoute />} />
         <Route path="/parceiro/login" element={<LoginParceiroPage />} />
         <Route
           path="/app/parceiro"
@@ -79,7 +80,7 @@ const AppRoutes = () => {
           {hubRoutes}
           {integrationsRoutes}
         </Route>
-        <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Suspense>
   );

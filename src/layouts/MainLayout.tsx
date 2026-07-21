@@ -1,7 +1,7 @@
 // FINQZ PRO - Layout Component
 // Design System Fintech - Sidebar Escura com Menu Colapsável
 import React, { useState, useEffect, useMemo } from "react";
-import { NavLink, useNavigate, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -45,7 +45,7 @@ import {
 } from "lucide-react";
 import useAppStore from "../store";
 import { hasPermissionMatch } from "../auth/permissionMatcher";
-import { finqzAuth } from "../auth/finqzAuth";
+import { useAuth } from "../auth";
 import finqzLogoBlue from "../assets/brand/finqz-logo-blue.png";
 
 // ============================================
@@ -279,8 +279,8 @@ const dashboardSidebarItems: MenuItem[] = [
 ];
 
 export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.ReactNode }> = ({ customMenuItems, children }) => {
-  const { sidebarOpen, setSidebarOpen, user, userPermissions: storeUserPermissions, theme, toggleTheme, setAuth } = useAppStore();
-  const navigate = useNavigate();
+  const { sidebarOpen, setSidebarOpen, user, userPermissions: storeUserPermissions, theme, toggleTheme } = useAppStore();
+  const { logout } = useAuth();
   const location = useLocation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["dashboard", "crm", "operacoes", "hub", "administracao"]);
@@ -442,9 +442,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     : "lg:ml-20";
 
   const handleLogout = async () => {
-    await finqzAuth.signOut();
-    setAuth(null);
-    navigate("/");
+    await logout();
   };
 
   const closeSidebarOnMobile = () => {

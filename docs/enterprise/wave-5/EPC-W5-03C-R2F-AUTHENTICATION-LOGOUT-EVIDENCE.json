@@ -1,0 +1,64 @@
+{
+  "epc": "EPC-W5-03C-R2F",
+  "verdict": "PASS_WITH_FINDINGS",
+  "rootCause": "The frontend logout cleared only part of the session. The AuthProvider context and protected store state could remain hydrated, and the HTTP client could still attach an in-memory access token until a reload.",
+  "navigationAuthority": "AUTH_LOGOUT_EVENT in AuthProvider is the single navigation authority. AuthProvider.logout only awaits finqzAuth.signOut(), while the listener performs setUser(null) and navigate('/login', { replace: true }).",
+  "filesChanged": [
+    "src/auth/logout.ts",
+    "src/auth/finqzAuth.ts",
+    "src/auth/AuthProvider.tsx",
+    "src/auth/guards.tsx",
+    "src/layouts/MainLayout.tsx",
+    "src/hooks/useApiErrorHandler.tsx",
+    "src/api/http.ts",
+    "src/App.tsx",
+    "src/auth/finqzAuth.test.ts",
+    "src/auth/logout-flow.test.tsx",
+    "src/api/http.test.ts"
+  ],
+  "testsExecuted": [
+    "npm run test -- --run src/auth/finqzAuth.test.ts src/auth/logout-flow.test.tsx src/api/http.test.ts",
+    "npm run test -- --run src/auth src/api",
+    "npx tsc -p tsconfig.json --noEmit",
+    "npm run build"
+  ],
+  "results": [
+    "Logout success clears local session state.",
+    "Logout network failure still clears local state.",
+    "Logout is idempotent.",
+    "Refresh 400 clears local state, emits auth:error once, and does not loop.",
+    "Common route 400 does not clear the global session.",
+    "Protected routes redirect to /login after logout.",
+    "Requests after logout do not send Authorization.",
+    "Refresh 401 clears the session and emits auth:error without retry loops.",
+    "Valid login continues to work.",
+    "Authenticated session hydration continues to work."
+  ],
+  "tenantEvidence": {
+    "tenantLocation": "Tenant is kept only inside the authenticated user object in src/store/index.ts (user.tenant_id / user.tenantName). There is no separate tenant slice in the store.",
+    "tenantCleanup": "clearLocalAuthState removes user, so tenant data is removed with the session."
+  },
+  "gates": {
+    "R2F-G01": "PASS",
+    "R2F-G02": "STATIC_AND_TEST_CONFIRMED",
+    "R2F-G03": "STATIC_AND_TEST_CONFIRMED",
+    "R2F-G04": "STATIC_AND_TEST_CONFIRMED_WITH_RESIDUAL_RISK",
+    "R2F-G05": "STATIC_AND_TEST_CONFIRMED",
+    "R2F-G06": "STATIC_AND_TEST_CONFIRMED",
+    "R2F-G07": "STATIC_AND_TEST_CONFIRMED",
+    "R2F-G08": "REGRESSION_TEST_CONFIRMED",
+    "R2F-G09": "PASS",
+    "R2F-G10": "PENDING_HML_REVALIDATION"
+  },
+  "residualRisks": [
+    "Server-side access token revocation remains out of scope for this EPC.",
+    "No external protected cache layer was found beyond the frontend store and HTTP auth state."
+  ],
+  "hmlRevalidationPlan": [
+    "Validate login, protected navigation, and logout on HML.",
+    "Confirm POST /api/v1/auth/logout returns 200.",
+    "Confirm subsequent requests omit Authorization.",
+    "Confirm refresh 400/401 returns the user to /login without a redirect loop.",
+    "Confirm reload after logout still lands on login because no session remains."
+  ]
+}

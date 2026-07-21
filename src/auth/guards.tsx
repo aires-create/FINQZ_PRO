@@ -82,7 +82,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   requiredModule,
   requiredAction = 'view',
-  fallbackPath = '/',
+  fallbackPath = '/login',
 }) => {
   const location = useLocation();
   

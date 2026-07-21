@@ -3,11 +3,13 @@
 // Fonte oficial: backend + sessão por token
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthUser } from './permissions';
 import useAppStore from '../store';
 import { PROFILE_PERMISSIONS } from '../types';
 import { mergeFrontendAdminPermissions } from '../config/permissions';
 import { finqzAuth } from './finqzAuth';
+import { AUTH_LOGOUT_EVENT } from './logout';
 
 // ============================================
 // TYPES
@@ -18,7 +20,7 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   login: (credentials: { access_code_or_email: string; senha: string }) => Promise<{ success: boolean; must_change_password?: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (userData: Partial<AuthUser>) => void;
 }
 
@@ -35,7 +37,7 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAuthenticated: false,
   login: async () => false,
-  logout: () => {},
+  logout: async () => {},
   updateUser: () => {},
 });
 
@@ -47,6 +49,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Inicializa autenticação
   useEffect(() => {
@@ -75,6 +78,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initAuth();
+  }, []);
+
+  useEffect(() => {
+    const handleLogout = () => {
+      setUser(null);
+      navigate('/login', { replace: true });
+    };
+
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleLogout as EventListener);
+
+    return () => {
+      window.removeEventListener(AUTH_LOGOUT_EVENT, handleLogout as EventListener);
+    };
   }, []);
 
   // Função de login com access_code ou e-mail
@@ -163,10 +179,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Função de logout
-  const logout = useCallback(() => {
-    void finqzAuth.signOut();
-    setUser(null);
-    useAppStore.getState().setAuth(null);
+  const logout = useCallback(async () => {
+    await finqzAuth.signOut();
   }, []);
 
   // Atualiza dados do usuário
