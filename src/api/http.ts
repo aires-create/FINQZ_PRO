@@ -2,7 +2,7 @@
 // Owns base URL, headers, auth token injection and request correlation.
 
 import { API_BASE_URL, API_CONFIG } from "../config/environment";
-import { clearSession, getAccessToken, getRefreshToken, storeSessionTokens } from "../auth/session";
+import { clearSession, canRefreshSession, getAccessToken, getRefreshToken, getSessionVersion, isSessionActive, storeSessionTokens } from "../auth/session";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -215,6 +215,10 @@ export const buildRequestHeaders = (
 };
 
 const handleAuthError = (): void => {
+  if (!isSessionActive() && !getAccessToken() && !getRefreshToken()) {
+    return;
+  }
+
   clearSession();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("auth:error", {
@@ -244,15 +248,15 @@ const canRetryAfterRefresh = (endpoint: string, options: FinqzRequestInit): bool
   return Boolean(
     !options.skipAuthRefresh &&
       !isAuthControlEndpoint(endpoint) &&
-      getAccessToken() &&
-      getRefreshToken()
+      canRefreshSession()
   );
 };
 
 export const refreshSessionTokens = async (): Promise<boolean> => {
+  const sessionVersion = getSessionVersion();
   const refreshToken = getRefreshToken();
 
-  if (!refreshToken) {
+  if (!refreshToken || !canRefreshSession()) {
     return false;
   }
 
@@ -269,7 +273,7 @@ export const refreshSessionTokens = async (): Promise<boolean> => {
       credentials: "include",
     });
 
-    if (!response.ok) {
+    if (!response.ok || sessionVersion !== getSessionVersion() || !isSessionActive()) {
       return false;
     }
 
@@ -277,7 +281,13 @@ export const refreshSessionTokens = async (): Promise<boolean> => {
     const accessToken = payload?.data?.accessToken;
     const nextRefreshToken = payload?.data?.refreshToken;
 
-    if (!payload?.success || !accessToken || !nextRefreshToken) {
+    if (
+      !payload?.success ||
+      !accessToken ||
+      !nextRefreshToken ||
+      sessionVersion !== getSessionVersion() ||
+      !isSessionActive()
+    ) {
       return false;
     }
 
