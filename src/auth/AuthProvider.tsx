@@ -7,6 +7,8 @@ import { AuthUser, getScopeByRole, isAdminRole } from './permissions';
 import useAppStore from '../store';
 import { PROFILE_PERMISSIONS } from '../types';
 import { mergeFrontendAdminPermissions } from '../config/permissions';
+import { finalizeLocalLogout } from './logout';
+import { getSessionVersion } from './session';
 
 // ============================================
 // TYPES
@@ -74,10 +76,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        const bootstrapVersion = getSessionVersion();
         // Tenta obter usuário do localStorage ou sessão
         const storedUser = getFallbackUser();
         
-        if (storedUser) {
+        if (storedUser && bootstrapVersion === getSessionVersion()) {
           // Garante que Admin Sistema tenha permissões explícitas
           if (storedUser.role === 'ROLE_ADMIN_SISTEMA') {
             storedUser.permissions = mergeFrontendAdminPermissions(storedUser.permissions);
@@ -200,9 +203,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Função de logout
   const logout = useCallback(() => {
-    // Remove dados de autenticação
-    localStorage.removeItem('finqz_user');
+    finalizeLocalLogout();
     setUser(null);
+    setLoading(false);
   }, []);
 
   // Atualiza dados do usuário

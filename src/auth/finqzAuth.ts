@@ -5,13 +5,13 @@ import { finqzClient } from "../api/finqzClient";
 import { ApiException, refreshSessionTokens } from "../api/http";
 import type { LoginCredentials } from "../types";
 import {
-  clearSession,
   getAccessToken,
   getRefreshToken,
   getSessionSnapshot,
   setSessionUser,
   storeSessionTokens,
 } from "./session";
+import { finalizeLocalLogout } from "./logout";
 import {
   mapBackendAuthUser,
   type BackendLoginResponse,
@@ -157,7 +157,7 @@ export const finqzAuth = {
     return { success: true };
   },
   logoutNative: async (): Promise<FinqzLogoutResult> => {
-    if (!getAccessToken()) {
+    if (!getAccessToken() && !getRefreshToken()) {
       return {
         success: false,
         error: "Sessão nativa ausente.",
@@ -167,23 +167,6 @@ export const finqzAuth = {
     try {
       return { success: await executeNativeLogout() };
     } catch (error) {
-      if (error instanceof ApiException && error.status === 401 && getRefreshToken()) {
-        const refreshed = await refreshSessionTokens();
-
-        if (refreshed && getAccessToken()) {
-          try {
-            return { success: await executeNativeLogout() };
-          } catch (retryError) {
-            return {
-              success: false,
-              error: retryError instanceof ApiException
-                ? retryError.message
-                : "Não foi possível encerrar a sessão nativa.",
-            };
-          }
-        }
-      }
-
       return {
         success: false,
         backendUnavailable: isBackendUnavailable(error),
@@ -206,7 +189,7 @@ export const finqzAuth = {
     let fallbackError: unknown = null;
 
     try {
-      if (getAccessToken()) {
+      if (getAccessToken() || getRefreshToken()) {
         nativeLogout = await finqzAuth.logoutNative();
       }
 
@@ -220,7 +203,7 @@ export const finqzAuth = {
         error: nativeLogout?.success ? null : nativeLogout?.error ?? fallbackError,
       };
     } finally {
-      clearSession();
+      finalizeLocalLogout();
     }
   },
 };

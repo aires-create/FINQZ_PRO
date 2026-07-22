@@ -1,5 +1,6 @@
 // FINQZ PRO - Main App
 import React, { useEffect, useState, useCallback, createContext, useContext, Suspense, lazy } from "react";
+import { flushSync } from "react-dom";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import useAppStore from "./store";
 import { Layout } from "./layouts/MainLayout";
@@ -8,7 +9,8 @@ import { AuthUser, Module, Action } from "./auth/permissions";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
 import { finqzAuth } from "./auth/finqzAuth";
-import { getCurrentUser, setSessionUser } from "./auth/session";
+import { AUTH_LOGOUT_EVENT } from "./auth/logout";
+import { getCurrentUser, getSessionVersion, setSessionUser } from "./auth/session";
 import { mergeFrontendAdminPermissions } from "./config/permissions";
 import { ENABLE_LEGACY_AUTH_FALLBACK } from "./config/environment";
 import {
@@ -80,6 +82,7 @@ const AuthScreen = () => {
 
   useEffect(() => {
     let isMounted = true;
+    const bootstrapVersion = getSessionVersion();
 
     const initAuth = async () => {
       try {
@@ -92,7 +95,7 @@ const AuthScreen = () => {
           timeoutPromise,
         ]);
 
-        if (isMounted && session.data?.user) {
+        if (isMounted && session.data?.user && bootstrapVersion === getSessionVersion()) {
           navigate("/app/dashboard", { replace: true });
           return;
         }
@@ -129,7 +132,7 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
@@ -173,6 +176,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { setAuth } = useAppStore();
+  const navigate = useNavigate();
 
   const normalizeAdminUser = (currentUser: any) => {
     const isAdmin = currentUser?.email?.includes("admin") ||
@@ -202,12 +206,30 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [setAuth]);
 
   useEffect(() => {
+    const handleAuthLogout = () => {
+      flushSync(() => {
+        setUser(null);
+        setAuth(null);
+        setLoading(false);
+      });
+      navigate("/login", { replace: true });
+    };
+
+    window.addEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout as EventListener);
+
+    return () => {
+      window.removeEventListener(AUTH_LOGOUT_EVENT, handleAuthLogout as EventListener);
+    };
+  }, [navigate, setAuth]);
+
+  useEffect(() => {
     let isMounted = true;
+    const bootstrapVersion = getSessionVersion();
 
     const checkAuth = async () => {
       try {
         const storedUser = getCurrentUser();
-        if (storedUser && isMounted) {
+        if (storedUser && isMounted && bootstrapVersion === getSessionVersion()) {
           applyAuthenticatedUser(storedUser);
           return;
         }
@@ -221,7 +243,7 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           timeoutPromise,
         ]);
 
-        if (isMounted && session.data?.user) {
+        if (isMounted && session.data?.user && bootstrapVersion === getSessionVersion()) {
           applyAuthenticatedUser(session.data.user);
         }
       } catch (error) {
@@ -337,6 +359,7 @@ const AppRoutes = () => {
       <Routes>
       {/* Login Admin */}
       <Route path="/" element={<AuthScreen />} />
+      <Route path="/login" element={<AuthScreen />} />
 
       {/* Login Parceiro */}
       <Route path="/parceiro/login" element={<LoginParceiroPage />} />
@@ -376,7 +399,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* fallback */}
-      <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
     </Suspense>
   );
