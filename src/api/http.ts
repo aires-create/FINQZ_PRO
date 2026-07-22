@@ -2,7 +2,14 @@
 // Owns base URL, headers, auth token injection and request correlation.
 
 import { API_BASE_URL, API_CONFIG } from "../config/environment";
-import { getAccessToken, getRefreshToken, storeSessionTokens } from "../auth/session";
+import {
+  canRefreshSession,
+  getAccessToken,
+  getRefreshToken,
+  getSessionVersion,
+  isSessionActive,
+  storeSessionTokens,
+} from "../auth/session";
 import { clearLocalAuthState } from "../auth/logout";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -253,6 +260,7 @@ const parseJsonPayload = async <T>(response: Response): Promise<T | null> => {
 const canRetryAfterRefresh = (endpoint: string, options: FinqzRequestInit): boolean => {
   return Boolean(
     !options.skipAuthRefresh &&
+      canRefreshSession() &&
       !isAuthControlEndpoint(endpoint)
   );
 };
@@ -281,10 +289,11 @@ const shouldInvalidateRefreshFailure = (status: number): boolean => {
 
 export const refreshSessionTokens = async (): Promise<RefreshSessionResult> => {
   const refreshToken = getRefreshToken();
-  if (!refreshToken) {
+  if (!refreshToken || !canRefreshSession()) {
     return { refreshed: false, invalidated: false };
   }
 
+  const sessionVersion = getSessionVersion();
   const requestId = generateRequestId();
   const headers = new Headers(API_CONFIG.DEFAULT_HEADERS);
   headers.set("X-Request-ID", requestId);
@@ -299,6 +308,10 @@ export const refreshSessionTokens = async (): Promise<RefreshSessionResult> => {
     });
 
     if (!response.ok) {
+      if (sessionVersion !== getSessionVersion() || !isSessionActive()) {
+        return { refreshed: false, invalidated: true };
+      }
+
       if (shouldInvalidateRefreshFailure(response.status)) {
         invalidateLocalSession();
         return { refreshed: false, invalidated: true };
@@ -310,6 +323,10 @@ export const refreshSessionTokens = async (): Promise<RefreshSessionResult> => {
     const payload = await parseJsonPayload<NativeRefreshResponse>(response);
     const accessToken = payload?.data?.accessToken;
     const nextRefreshToken = payload?.data?.refreshToken;
+
+    if (sessionVersion !== getSessionVersion() || !isSessionActive()) {
+      return { refreshed: false, invalidated: true };
+    }
 
     if (!payload?.success || !accessToken || !nextRefreshToken) {
       invalidateLocalSession();
@@ -410,7 +427,8 @@ export async function apiRequest<T>(
       error instanceof ApiException &&
       isAuthError(error.status) &&
       !options.skipAuthRefresh &&
-      !isAuthControlEndpoint(endpoint)
+      !isAuthControlEndpoint(endpoint) &&
+      isSessionActive()
     ) {
       handleAuthError();
     }

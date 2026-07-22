@@ -12,6 +12,7 @@ import {
 } from "./http";
 import {
   clearSession,
+  canRefreshSession,
   getSessionSnapshot,
   type FinqzSession,
 } from "../auth/session";
@@ -37,7 +38,7 @@ const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestI
     headers: prepared.headers,
   });
 
-  if (response.status === 401 && !requestOptions.skipAuthRefresh) {
+  if (response.status === 401 && !requestOptions.skipAuthRefresh && canRefreshSession()) {
     const refreshed = await refreshSessionTokens();
 
     if (refreshed.refreshed) {

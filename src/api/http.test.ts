@@ -109,4 +109,32 @@ describe("api/http", () => {
 
     window.removeEventListener("auth:error", authErrorHandler as EventListener);
   });
+
+  it("does not try to refresh after the session has already been cleared by logout", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+
+    clearLocalAuthState();
+
+    const authErrorHandler = vi.fn();
+    window.addEventListener("auth:error", authErrorHandler as EventListener);
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: "Sessao expirada" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await expect(apiRequest("/api/v1/crm/clientes")).rejects.toMatchObject({ status: 401 });
+
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1);
+    expect(authErrorHandler).not.toHaveBeenCalled();
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+
+    window.removeEventListener("auth:error", authErrorHandler as EventListener);
+  });
 });

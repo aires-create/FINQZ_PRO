@@ -38,5 +38,6 @@ describe("auth/session", () => {
 
     expect(getAccessToken()).toBeNull();
     expect(getRefreshToken()).toBeNull();
+    expect(getSessionSnapshot().isAuthenticated).toBe(false);
   });
 });

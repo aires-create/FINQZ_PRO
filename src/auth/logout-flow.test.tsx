@@ -8,6 +8,7 @@ import { clearLocalAuthState } from "./logout";
 import { ProtectedRoute } from "./guards";
 import { getAccessToken, getRefreshToken, storeSessionTokens } from "./session";
 import { useApiErrorHandler } from "../hooks/useApiErrorHandler";
+import useAppStore from "../store";
 
 const finqzClientMock = vi.hoisted(() => ({
   post: vi.fn(),
@@ -120,6 +121,9 @@ describe("auth logout flow", () => {
 
     expect(getAccessToken()).toBeNull();
     expect(getRefreshToken()).toBeNull();
+    expect(useAppStore.getState().isAuthenticated).toBe(false);
+    expect(useAppStore.getState().user).toBeNull();
+    expect(useAppStore.getState().userPermissions).toEqual({});
     expect(screen.queryByText("Protected screen")).toBeNull();
   });
 
@@ -172,5 +176,7 @@ describe("auth logout flow", () => {
 
     expect(getAccessToken()).toBeNull();
     expect(getRefreshToken()).toBeNull();
+    expect(useAppStore.getState().isAuthenticated).toBe(false);
+    expect(useAppStore.getState().user).toBeNull();
   });
 });

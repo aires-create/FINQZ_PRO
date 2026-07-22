@@ -48,6 +48,12 @@ const safeSessionStoreRemove = (key: string): void => {
 const sessionState = {
   accessToken: null as string | null,
   refreshToken: null as string | null,
+  isActive: false,
+  version: 0,
+};
+
+const syncSessionActivity = (): void => {
+  sessionState.isActive = Boolean(sessionState.accessToken || sessionState.refreshToken);
 };
 
 const setTokenValue = (key: string, token: string | null | undefined): void => {
@@ -61,6 +67,7 @@ const setTokenValue = (key: string, token: string | null | undefined): void => {
     if (key === STORAGE_KEYS.REFRESH_TOKEN) {
       sessionState.refreshToken = null;
     }
+    syncSessionActivity();
     return;
   }
 
@@ -73,6 +80,8 @@ const setTokenValue = (key: string, token: string | null | undefined): void => {
   if (key === STORAGE_KEYS.REFRESH_TOKEN) {
     sessionState.refreshToken = normalizedToken;
   }
+
+  syncSessionActivity();
 };
 
 export const getAccessToken = (): string | null => {
@@ -99,7 +108,7 @@ export const getSessionSnapshot = (): FinqzSessionSnapshot => {
     data: {
       user: null,
     },
-    isAuthenticated: Boolean(accessToken || refreshToken),
+    isAuthenticated: sessionState.isActive && Boolean(accessToken || refreshToken),
     hasAccessToken: Boolean(accessToken),
     hasRefreshToken: Boolean(refreshToken),
     source: "finqz",
@@ -126,8 +135,18 @@ export const storeSessionTokens = (tokens: {
 export const clearSession = (): void => {
   sessionState.accessToken = null;
   sessionState.refreshToken = null;
+  sessionState.isActive = false;
+  sessionState.version += 1;
   safeSessionStoreRemove(STORAGE_KEYS.TOKEN);
   safeSessionStoreRemove(STORAGE_KEYS.REFRESH_TOKEN);
+};
+
+export const isSessionActive = (): boolean => sessionState.isActive;
+
+export const getSessionVersion = (): number => sessionState.version;
+
+export const canRefreshSession = (): boolean => {
+  return sessionState.isActive && Boolean(sessionState.accessToken) && Boolean(sessionState.refreshToken);
 };
 
 export const getStoredAuthToken = getAccessToken;

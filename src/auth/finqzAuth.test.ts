@@ -128,7 +128,9 @@ describe("auth/finqzAuth", () => {
       refreshToken: "refresh-token",
     });
 
-    finqzClientMock.auth.signOut.mockResolvedValueOnce({ data: null, error: null });
+    finqzClientMock.post.mockResolvedValueOnce({
+      data: { success: true },
+    });
 
     await finqzAuth.signOut();
 

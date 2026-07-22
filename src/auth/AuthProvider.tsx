@@ -10,6 +10,7 @@ import { PROFILE_PERMISSIONS } from '../types';
 import { mergeFrontendAdminPermissions } from '../config/permissions';
 import { finqzAuth } from './finqzAuth';
 import { AUTH_LOGOUT_EVENT } from './logout';
+import { getSessionVersion, isSessionActive } from './session';
 
 // ============================================
 // TYPES
@@ -51,11 +52,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const clearAuthenticatedState = useCallback(() => {
+    setUser(null);
+    setLoading(false);
+    useAppStore.setState({
+      isAuthenticated: false,
+      user: null,
+      userPermissions: {},
+    });
+  }, []);
+
   // Inicializa autenticação
   useEffect(() => {
     const initAuth = async () => {
+      const sessionVersion = getSessionVersion();
+
       try {
         const session = await finqzAuth.getSession();
+
+        if (sessionVersion !== getSessionVersion() || !isSessionActive()) {
+          return;
+        }
+
         const sessionUser = session.data?.user;
 
         if (sessionUser) {
@@ -69,20 +87,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           setUser(normalizedUser);
           useAppStore.getState().setAuth(normalizedUser);
+        } else {
+          clearAuthenticatedState();
         }
       } catch (error) {
         console.error('[Auth] Erro ao inicializar:', error);
       } finally {
-        setLoading(false);
+        if (sessionVersion === getSessionVersion()) {
+          setLoading(false);
+        }
       }
     };
 
     initAuth();
-  }, []);
+  }, [clearAuthenticatedState]);
 
   useEffect(() => {
     const handleLogout = () => {
-      setUser(null);
+      clearAuthenticatedState();
       navigate('/login', { replace: true });
     };
 
@@ -91,7 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       window.removeEventListener(AUTH_LOGOUT_EVENT, handleLogout as EventListener);
     };
-  }, []);
+  }, [clearAuthenticatedState, navigate]);
 
   // Função de login com access_code ou e-mail
   const login = useCallback(async (credentials: { access_code_or_email: string; senha: string }): Promise<{ success: boolean; must_change_password?: boolean; error?: string }> => {
