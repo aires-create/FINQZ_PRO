@@ -14,7 +14,7 @@ import {
   type HttpMethod,
 } from "./http";
 import {
-  clearSession,
+  canRefreshSession,
   getSessionSnapshot,
   setSessionUser,
   type FinqzSession,
@@ -47,7 +47,7 @@ const fetchWithStandardHeaders = async (endpoint: string, options: FinqzRequestI
     headers: prepared.headers,
   });
 
-  if (response.status === 401 && !requestOptions.skipAuthRefresh) {
+  if (response.status === 401 && !requestOptions.skipAuthRefresh && canRefreshSession()) {
     const refreshed = await refreshSessionTokens();
 
     if (refreshed) {
@@ -103,8 +103,6 @@ const getSession = async (): Promise<FinqzAuthSession> => {
 };
 
 const signOut = async (): Promise<FinqzSignOutResult> => {
-  clearSession();
-
   try {
     await edgeSparkClient.auth.signOut();
     return { data: null, error: null };

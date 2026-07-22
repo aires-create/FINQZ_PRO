@@ -5,7 +5,7 @@ import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle, Info, Zap } from 'lucide-react';
 import { ApiException, isAuthError, isPermissionError, isValidationError, getErrorMessage } from '../api/client';
-import { STORAGE_KEYS } from '../config/environment';
+import { finalizeLocalLogout } from '../auth/logout';
 
 // ============================================
 // ERROR TYPES
@@ -45,12 +45,7 @@ export const useApiErrorHandler = () => {
 
     // Erro de autenticação
     if (isAuthError(status)) {
-      // Limpa sessão
-      localStorage.removeItem(STORAGE_KEYS.TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.USER);
-      
-      // Redirect para login
+      finalizeLocalLogout();
       navigate('/login', { replace: true });
       
       return {

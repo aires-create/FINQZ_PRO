@@ -31,6 +31,16 @@ export interface FinqzSessionSnapshot extends FinqzSession {
   source: "finqz";
 }
 
+interface SessionRuntimeState {
+  isActive: boolean;
+  version: number;
+}
+
+const sessionRuntime: SessionRuntimeState = {
+  isActive: false,
+  version: 0,
+};
+
 const safeLocalStorageGet = (key: string): string | null => {
   try {
     return localStorage.getItem(key);
@@ -63,6 +73,16 @@ const setTokenValue = (key: string, token: string | null | undefined): void => {
   }
 
   safeLocalStorageSet(key, normalizedToken);
+};
+
+const syncRuntimeStateFromStorage = (): void => {
+  if (sessionRuntime.isActive) {
+    return;
+  }
+
+  if (safeLocalStorageGet(STORAGE_KEYS.USER) || safeLocalStorageGet(STORAGE_KEYS.TOKEN) || safeLocalStorageGet(STORAGE_KEYS.REFRESH_TOKEN)) {
+    sessionRuntime.isActive = true;
+  }
 };
 
 export const getAccessToken = (): string | null => {
@@ -100,10 +120,13 @@ export const setSessionUser = (user: FinqzSessionUser | null | undefined): void 
     return;
   }
 
+  sessionRuntime.isActive = true;
   safeLocalStorageSet(STORAGE_KEYS.USER, JSON.stringify(user));
 };
 
 export const getSessionSnapshot = (): FinqzSessionSnapshot => {
+  syncRuntimeStateFromStorage();
+
   const user = getCurrentUser();
   const accessToken = getAccessToken();
   const refreshToken = getRefreshToken();
@@ -112,7 +135,7 @@ export const getSessionSnapshot = (): FinqzSessionSnapshot => {
     data: {
       user,
     },
-    isAuthenticated: Boolean(user || accessToken),
+    isAuthenticated: sessionRuntime.isActive && Boolean(user || accessToken || refreshToken),
     hasAccessToken: Boolean(accessToken),
     hasRefreshToken: Boolean(refreshToken),
     source: "finqz",
@@ -123,10 +146,27 @@ export const isAuthenticated = (): boolean => {
   return getSessionSnapshot().isAuthenticated;
 };
 
+export const getSessionVersion = (): number => {
+  return sessionRuntime.version;
+};
+
+export const isSessionActive = (): boolean => {
+  syncRuntimeStateFromStorage();
+  return sessionRuntime.isActive;
+};
+
+export const canRefreshSession = (): boolean => {
+  return isSessionActive() && Boolean(getAccessToken() && getRefreshToken());
+};
+
 export const storeSessionTokens = (tokens: {
   accessToken?: string | null;
   refreshToken?: string | null;
 }): void => {
+  if (tokens.accessToken || tokens.refreshToken) {
+    sessionRuntime.isActive = true;
+  }
+
   if ("accessToken" in tokens) {
     setAccessToken(tokens.accessToken);
   }
@@ -137,6 +177,8 @@ export const storeSessionTokens = (tokens: {
 };
 
 export const clearSession = (): void => {
+  sessionRuntime.isActive = false;
+  sessionRuntime.version += 1;
   safeLocalStorageRemove(STORAGE_KEYS.TOKEN);
   safeLocalStorageRemove(STORAGE_KEYS.REFRESH_TOKEN);
   safeLocalStorageRemove(STORAGE_KEYS.USER);
