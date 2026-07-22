@@ -13,6 +13,7 @@ import type { GetProviderRuntimeIssuesUseCase } from '../../../modules/integrati
 import type { GetProviderRuntimeSummaryUseCase } from '../../../modules/integrations/application/get-provider-runtime-summary.use-case.js';
 import type { TestIntegrationProviderConnectionUseCase } from '../../../modules/integrations/application/test-integration-provider-connection.use-case.js';
 import type { TestIntegrationProviderMarginInquiryUseCase } from '../../../modules/integrations/application/test-integration-provider-margin-inquiry.use-case.js';
+import type { TestIntegrationProviderInitialSimulationUseCase } from '../../../modules/integrations/application/test-integration-provider-initial-simulation.use-case.js';
 import { IntegrationsController } from '../../../modules/integrations/presentation/http/integrations.controller.js';
 import { createIntegrationsRoutes } from '../../../modules/integrations/presentation/http/integrations.routes.js';
 import type { FinancialProposal } from '../../../modules/integrations/domain/contracts/financial-proposal/financial-proposal.contract.js';
@@ -68,6 +69,12 @@ const createApp = async (
   const marginInquiryUseCase = {
     execute: testMarginInquiry,
   } as unknown as TestIntegrationProviderMarginInquiryUseCase;
+  const initialSimulationUseCase = {
+    execute: async () => ({
+      providerKey: 'sos-bolso',
+      availableLimit: 0,
+    }),
+  } as unknown as TestIntegrationProviderInitialSimulationUseCase;
   const runtimeSummaryUseCase = {
     execute: runtimeSummary,
   } as unknown as GetProviderRuntimeSummaryUseCase;
@@ -84,6 +91,7 @@ const createApp = async (
     payloadDiagnosticsUseCase,
     { execute: () => [] } as any,
     marginInquiryUseCase,
+    initialSimulationUseCase,
     runtimeSummaryUseCase,
     runtimeIssuesUseCase,
     runtimeDiagnosticsUseCase,
