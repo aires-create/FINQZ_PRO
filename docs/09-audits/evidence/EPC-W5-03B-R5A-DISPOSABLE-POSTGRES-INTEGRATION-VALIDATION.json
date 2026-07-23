@@ -1,0 +1,295 @@
+{
+  "phase": "EPC-W5-03B-R5A",
+  "title": "Disposable Postgres Integration Validation",
+  "worktree": "C:\\Projects\\FINQZ_PRO\\_worktrees\\w5-03b-r4-cce8840",
+  "branch": "homologation/bootstrap-vps",
+  "head": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+  "verdict": "TEST_PYRAMID_NOT_RESTORED",
+  "disposableDatabase": {
+    "container": "finqz-r5a-postgres",
+    "image": "postgres:16-alpine",
+    "version": "PostgreSQL 16.13 on x86_64-pc-linux-musl",
+    "hostPort": "127.0.0.1:52625",
+    "database": "finqz_r5a_test",
+    "user": "finqz_test",
+    "passwordPlaceholder": "TEMPORARY_TEST_CREDENTIAL",
+    "status": "running"
+  },
+  "environment": {
+    "nodeEnv": "test",
+    "appEnv": "local",
+    "databaseUrl": "masked://localhost:5432/finqz_r5a_test",
+    "directUrl": "masked://localhost:5432/finqz_r5a_test",
+    "corsOrigin": "http://localhost:5173",
+    "secrets": "temporary-non-production-values"
+  },
+  "connectivity": {
+    "dns": [
+      "::1",
+      "127.0.0.1"
+    ],
+    "tcpPass": true,
+    "authPass": true,
+    "select1Pass": true
+  },
+  "prisma": {
+    "npmCi": "PASS",
+    "validate": "PASS",
+    "generate": "PASS",
+    "binaryTarget": "debian-openssl-3.0.x",
+    "openSslError": false
+  },
+  "migrations": {
+    "total": 18,
+    "oldest": "20260507224052_init_enterprise",
+    "newest": "20260710120000_sdc_3_4h_b_simulation_runtime_evidence",
+    "targetPresent": true,
+    "destructiveScan": {
+      "matchCount": 4,
+      "files": [
+        "backend/prisma/migrations/20260511193021_init_foundation/migration.sql"
+      ]
+    },
+    "migrateDeploy": "PASS",
+    "migrateStatus": "Database schema is up to date"
+  },
+  "criticalTables": [
+    {
+      "name": "public.edp_simulations",
+      "exists": true,
+      "primaryKey": "edp_simulations_pkey",
+      "foreignKeys": [
+        "edp_simulations_tenantId_fkey"
+      ],
+      "unique": [
+        "edp_simulations_tenantId_aggregateId_key"
+      ],
+      "indexes": [
+        "edp_simulations_tenantId_idx",
+        "edp_simulations_tenantId_aggregateId_key",
+        "edp_simulations_tenantId_aggregateType_idx",
+        "edp_simulations_tenantId_deletedAt_idx"
+      ]
+    },
+    {
+      "name": "public.edp_decision_policies",
+      "exists": true,
+      "primaryKey": "edp_decision_policies_pkey",
+      "foreignKeys": [
+        "edp_decision_policies_tenantId_fkey"
+      ],
+      "unique": [
+        "edp_decision_policies_tenantId_aggregateId_version_key"
+      ],
+      "indexes": [
+        "edp_decision_policies_tenantId_idx",
+        "edp_decision_policies_tenantId_aggregateId_idx",
+        "edp_decision_policies_tenantId_status_idx",
+        "edp_decision_policies_tenantId_deletedAt_idx",
+        "edp_decision_policies_tenantId_aggregateId_version_key"
+      ]
+    },
+    {
+      "name": "public.edp_event_store",
+      "exists": true,
+      "primaryKey": "edp_event_store_pkey",
+      "foreignKeys": [
+        "edp_event_store_tenantId_fkey"
+      ],
+      "unique": [],
+      "indexes": [
+        "edp_event_store_tenantId_idx",
+        "edp_event_store_tenantId_aggregateId_idx",
+        "edp_event_store_tenantId_correlationId_idx",
+        "edp_event_store_tenantId_eventName_idx",
+        "edp_event_store_tenantId_occurredAt_idx"
+      ]
+    },
+    {
+      "name": "public.simulation_runtime_evidence",
+      "exists": true,
+      "primaryKey": "simulation_runtime_evidence_pkey",
+      "foreignKeys": [
+        "simulation_runtime_evidence_tenantId_fkey"
+      ],
+      "unique": [
+        "simulation_runtime_evidence_tenantId_campaignId_evidenceId_key"
+      ],
+      "indexes": [
+        "simulation_runtime_evidence_tenantId_idx",
+        "simulation_runtime_evidence_tenantId_campaignId_idx",
+        "simulation_runtime_evidence_tenantId_campaignId_subproductCode_",
+        "simulation_runtime_evidence_tenantId_campaignId_comparisonStatu",
+        "simulation_runtime_evidence_tenantId_campaignId_divergenceCateg",
+        "simulation_runtime_evidence_tenantId_campaignId_timestamp_idx",
+        "simulation_runtime_evidence_tenantId_correlationId_idx",
+        "simulation_runtime_evidence_tenantId_campaignId_evidenceId_key"
+      ]
+    }
+  ],
+  "criticalColumns": {
+    "edp_simulations": [
+      "id:uuid:not-null",
+      "tenantId:uuid:not-null",
+      "aggregateId:text:not-null",
+      "aggregateType:text:not-null",
+      "version:integer:not-null",
+      "state:text:not-null",
+      "snapshot:jsonb:not-null",
+      "deletedAt:timestamp nullable",
+      "createdAt:timestamp not-null",
+      "updatedAt:timestamp not-null"
+    ],
+    "edp_decision_policies": [
+      "id:uuid:not-null",
+      "tenantId:uuid:not-null",
+      "aggregateId:text:not-null",
+      "version:integer:not-null",
+      "status:text:not-null",
+      "configSnapshot:jsonb:not-null",
+      "createdAt:timestamp not-null",
+      "updatedAt:timestamp not-null"
+    ],
+    "edp_event_store": [
+      "eventId:uuid:not-null",
+      "tenantId:uuid:not-null",
+      "aggregateId:text:not-null",
+      "aggregateType:text:not-null",
+      "aggregateVersion:integer:not-null",
+      "payload:jsonb:not-null",
+      "occurredAt:timestamp not-null",
+      "createdAt:timestamp not-null"
+    ],
+    "simulation_runtime_evidence": [
+      "id:uuid:not-null",
+      "tenantId:uuid:not-null",
+      "evidenceId:text:not-null",
+      "campaignId:text:not-null",
+      "timestamp:timestamp not-null",
+      "environment:text:not-null",
+      "requestId:text:not-null",
+      "correlationId:text:not-null",
+      "executionId:text:not-null",
+      "productCode:text:not-null",
+      "subproductCode:text:not-null",
+      "comparisonStatus:text:not-null",
+      "divergenceCategory:text:not-null",
+      "createdAt:timestamp not-null"
+    ]
+  },
+  "prismaSuites": [
+    {
+      "file": "src/tests/integration/edp.persistence.prisma.test.ts",
+      "status": "PASS",
+      "tests": 5,
+      "notes": [
+        "live Prisma client",
+        "tenant isolation",
+        "event store/outbox/audit/idempotency",
+        "transaction rollback"
+      ]
+    },
+    {
+      "file": "src/tests/integration/edp.runtime.e2e.test.ts",
+      "status": "FAIL",
+      "tests": 7,
+      "failedTests": 3,
+      "notes": [
+        "first test timed out at 30s",
+        "another test timed out at 30s",
+        "query test failed after prior timeout contamination in the same file"
+      ]
+    },
+    {
+      "file": "src/tests/integration/simulation-runtime-evidence.http.test.ts",
+      "status": "PASS",
+      "tests": 1,
+      "notes": [
+        "auth",
+        "permissions",
+        "persistence",
+        "idempotency",
+        "tenant isolation"
+      ]
+    },
+    {
+      "file": "src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts",
+      "status": "PASS",
+      "tests": 4,
+      "notes": [
+        "live Prisma client",
+        "retry replay",
+        "conflicting retry rejection",
+        "tenant cascade deletion"
+      ]
+    }
+  ],
+  "inMemorySuites": [
+    {
+      "file": "src/tests/integration/edp.persistence.memory.test.ts",
+      "status": "PASS",
+      "tests": 4
+    },
+    {
+      "file": "src/tests/integration/edp.runtime.memory.test.ts",
+      "status": "PASS",
+      "tests": 4
+    },
+    {
+      "file": "src/tests/integration/simulation-runtime-evidence.memory.test.ts",
+      "status": "PASS",
+      "tests": 4
+    },
+    {
+      "file": "src/tests/integration/simulation-runtime-evidence.persistence.memory.test.ts",
+      "status": "PASS",
+      "tests": 3
+    }
+  ],
+  "integrationRun": {
+    "backendTestFiles": 132,
+    "backendTests": 887,
+    "passedFiles": 131,
+    "failedFiles": 1,
+    "passedTests": 884,
+    "failedTests": 3
+  },
+  "completeSuite": {
+    "rootTestFiles": 26,
+    "rootTests": 112,
+    "rootBuild": "PASS",
+    "backendBuild": "PASS"
+  },
+  "semantics": {
+    "preserved": true,
+    "classification": "PARTIAL_DATABASE_COVERAGE",
+    "notes": [
+      "real Prisma client",
+      "real PostgreSQL",
+      "transaction and rollback coverage",
+      "FK and unique constraint coverage",
+      "tenant isolation coverage",
+      "idempotency coverage",
+      "one runtime E2E file remains unstable"
+    ]
+  },
+  "migrationHml": {
+    "file": "backend/prisma/migrations/20260710120000_sdc_3_4h_b_simulation_runtime_evidence/migration.sql",
+    "classification": "SAFE_ADDITIVE",
+    "requiredBefore": "FEATURE_USE",
+    "readinessTouchesTable": false,
+    "startupTouchesTable": false
+  },
+  "rollback": {
+    "sourceDigest": "sha256:f945b26ed54242be14736dcc10e21a5a59e7984288a9892cbae7d2d0ae81a898",
+    "destructiveRollbackNeeded": false,
+    "hmlTagged": false
+  },
+  "cleanup": {
+    "disposablePostgresRemoved": true,
+    "officialContainersUntouched": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true
+  }
+}

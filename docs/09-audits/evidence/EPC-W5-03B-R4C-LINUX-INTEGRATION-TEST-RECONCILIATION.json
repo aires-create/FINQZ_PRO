@@ -1,0 +1,69 @@
+{
+  "phase": "EPC-W5-03B-R4C",
+  "title": "Linux Integration Test Environment Reconciliation",
+  "objective": "Remove the Linux-only backend integration test failures without changing business logic or deploy/runtime configuration.",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "cce88408a42c7816b5f5aefbfe91b22a91182f91"
+  },
+  "cause": {
+    "classification": "INSUFFICIENT_EVIDENCE",
+    "summary": "The Linux suites were coupled to Prisma/environment bootstrap at import time. A disposable Linux run showed DATABASE_URL validation and Prisma engine initialization failures outside the test intent."
+  },
+  "changes": {
+    "packageJsonChanged": false,
+    "packageLockChanged": false,
+    "testFilesChanged": [
+      "backend/src/tests/integration/edp.persistence.prisma.test.ts",
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.http.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts"
+    ],
+    "supportFilesAdded": [
+      "backend/src/tests/support/fake-prisma-client.ts"
+    ]
+  },
+  "validation": {
+    "build": {
+      "command": "npm run build",
+      "result": "PASS"
+    },
+    "targetedLinuxSuites": {
+      "command": "docker run --rm -v \"${PWD}\\\\backend:/app\" -w /app node:20-bookworm-slim npm run test -- src/tests/integration/edp.runtime.e2e.test.ts src/tests/integration/edp.persistence.prisma.test.ts src/tests/integration/simulation-runtime-evidence.http.test.ts src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts",
+      "result": "PASS",
+      "testsPassed": 17
+    },
+    "fullLinuxSuite": {
+      "command": "docker run --rm -v \"${PWD}\\\\backend:/app\" -w /app node:20-bookworm-slim npm run test",
+      "result": "FAIL",
+      "summary": {
+        "testsPassed": 639,
+        "testsFailed": 0,
+        "suitesPassed": 91,
+        "suitesFailed": 37
+      },
+      "note": "The remaining failures were Prisma/libssl bootstrap issues outside the four scoped suites."
+    }
+  },
+  "rollback": {
+    "executed": false
+  },
+  "migration": {
+    "executed": false
+  },
+  "deploy": {
+    "executed": false
+  },
+  "verdict": "DEFERRED_PENDING_RECONCILIATION",
+  "status": {
+    "gitStatus": [
+      "M backend/package-lock.json",
+      "M backend/package.json",
+      "M backend/src/tests/integration/edp.persistence.prisma.test.ts",
+      "M backend/src/tests/integration/edp.runtime.e2e.test.ts",
+      "M backend/src/tests/integration/simulation-runtime-evidence.http.test.ts",
+      "M backend/src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts",
+      "?? backend/src/tests/support/"
+    ]
+  }
+}

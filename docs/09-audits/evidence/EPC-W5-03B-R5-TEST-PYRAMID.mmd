@@ -1,0 +1,9 @@
+flowchart TD
+  A[Restore real Prisma/PostgreSQL integration suites] --> B[Add parallel InMemory suites]
+  B --> C[npm ci PASS]
+  C --> D[npm run build PASS]
+  D --> E[Run InMemory test files PASS]
+  E --> F[Run restored integration suite with DATABASE_URL injected]
+  F --> G[Prisma reports missing tables]
+  G --> H[Real database-backed coverage still blocked]
+  H --> I[TEST_PYRAMID_NOT_RESTORED]

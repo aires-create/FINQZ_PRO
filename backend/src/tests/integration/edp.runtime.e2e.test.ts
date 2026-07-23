@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createApp } from '../../app.js';
 import { generateAccessToken } from '../../utils/jwt.js';
 import type { JWTPayload } from '../../types/index.js';
 
@@ -125,25 +126,27 @@ const matchesWhere = (row: Record<string, unknown>, where: Record<string, unknow
 
 const cloneState = (state: FakeState): FakeState => structuredClone(state);
 
-const buildInitialState = (): FakeState => ({
-  users: new Map(),
-  edpEventStore: new Map(),
-  edpOutboxMessage: new Map(),
-  edpAuditTimelineEvent: new Map(),
-  edpIdempotencyRecord: new Map(),
-  edpCorrelationRecord: new Map(),
-  securityEventLog: [],
-  failModes: {
-    eventStoreAppend: false,
-    outboxEnqueue: false,
-    auditAppend: false,
-    correlationUpsert: false,
-    idempotencyRemember: false,
-    idempotencyMarkProcessed: false,
-  },
-});
+function buildInitialState(): FakeState {
+  return {
+    users: new Map(),
+    edpEventStore: new Map(),
+    edpOutboxMessage: new Map(),
+    edpAuditTimelineEvent: new Map(),
+    edpIdempotencyRecord: new Map(),
+    edpCorrelationRecord: new Map(),
+    securityEventLog: [],
+    failModes: {
+      eventStoreAppend: false,
+      outboxEnqueue: false,
+      auditAppend: false,
+      correlationUpsert: false,
+      idempotencyRemember: false,
+      idempotencyMarkProcessed: false,
+    },
+  };
+}
 
-const createFakePrismaClient = (initialState?: Partial<FakeState>): FakePrismaClient => {
+function createFakePrismaClient(initialState?: Partial<FakeState>): FakePrismaClient {
   let rootState: FakeState = {
     ...buildInitialState(),
     ...initialState,
@@ -364,7 +367,13 @@ const createFakePrismaClient = (initialState?: Partial<FakeState>): FakePrismaCl
 
   client = buildClient();
   return client;
-};
+}
+
+const prismaMock = vi.hoisted(() => {
+  const client = createFakePrismaClient();
+  globalThis.__edpPrismaMock = client;
+  return client;
+});
 
 function getPrismaMock() {
   return globalThis.__edpPrismaMock as FakePrismaClient;
@@ -395,8 +404,6 @@ vi.mock('../../modules/security-events/index.js', () => ({
 let app: FastifyInstance | undefined;
 
 const getApp = async () => {
-  vi.resetModules();
-  const { createApp } = await import('../../app.js');
   app = await createApp();
   await app.ready();
 
@@ -465,8 +472,8 @@ const expectNoOperationalWrites = () => {
 };
 
 beforeEach(() => {
-  globalThis.__edpPrismaMock = createFakePrismaClient();
-  globalThis.__edpPrismaMock.__seedUser(buildTenantContextUser());
+  prismaMock.__reset();
+  prismaMock.__seedUser(buildTenantContextUser());
 });
 
 afterEach(async () => {

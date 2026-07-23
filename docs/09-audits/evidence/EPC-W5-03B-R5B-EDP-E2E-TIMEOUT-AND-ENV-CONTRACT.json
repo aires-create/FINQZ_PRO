@@ -1,0 +1,71 @@
+{
+  "id": "EPC-W5-03B-R5B",
+  "title": "EDP E2E Timeout and Env Contract",
+  "scope": {
+    "file": "backend/src/tests/integration/edp.runtime.e2e.test.ts",
+    "env_contract": [
+      "NODE_ENV=test is supported",
+      "APP_ENV=test is not supported by the schema",
+      "APP_ENV falls back to local when not provided"
+    ]
+  },
+  "root_cause": {
+    "summary": "The EDP runtime test was paying a full cold bootstrap cost for each case. A module reset plus a newly created fake Prisma client forced the app graph to be reloaded too often, which pushed the first EDP case into the Vitest timeout window.",
+    "signals": [
+      "The app bootstrap was being re-entered through a dynamic import path.",
+      "The fake Prisma client reference was not stable across cases.",
+      "The test setup does not define APP_ENV=test, so the env schema still resolves APP_ENV to local."
+    ]
+  },
+  "fix": {
+    "summary": "Create one hoisted fake Prisma client, reset its state per test, import the app through the standard createApp path, and stop resetting modules between cases.",
+    "files": [
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts"
+    ]
+  },
+  "validation": {
+    "isolated_file_runs": [
+      {
+        "run": 1,
+        "command": "docker run ... npx vitest run src/tests/integration/edp.runtime.e2e.test.ts --reporter=dot",
+        "result": "pass",
+        "tests_passed": 7,
+        "duration_seconds": 50.96
+      },
+      {
+        "run": 2,
+        "command": "docker run ... npx vitest run src/tests/integration/edp.runtime.e2e.test.ts --reporter=dot",
+        "result": "pass",
+        "tests_passed": 7,
+        "duration_seconds": 54.14
+      },
+      {
+        "run": 3,
+        "command": "docker run ... npx vitest run src/tests/integration/edp.runtime.e2e.test.ts --reporter=dot",
+        "result": "pass",
+        "tests_passed": 7,
+        "duration_seconds": 51.43
+      }
+    ],
+    "full_suite_note": "The broader integration suite still depends on a reachable PostgreSQL instance from the Linux container. In this environment the external DB path was not reliable enough to treat as a pass signal for the full suite.",
+    "platform": "Linux Node 20 container with the worktree mounted"
+  },
+  "references": {
+    "test_lines": [
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts:6",
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts:372",
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts:406",
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts:474"
+    ],
+    "env_schema": [
+      "backend/src/config/env/env.schema.ts:3",
+      "backend/src/config/env/env.schema.ts:9",
+      "backend/src/config/env/env.schema.ts:75",
+      "backend/src/config/env/env.schema.ts:80"
+    ],
+    "test_setup": [
+      "backend/src/tests/setup.ts:17"
+    ]
+  }
+}
+

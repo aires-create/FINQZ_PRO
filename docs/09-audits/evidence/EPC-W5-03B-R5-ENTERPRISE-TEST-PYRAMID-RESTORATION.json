@@ -1,0 +1,62 @@
+{
+  "phase": "EPC-W5-03B-R5",
+  "title": "Enterprise Test Pyramid Restoration",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "candidateHead": "cce88408a42c7816b5f5aefbfe91b22a91182f91",
+    "worktree": "C:\\Projects\\FINQZ_PRO\\_worktrees\\w5-03b-r4-cce8840"
+  },
+  "verdict": "TEST_PYRAMID_NOT_RESTORED",
+  "sourceRestoration": {
+    "restoredFiles": [
+      "backend/src/tests/integration/edp.persistence.prisma.test.ts",
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.http.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.persistence.prisma.test.ts"
+    ],
+    "inMemoryFilesAdded": [
+      "backend/src/tests/integration/edp.persistence.memory.test.ts",
+      "backend/src/tests/integration/edp.runtime.memory.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.memory.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.persistence.memory.test.ts"
+    ],
+    "packageJsonChangedByThisPhase": false,
+    "packageLockChangedByThisPhase": false
+  },
+  "validation": {
+    "npmCi": "PASS",
+    "npmRunBuild": "PASS",
+    "memoryTestCommand": "PASS",
+    "memoryTestFiles": 4,
+    "memoryTestsPassed": 15,
+    "integrationTestCommand": "FAIL",
+    "integrationSuitesTotal": 17,
+    "integrationSuitesPassed": 14,
+    "integrationSuitesFailed": 3,
+    "integrationTestsPassed": 66,
+    "integrationTestsFailed": 10
+  },
+  "environmentFindings": {
+    "linuxContainerImage": "node:20-bookworm-slim",
+    "prismaMigrateStatus": "pending migrations detected",
+    "missingTables": [
+      "public.edp_simulations",
+      "public.edp_decision_policies",
+      "public.edp_event_store",
+      "public.simulation_runtime_evidence"
+    ],
+    "rootCause": "The current database state does not contain the schema required by the restored Prisma/PostgreSQL integration suites, and this phase does not allow executing migrations."
+  },
+  "risks": [
+    "Real integration coverage remains blocked until the database schema is present.",
+    "InMemory suites validate contract-level behavior but do not replace database-backed coverage."
+  ],
+  "nextStep": "Apply the missing migrations in a controlled environment, then rerun the restored integration suites.",
+  "safety": {
+    "deploy": false,
+    "migration": false,
+    "restart": false,
+    "commit": false,
+    "push": false
+  }
+}

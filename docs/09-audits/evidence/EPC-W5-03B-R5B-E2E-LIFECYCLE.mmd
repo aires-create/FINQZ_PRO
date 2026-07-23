@@ -1,0 +1,19 @@
+sequenceDiagram
+  participant Vitest
+  participant TestFile as edp.runtime.e2e.test.ts
+  participant App as createApp()
+  participant Prisma as Stable fake Prisma
+  participant Http as Fastify runtime
+
+  Vitest->>TestFile: beforeEach()
+  TestFile->>Prisma: __reset()
+  TestFile->>Prisma: __seedUser()
+  Vitest->>TestFile: import app once
+  TestFile->>App: createApp()
+  App->>Prisma: resolve stable mock during bootstrap
+  App-->>TestFile: Fastify instance ready
+  Vitest->>Http: inject runtime request
+  Http-->>Vitest: response and persistence assertions
+  Vitest->>TestFile: afterEach()
+  TestFile->>Http: app.close()
+

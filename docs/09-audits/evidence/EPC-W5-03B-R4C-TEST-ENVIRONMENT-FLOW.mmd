@@ -1,0 +1,16 @@
+flowchart TD
+  A[Linux Vitest bootstrap] --> B[Import-time config validation]
+  B --> C[DATABASE_URL required]
+  C --> D[Prisma-backed suites fail before exercising contracts]
+  D --> E[Test harness refactor]
+  E --> F[Mock config/app.js in route-level tests]
+  E --> G[Mock security-events logger path]
+  E --> H[Use in-memory repositories for persistence suites]
+  E --> I[Use custom fake Prisma client for auth context]
+  F --> J[Targeted Linux suites pass]
+  G --> J
+  H --> J
+  I --> J
+  J --> K[npm run build PASS]
+  J --> L[Targeted Linux validation PASS]
+  L --> M[Full suite still has unrelated Prisma/libssl failures in disposable node image]
