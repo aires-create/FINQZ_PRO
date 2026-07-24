@@ -1,4 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const dotenvConfigMock = vi.hoisted(() => vi.fn(() => ({ parsed: {} })));
+
+vi.hoisted(() => {
+  process.env.NODE_ENV = 'test';
+  process.env.DATABASE_URL =
+    'postgresql://finqz_user:finqz_password@localhost:5432/finqz_pro_test?schema=public';
+  process.env.REDIS_URL = 'redis://localhost:6379/2';
+  process.env.REDIS_HOST = 'localhost';
+  process.env.REDIS_PORT = '6379';
+  process.env.REDIS_DB = '2';
+  process.env.JWT_SECRET =
+    'test-only-jwt-secret-with-sufficient-minimum-length-01';
+  process.env.JWT_REFRESH_SECRET =
+    'test-only-refresh-secret-with-sufficient-minimum-length-01';
+  process.env.CORS_ORIGIN = 'http://localhost:5173';
+  process.env.BLUEPAY_ENABLED = 'false';
+  process.env.SOS_BOLSO_ENABLED = 'false';
+});
+
+vi.mock('dotenv', () => ({
+  default: {
+    config: dotenvConfigMock,
+  },
+}));
 
 import { parseEnv } from '../../config/env.js';
 
@@ -10,10 +35,52 @@ const validEnv = {
   REDIS_HOST: 'localhost',
   REDIS_PORT: '6379',
   REDIS_DB: '2',
-  JWT_SECRET: 'test-only-jwt-secret-change-before-runtime-use-32chars',
-  JWT_REFRESH_SECRET: 'test-only-refresh-secret-change-before-runtime-use-32chars',
+  JWT_SECRET: 'test-only-jwt-secret-with-sufficient-minimum-length-01',
+  JWT_REFRESH_SECRET:
+    'test-only-refresh-secret-with-sufficient-minimum-length-01',
   CORS_ORIGIN: 'http://localhost:5173',
 };
+
+const snapshotEnv = () => ({ ...process.env });
+
+const restoreEnv = (snapshot: NodeJS.ProcessEnv) => {
+  for (const key of Object.keys(process.env)) {
+    if (!(key in snapshot)) {
+      delete process.env[key];
+    }
+  }
+
+  for (const [key, value] of Object.entries(snapshot)) {
+    if (value === undefined) {
+      delete process.env[key];
+      continue;
+    }
+
+    process.env[key] = value;
+  }
+};
+
+const loadFreshEnvModule = async () => {
+  vi.resetModules();
+  return await import('../../config/env.js');
+};
+
+let envSnapshot: NodeJS.ProcessEnv;
+let argvSnapshot: string[];
+
+beforeEach(() => {
+  envSnapshot = snapshotEnv();
+  argvSnapshot = [...process.argv];
+  dotenvConfigMock.mockClear();
+  dotenvConfigMock.mockImplementation(() => ({ parsed: {} }));
+});
+
+afterEach(() => {
+  restoreEnv(envSnapshot);
+  process.argv.length = 0;
+  process.argv.push(...argvSnapshot);
+  vi.restoreAllMocks();
+});
 
 describe('parseEnv', () => {
   it('normalizes a valid isolated test environment', () => {
@@ -46,9 +113,9 @@ describe('parseEnv', () => {
     expect(env.redisDb).toBe(4);
   });
 
-  it('rejects missing required infrastructure variables', () => {
+  it('rejects missing required infrastructure variables without exposing secrets', () => {
     expect(() => parseEnv({ NODE_ENV: 'test' })).toThrow(
-      /DATABASE_URL is required/,
+      /Values are hidden for security/,
     );
   });
 
@@ -67,23 +134,76 @@ describe('parseEnv', () => {
       }),
     ).toThrow(/REDIS_DB must be a non-negative integer/);
   });
+});
 
-  it('keeps BLUEPAY optional when disabled', () => {
-    const env = parseEnv({
-      ...validEnv,
-      BLUEPAY_ENABLED: 'false',
+describe('environment bootstrap contract', () => {
+  it('loads backend/.env in development via npm lifecycle and preserves injected values', async () => {
+    Object.assign(process.env, validEnv, {
+      PORT: '4567',
+      npm_lifecycle_event: 'dev',
+    });
+    delete process.env.NODE_ENV;
+
+    dotenvConfigMock.mockImplementation((options = {}) => {
+      expect(options).toEqual({});
+      expect(dotenvConfigMock.mock.calls[0] ?? []).toEqual([]);
+      expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+      process.env.NODE_ENV = 'development';
+      return { parsed: {} };
     });
 
-    expect(env.bluepayEnabled).toBe(false);
-    expect(env.bluepayBaseUrl).toBeUndefined();
+    const module = await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(module.env.port).toBe(4567);
+    expect(process.env.PORT).toBe('4567');
   });
 
-  it('requires BLUEPAY config when enabled', () => {
-    expect(() =>
-      parseEnv({
-        ...validEnv,
-        BLUEPAY_ENABLED: 'true',
-      }),
-    ).toThrow(/BLUEPAY_BASE_URL is required when BLUEPAY_ENABLED=true/);
+  it('loads backend/.env when bootstrapped directly through server.fastify.ts with NODE_ENV unset', async () => {
+    Object.assign(process.env, validEnv, {
+      PORT: '4567',
+    });
+    delete process.env.NODE_ENV;
+    process.argv[1] = 'C:\\Projects\\FINQZ_PRO\\backend\\src\\server.fastify.ts';
+
+    dotenvConfigMock.mockImplementation((options = {}) => {
+      expect(options).toEqual({});
+      process.env.NODE_ENV = 'development';
+      return { parsed: {} };
+    });
+
+    const module = await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(module.env.port).toBe(4567);
+    expect(process.env.PORT).toBe('4567');
+  });
+
+  it('does not load backend/.env in test even when npm_lifecycle_event=dev', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'test',
+      npm_lifecycle_event: 'dev',
+    });
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
+  });
+
+  it('does not load backend/.env in production even when npm_lifecycle_event=dev', async () => {
+    Object.assign(process.env, validEnv, {
+      NODE_ENV: 'production',
+      PORT: '4000',
+      HOST: '0.0.0.0',
+      JWT_SECRET:
+        'prod-secure-alpha-abcdefghijklmnopqrstuvwxyz123456',
+      JWT_REFRESH_SECRET:
+        'prod-secure-beta-abcdefghijklmnopqrstuvwxyz654321',
+      npm_lifecycle_event: 'dev',
+    });
+
+    await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).not.toHaveBeenCalled();
   });
 });

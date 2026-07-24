@@ -14,7 +14,25 @@ import {
   validateUrls,
 } from './env.validation.js';
 
-dotenv.config();
+const shouldLoadLocalEnv = () => {
+  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production') {
+    return false;
+  }
+
+  if (process.env.NODE_ENV === 'development') {
+    return true;
+  }
+
+  if (/(?:^|[\\/])server\.fastify\.(?:ts|tsx|js|mjs|cjs)$/.test(process.argv[1] ?? '')) {
+    return true;
+  }
+
+  return process.env.npm_lifecycle_event === 'dev';
+};
+
+if (shouldLoadLocalEnv()) {
+  dotenv.config();
+}
 
 export const envSchema = rawEnvSchema
   .superRefine((input, context) => {
