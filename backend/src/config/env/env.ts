@@ -23,6 +23,10 @@ const shouldLoadLocalEnv = () => {
     return true;
   }
 
+  if (/(?:^|[\\/])server\.fastify\.(?:ts|tsx|js|mjs|cjs)$/.test(process.argv[1] ?? '')) {
+    return true;
+  }
+
   return process.env.npm_lifecycle_event === 'dev';
 };
 

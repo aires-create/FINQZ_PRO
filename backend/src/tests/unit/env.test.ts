@@ -1,5 +1,3 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dotenvConfigMock = vi.hoisted(() => vi.fn(() => ({ parsed: {} })));
@@ -28,10 +26,6 @@ vi.mock('dotenv', () => ({
 }));
 
 import { parseEnv } from '../../config/env.js';
-
-const testFileDir = path.dirname(fileURLToPath(import.meta.url));
-const backendRoot = path.resolve(testFileDir, '../../../');
-const expectedBackendEnvPath = path.resolve(backendRoot, '.env');
 
 const validEnv = {
   NODE_ENV: 'test',
@@ -72,15 +66,19 @@ const loadFreshEnvModule = async () => {
 };
 
 let envSnapshot: NodeJS.ProcessEnv;
+let argvSnapshot: string[];
 
 beforeEach(() => {
   envSnapshot = snapshotEnv();
+  argvSnapshot = [...process.argv];
   dotenvConfigMock.mockClear();
   dotenvConfigMock.mockImplementation(() => ({ parsed: {} }));
 });
 
 afterEach(() => {
   restoreEnv(envSnapshot);
+  process.argv.length = 0;
+  process.argv.push(...argvSnapshot);
   vi.restoreAllMocks();
 });
 
@@ -150,6 +148,26 @@ describe('environment bootstrap contract', () => {
       expect(options).toEqual({});
       expect(dotenvConfigMock.mock.calls[0] ?? []).toEqual([]);
       expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+      process.env.NODE_ENV = 'development';
+      return { parsed: {} };
+    });
+
+    const module = await loadFreshEnvModule();
+
+    expect(dotenvConfigMock).toHaveBeenCalledTimes(1);
+    expect(module.env.port).toBe(4567);
+    expect(process.env.PORT).toBe('4567');
+  });
+
+  it('loads backend/.env when bootstrapped directly through server.fastify.ts with NODE_ENV unset', async () => {
+    Object.assign(process.env, validEnv, {
+      PORT: '4567',
+    });
+    delete process.env.NODE_ENV;
+    process.argv[1] = 'C:\\Projects\\FINQZ_PRO\\backend\\src\\server.fastify.ts';
+
+    dotenvConfigMock.mockImplementation((options = {}) => {
+      expect(options).toEqual({});
       process.env.NODE_ENV = 'development';
       return { parsed: {} };
     });
