@@ -225,4 +225,3 @@ const PartnerAcquisitionLeadsPage: React.FC = () => {
 };
 
 export default PartnerAcquisitionLeadsPage;
-

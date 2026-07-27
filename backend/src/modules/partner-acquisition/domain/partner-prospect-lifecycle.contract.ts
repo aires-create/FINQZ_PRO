@@ -55,4 +55,3 @@ export const isPartnerProspectTerminalStatus = (
 ): status is PartnerProspectTerminalStatus => {
   return PARTNER_PROSPECT_TERMINAL_STATUSES.includes(status as PartnerProspectTerminalStatus);
 };
-

@@ -243,7 +243,6 @@ async promoteLeadToProspect(
     },
   );
 },
-  
   async getProspects(params?: ListPartnerProspectsParams): Promise<ListPartnerProspectsResponse> {
     const query = params ? buildQueryString(params as Record<string, unknown>) : '';
     return apiCall<ListPartnerProspectsResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects${query}`);
