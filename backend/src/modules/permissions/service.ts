@@ -7,6 +7,7 @@ import { PermissionAction } from '@prisma/client';
 import { AppError, ValidationError } from '../../types/index.js';
 import { createModuleLogger } from '../../shared/logger.js';
 import type { CreatePermissionRequest, UpdatePermissionRequest, PermissionResponse } from './types.js';
+import { PARTNER_ACQUISITION_RBAC_PERMISSIONS } from './partner-acquisition-rbac.catalog.js';
 
 const logger = createModuleLogger('PermissionsService');
 
@@ -208,6 +209,9 @@ export class PermissionsService {
         { name: 'Read Lead', slug: 'lead:read', resource: 'leads', action: 'READ' as PermissionAction },
         { name: 'Update Lead', slug: 'lead:update', resource: 'leads', action: 'UPDATE' as PermissionAction },
         { name: 'Delete Lead', slug: 'lead:delete', resource: 'leads', action: 'DELETE' as PermissionAction },
+
+        // Partner acquisition permissions
+        ...PARTNER_ACQUISITION_RBAC_PERMISSIONS,
 
         // Report permissions
         { name: 'Read Report', slug: 'report:read', resource: 'reports', action: 'READ' as PermissionAction },

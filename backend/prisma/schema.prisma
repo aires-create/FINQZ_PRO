@@ -840,3 +840,192 @@ model RefreshToken {
   @@index([revokedAt])
   @@map("refresh_tokens")
 }
+
+// ============================================
+// PARTNER ACQUISITION
+// ============================================
+
+model PartnerAcquisitionLead {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadCode        String
+  fullName        String
+  email           String?
+  phone           String?
+  companyName     String?
+  document        String?
+  channel         String
+  sourceName      String?
+  sourceReference String?
+  campaignId      String?
+  hubContextId    String?
+  ownerUserId     String?   @db.Uuid
+  status          String    @default("NEW")
+  score           Int?
+  version         Int       @default(0)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+
+  @@unique([tenantId, leadCode])
+  @@unique([tenantId, sourceReference])
+  @@index([tenantId])
+  @@index([tenantId, channel])
+  @@index([tenantId, status])
+  @@index([tenantId, ownerUserId])
+  @@index([tenantId, deletedAt])
+  @@map("partner_acquisition_leads")
+}
+
+model PartnerAcquisitionProspect {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospectCode        String
+  leadId              String    @db.Uuid
+  fullName            String
+  email               String?
+  phone               String?
+  companyName         String?
+  document            String?
+  channel             String
+  sourceName          String?
+  sourceReference     String?
+  campaignId          String?
+  hubContextId        String?
+  sdrAgentId          String?
+  status              String    @default("NEW")
+  pipelineId          String?   @db.Uuid
+  stageId             String?   @db.Uuid
+  pipelineCode        String?
+  stageCode           String?
+  score               Int?
+  qualificationReason String?
+  assignedUserId      String?   @db.Uuid
+  nextActionAt        DateTime?
+  signedAt            DateTime?
+  convertedAt         DateTime?
+  partnerId           String?   @db.Uuid
+  version             Int       @default(0)
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+
+  @@unique([tenantId, prospectCode])
+  @@unique([tenantId, leadId])
+  @@unique([tenantId, partnerId])
+  @@unique([tenantId, sourceReference])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, pipelineCode])
+  @@index([tenantId, stageCode])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId, signedAt])
+  @@index([tenantId, convertedAt])
+  @@index([tenantId, deletedAt])
+  @@map("partner_acquisition_prospects")
+}
+
+model PartnerAcquisitionCommandInbox {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commandType    String
+  aggregateId    String?   @db.Uuid
+  aggregateType  String
+  actorUserId    String    @db.Uuid
+  requestId      String
+  correlationId  String
+  idempotencyKey String
+  status         String    @default("RECEIVED")
+  receivedAt     DateTime  @default(now())
+  processedAt    DateTime?
+  payload        Json
+  result         Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId])
+  @@index([tenantId, commandType])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, receivedAt])
+  @@map("partner_acquisition_command_inbox")
+}
+
+model PartnerAcquisitionEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId        String   @db.Uuid
+  aggregateId    String   @db.Uuid
+  aggregateType  String
+  eventType      String
+  actorUserId    String   @db.Uuid
+  requestId      String
+  correlationId  String
+  idempotencyKey String
+  occurredAt     DateTime
+  payload        Json
+  metadata       Json?
+  version        Int
+  createdAt      DateTime @default(now())
+
+  tenantId String @db.Uuid
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, eventType])
+  @@index([tenantId, occurredAt])
+  @@map("partner_acquisition_events")
+}
+
+model PartnerAcquisitionOutbox {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId       String    @db.Uuid
+  aggregateId   String    @db.Uuid
+  aggregateType String
+  eventType     String
+  status        String    @default("PENDING")
+  attemptCount  Int       @default(0)
+  availableAt   DateTime
+  processedAt   DateTime?
+  lastError     String?
+  payload       Json
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, availableAt])
+  @@index([tenantId, eventType])
+  @@map("partner_acquisition_outbox")
+}
+
+model PartnerAcquisitionConversionDecision {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospectId      String   @db.Uuid
+  partnerId       String?  @db.Uuid
+  approved        Boolean
+  decidedByUserId String   @db.Uuid
+  decidedAt       DateTime
+  reason          String?
+  version         Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId String @db.Uuid
+
+  @@unique([tenantId, prospectId])
+  @@unique([tenantId, partnerId])
+  @@index([tenantId])
+  @@index([tenantId, approved])
+  @@index([tenantId, decidedAt])
+  @@map("partner_acquisition_conversion_decisions")
+}
