@@ -119,7 +119,7 @@ describe('partner-acquisition.controller', () => {
     service.transitionLead = vi.fn().mockResolvedValue({
       tenantId,
       leadId,
-      leadCode: leadId,
+      leadCode: 'lead-001',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -157,7 +157,7 @@ describe('partner-acquisition.controller', () => {
       data: {
         tenantId,
         leadId,
-        leadCode: leadId,
+        leadCode: 'lead-001',
         fullName: 'Parceiro Exemplo',
         email: null,
         phone: null,

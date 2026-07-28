@@ -365,7 +365,7 @@ const toLeadDto = (lead: PartnerLead) =>
   partnerAcquisitionLeadDtoSchema.parse({
     tenantId: lead.tenantId,
     leadId: lead.leadId,
-    leadCode: lead.leadId,
+    leadCode: lead.leadCode,
     fullName: lead.fullName,
     email: lead.email,
     phone: lead.phone,
@@ -387,7 +387,7 @@ const toProspectDto = (prospect: PartnerProspect) =>
   partnerAcquisitionProspectDtoSchema.parse({
     tenantId: prospect.tenantId,
     prospectId: prospect.prospectId,
-    prospectCode: prospect.prospectId,
+    prospectCode: prospect.prospectCode,
     leadId: prospect.leadId,
     fullName: prospect.fullName,
     email: prospect.email,
@@ -540,6 +540,7 @@ export class PartnerAcquisitionController {
         ),
         commandType: 'CreatePartnerLeadCommand',
         leadId: body.leadCode,
+        leadCode: body.leadCode,
         fullName: body.fullName,
         ...(body.email !== undefined ? { email: body.email } : {}),
         ...(body.phone !== undefined ? { phone: body.phone } : {}),
@@ -705,6 +706,7 @@ export class PartnerAcquisitionController {
         ),
         commandType: 'CreatePartnerProspectCommand',
         prospectId: body.prospectCode,
+        prospectCode: body.prospectCode,
         leadId: body.leadId,
         fullName: body.fullName,
         ...(body.email !== undefined ? { email: body.email } : {}),

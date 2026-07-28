@@ -40,6 +40,7 @@ export type PartnerAcquisitionAggregateType =
 export interface PartnerLeadIdentity {
   tenantId: string;
   leadId: string;
+  leadCode: string;
 }
 
 export interface PartnerLeadContact {
@@ -165,6 +166,7 @@ export interface PartnerAcquisitionEventMetadata extends PartnerAcquisitionComma
 export interface PartnerProspectIdentity {
   tenantId: string;
   prospectId: string;
+  prospectCode: string;
   leadId: string;
 }
 

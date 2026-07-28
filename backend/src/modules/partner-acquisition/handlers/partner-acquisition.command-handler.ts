@@ -402,7 +402,7 @@ export class PartnerAcquisitionCommandHandler
       case 'CreatePartnerLeadCommand':
         return this.service.createLead({
           tenantId: command.tenantId,
-          leadCode: command.leadId,
+          leadCode: command.leadCode,
           fullName: command.fullName,
           email: command.email ?? null,
           phone: command.phone ?? null,
@@ -422,7 +422,7 @@ export class PartnerAcquisitionCommandHandler
       case 'CreatePartnerProspectCommand':
         return this.service.createProspect({
           tenantId: command.tenantId,
-          prospectCode: command.prospectId,
+          prospectCode: command.prospectCode,
           leadId: command.leadId,
           fullName: command.fullName,
           email: command.email ?? null,
