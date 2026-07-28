@@ -291,6 +291,7 @@ describe('partner-acquisition.command-handler', () => {
       result: {
         tenantId: 'tenant-1',
         leadId: 'lead-1',
+        leadCode: 'lead-code-1',
         fullName: 'Parceiro Exemplo',
         email: null,
         phone: null,
