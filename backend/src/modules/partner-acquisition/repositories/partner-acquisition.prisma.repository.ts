@@ -136,6 +136,7 @@ const buildLeadWhere = (
 const toLeadModel = (lead: LeadRow): PartnerLead => ({
   tenantId: lead.tenantId,
   leadId: lead.id,
+  leadCode: lead.leadCode,
   fullName: lead.fullName,
   email: lead.email,
   phone: lead.phone,
@@ -156,6 +157,7 @@ const toLeadModel = (lead: LeadRow): PartnerLead => ({
 const toProspectModel = (prospect: ProspectRow): PartnerProspect => ({
   tenantId: prospect.tenantId,
   prospectId: prospect.id,
+  prospectCode: prospect.prospectCode,
   leadId: prospect.leadId,
   fullName: prospect.fullName,
   email: prospect.email,

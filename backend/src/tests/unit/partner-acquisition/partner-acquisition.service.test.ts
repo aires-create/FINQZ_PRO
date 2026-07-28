@@ -132,14 +132,14 @@ describe('partner-acquisition.service', () => {
 
     const input = {
       tenantId: 'tenant-1',
-      leadCode: 'lead-1',
+      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
       channel: 'CAMPAIGN',
     } as const;
 
     await service.createLead(input);
     await service.findLeadById({ tenantId: 'tenant-1', leadId: 'lead-1' });
-    await service.findLeadByCode({ tenantId: 'tenant-1', leadCode: 'lead-1' });
+    await service.findLeadByCode({ tenantId: 'tenant-1', leadCode: 'lead-code-1' });
     await service.listLeads({ tenantId: 'tenant-1' });
     await service.softDeleteLead({
       tenantId: 'tenant-1',
@@ -154,7 +154,7 @@ describe('partner-acquisition.service', () => {
     });
     expect(repository.findLeadByCode).toHaveBeenCalledWith({
       tenantId: 'tenant-1',
-      leadCode: 'lead-1',
+      leadCode: 'lead-code-1',
     });
     expect(repository.listLeads).toHaveBeenCalledWith({ tenantId: 'tenant-1' });
     expect(repository.softDeleteLead).toHaveBeenCalledWith({
@@ -201,7 +201,7 @@ describe('partner-acquisition.service', () => {
 
     const createInput = {
       tenantId: 'tenant-1',
-      prospectCode: 'prospect-1',
+      prospectCode: 'prospect-code-1',
       leadId: 'lead-1',
       fullName: 'Parceiro Exemplo',
       channel: 'SDR_IA',
@@ -209,7 +209,7 @@ describe('partner-acquisition.service', () => {
 
     await service.createProspect(createInput);
     await service.findProspectById({ tenantId: 'tenant-1', prospectId: 'prospect-1' });
-    await service.findProspectByCode({ tenantId: 'tenant-1', prospectCode: 'prospect-1' });
+    await service.findProspectByCode({ tenantId: 'tenant-1', prospectCode: 'prospect-code-1' });
     await service.listProspects({ tenantId: 'tenant-1' });
     await service.updateProspectLifecycle({
       tenantId: 'tenant-1',
@@ -237,7 +237,7 @@ describe('partner-acquisition.service', () => {
     });
     expect(repository.findProspectByCode).toHaveBeenCalledWith({
       tenantId: 'tenant-1',
-      prospectCode: 'prospect-1',
+      prospectCode: 'prospect-code-1',
     });
     expect(repository.listProspects).toHaveBeenCalledWith({ tenantId: 'tenant-1' });
     expect(repository.updateProspectLifecycle).toHaveBeenCalledWith({
@@ -447,6 +447,7 @@ describe('partner-acquisition.service', () => {
     repository.findLeadById.mockResolvedValue({
       tenantId: 'tenant-1',
       leadId: 'lead-1',
+      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -619,6 +620,7 @@ describe('partner-acquisition.service', () => {
     repository.findLeadById.mockResolvedValue({
       tenantId: 'tenant-1',
       leadId: 'lead-1',
+      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -842,6 +844,7 @@ describe('partner-acquisition.service', () => {
     repository.findLeadById.mockResolvedValue({
       tenantId: 'tenant-1',
       leadId: 'lead-1',
+      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -862,6 +865,7 @@ describe('partner-acquisition.service', () => {
     repository.promoteLeadToProspectInTransaction.mockResolvedValue({
       tenantId: 'tenant-1',
       prospectId: 'prospect-1',
+      prospectCode: 'prospect-code-1',
       leadId: 'lead-1',
       fullName: 'Parceiro Exemplo',
       email: null,
@@ -941,7 +945,7 @@ describe('partner-acquisition.service', () => {
     expect(repository.promoteLeadToProspectInTransaction).toHaveBeenCalledWith({
       tenantId: 'tenant-1',
       leadId: 'lead-1',
-      prospectCode: 'lead-1',
+      prospectCode: 'lead-code-1',
     });
     expect(repository.markCommandProcessed).toHaveBeenCalledTimes(1);
     expect(result).toEqual({

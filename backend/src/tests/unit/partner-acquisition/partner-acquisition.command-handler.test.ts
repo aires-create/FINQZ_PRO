@@ -82,6 +82,7 @@ describe('partner-acquisition.command-handler', () => {
     service.createLead.mockResolvedValue({
       tenantId: 'tenant-1',
       leadId: 'lead-1',
+      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -136,6 +137,7 @@ describe('partner-acquisition.command-handler', () => {
       sourceReference: 'h16t-smoke',
       commandType: 'CreatePartnerLeadCommand',
       leadId: 'lead-1',
+      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
     };
 
@@ -151,7 +153,7 @@ describe('partner-acquisition.command-handler', () => {
     expect(service.createLead).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
-        leadCode: 'lead-1',
+        leadCode: 'lead-code-1',
         sourceName: 'H16T Smoke',
         sourceReference: 'h16t-smoke',
       }),
@@ -193,6 +195,7 @@ describe('partner-acquisition.command-handler', () => {
     service.createProspect.mockResolvedValue({
       tenantId: 'tenant-1',
       prospectId: 'prospect-1',
+      prospectCode: 'prospect-code-1',
       leadId: 'lead-1',
       fullName: 'Parceiro Exemplo',
       email: null,
@@ -252,6 +255,7 @@ describe('partner-acquisition.command-handler', () => {
       sourceReference: 'h16t-smoke',
       commandType: 'CreatePartnerProspectCommand',
       prospectId: 'prospect-1',
+      prospectCode: 'prospect-code-1',
       leadId: 'lead-1',
       fullName: 'Parceiro Exemplo',
       initialStatus: 'NEW',
@@ -262,7 +266,7 @@ describe('partner-acquisition.command-handler', () => {
     expect(service.createProspect).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: 'tenant-1',
-        prospectCode: 'prospect-1',
+        prospectCode: 'prospect-code-1',
         sourceName: 'H16T Smoke',
         sourceReference: 'h16t-smoke',
       }),
