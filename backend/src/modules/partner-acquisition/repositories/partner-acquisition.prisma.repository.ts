@@ -99,6 +99,36 @@ const isUniqueConstraintError = (error: unknown): boolean => {
   return targetFields.has('tenantId') && targetFields.has('leadId');
 };
 
+const getUniqueConstraintTargetFields = (error: unknown): string[] | null => {
+  if (!isRecord(error) || error.code !== UNIQUE_CONSTRAINT_CODE) {
+    return null;
+  }
+
+  const meta = isRecord(error.meta) ? error.meta : undefined;
+  const target = meta?.target;
+
+  if (typeof target === 'string') {
+    return [target];
+  }
+
+  if (!isStringArray(target)) {
+    return null;
+  }
+
+  return target;
+};
+
+const isUniqueConstraintTarget = (error: unknown, ...fields: string[]): boolean => {
+  const target = getUniqueConstraintTargetFields(error);
+
+  if (!target) {
+    return false;
+  }
+
+  const targetFields = new Set(target);
+  return fields.every((field) => targetFields.has(field));
+};
+
 const runInTransaction = async <T>(
   client: PartnerAcquisitionPrismaClient,
   action: (transaction: Prisma.TransactionClient) => Promise<T>,
@@ -136,6 +166,7 @@ const buildLeadWhere = (
 const toLeadModel = (lead: LeadRow): PartnerLead => ({
   tenantId: lead.tenantId,
   leadId: lead.id,
+  leadCode: lead.leadCode,
   fullName: lead.fullName,
   email: lead.email,
   phone: lead.phone,
@@ -156,6 +187,7 @@ const toLeadModel = (lead: LeadRow): PartnerLead => ({
 const toProspectModel = (prospect: ProspectRow): PartnerProspect => ({
   tenantId: prospect.tenantId,
   prospectId: prospect.id,
+  prospectCode: prospect.prospectCode,
   leadId: prospect.leadId,
   fullName: prospect.fullName,
   email: prospect.email,
@@ -405,6 +437,20 @@ const findProspectByTenantAndLeadRow = (
   });
 };
 
+const findProspectByTenantAndCodeRow = (
+  client: PartnerAcquisitionPrismaClient,
+  tenantId: string,
+  prospectCode: string,
+) => {
+  return client.partnerAcquisitionProspect.findFirst({
+    where: {
+      prospectCode,
+      ...tenantFilter(tenantId),
+      deletedAt: null,
+    },
+  });
+};
+
 export class PartnerAcquisitionPrismaRepository
   implements PartnerAcquisitionRepositoryContract
 {
@@ -511,11 +557,19 @@ export class PartnerAcquisitionPrismaRepository
   async createProspect(
     input: PartnerAcquisitionProspectCreateInput,
   ): Promise<PartnerProspect> {
-    const prospect = await this.client.partnerAcquisitionProspect.create({
-      data: buildProspectCreateData(input),
-    });
+    try {
+      const prospect = await this.client.partnerAcquisitionProspect.create({
+        data: buildProspectCreateData(input),
+      });
 
-    return toProspectModel(prospect);
+      return toProspectModel(prospect);
+    } catch (error) {
+      if (!isUniqueConstraintTarget(error, 'tenantId', 'prospectCode')) {
+        throw error;
+      }
+
+      throw new ConflictError('Partner prospect code is already in use');
+    }
   }
 
   async findProspectById(
@@ -707,62 +761,87 @@ export class PartnerAcquisitionPrismaRepository
   async promoteLeadToProspectInTransaction(
     input: PartnerAcquisitionLeadProspectPromotionInput,
   ): Promise<PartnerProspect | null> {
-    return runInTransaction(this.client, async (transaction) => {
-      const lead = await findLeadByTenantAndId(transaction, input.tenantId, input.leadId);
+    try {
+      return await runInTransaction(this.client, async (transaction) => {
+        const lead = await findLeadByTenantAndId(transaction, input.tenantId, input.leadId);
 
-      if (!lead) {
-        return null;
-      }
-
-      const existingProspect = await findProspectByTenantAndLeadRow(
-        transaction,
-        input.tenantId,
-        input.leadId,
-      );
-
-      if (existingProspect) {
-        return toProspectModel(existingProspect);
-      }
-
-      const prospectData = buildProspectCreateData({
-        tenantId: input.tenantId,
-        prospectCode: input.prospectCode,
-        leadId: input.leadId,
-        fullName: lead.fullName,
-        email: lead.email,
-        phone: lead.phone,
-        companyName: lead.companyName,
-        document: lead.document,
-        channel: lead.channel,
-        sourceName: lead.sourceName,
-        sourceReference: lead.sourceReference,
-        campaignId: lead.campaignId,
-        hubContextId: lead.hubContextId,
-        ownerUserId: lead.ownerUserId,
-        status: 'NEW',
-        score: lead.score,
-      } as PartnerAcquisitionProspectCreateInput);
-
-      try {
-        const prospect = await transaction.partnerAcquisitionProspect.create({
-          data: prospectData,
-        });
-
-        return toProspectModel(prospect);
-      } catch (error) {
-        if (!isUniqueConstraintError(error)) {
-          throw error;
+        if (!lead) {
+          return null;
         }
 
-        const existing = await findProspectByTenantAndLeadRow(
+        const existingProspect = await findProspectByTenantAndLeadRow(
           transaction,
           input.tenantId,
           input.leadId,
         );
 
-        return existing ? toProspectModel(existing) : null;
+        if (existingProspect) {
+          return toProspectModel(existingProspect);
+        }
+
+        const prospectData = buildProspectCreateData({
+          tenantId: input.tenantId,
+          prospectCode: input.prospectCode,
+          leadId: input.leadId,
+          fullName: lead.fullName,
+          email: lead.email,
+          phone: lead.phone,
+          companyName: lead.companyName,
+          document: lead.document,
+          channel: lead.channel,
+          sourceName: lead.sourceName,
+          sourceReference: lead.sourceReference,
+          campaignId: lead.campaignId,
+          hubContextId: lead.hubContextId,
+          ownerUserId: lead.ownerUserId,
+          status: 'NEW',
+          score: lead.score,
+        } as PartnerAcquisitionProspectCreateInput);
+
+        const prospect = await transaction.partnerAcquisitionProspect.create({
+          data: prospectData,
+        });
+
+        return toProspectModel(prospect);
+      });
+    } catch (error) {
+      const isLeadIdCollision = isUniqueConstraintTarget(error, 'tenantId', 'leadId');
+      const isProspectCodeCollision = isUniqueConstraintTarget(
+        error,
+        'tenantId',
+        'prospectCode',
+      );
+
+      if (!isLeadIdCollision && !isProspectCodeCollision) {
+        throw error;
       }
-    });
+
+      const existing = await findProspectByTenantAndLeadRow(
+        this.client,
+        input.tenantId,
+        input.leadId,
+      );
+
+      if (existing) {
+        return toProspectModel(existing);
+      }
+
+      const conflictingProspect = await findProspectByTenantAndCodeRow(
+        this.client,
+        input.tenantId,
+        input.prospectCode,
+      );
+
+      if (conflictingProspect && conflictingProspect.leadId === input.leadId) {
+        return toProspectModel(conflictingProspect);
+      }
+
+      if (conflictingProspect) {
+        throw new ConflictError('Prospect code is already assigned to another lead');
+      }
+
+      throw new ConflictError('Partner prospect code is already in use');
+    }
   }
 
   async recordCommand(

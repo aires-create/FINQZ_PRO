@@ -187,6 +187,7 @@ describe('partner-acquisition routes', () => {
       {
         tenantId,
         leadId,
+        leadCode: 'lead-001',
         fullName: 'Parceiro Exemplo',
         email: 'parceiro@example.com',
         phone: null,
@@ -221,7 +222,7 @@ describe('partner-acquisition routes', () => {
         {
           tenantId,
           leadId,
-          leadCode: leadId,
+          leadCode: 'lead-001',
           fullName: 'Parceiro Exemplo',
           email: 'parceiro@example.com',
           phone: null,
@@ -258,6 +259,7 @@ describe('partner-acquisition routes', () => {
     handlerMock.handle.mockResolvedValueOnce({
       tenantId,
       leadId,
+      leadCode: 'lead-001',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -309,6 +311,7 @@ describe('partner-acquisition routes', () => {
     handlerMock.handle.mockResolvedValueOnce({
       tenantId,
       prospectId,
+      prospectCode: 'prospect-001',
       leadId,
       fullName: 'Parceiro Exemplo',
       email: null,
@@ -416,7 +419,7 @@ describe('partner-acquisition routes', () => {
     serviceMock.transitionLead.mockResolvedValueOnce({
       tenantId,
       leadId,
-      leadCode: leadId,
+      leadCode: 'lead-001',
       fullName: 'Parceiro Exemplo',
       email: null,
       phone: null,
@@ -466,7 +469,7 @@ describe('partner-acquisition routes', () => {
       data: {
         tenantId,
         leadId,
-        leadCode: leadId,
+        leadCode: 'lead-001',
         fullName: 'Parceiro Exemplo',
         email: null,
         phone: null,
@@ -558,6 +561,7 @@ describe('partner-acquisition routes', () => {
     serviceMock.findProspectById.mockResolvedValueOnce({
       tenantId,
       prospectId,
+      prospectCode: 'prospect-001',
       leadId,
       fullName: 'Parceiro Exemplo',
       email: null,
@@ -582,6 +586,7 @@ describe('partner-acquisition routes', () => {
     handlerMock.handle.mockResolvedValueOnce({
       tenantId,
       prospectId,
+      prospectCode: 'prospect-001',
       leadId,
       fullName: 'Parceiro Exemplo',
       email: null,

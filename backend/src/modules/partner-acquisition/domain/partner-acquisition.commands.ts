@@ -49,6 +49,7 @@ export interface PartnerAcquisitionCommandEnvelope {
 export interface CreatePartnerLeadCommand extends PartnerAcquisitionCommandEnvelope {
   commandType: 'CreatePartnerLeadCommand';
   leadId: string;
+  leadCode: string;
   fullName: string;
   email?: string | null;
   phone?: string | null;
@@ -59,6 +60,7 @@ export interface CreatePartnerLeadCommand extends PartnerAcquisitionCommandEnvel
 export interface CreatePartnerProspectCommand extends PartnerAcquisitionCommandEnvelope {
   commandType: 'CreatePartnerProspectCommand';
   prospectId: string;
+  prospectCode: string;
   leadId: string;
   fullName: string;
   email?: string | null;

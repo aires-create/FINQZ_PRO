@@ -433,7 +433,7 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
       const prospect = await this.repository.promoteLeadToProspectInTransaction({
         tenantId,
         leadId: command.leadId,
-        prospectCode: command.leadId,
+        prospectCode: lead.leadCode,
       });
 
       if (!prospect) {

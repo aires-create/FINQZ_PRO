@@ -23,6 +23,7 @@ import type {
 import type { PartnerAcquisitionCommandRecordInput } from '../repositories/partner-acquisition.repository.contract.js';
 import type { PartnerAcquisitionServiceContract } from '../services/partner-acquisition.service.contract.js';
 import { partnerAcquisitionService } from '../services/partner-acquisition.service.js';
+import { ConflictError } from '../../../shared/errors/AppError.js';
 import type {
   PartnerAcquisitionCommandExecutionResult,
   PartnerAcquisitionCommandHandlerContract,
@@ -184,18 +185,69 @@ const createOutboxRecordInput = (
   payload: plan.payload,
 });
 
-const buildProcessedResult = (
+const buildProcessedResult = async (
+  service: PartnerAcquisitionServiceContract,
+  command: PartnerAcquisitionCommand,
   commandRecord: PartnerAcquisitionCommandRecordInput,
-): PartnerAcquisitionCommandExecutionResult => {
-  if (!commandRecord.result) {
+): Promise<PartnerAcquisitionCommandExecutionResult> => {
+  if (!commandRecord.result || !isRecord(commandRecord.result)) {
     throw new PartnerAcquisitionCommandReplayError(
       commandRecord.commandType,
       commandRecord.idempotencyKey,
     );
   }
 
+  if (command.commandType === 'CreatePartnerLeadCommand') {
+    if (typeof commandRecord.result.leadCode === 'string') {
+      return commandRecord.result as unknown as PartnerAcquisitionCommandExecutionResult;
+    }
+
+    const leadId = typeof commandRecord.result.leadId === 'string'
+      ? commandRecord.result.leadId
+      : command.leadId;
+    const lead = await service.findLeadById({
+      tenantId: command.tenantId,
+      leadId,
+    });
+
+    if (!lead) {
+      throw new ConflictError('Partner acquisition replay could not be rehydrated');
+    }
+
+    return {
+      ...commandRecord.result,
+      leadCode: lead.leadCode,
+    } as unknown as PartnerAcquisitionCommandExecutionResult;
+  }
+
+  if (command.commandType === 'CreatePartnerProspectCommand') {
+    if (typeof commandRecord.result.prospectCode === 'string') {
+      return commandRecord.result as unknown as PartnerAcquisitionCommandExecutionResult;
+    }
+
+    const prospectId = typeof commandRecord.result.prospectId === 'string'
+      ? commandRecord.result.prospectId
+      : command.prospectId;
+    const prospect = await service.findProspectById({
+      tenantId: command.tenantId,
+      prospectId,
+    });
+
+    if (!prospect) {
+      throw new ConflictError('Partner acquisition replay could not be rehydrated');
+    }
+
+    return {
+      ...commandRecord.result,
+      prospectCode: prospect.prospectCode,
+    } as unknown as PartnerAcquisitionCommandExecutionResult;
+  }
+
   return commandRecord.result as unknown as PartnerAcquisitionCommandExecutionResult;
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
 const assertResult = <T>(value: T | null, message: string): T => {
   if (value === null) {
@@ -226,7 +278,7 @@ export class PartnerAcquisitionCommandHandler
     const inbox = await this.service.recordCommand(createInboxPayload(command));
 
     if (inbox.status === 'PROCESSED') {
-      return buildProcessedResult(inbox);
+      return buildProcessedResult(this.service, command, inbox);
     }
 
     if (inbox.status === 'FAILED') {
@@ -272,6 +324,11 @@ export class PartnerAcquisitionCommandHandler
         failedAt: command.requestedAt,
         error: message,
       });
+
+      if (error instanceof ConflictError) {
+        throw error;
+      }
+
       throw new PartnerAcquisitionCommandFailedError(
         command.commandType,
         command.idempotencyKey,
@@ -402,7 +459,7 @@ export class PartnerAcquisitionCommandHandler
       case 'CreatePartnerLeadCommand':
         return this.service.createLead({
           tenantId: command.tenantId,
-          leadCode: command.leadId,
+          leadCode: command.leadCode,
           fullName: command.fullName,
           email: command.email ?? null,
           phone: command.phone ?? null,
@@ -422,7 +479,7 @@ export class PartnerAcquisitionCommandHandler
       case 'CreatePartnerProspectCommand':
         return this.service.createProspect({
           tenantId: command.tenantId,
-          prospectCode: command.prospectId,
+          prospectCode: command.prospectCode,
           leadId: command.leadId,
           fullName: command.fullName,
           email: command.email ?? null,
