@@ -324,6 +324,11 @@ export class PartnerAcquisitionCommandHandler
         failedAt: command.requestedAt,
         error: message,
       });
+
+      if (error instanceof ConflictError) {
+        throw error;
+      }
+
       throw new PartnerAcquisitionCommandFailedError(
         command.commandType,
         command.idempotencyKey,
