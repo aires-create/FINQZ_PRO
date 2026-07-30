@@ -279,6 +279,7 @@ const dashboardSidebarItems: MenuItem[] = [
 
 export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.ReactNode }> = ({ customMenuItems, children }) => {
   const { sidebarOpen, setSidebarOpen, user, userPermissions: storeUserPermissions, theme, toggleTheme } = useAppStore();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -441,8 +442,7 @@ export const Layout: React.FC<{ customMenuItems?: MenuItem[]; children?: React.R
     : "lg:ml-20";
 
   const handleLogout = async () => {
-    await finqzAuth.signOut();
-    navigate("/login", { replace: true });
+    await logout();
   };
 
   const closeSidebarOnMobile = () => {

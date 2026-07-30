@@ -5491,7 +5491,7 @@ if (
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Cliente</span><p className="font-semibold text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem cliente'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Produto</span><p className="font-semibold text-white">{selectedLead?.produto || 'Não selecionado'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedWorkspaceLead?.derived.stageLabel ?? 'Etapa não identificada'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Responsável</span><p className="font-semibold text-white">{selectedLead?.responsavel_nome || 'Sem responsável'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Valor</span><p className="font-bold text-xl text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>
               </div>

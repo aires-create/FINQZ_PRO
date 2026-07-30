@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -185,6 +189,14 @@ describe("Oportunidades Kanban hardening", () => {
     expect(report.totalGroupedByUuid).toBe(0);
     expect(Array.isArray(report.recentDragEvents)).toBe(true);
     expect(Array.isArray(report.recentObservations)).toBe(true);
+  });
+
+  it("renders the negotiation header from selectedLead data only", () => {
+    const filePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../pages/Oportunidades.tsx");
+    const source = readFileSync(filePath, "utf8");
+
+    expect(source).toContain("selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'");
+    expect(source).not.toContain("selectedWorkspaceLead?.derived.stageLabel");
   });
 
   it("resets runtime metrics without changing report structure", () => {
