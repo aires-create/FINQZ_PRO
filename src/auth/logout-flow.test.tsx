@@ -179,4 +179,43 @@ describe("auth logout flow", () => {
     expect(useAppStore.getState().isAuthenticated).toBe(false);
     expect(useAppStore.getState().user).toBeNull();
   });
+
+  it("mounts protected routes after authenticated session bootstrap resolves loading", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+    });
+
+    finqzClientMock.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          user: buildAuthedUser(),
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/app/private"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginScreen />} />
+            <Route
+              path="/app/*"
+              element={
+                <ProtectedRoute>
+                  <ProtectedScreen />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Protected screen")).toBeTruthy());
+
+    expect(screen.queryByText("Carregando...")).toBeNull();
+    expect(screen.getByTestId("path").textContent).toBe("/app/private");
+  });
 });
