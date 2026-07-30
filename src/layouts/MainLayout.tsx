@@ -70,6 +70,7 @@ const ROUTE_PERMISSIONS: Record<string, string> = {
   // Operações
   "/app/operacoes/parceiros": "customer:view",
   "/app/operacoes/estrutura-comercial": "sales:view",
+  "/app/operacoes/partner-acquisition/leads": "partner_acquisition:read",
   "/app/operacoes/tabelas-comerciais": "sales:view",
   "/app/operacoes/roteiros": "roteiros:read",
   "/app/operacoes/financeiro": "finance:view",
@@ -213,6 +214,7 @@ const pageConfig: Record<string, { title: string; icon: React.ElementType }> = {
   // Operações
   "/app/operacoes/parceiros": { title: "Parceiros", icon: Handshake },
   "/app/operacoes/estrutura-comercial": { title: "Estrutura Comercial", icon: Building2 },
+  "/app/operacoes/partner-acquisition/leads": { title: "Aquisição de Parceiros", icon: Handshake },
   "/app/operacoes/tabelas-comerciais": { title: "Tabelas Comerciais", icon: Table2 },
   "/app/operacoes/roteiros": { title: "Roteiros Operacionais", icon: ClipboardList },
   "/app/operacoes/financeiro": { title: "Financeiro", icon: Wallet },
@@ -279,6 +281,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
       { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
+      { path: "/app/operacoes/partner-acquisition/leads", label: "Aquisição de Parceiros", icon: Handshake, permission: "partner_acquisition:read" },
       { path: "/app/operacoes/tabelas-comerciais", label: "Tabelas Comerciais", icon: Table2, permission: "sales:view" },
       { path: "/app/operacoes/roteiros", label: "Roteiros Operacionais", icon: ClipboardList, permission: "roteiros:read" },
       { path: "/app/operacoes/financeiro", label: "Financeiro", icon: Wallet, permission: "finance:view" },

@@ -9,6 +9,10 @@ const FinanceiroPage = lazy(() => import("../pages/Financeiro"));
 const ContaCorrentePage = lazy(() => import("../pages/ContaCorrente"));
 const RelatoriosPage = lazy(() => import("../pages/Relatorios"));
 const TabelasComerciaisPage = lazy(() => import("../pages/TabelasComerciais"));
+const PartnerAcquisitionLeadsPage = lazy(() => import("../pages/PartnerAcquisitionLeads"));
+const PartnerAcquisitionLeadDetailsPage = lazy(() => import("../pages/PartnerAcquisitionLeadDetails"));
+const PartnerAcquisitionProspectsPage = lazy(() => import("../pages/PartnerAcquisitionProspects"));
+const PartnerAcquisitionProspectDetailsPage = lazy(() => import("../pages/PartnerAcquisitionProspectDetails"));
 
 export const operacoesRoutes = (
   <>
@@ -33,6 +37,38 @@ export const operacoesRoutes = (
           requiredAction="view"
         >
           <EstruturaComercialPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="operacoes/partner-acquisition/leads"
+      element={
+        <ProtectedRoute requiredPermission="partner_acquisition:read">
+          <PartnerAcquisitionLeadsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="operacoes/partner-acquisition/leads/:leadId"
+      element={
+        <ProtectedRoute requiredPermission="partner_acquisition:read">
+          <PartnerAcquisitionLeadDetailsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="operacoes/partner-acquisition/prospects"
+      element={
+        <ProtectedRoute requiredPermission="partner_acquisition:read">
+          <PartnerAcquisitionProspectsPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="operacoes/partner-acquisition/prospects/:prospectId"
+      element={
+        <ProtectedRoute requiredPermission="partner_acquisition:read">
+          <PartnerAcquisitionProspectDetailsPage />
         </ProtectedRoute>
       }
     />
