@@ -1,7 +1,7 @@
 // FINQZ PRO - Layout Component
 // Design System Fintech - Sidebar Escura com Menu Colapsável
 import React, { useState, useEffect, useMemo } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
