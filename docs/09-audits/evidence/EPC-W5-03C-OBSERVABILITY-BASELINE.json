@@ -1,0 +1,198 @@
+{
+  "specId": "EPC-W5-03C",
+  "title": "Baseline Observability & Release Gates",
+  "status": "DEFERRED",
+  "verdict": "DEFERRED_PENDING_GATES",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "1d20966e95911d94ea266cf762a6fc9123f0fc3e"
+  },
+  "architectureValidated": true,
+  "liveEndpointEvidence": false,
+  "previousAuditEvidence": "stale_or_insufficient",
+  "rerunNeededAfterHeadConfirmation": true,
+  "backendBootstrapEvidence": {
+    "attempted": true,
+    "result": "FAILED",
+    "command": "node dist/server.js",
+    "logFiles": [
+      "backend/epc-w503c.out.log",
+      "backend/epc-w503c.err.log"
+    ],
+    "errorSummary": "PrismaClientInitializationError: Error opening a TLS connection: Credenciais não disponíveis no pacote de segurança",
+    "consequence": "HTTP server never listened, so no real endpoint calls could be executed",
+    "rootCause": "not yet determined",
+    "notes": [
+      "The local backend did not complete bootstrap.",
+      "Integration tests have demonstrated connectivity in other paths.",
+      "There may be a difference between test configuration and the local process configuration.",
+      "No changes to TLS, DATABASE_URL, Prisma, or .env were authorized."
+    ]
+  },
+  "architecture": {
+    "runtime": "Master Catalog Runtime",
+    "adapter": "Observability Adapter",
+    "sink": "Structured Logger Sink",
+    "fallback": "Noop Sink",
+    "logger": "corporate logger via shared/logger.ts",
+    "properties": [
+      "passive",
+      "synchronous at call site",
+      "fail-safe",
+      "no external telemetry exporter",
+      "no tracing backend",
+      "no persistence side effects"
+    ]
+  },
+  "endpointsAnalyzed": [
+    {
+      "method": "GET",
+      "path": "/api/v1/master-catalog/tree"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/master-catalog/segments"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/master-catalog/products"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/master-catalog/products/:productId/subproducts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/master-catalog/subproducts/:subproductId/modalities"
+    }
+  ],
+  "events": {
+    "emittedByDesign": [
+      "REQUEST_STARTED",
+      "PRIMARY_USED",
+      "REQUEST_FINISHED",
+      "REQUEST_FAILED"
+    ],
+    "liveEventsObserved": [],
+    "liveExecutionBlocked": true
+  },
+  "metrics": {
+    "collected": [],
+    "status": "DEFINED_NOT_COLLECTED_LIVE",
+    "requests_total": "DEFINED_NOT_COLLECTED_LIVE",
+    "primary_requests_total": "DEFINED_NOT_COLLECTED_LIVE",
+    "failed_requests_total": "DEFINED_NOT_COLLECTED_LIVE",
+    "latency": "DEFINED_NOT_COLLECTED_LIVE",
+    "availability": "DEFINED_NOT_COLLECTED_LIVE",
+    "primary_usage_ratio": "DEFINED_NOT_COLLECTED_LIVE",
+    "error_ratio": "DEFINED_NOT_COLLECTED_LIVE"
+  },
+  "releaseGates": [
+    {
+      "gate": "A",
+      "name": "Schema emitted correctly",
+      "status": "PASS_BY_TEST_AND_STATIC_EVIDENCE",
+      "evidence": "Telemetry contracts, unit tests and static architecture"
+    },
+    {
+      "gate": "B",
+      "name": "RequestId propagated",
+      "status": "PASS_BY_TEST_NOT_LIVE_VALIDATED",
+      "evidence": "Telemetry emitter tests, no live validation"
+    },
+    {
+      "gate": "C",
+      "name": "Primary usage mensurável",
+      "status": "FAIL_NO_LIVE_EVIDENCE",
+      "evidence": "No live request execution evidence"
+    },
+    {
+      "gate": "D",
+      "name": "Fallback mensurável",
+      "status": "NOT_APPLICABLE",
+      "evidence": "No fallback functional path exists in the currently instrumented Master Catalog backend flow"
+    },
+    {
+      "gate": "E",
+      "name": "Parity prepared",
+      "status": "NOT_APPLICABLE",
+      "evidence": "Shadow/parity does not occur in this backend flow"
+    },
+    {
+      "gate": "F",
+      "name": "Latency mensurável",
+      "status": "FAIL_NO_LIVE_EVIDENCE",
+      "evidence": "No live request execution evidence"
+    },
+    {
+      "gate": "G",
+      "name": "Errors classified",
+      "status": "FAIL_NO_LIVE_EVIDENCE",
+      "evidence": "No live request execution evidence"
+    },
+    {
+      "gate": "H",
+      "name": "Rollback documentado",
+      "status": "PASS_BY_DOCUMENTATION_AND_TEST",
+      "evidence": "Rollback posture documented in baseline markdown and validated by tests"
+    }
+  ],
+  "rollback": {
+    "technical": "Disable sink wiring and keep Noop as the only sink.",
+    "operational": "Stop the local backend process; no runtime changes are required.",
+    "functional": "No functional rollback is required because no runtime behavior was changed.",
+    "observability": "Route the adapter back to NoopObservabilitySink."
+  },
+  "risks": {
+    "blocker": [
+      "backend bootstrap fails before HTTP listener starts"
+    ],
+    "critical": [
+      "real endpoint calls could not be executed"
+    ],
+    "high": [
+      "live release gates C, D, F and G remain unproven"
+    ],
+    "medium": [
+      "operational readiness remains documentary-only"
+    ],
+    "low": [
+      "static telemetry contracts and build/test status are stable"
+    ]
+  },
+  "gaps": [
+    "No live backend listener",
+    "No live endpoint execution",
+    "No live request or latency samples",
+    "No shadow or parity evidence",
+    "No operational release gate proof",
+    "Baseline evidence from the previous fc2a992 run is stale/insufficient for the current 1d20966 head"
+  ],
+  "validations": {
+    "test": "passed",
+    "build": "passed",
+    "gitDiffCheck": "passed",
+    "gitStatusCaptured": true
+  },
+  "nextStep": {
+    "id": "W5-03C-R1",
+    "name": "LOCAL RUNTIME READINESS DIAGNOSIS",
+    "objective": "Identify, using read-only and safe diagnostic commands only, why the local process fails PostgreSQL/TLS readiness while integration tests can connect in other paths.",
+    "constraints": [
+      "do not alter .env",
+      "do not alter .env.example",
+      "do not alter DATABASE_URL",
+      "do not disable TLS",
+      "do not alter Prisma",
+      "do not create migrations",
+      "do not execute deploy",
+      "do not access or modify VPS",
+      "do not bypass readiness"
+    ]
+  },
+  "comparisonToEpcW5Gr": {
+    "baselineRisk": "reduced at architecture level",
+    "operationalRisk": "still high",
+    "reason": "telemetry contracts now exist, but live baseline could not be produced in this environment"
+  }
+}

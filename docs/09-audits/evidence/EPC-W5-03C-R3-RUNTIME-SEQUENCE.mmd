@@ -1,0 +1,23 @@
+graph TD
+  Developer[Developer]
+  Backend[Backend running]
+  Auth[POST /api/v1/auth/login]
+  Token[Bearer JWT]
+  MasterCatalog[Master Catalog endpoints]
+  RequestID[X-Request-ID]
+  Logs[Structured logs]
+  Started[MASTER_CATALOG_REQUEST_STARTED]
+  Primary[MASTER_CATALOG_PRIMARY_USED]
+  Finished[MASTER_CATALOG_REQUEST_FINISHED]
+  NoFail[No REQUEST_FAILED]
+
+  Developer --> Backend
+  Developer --> Auth
+  Auth --> Token
+  Token --> MasterCatalog
+  RequestID --> MasterCatalog
+  MasterCatalog --> Logs
+  MasterCatalog --> Started
+  MasterCatalog --> Primary
+  MasterCatalog --> Finished
+  MasterCatalog --> NoFail

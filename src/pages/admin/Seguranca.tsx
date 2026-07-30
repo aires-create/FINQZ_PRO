@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Shield, Lock, Eye, EyeOff, Key, Check, AlertTriangle } from "lucide-react";
 import { Button, Input } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { authApi } from "../../api/modules/auth.api";
 
 export const SegurancaPage: React.FC = () => {
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -18,7 +19,7 @@ export const SegurancaPage: React.FC = () => {
     ipAllowlist: '',
   });
 
-  const handleTrocarSenha = () => {
+  const handleTrocarSenha = async () => {
     if (novaSenha !== confirmarSenha) {
       alert('As senhas não conferem!');
       return;
@@ -27,6 +28,25 @@ export const SegurancaPage: React.FC = () => {
       alert('A senha deve ter pelo menos 8 caracteres!');
       return;
     }
+    if (!senhaAtual) {
+      alert('Digite a senha atual!');
+      return;
+    }
+    if (!novaSenha) {
+      alert('Digite a nova senha!');
+      return;
+    }
+
+    const result = await authApi.changePassword({
+      currentPassword: senhaAtual,
+      newPassword: novaSenha,
+    });
+
+    if (!result.success) {
+      alert(result.error || 'Não foi possível alterar a senha.');
+      return;
+    }
+
     alert('Senha alterada com sucesso!');
     setSenhaAtual('');
     setNovaSenha('');

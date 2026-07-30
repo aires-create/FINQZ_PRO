@@ -3,7 +3,6 @@
 // ============================================
 
 import { Prisma } from '@prisma/client';
-import { prisma } from '../../database/prisma.js';
 import { AppError, AuthorizationError, ValidationError } from '../../types/index.js';
 import { createModuleLogger } from '../../shared/logger.js';
 import type {
@@ -12,42 +11,9 @@ import type {
   MembershipRole,
   UpdateMembershipRequest,
 } from './types.js';
+import { membershipsRepository } from './repositories/memberships.repository.js';
 
 const logger = createModuleLogger('MembershipsService');
-
-const membershipInclude = {
-  user: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-      phone: true,
-      jobTitle: true,
-      isActive: true,
-    },
-  },
-  organization: {
-    select: {
-      id: true,
-      name: true,
-      code: true,
-      type: true,
-      level: true,
-      parent: {
-        select: { id: true, name: true, code: true },
-      },
-    },
-  },
-  invitedBy: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      email: true,
-    },
-  },
-} satisfies Prisma.MembershipInclude;
 
 const canManageRole = (actorRole?: string | null): boolean =>
   actorRole === 'owner' || actorRole === 'admin';
@@ -61,56 +27,11 @@ const canViewMembership = (
 
 export class MembershipsService {
   async listMemberships(tenantId: string, query: MembershipListQuery) {
-    const where: Prisma.MembershipWhereInput = {
-      tenantId,
-      deletedAt: null,
-    };
-
-    if (query.organizationId) where.organizationId = query.organizationId;
-    if (query.userId) where.userId = query.userId;
-    if (query.role) where.role = query.role;
-    if (query.status) where.isActive = query.status === 'active';
-
-    const skip = (query.page - 1) * query.limit;
-
-    const [memberships, total] = await Promise.all([
-      prisma.membership.findMany({
-        where,
-        include: membershipInclude,
-        orderBy: { joinedAt: 'desc' },
-        skip,
-        take: query.limit,
-      }),
-      prisma.membership.count({ where }),
-    ]);
-
-    return { memberships, total };
+    return membershipsRepository.listMemberships(tenantId, query);
   }
 
   async listUserMemberships(tenantId: string, userId: string) {
-    return prisma.membership.findMany({
-      where: {
-        tenantId,
-        userId,
-        isActive: true,
-        deletedAt: null,
-      },
-      include: {
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            type: true,
-            level: true,
-            parent: {
-              select: { id: true, name: true, code: true },
-            },
-          },
-        },
-      },
-      orderBy: { joinedAt: 'desc' },
-    });
+    return membershipsRepository.listUserMemberships(tenantId, userId);
   }
 
   async getMembership(
@@ -119,14 +40,7 @@ export class MembershipsService {
     actorUserId: string,
     actorMembershipRole?: string | null,
   ) {
-    const membership = await prisma.membership.findFirst({
-      where: {
-        id: membershipId,
-        tenantId,
-        deletedAt: null,
-      },
-      include: membershipInclude,
-    });
+    const membership = await membershipsRepository.findById(tenantId, membershipId);
 
     if (!membership) {
       throw new AppError('Membership not found', 404);
@@ -143,30 +57,9 @@ export class MembershipsService {
     logger.info(`Creating membership for user ${data.userId} in organization ${data.organizationId}`);
 
     const [user, organization, actorMembership] = await Promise.all([
-      prisma.user.findFirst({
-        where: {
-          id: data.userId,
-          tenantId,
-          isActive: true,
-          deletedAt: null,
-        },
-      }),
-      prisma.organization.findFirst({
-        where: {
-          id: data.organizationId,
-          tenantId,
-          isActive: true,
-          deletedAt: null,
-        },
-      }),
-      prisma.membership.findUnique({
-        where: {
-          userId_organizationId: {
-            userId: actorUserId,
-            organizationId: data.organizationId,
-          },
-        },
-      }),
+      membershipsRepository.findUser(tenantId, data.userId),
+      membershipsRepository.findOrganization(tenantId, data.organizationId),
+      membershipsRepository.findActorMembership(actorUserId, data.organizationId),
     ]);
 
     if (!user) {
@@ -185,14 +78,7 @@ export class MembershipsService {
       throw new AuthorizationError('Only owners can assign the owner role');
     }
 
-    const existingMembership = await prisma.membership.findUnique({
-      where: {
-        userId_organizationId: {
-          userId: data.userId,
-          organizationId: data.organizationId,
-        },
-      },
-    });
+    const existingMembership = await membershipsRepository.findExistingMembership(data.userId, data.organizationId);
 
     if (existingMembership && !existingMembership.deletedAt) {
       throw new ValidationError('User is already a member of this organization');
@@ -209,29 +95,19 @@ export class MembershipsService {
     if (data.permissions !== undefined) writeData.permissions = data.permissions;
 
     const membership = existingMembership
-      ? await prisma.membership.update({
-          where: { id: existingMembership.id },
-          data: {
-            role: data.role,
-            permissions: data.permissions ?? Prisma.JsonNull,
-            invitedById: actorUserId,
-            invitedAt: new Date(),
-            joinedAt: new Date(),
-            isActive: true,
-            deletedAt: null,
-          },
-          include: membershipInclude,
+      ? await membershipsRepository.update(existingMembership.id, {
+          role: data.role,
+          permissions: data.permissions ?? Prisma.JsonNull,
+          invitedById: actorUserId,
+          invitedAt: new Date(),
+          joinedAt: new Date(),
+          isActive: true,
+          deletedAt: null,
         })
-      : await prisma.membership.create({
-          data: writeData,
-          include: membershipInclude,
-        });
+      : await membershipsRepository.create(writeData);
 
     if (!user.organizationId) {
-      await prisma.user.update({
-        where: { id: data.userId },
-        data: { organizationId: data.organizationId },
-      });
+      await membershipsRepository.updateUserOrganization(data.userId, data.organizationId);
     }
 
     return membership;
@@ -244,26 +120,16 @@ export class MembershipsService {
     actorMembershipRole: string | undefined,
     data: UpdateMembershipRequest,
   ) {
-    const currentMembership = await prisma.membership.findFirst({
-      where: {
-        id: membershipId,
-        tenantId,
-        deletedAt: null,
-      },
-    });
+    const currentMembership = await membershipsRepository.findById(tenantId, membershipId);
 
     if (!currentMembership) {
       throw new AppError('Membership not found', 404);
     }
 
-    const actorMembership = await prisma.membership.findUnique({
-      where: {
-        userId_organizationId: {
-          userId: actorUserId,
-          organizationId: currentMembership.organizationId,
-        },
-      },
-    });
+    const actorMembership = await membershipsRepository.findActorMembership(
+      actorUserId,
+      currentMembership.organizationId,
+    );
 
     const actorCanManage = canManageRole(actorMembership?.role ?? actorMembershipRole);
     const isSelfUpdate = currentMembership.userId === actorUserId;
@@ -290,11 +156,7 @@ export class MembershipsService {
     if (data.permissions !== undefined) updateData.permissions = data.permissions ?? Prisma.JsonNull;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-    return prisma.membership.update({
-      where: { id: membershipId },
-      data: updateData,
-      include: membershipInclude,
-    });
+    return membershipsRepository.update(membershipId, updateData);
   }
 
   async deleteMembership(
@@ -303,26 +165,16 @@ export class MembershipsService {
     actorUserId: string,
     actorMembershipRole?: string,
   ): Promise<void> {
-    const membership = await prisma.membership.findFirst({
-      where: {
-        id: membershipId,
-        tenantId,
-        deletedAt: null,
-      },
-    });
+    const membership = await membershipsRepository.findById(tenantId, membershipId);
 
     if (!membership) {
       throw new AppError('Membership not found', 404);
     }
 
-    const actorMembership = await prisma.membership.findUnique({
-      where: {
-        userId_organizationId: {
-          userId: actorUserId,
-          organizationId: membership.organizationId,
-        },
-      },
-    });
+    const actorMembership = await membershipsRepository.findActorMembership(
+      actorUserId,
+      membership.organizationId,
+    );
 
     const actorCanManage = canManageRole(actorMembership?.role ?? actorMembershipRole);
     const isSelfRemoval = membership.userId === actorUserId;
@@ -335,49 +187,26 @@ export class MembershipsService {
       await this.assertAnotherActiveOwner(tenantId, membership.organizationId, membership.id);
     }
 
-    await prisma.membership.update({
-      where: { id: membershipId },
-      data: {
-        deletedAt: new Date(),
-        isActive: false,
-      },
-    });
+    await membershipsRepository.softDelete(membershipId);
 
-    const user = await prisma.user.findUnique({
-      where: { id: membership.userId },
-      select: { organizationId: true },
-    });
+    const user = await membershipsRepository.findUserById(membership.userId);
 
     if (user?.organizationId === membership.organizationId) {
-      const replacementMembership = await prisma.membership.findFirst({
-        where: {
-          userId: membership.userId,
-          tenantId,
-          isActive: true,
-          deletedAt: null,
-          organizationId: { not: membership.organizationId },
-        },
-        orderBy: { joinedAt: 'desc' },
-      });
+      const replacementMembership = await membershipsRepository.findReplacementMembership(
+        tenantId,
+        membership.userId,
+        membership.organizationId,
+      );
 
-      await prisma.user.update({
-        where: { id: membership.userId },
-        data: {
-          organizationId: replacementMembership?.organizationId ?? null,
-        },
-      });
+      await membershipsRepository.updateUserOrganization(
+        membership.userId,
+        replacementMembership?.organizationId ?? null,
+      );
     }
   }
 
   async acceptMembership(tenantId: string, membershipId: string, userId: string) {
-    const membership = await prisma.membership.findFirst({
-      where: {
-        id: membershipId,
-        userId,
-        tenantId,
-        deletedAt: null,
-      },
-    });
+    const membership = await membershipsRepository.findById(tenantId, membershipId);
 
     if (!membership) {
       throw new AppError('Membership invitation not found', 404);
@@ -387,14 +216,7 @@ export class MembershipsService {
       throw new ValidationError('Membership is already active');
     }
 
-    return prisma.membership.update({
-      where: { id: membershipId },
-      data: {
-        isActive: true,
-        joinedAt: new Date(),
-      },
-      include: membershipInclude,
-    });
+    return membershipsRepository.activate(membershipId);
   }
 
   private async assertAnotherActiveOwner(
@@ -402,16 +224,11 @@ export class MembershipsService {
     organizationId: string,
     excludedMembershipId: string,
   ): Promise<void> {
-    const ownerCount = await prisma.membership.count({
-      where: {
-        tenantId,
-        organizationId,
-        id: { not: excludedMembershipId },
-        role: 'owner',
-        isActive: true,
-        deletedAt: null,
-      },
-    });
+    const ownerCount = await membershipsRepository.countOwners(
+      tenantId,
+      organizationId,
+      excludedMembershipId,
+    );
 
     if (ownerCount === 0) {
       throw new ValidationError('Organization must keep at least one active owner');

@@ -309,7 +309,7 @@ export interface OportunidadeKanban {
 }
 
 export interface Cliente {
-  id: number;
+  id: string | number;
   nome: string;
   cpf_cnpj?: string;
   email?: string;
@@ -1219,8 +1219,15 @@ export const MODULE_PERMISSIONS: ModulePermissions[] = [
       { key: 'create', label: 'Criar', description: 'Criar novas oportunidades' },
       { key: 'edit', label: 'Editar', description: 'Editar oportunidades' },
       { key: 'delete', label: 'Excluir', description: 'Excluir oportunidades' },
-      { key: 'move_card', label: 'Mover Cards', description: 'Arrastar entre colunas' },
-      { key: 'edit_pipeline', label: 'Editar Pipeline', description: 'Criar/editar colunas e pipelines' },
+      { key: 'move_stage', label: 'Mover Etapa', description: 'Mover oportunidades entre etapas' },
+    ],
+  },
+  {
+    module: 'pipelines',
+    label: 'Pipelines',
+    actions: [
+      { key: 'view', label: 'Visualizar', description: 'Ver pipelines configurados' },
+      { key: 'manage', label: 'Gerenciar', description: 'Criar/editar colunas e pipelines' },
     ],
   },
   {
@@ -1633,7 +1640,8 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   master: {
     dashboard: ['view'],
     clientes: ['view', 'create', 'edit', 'delete'],
-    oportunidades: ['view', 'create', 'edit', 'delete', 'move_card', 'edit_pipeline'],
+    oportunidades: ['view', 'create', 'edit', 'delete', 'move_stage'],
+    pipelines: ['manage'],
     parceiros: ['view', 'create', 'edit', 'delete'],
     produtos: ['view', 'create', 'edit', 'delete'],
     relatorios: ['view', 'export'],
@@ -1655,7 +1663,8 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   comercial_diretoria: {
     dashboard: ['view'],
     clientes: ['view', 'create', 'edit'],
-    oportunidades: ['view', 'create', 'edit', 'move_card', 'edit_pipeline'],
+    oportunidades: ['view', 'create', 'edit', 'move_stage'],
+    pipelines: ['manage'],
     parceiros: ['view', 'create', 'edit'],
     produtos: ['view'],
     relatorios: ['view', 'export'],
@@ -1666,7 +1675,7 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   regional: {
     dashboard: ['view'],
     clientes: ['view', 'create', 'edit'],
-    oportunidades: ['view', 'create', 'edit', 'move_card'],
+    oportunidades: ['view', 'create', 'edit', 'move_stage'],
     parceiros: ['view', 'create', 'edit'],
     produtos: ['view'],
     relatorios: ['view'],
@@ -1677,7 +1686,8 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   gerente: {
     dashboard: ['view'],
     clientes: ['view', 'create', 'edit'],
-    oportunidades: ['view', 'create', 'edit', 'move_card', 'edit_pipeline'],
+    oportunidades: ['view', 'create', 'edit', 'move_stage'],
+    pipelines: ['manage'],
     parceiros: ['view', 'create'],
     produtos: ['view'],
     relatorios: ['view'],
@@ -1688,7 +1698,7 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   vendedor: {
     dashboard: ['view'],
     clientes: ['view', 'create'],
-    oportunidades: ['view', 'create', 'edit', 'move_card'],
+    oportunidades: ['view', 'create', 'edit', 'move_stage'],
     parceiros: ['view'],
     produtos: ['view'],
     relatorios: [],
@@ -1711,7 +1721,7 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   ADMIN_SISTEMA: {
     dashboard: ['view'],
     clientes: ['read', 'create', 'edit', 'delete', 'export'],
-    oportunidades: ['read', 'create', 'edit', 'delete', 'move', 'export'],
+    oportunidades: ['read', 'create', 'edit', 'delete', 'move_stage', 'export'],
     parceiros: ['read', 'create', 'edit', 'delete'],
     financeiro: ['read', 'export'],
     usuarios: ['read', 'create', 'edit', 'delete'],
@@ -1723,7 +1733,7 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   ADMIN_FRANQUIA: {
     dashboard: ['view'],
     clientes: ['read', 'create', 'edit', 'delete', 'export'],
-    oportunidades: ['read', 'create', 'edit', 'delete', 'move', 'export'],
+    oportunidades: ['read', 'create', 'edit', 'delete', 'move_stage', 'export'],
     parceiros: ['read', 'create', 'edit', 'delete'],
     financeiro: ['read', 'export'],
     usuarios: ['read', 'create', 'edit'],
@@ -1735,7 +1745,7 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   FRANQUEADO: {
     dashboard: ['view'],
     clientes: ['read', 'create', 'edit'],
-    oportunidades: ['read', 'create', 'edit', 'move'],
+    oportunidades: ['read', 'create', 'edit', 'move_stage'],
     parceiros: ['read'],
     financeiro: ['read'],
     usuarios: [],
@@ -1746,7 +1756,7 @@ export const PROFILE_PERMISSIONS: Record<string, Record<string, PermissionKey[]>
   SDR: {
     dashboard: ['view'],
     clientes: ['read', 'create'],
-    oportunidades: ['read', 'create', 'edit', 'move'],
+    oportunidades: ['read', 'create', 'edit', 'move_stage'],
     parceiros: ['read'],
     financeiro: [],
     usuarios: [],

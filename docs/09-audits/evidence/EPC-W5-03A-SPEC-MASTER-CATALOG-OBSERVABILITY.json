@@ -1,0 +1,1317 @@
+{
+  "specId": "EPC-W5-03A-SPEC",
+  "title": "Master Catalog Observability Specification",
+  "status": "COMPLETE",
+  "wave": "EPC-W5",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "542bf501626841f07b1686b32b4a6da79d8b8067",
+    "upstream": "origin/homologation/bootstrap-vps"
+  },
+  "readiness": {
+    "overall": "GO_WITH_RESTRICTIONS",
+    "observability": "AUTHORIZED",
+    "opportunities": "DEFERRED_PENDING_GATES",
+    "firstFunctionalCut": "DEFERRED_PENDING_GATES",
+    "legacyRemoval": "NO_GO",
+    "loanWithCollateralFallbackRemoval": "NO_GO",
+    "creditPfCatalogRetirement": "NO_GO"
+  },
+  "verdict": "APPROVED_WITH_RESTRICTIONS",
+  "eventCatalog": {
+    "REQUIRED_FOR_W5_03A_MVP": [
+      "MASTER_CATALOG_REQUEST_STARTED",
+      "MASTER_CATALOG_REQUEST_FINISHED",
+      "MASTER_CATALOG_REQUEST_FAILED",
+      "MASTER_CATALOG_PRIMARY_USED",
+      "MASTER_CATALOG_FALLBACK_USED",
+      "MASTER_CATALOG_SHADOW_STARTED",
+      "MASTER_CATALOG_SHADOW_FINISHED",
+      "MASTER_CATALOG_SHADOW_DIVERGENCE",
+      "MASTER_CATALOG_PARITY_RESULT"
+    ],
+    "CONDITIONAL": [
+      "MASTER_CATALOG_CONSUMER_REGISTERED",
+      "MASTER_CATALOG_CACHE_HIT",
+      "MASTER_CATALOG_CACHE_MISS"
+    ],
+    "FUTURE": [],
+    "REJECTED": [
+      "cache-as-requirement-for-W5-03A-or-W5-03B",
+      "artificial-trace-or-span-generation"
+    ]
+  },
+  "metricCatalog": {
+    "PRIMARY_METRIC": [
+      "master_catalog_requests_total",
+      "master_catalog_primary_requests_total",
+      "master_catalog_fallback_requests_total",
+      "master_catalog_shadow_requests_total",
+      "master_catalog_shadow_divergence_total",
+      "master_catalog_errors_total",
+      "master_catalog_latency_ms",
+      "master_catalog_consumer_usage_total"
+    ],
+    "DERIVED_RATIO": [
+      {
+        "name": "master_catalog_availability",
+        "numerator": "successful canonical requests",
+        "denominator": "total canonical requests",
+        "population": "all canonical request attempts",
+        "window": "release window",
+        "exclusions": [
+          "synthetic health probes if tracked separately"
+        ],
+        "sourceMetrics": [
+          "master_catalog_requests_total",
+          "master_catalog_errors_total"
+        ]
+      },
+      {
+        "name": "master_catalog_parity_score",
+        "numerator": "matched comparison fields",
+        "denominator": "compared fields",
+        "population": "shadow comparisons",
+        "window": "release window",
+        "exclusions": [
+          "incomplete comparisons if explicitly invalid"
+        ],
+        "sourceMetrics": [
+          "master_catalog_shadow_requests_total",
+          "master_catalog_shadow_divergence_total"
+        ]
+      },
+      {
+        "name": "master_catalog_primary_usage_ratio",
+        "numerator": "primary canonical requests",
+        "denominator": "total canonical requests",
+        "population": "all canonical requests",
+        "window": "release window",
+        "exclusions": [
+          "synthetic health probes"
+        ],
+        "sourceMetrics": [
+          "master_catalog_primary_requests_total",
+          "master_catalog_requests_total"
+        ]
+      },
+      {
+        "name": "master_catalog_fallback_ratio",
+        "numerator": "fallback requests",
+        "denominator": "total canonical requests",
+        "population": "all canonical requests",
+        "window": "release window",
+        "exclusions": [
+          "cache misses unless fallback is the cache fallback"
+        ],
+        "sourceMetrics": [
+          "master_catalog_fallback_requests_total",
+          "master_catalog_requests_total"
+        ]
+      },
+      {
+        "name": "master_catalog_error_ratio",
+        "numerator": "failed requests",
+        "denominator": "total canonical requests",
+        "population": "all canonical requests",
+        "window": "release window",
+        "exclusions": [
+          "non-request system noise"
+        ],
+        "sourceMetrics": [
+          "master_catalog_errors_total",
+          "master_catalog_requests_total"
+        ]
+      }
+    ],
+    "CONDITIONAL_METRIC": [
+      "master_catalog_cache_hit_total",
+      "master_catalog_cache_miss_total"
+    ]
+  },
+  "fieldPolicy": {
+    "required": [
+      "timestamp",
+      "level",
+      "tenantId",
+      "sourceType",
+      "consumer",
+      "requestId",
+      "catalogVersion",
+      "source",
+      "status",
+      "latencyMs",
+      "fallback",
+      "shadow",
+      "primary",
+      "result"
+    ],
+    "requiredWhenAvailable": [
+      "correlationId",
+      "traceId",
+      "spanId",
+      "errorCode",
+      "errorMessage"
+    ],
+    "prohibited": [
+      "raw tenantId as metric label",
+      "artificial traceId generation",
+      "artificial spanId generation",
+      "frontend tenantId inference outside auth context"
+    ]
+  },
+  "tenantPolicy": {
+    "logs": "tenantId allowed with sanitization and access control",
+    "metrics": "raw tenantId prohibited as a label",
+    "tracing": "tenantId permitted only according to security policy",
+    "frontend": "tenantId must not be inferred outside the authenticated context"
+  },
+  "tracingPolicy": {
+    "requestId": "REQUIRED",
+    "correlationId": "REQUIRED_WHEN_AVAILABLE",
+    "traceId": "REQUIRED_WHEN_AVAILABLE",
+    "spanId": "REQUIRED_WHEN_AVAILABLE",
+    "requestCorrelation": "frontend and backend correlation when technically available without incompatible contract change",
+    "distributedTracing": "not a W5-03B blocker unless implemented and approved",
+    "logCorrelation": "supported through requestId, consumer and sourceType"
+  },
+  "documentsReviewed": [
+    "docs/00-master/DCA-FINQZ-PRO-ENTERPRISE-v2.md",
+    "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md",
+    "docs/03-decision-platform/DCA-ENTERPRISE-DECISION-PLATFORM-v1.md",
+    "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md",
+    "docs/01-architecture/EPC-W4-01-CONSUMER-CANONICAL-INVENTORY.md",
+    "docs/01-architecture/EPC-W4-02-MASTER-CATALOG-PROMOTION.md",
+    "docs/09-audits/EPC-W5-01-MASTER-CATALOG-INVENTORY.md",
+    "docs/09-audits/EPC-W5-02-MASTER-CATALOG-DEPENDENCY-GRAPH.md",
+    "docs/09-audits/EPC-W5-03-MASTER-CATALOG-MIGRATION-CUT-PLAN.md",
+    "docs/09-audits/EPC-W5-GR-ARCHITECTURE-REVIEW-GO-NO-GO.md",
+    "docs/05-adr/ADR-004-commercial-master-catalog.md",
+    "docs/05-adr/ADR-010-loan-with-collateral-canonical-taxonomy.md"
+  ],
+  "sourceCodeReviewed": [
+    "backend/src/core/http/fastify.ts",
+    "backend/src/core/http/request-correlation.ts",
+    "backend/src/infra/observability/index.ts",
+    "backend/src/infra/observability/http.ts",
+    "backend/src/infra/observability/process.ts",
+    "backend/src/infra/observability/provider.ts",
+    "backend/src/infra/observability/registry.ts",
+    "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts",
+    "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts",
+    "backend/src/modules/master-catalog/application/master-catalog.runtime.ts",
+    "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+    "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+    "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts",
+    "src/api/http.ts",
+    "src/api/modules/master-catalog.api.ts",
+    "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+    "src/features/commercial-structure/commercialCoverageShadowComparator.ts",
+    "src/features/simulation-runtime/hooks/useSimulationRuntimeShadow.ts",
+    "src/features/simulation-runtime/telemetry/simulation-runtime.telemetry.ts",
+    "src/pages/Oportunidades.tsx",
+    "src/pages/EstruturaComercial.tsx",
+    "src/pages/CommercialCoverage.tsx",
+    "src/pages/TabelasComerciais.tsx",
+    "src/pages/Simulador.tsx",
+    "src/store/index.ts"
+  ],
+  "architectureProposal": {
+    "owner": "backend master-catalog runtime",
+    "sourceOfTruth": "Master Catalog canonical backend",
+    "scope": [
+      "master-catalog backend read path",
+      "frontend canonical consumers",
+      "Commercial Coverage shadow read",
+      "Simulation Runtime shadow and evidence",
+      "loan-with-collateral compatibility adapter",
+      "legacy compatibility sources"
+    ],
+    "outOfScope": [
+      "mutations",
+      "schema changes",
+      "migrations",
+      "feature flags",
+      "HTTP contract changes",
+      "database changes"
+    ]
+  },
+  "eventModel": [
+    {
+      "name": "MASTER_CATALOG_REQUEST_STARTED",
+      "description": "Canonical Master Catalog request started.",
+      "objective": "Mark request entry and establish the identity chain.",
+      "origin": "frontend API client or backend HTTP boundary",
+      "destination": "logs, metrics, traces, audit evidence",
+      "consumers": [
+        "Oportunidades",
+        "Estrutura Comercial",
+        "Commercial Coverage",
+        "loan-with-collateral",
+        "future cache layers"
+      ],
+      "payload": "request metadata and consumer identity",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "status"
+      ],
+      "optionalFields": [
+        "httpMethod",
+        "httpRoute",
+        "correlationId",
+        "traceId",
+        "spanId",
+        "shadow",
+        "primary",
+        "fallback",
+        "latencyMs"
+      ],
+      "frequency": "one per canonical request",
+      "logLevel": "info",
+      "retention": "platform log retention policy",
+      "auditCriterion": "every finished request must have a matching start event"
+    },
+    {
+      "name": "MASTER_CATALOG_REQUEST_FINISHED",
+      "description": "Canonical request finished successfully.",
+      "objective": "Record outcome, latency, and mode flags.",
+      "origin": "controller, runtime, or API client wrapper",
+      "destination": "logs, metrics, traces, evidence pack",
+      "consumers": [
+        "all canonical consumers"
+      ],
+      "payload": "status, latency, result type, mode flags",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "status",
+        "latencyMs",
+        "result"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "fallback",
+        "shadow",
+        "primary",
+        "errorCode",
+        "errorMessage",
+        "httpStatus"
+      ],
+      "frequency": "one per successful request",
+      "logLevel": "info",
+      "retention": "platform log retention policy",
+      "auditCriterion": "finished events must reconcile with started events and latency"
+    },
+    {
+      "name": "MASTER_CATALOG_REQUEST_FAILED",
+      "description": "Canonical request failed.",
+      "objective": "Capture failure classification and recovery path.",
+      "origin": "controller, runtime, repository, or consumer wrapper",
+      "destination": "logs, metrics, alerts, audit evidence",
+      "consumers": [
+        "all canonical consumers"
+      ],
+      "payload": "error classification and consumer context",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "status",
+        "errorCode",
+        "errorMessage"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "latencyMs",
+        "fallback",
+        "shadow",
+        "primary",
+        "result"
+      ],
+      "frequency": "one per failed request",
+      "logLevel": "error",
+      "retention": "platform log retention policy",
+      "auditCriterion": "every failure must be classified and correlated"
+    },
+    {
+      "name": "MASTER_CATALOG_PRIMARY_USED",
+      "description": "Canonical source used as the primary path.",
+      "objective": "Measure direct canonical adoption.",
+      "origin": "canonical read consumers and runtime resolution",
+      "destination": "logs, metrics, audit evidence",
+      "consumers": [
+        "Oportunidades",
+        "Estrutura Comercial",
+        "Commercial Coverage",
+        "loan-with-collateral",
+        "Simulation Runtime"
+      ],
+      "payload": "primary usage context",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "primary",
+        "result"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "latencyMs",
+        "httpRoute",
+        "shadow",
+        "fallback"
+      ],
+      "frequency": "one per canonical primary resolution",
+      "logLevel": "info",
+      "retention": "platform log retention policy",
+      "auditCriterion": "primary usage must be counted per consumer and release window"
+    },
+    {
+      "name": "MASTER_CATALOG_FALLBACK_USED",
+      "description": "Fallback path used instead of canonical primary path.",
+      "objective": "Measure residual compatibility usage.",
+      "origin": "Oportunidades empty-tree fallback, loan-with-collateral fallback path, approved compatibility adapters",
+      "destination": "logs, metrics, alerts, evidence",
+      "consumers": [
+        "canonical consumers with transitional behavior"
+      ],
+      "payload": "fallback reason and recovery path",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "fallback",
+        "result"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "errorCode",
+        "errorMessage",
+        "latencyMs",
+        "shadow",
+        "primary"
+      ],
+      "frequency": "one per fallback occurrence",
+      "logLevel": "warn",
+      "retention": "platform log retention policy",
+      "auditCriterion": "fallback must be visible, counted, and reducible to zero where required"
+    },
+    {
+      "name": "MASTER_CATALOG_SHADOW_STARTED",
+      "description": "Shadow comparison started.",
+      "objective": "Mark the beginning of a parity comparison cycle.",
+      "origin": "Commercial Coverage loader or future shadow wrapper",
+      "destination": "logs, traces, audit evidence",
+      "consumers": [
+        "shadow read consumers only"
+      ],
+      "payload": "shadow context and compared sources",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "shadow"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "latencyMs",
+        "primary",
+        "fallback",
+        "result"
+      ],
+      "frequency": "one per shadow execution",
+      "logLevel": "info",
+      "retention": "platform log retention policy",
+      "auditCriterion": "every divergence result must have a matching shadow start"
+    },
+    {
+      "name": "MASTER_CATALOG_SHADOW_FINISHED",
+      "description": "Shadow comparison finished.",
+      "objective": "Capture completion, runtime, and comparison status.",
+      "origin": "shadow comparator",
+      "destination": "logs, metrics, evidence",
+      "consumers": [
+        "Commercial Coverage",
+        "future parity gates"
+      ],
+      "payload": "summary of the comparison",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "shadow",
+        "result",
+        "latencyMs"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "fallback",
+        "primary",
+        "errorCode",
+        "errorMessage"
+      ],
+      "frequency": "one per finished comparison",
+      "logLevel": "info",
+      "retention": "platform log retention policy",
+      "auditCriterion": "completion must carry comparison status and latency"
+    },
+    {
+      "name": "MASTER_CATALOG_SHADOW_DIVERGENCE",
+      "description": "Canonical tree diverged from the compatibility tree.",
+      "objective": "Measure drift and parity risk.",
+      "origin": "Commercial Coverage comparator",
+      "destination": "logs, alerts, parity evidence, release gates",
+      "consumers": [
+        "observability pipeline",
+        "data owner",
+        "commercial owner"
+      ],
+      "payload": "divergence categories and affected nodes",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "shadow",
+        "result"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "latencyMs",
+        "errorCode",
+        "errorMessage",
+        "primary"
+      ],
+      "frequency": "zero or more per shadow execution, but always counted",
+      "logLevel": "warn",
+      "retention": "longer than normal request logs until parity is formally accepted",
+      "auditCriterion": "every divergence must be classified by category and count"
+    },
+    {
+      "name": "MASTER_CATALOG_PARITY_RESULT",
+      "description": "Parity computed for a consumer or release window.",
+      "objective": "Provide formal pass/fail parity result for W5-03B readiness.",
+      "origin": "parity gate evaluator",
+      "destination": "evidence pack, release checklist, architecture audit",
+      "consumers": [
+        "release management",
+        "architecture board",
+        "commercial owner"
+      ],
+      "payload": "parity score, scope, and decision",
+      "requiredFields": [
+        "timestamp",
+        "tenantId",
+        "consumer",
+        "sourceType",
+        "requestId",
+        "catalogVersion",
+        "source",
+        "result",
+        "shadow",
+        "primary"
+      ],
+      "optionalFields": [
+        "correlationId",
+        "traceId",
+        "spanId",
+        "latencyMs",
+        "fallback",
+        "errorCode",
+        "errorMessage"
+      ],
+      "frequency": "at least once per controlled evidence window",
+      "logLevel": "info",
+      "retention": "until the next wave baseline is ratified",
+      "auditCriterion": "parity result must be reproducible from metric and log evidence"
+    },
+    {
+      "name": "MASTER_CATALOG_CONSUMER_REGISTERED",
+      "description": "Consumer recognized as a Master Catalog consumer.",
+      "objective": "Remain conditional until a real operational registration process exists.",
+      "origin": "consumer bootstrap or future registration hook",
+      "destination": "catalog usage inventory or future registry evidence",
+      "consumers": [
+        "static catalog consumers and future operational registries"
+      ],
+      "payload": "consumer identity and scope",
+      "requiredFields": [
+        "timestamp",
+        "consumer",
+        "sourceType",
+        "source",
+        "result"
+      ],
+      "optionalFields": [
+        "tenantId",
+        "requestId",
+        "correlationId",
+        "traceId",
+        "spanId",
+        "catalogVersion",
+        "fallback",
+        "shadow",
+        "primary"
+      ],
+      "frequency": "only if a real registration process exists",
+      "logLevel": "info",
+      "retention": "wave baseline retention policy",
+      "auditCriterion": "not required for the W5-03A MVP",
+      "classification": "CONDITIONAL"
+    },
+    {
+      "name": "MASTER_CATALOG_CACHE_HIT",
+      "description": "Cache layer served a Master Catalog response or lookup.",
+      "objective": "Remain conditional until an official cache exists in the canonical flow.",
+      "origin": "future API client cache or backend lookup cache",
+      "destination": "optional diagnostics only",
+      "consumers": [
+        "future cache wrappers only"
+      ],
+      "payload": "cache key, scope, and consumer",
+      "requiredFields": [
+        "timestamp",
+        "consumer",
+        "sourceType",
+        "source",
+        "result"
+      ],
+      "optionalFields": [
+        "tenantId",
+        "requestId",
+        "correlationId",
+        "traceId",
+        "spanId",
+        "catalogVersion",
+        "latencyMs",
+        "shadow",
+        "primary",
+        "fallback"
+      ],
+      "frequency": "not applicable until official cache exists",
+      "logLevel": "debug",
+      "retention": "operational diagnostics policy",
+      "auditCriterion": "not applicable until official cache exists",
+      "classification": "CONDITIONAL"
+    },
+    {
+      "name": "MASTER_CATALOG_CACHE_MISS",
+      "description": "Cache layer could not serve a Master Catalog response or lookup.",
+      "objective": "Remain conditional until an official cache exists in the canonical flow.",
+      "origin": "future cache layer",
+      "destination": "optional diagnostics only",
+      "consumers": [
+        "future cache wrappers only"
+      ],
+      "payload": "cache key, miss reason, and consumer",
+      "requiredFields": [
+        "timestamp",
+        "consumer",
+        "sourceType",
+        "source",
+        "result"
+      ],
+      "optionalFields": [
+        "tenantId",
+        "requestId",
+        "correlationId",
+        "traceId",
+        "spanId",
+        "catalogVersion",
+        "latencyMs",
+        "errorCode",
+        "errorMessage",
+        "shadow",
+        "primary",
+        "fallback"
+      ],
+      "frequency": "not applicable until official cache exists",
+      "logLevel": "debug",
+      "retention": "operational diagnostics policy",
+      "auditCriterion": "not applicable until official cache exists",
+      "classification": "CONDITIONAL"
+    }
+  ],
+  "logSchema": {
+    "name": "master_catalog_observability_log_v1",
+    "fields": [
+      {
+        "name": "timestamp",
+        "type": "string (ISO-8601)",
+        "required": true,
+        "description": "Event time in UTC",
+        "example": "2026-07-12T12:34:56.789Z"
+      },
+      {
+        "name": "level",
+        "type": "string",
+        "required": true,
+        "description": "Log severity",
+        "example": "info"
+      },
+      {
+        "name": "tenantId",
+        "type": "string",
+        "required": true,
+        "description": "Tenant context",
+        "example": "tenant_123"
+      },
+      {
+        "name": "consumer",
+        "type": "string",
+        "required": true,
+        "description": "Consumer identity",
+        "example": "Oportunidades"
+      },
+      {
+        "name": "sourceType",
+        "type": "string",
+        "required": true,
+        "description": "Source classification",
+        "example": "frontend"
+      },
+      {
+        "name": "requestId",
+        "type": "string",
+        "required": true,
+        "description": "Transport-level request correlation",
+        "example": "finqz-request-123"
+      },
+      {
+        "name": "correlationId",
+        "type": "string",
+        "required": false,
+        "description": "Business transaction chain ID",
+        "example": "corr-123"
+      },
+      {
+        "name": "traceId",
+        "type": "string",
+        "required": false,
+        "description": "Distributed trace ID",
+        "example": "4bf92f3577b34da6a3ce929d0e0e4736"
+      },
+      {
+        "name": "spanId",
+        "type": "string",
+        "required": false,
+        "description": "Span identifier if tracing exists",
+        "example": "00f067aa0ba902b7"
+      },
+      {
+        "name": "catalogVersion",
+        "type": "string",
+        "required": true,
+        "description": "Master Catalog version used in the request",
+        "example": "3.1.0"
+      },
+      {
+        "name": "source",
+        "type": "string",
+        "required": true,
+        "description": "Emitting component",
+        "example": "master-catalog.controller"
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "required": true,
+        "description": "Result status",
+        "example": "success"
+      },
+      {
+        "name": "latencyMs",
+        "type": "number | null",
+        "required": true,
+        "description": "Latency in milliseconds",
+        "example": 42
+      },
+      {
+        "name": "fallback",
+        "type": "boolean",
+        "required": true,
+        "description": "Whether fallback path was used",
+        "example": false
+      },
+      {
+        "name": "shadow",
+        "type": "boolean",
+        "required": true,
+        "description": "Whether shadow path was used",
+        "example": true
+      },
+      {
+        "name": "primary",
+        "type": "boolean",
+        "required": true,
+        "description": "Whether primary canonical path was used",
+        "example": true
+      },
+      {
+        "name": "result",
+        "type": "string",
+        "required": true,
+        "description": "Outcome or status label",
+        "example": "MATCH"
+      },
+      {
+        "name": "errorCode",
+        "type": "string | null",
+        "required": true,
+        "description": "Machine-readable failure code",
+        "example": "VALIDATION_ERROR"
+      },
+      {
+        "name": "errorMessage",
+        "type": "string | null",
+        "required": true,
+        "description": "Human-readable error summary",
+        "example": "Missing tenant context"
+      }
+    ],
+    "optionalFields": [
+      "httpMethod",
+      "httpRoute",
+      "httpStatus",
+      "eventName",
+      "eventId",
+      "divergenceCount",
+      "parityScore",
+      "cacheKey",
+      "comparisonStatus",
+      "fallbackReason",
+      "primarySource",
+      "shadowSource",
+      "consumerVersion",
+      "operation"
+    ],
+    "rules": [
+      "Every log line must include tenant, consumer, request, catalog version, source, and result context.",
+      "Correlation, trace, and span identifiers are included when the capability exists and the contract already exposes them.",
+      "Error logs must never omit errorCode and errorMessage.",
+      "Shadow and fallback usage must be distinguishable by boolean fields.",
+      "Logs must be machine-parsable.",
+      "requestId is transport-level, correlationId is business-level when available, traceId and spanId are distributed tracing identifiers when available."
+    ]
+  },
+  "metrics": [
+    {
+      "name": "master_catalog_requests_total",
+      "description": "Total canonical requests.",
+      "formula": "count of canonical Master Catalog requests",
+      "source": "backend HTTP + API client",
+      "unit": "requests",
+      "threshold": "release gate target required",
+      "owner": "platform observability",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "inspect route, tenant context, and request path"
+    },
+    {
+      "name": "master_catalog_primary_requests_total",
+      "description": "Canonical primary usage.",
+      "formula": "count where primary=true",
+      "source": "request logs / events",
+      "unit": "requests",
+      "threshold": "release gate target required",
+      "owner": "domain owner",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "identify consumers still bypassing primary"
+    },
+    {
+      "name": "master_catalog_fallback_requests_total",
+      "description": "Fallback usage.",
+      "formula": "count where fallback=true",
+      "source": "request logs / events",
+      "unit": "requests",
+      "threshold": "release gate target required",
+      "owner": "domain owner",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "reduce fallback scope or fix primary path"
+    },
+    {
+      "name": "master_catalog_shadow_requests_total",
+      "description": "Shadow executions.",
+      "formula": "count where shadow=true",
+      "source": "shadow comparator / shadow hook",
+      "unit": "requests",
+      "threshold": "release gate target required",
+      "owner": "observability owner",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "validate shadow pipeline and comparator health"
+    },
+    {
+      "name": "master_catalog_shadow_divergence_total",
+      "description": "Shadow divergences.",
+      "formula": "count of divergent comparisons",
+      "source": "shadow comparator",
+      "unit": "divergences",
+      "threshold": "release gate target required",
+      "owner": "commercial/data owner",
+      "periodicity": "per release window",
+      "correctiveAction": "block retirement until divergence is explained"
+    },
+    {
+      "name": "master_catalog_errors_total",
+      "description": "Failures.",
+      "formula": "count of failed requests/events",
+      "source": "logs + error handler",
+      "unit": "errors",
+      "threshold": "release gate target required",
+      "owner": "platform owner",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "classify error and fix source path"
+    },
+    {
+      "name": "master_catalog_latency_ms",
+      "description": "Latency histogram.",
+      "formula": "request durations in milliseconds",
+      "source": "request logs + spans",
+      "unit": "milliseconds",
+      "threshold": "p95/p99 gate target required",
+      "owner": "platform observability",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "investigate slow consumer, runtime, or repository"
+    },
+    {
+      "name": "master_catalog_availability",
+      "description": "Derived service availability ratio.",
+      "formula": "successful requests / total requests",
+      "source": "metrics + logs",
+      "unit": "ratio",
+      "threshold": "release gate target required",
+      "owner": "platform owner",
+      "periodicity": "rolling 5m / 1h / 24h",
+      "correctiveAction": "inspect outages, failures, and readiness"
+    },
+    {
+      "name": "master_catalog_parity_score",
+      "description": "Derived parity ratio.",
+      "formula": "matched fields / compared fields",
+      "source": "parity comparator",
+      "unit": "percentage",
+      "threshold": "release gate target required",
+      "owner": "data/commercial owner",
+      "periodicity": "per release window",
+      "correctiveAction": "keep shadow active and re-evaluate drift"
+    },
+    {
+      "name": "master_catalog_consumer_usage_total",
+      "description": "Consumer usage distribution.",
+      "formula": "count by consumer and mode",
+      "source": "events + logs",
+      "unit": "requests",
+      "threshold": "release gate target required",
+      "owner": "architecture owner",
+      "periodicity": "rolling 1h / 24h",
+      "correctiveAction": "identify consumers not yet migrated"
+    },
+    {
+      "name": "master_catalog_cache_hit_total",
+      "description": "Conditional cache hits.",
+      "formula": "count of cache hits",
+      "source": "conditional cache wrapper",
+      "unit": "hits",
+      "threshold": "not applicable until official cache exists",
+      "owner": "platform owner",
+      "periodicity": "conditional",
+      "correctiveAction": "do not recommend creating cache for W5-03A/W5-03B"
+    },
+    {
+      "name": "master_catalog_cache_miss_total",
+      "description": "Conditional cache misses.",
+      "formula": "count of cache misses",
+      "source": "conditional cache wrapper",
+      "unit": "misses",
+      "threshold": "not applicable until official cache exists",
+      "owner": "platform owner",
+      "periodicity": "conditional",
+      "correctiveAction": "do not recommend creating cache for W5-03A/W5-03B"
+    }
+  ],
+  "tracing": {
+    "ids": [
+      "requestId",
+      "correlationId",
+      "traceId",
+      "spanId",
+      "tenantId",
+      "consumer",
+      "sourceType",
+      "catalogVersion"
+    ],
+    "semantics": {
+      "requestId": "transport-level request correlation",
+      "correlationId": "required when available for business log correlation",
+      "traceId": "required when available for distributed tracing",
+      "spanId": "required when available for span correlation",
+      "tenantId": "tenant-scoped identity",
+      "consumer": "named client or module using the catalog",
+      "sourceType": "source classification for the emitting hop",
+      "catalogVersion": "version of the catalog contract used in the request"
+    },
+    "propagation": [
+      "frontend API client creates or forwards requestId",
+      "API request enters backend through request correlation middleware",
+      "controller resolves tenantId from authenticated tenant context",
+      "runtime and service carry tenantId, requestId, and correlationId",
+      "repository executes tenant-scoped Prisma queries",
+      "structured logs and events repeat the same identifiers",
+      "shadow and evidence flows keep the same requestId and correlationId"
+    ],
+    "path": [
+      "Frontend",
+      "API",
+      "Controller",
+      "Runtime",
+      "Service",
+      "Repository",
+      "Prisma"
+    ],
+    "rules": [
+      "Every canonical request must be correlatable by requestId between frontend and backend when technically available without incompatible contract change.",
+      "Shadow comparisons must share request and correlation identifiers when available.",
+      "Evidence records must preserve request identifiers even when fallback is used.",
+      "No artificial trace or span identifiers may be generated."
+    ]
+  },
+  "instrumentation": {
+    "backend": [
+      {
+        "layer": "HTTP kernel",
+        "path": "backend/src/core/http/fastify.ts",
+        "signals": [
+          "request start/finish",
+          "request correlation",
+          "readiness",
+          "errors",
+          "route context"
+        ]
+      },
+      {
+        "layer": "Master Catalog route",
+        "path": "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts",
+        "signals": [
+          "consumer name",
+          "auth success/failure",
+          "route entry"
+        ]
+      },
+      {
+        "layer": "Master Catalog controller",
+        "path": "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts",
+        "signals": [
+          "tenant",
+          "validation result",
+          "request outcome"
+        ]
+      },
+      {
+        "layer": "Master Catalog runtime",
+        "path": "backend/src/modules/master-catalog/application/master-catalog.runtime.ts",
+        "signals": [
+          "canonical mode",
+          "version",
+          "consumer context"
+        ]
+      },
+      {
+        "layer": "Master Catalog service",
+        "path": "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+        "signals": [
+          "tenant enforcement",
+          "path selection"
+        ]
+      },
+      {
+        "layer": "Master Catalog repository",
+        "path": "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+        "signals": [
+          "query count",
+          "tenant scope",
+          "latency",
+          "result size"
+        ]
+      },
+      {
+        "layer": "Simulation adapter",
+        "path": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+        "signals": [
+          "alias hit",
+          "fallback used",
+          "product/subproduct normalization"
+        ]
+      },
+      {
+        "layer": "Simulation metadata",
+        "path": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts",
+        "signals": [
+          "product identity",
+          "compatibility scope"
+        ]
+      }
+    ],
+    "frontend": [
+      {
+        "layer": "API client",
+        "path": "src/api/http.ts and src/api/modules/master-catalog.api.ts",
+        "signals": [
+          "requestId",
+          "route",
+          "response status",
+          "latency",
+          "consumer"
+        ]
+      },
+      {
+        "layer": "Oportunidades",
+        "path": "src/pages/Oportunidades.tsx",
+        "signals": [
+          "canonical fetch success/failure",
+          "empty-tree fallback",
+          "consumer registration"
+        ]
+      },
+      {
+        "layer": "Estrutura Comercial",
+        "path": "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts and src/pages/EstruturaComercial.tsx",
+        "signals": [
+          "tree load success/failure",
+          "sync counts",
+          "mapper outcome"
+        ]
+      },
+      {
+        "layer": "Commercial Coverage",
+        "path": "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts and src/pages/CommercialCoverage.tsx",
+        "signals": [
+          "shadow start/finish/divergence",
+          "comparator results",
+          "coverage tree result"
+        ]
+      },
+      {
+        "layer": "Simulation Runtime shadow",
+        "path": "src/features/simulation-runtime/hooks/useSimulationRuntimeShadow.ts and src/features/simulation-runtime/telemetry/simulation-runtime.telemetry.ts",
+        "signals": [
+          "shadow start/finish",
+          "evidence stored/failed",
+          "fallback used",
+          "comparison summary"
+        ]
+      },
+      {
+        "layer": "Stores",
+        "path": "src/store/index.ts",
+        "signals": [
+          "legacy source usage",
+          "derived structure source",
+          "migration residuals"
+        ]
+      },
+      {
+        "layer": "Simulador",
+        "path": "src/pages/Simulador.tsx",
+        "signals": [
+          "dependency on compatibility repository",
+          "fallback behavior"
+        ]
+      },
+      {
+        "layer": "Tabelas Comerciais",
+        "path": "src/pages/TabelasComerciais.tsx",
+        "signals": [
+          "selector origin",
+          "catalog source",
+          "fallback behavior"
+        ]
+      }
+    ]
+  },
+  "releaseGates": [
+    {
+      "gateId": "Gate A - Observability baseline",
+      "evidence": "structured schema published and logs emitted",
+      "passCriteria": "mandatory fields present in logs and events",
+      "failCriteria": "any mandatory field missing",
+      "owner": "observability owner"
+    },
+    {
+      "gateId": "Gate B - Request tracing",
+      "evidence": "requestId, consumer and sourceType propagation verified where technically available",
+      "passCriteria": "frontend requestId correlates with backend requestId without incompatible contract change",
+      "failCriteria": "request correlation cannot be established",
+      "owner": "platform owner"
+    },
+    {
+      "gateId": "Gate C - Primary usage",
+      "evidence": "canonical primary usage measured per consumer",
+      "passCriteria": "Oportunidades and Estrutura Comercial are measurable as canonical consumers",
+      "failCriteria": "primary usage cannot be measured",
+      "owner": "consumer owner"
+    },
+    {
+      "gateId": "Gate D - Fallback measurement",
+      "evidence": "fallback usage measured per consumer",
+      "passCriteria": "fallback events are visible and attributable",
+      "failCriteria": "fallback use is not counted or not attributable",
+      "owner": "domain owner"
+    },
+    {
+      "gateId": "Gate E - Shadow parity",
+      "evidence": "shadow results and divergences measured",
+      "passCriteria": "parity score and divergence totals are reproducible",
+      "failCriteria": "comparator absent or inconsistent",
+      "owner": "commercial owner"
+    },
+    {
+      "gateId": "Gate F - Latency and availability",
+      "evidence": "latency and availability metrics exposed",
+      "passCriteria": "p95, p99, and availability are visible in the window",
+      "failCriteria": "metrics unavailable",
+      "owner": "platform owner"
+    },
+    {
+      "gateId": "Gate G - Error visibility",
+      "evidence": "failures are classified and counted",
+      "passCriteria": "errors_total reconciles with logs",
+      "failCriteria": "failure classification missing",
+      "owner": "platform owner"
+    },
+    {
+      "gateId": "Gate H - Rollback rehearsal",
+      "evidence": "rollback of observability is documented and testable",
+      "passCriteria": "rollback can disable telemetry without changing behavior",
+      "failCriteria": "rollback requires production code change",
+      "owner": "architecture owner"
+    }
+  ],
+  "w5_03bCriteria": [
+    "all three request lifecycle events exist and are visible",
+    "requestId, consumer, and sourceType are correlated between frontend and backend when technically available",
+    "primary and fallback usage are counted per consumer",
+    "shadow start, finish, and divergence are visible for shadow consumers",
+    "parity result is reproducible from logs and metrics",
+    "structured logs carry the mandatory schema fields",
+    "distributed tracing is not a blocker unless implemented and approved",
+    "availability, latency, parity, and fallback metrics are exposed",
+    "rollback rehearsal exists without runtime change",
+    "numeric thresholds are approved in the release checklist after baseline"
+  ],
+  "rollback": {
+    "constraints": [
+      "no runtime behavior change",
+      "no HTTP contract change",
+      "no persistence change",
+      "no feature flag change"
+    ],
+    "allowedActions": [
+      "disable new event sinks",
+      "disable new metric export paths",
+      "disable new trace exporters",
+      "keep canonical request behavior unchanged",
+      "keep shadow behavior unchanged",
+      "keep fallback behavior unchanged",
+      "keep tenant and correlation propagation unchanged"
+    ],
+    "mechanism": "configuration or observability package version swap only"
+  },
+  "decisionOwnership": {
+    "adr": [
+      "changing canonical taxonomy or ownership",
+      "changing the meaning of catalogVersion",
+      "changing ownership of creditPfCatalog",
+      "changing retirement policy for loan-with-collateral"
+    ],
+    "epc": [
+      "adding or changing observability events",
+      "changing structured log schema",
+      "defining metrics and parity rules",
+      "defining release gates and rollout criteria"
+    ],
+    "runbook": [
+      "enabling or disabling observability exporters",
+      "investigating missing traces or missing metrics",
+      "handling parity divergence during rollout",
+      "performing a rollback rehearsal"
+    ]
+  },
+  "releasePosture": {
+    "READINESS_W5_OVERALL": "GO_WITH_RESTRICTIONS",
+    "READINESS_W5_03A_OBSERVABILITY": "AUTHORIZED",
+    "READINESS_W5_03B_OPPORTUNITIES": "DEFERRED_PENDING_GATES",
+    "READINESS_FIRST_FUNCTIONAL_CUT": "DEFERRED_PENDING_GATES",
+    "READINESS_LEGACY_REMOVAL": "NO_GO",
+    "READINESS_LOAN_WITH_COLLATERAL_FALLBACK_REMOVAL": "NO_GO",
+    "READINESS_CREDIT_PF_CATALOG_RETIREMENT": "NO_GO"
+  },
+  "summary": {
+    "eventCount": 12,
+    "eventRequiredCount": 9,
+    "eventConditionalCount": 3,
+    "eventFutureCount": 0,
+    "eventRejectedCount": 2,
+    "metricCount": 12,
+    "primaryMetricCount": 8,
+    "derivedRatioCount": 5,
+    "conditionalMetricCount": 2,
+    "traceIdCount": 6,
+    "requiredFieldCount": 14,
+    "requiredWhenAvailableFieldCount": 5,
+    "prohibitedFieldCount": 4,
+    "backendInstrumentationLayers": 8,
+    "frontendInstrumentationLayers": 8,
+    "releaseGateCount": 8,
+    "w5_03bEvidenceCount": 9,
+    "documentCount": 12,
+    "codeSourceCount": 26
+  }
+}

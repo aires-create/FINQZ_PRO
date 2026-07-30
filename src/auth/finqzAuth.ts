@@ -7,16 +7,44 @@ import type { LoginCredentials } from "../types";
 import {
   getAccessToken,
   getRefreshToken,
+  getCurrentUser,
   getSessionSnapshot,
   setSessionUser,
   storeSessionTokens,
 } from "./session";
-import { finalizeLocalLogout } from "./logout";
+import { clearLocalAuthState } from "./logout";
 import {
   mapBackendAuthUser,
   type BackendLoginResponse,
   type MappedFinqzUser,
 } from "./userMapper";
+
+interface BackendSessionUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  roleId: string;
+  role: string;
+  perfil: string;
+  tenantId: string;
+  tenantName: string;
+  roles: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    type: string;
+  }>;
+  permissions: string[];
+}
+
+interface BackendSessionResponse {
+  success: boolean;
+  data?: {
+    user: BackendSessionUser;
+  };
+  message?: string;
+}
 
 export interface FinqzLoginResult {
   success: boolean;
@@ -41,8 +69,6 @@ interface NativeLogoutResponse {
   success: boolean;
   message?: string;
 }
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isBackendUnavailable = (error: unknown): boolean => {
   if (!(error instanceof ApiException)) {
@@ -74,7 +100,7 @@ const buildLogoutPayload = (): { refreshToken: string } | undefined => {
 
 const executeNativeLogout = async (): Promise<boolean> => {
   const response = await finqzClient.post<NativeLogoutResponse>(
-    "/auth/logout",
+    "/api/v1/auth/logout",
     buildLogoutPayload(),
     {
       credentials: "include",
@@ -89,16 +115,9 @@ export const finqzAuth = {
   login: async (input: LoginCredentials): Promise<FinqzLoginResult> => {
     const email = input.access_code_or_email.trim().toLowerCase();
 
-    if (!emailPattern.test(email)) {
-      return {
-        success: false,
-        error: "Use seu e-mail corporativo para entrar nesta versão.",
-      };
-    }
-
     try {
       const response = await finqzClient.post<BackendLoginResponse>(
-        "/auth/login",
+        "/api/v1/auth/login",
         {
           email,
           password: input.senha,
@@ -147,7 +166,7 @@ export const finqzAuth = {
   refreshSession: async (): Promise<FinqzRefreshResult> => {
     const refreshed = await refreshSessionTokens();
 
-    if (!refreshed) {
+    if (!refreshed.refreshed) {
       return {
         success: false,
         error: "Sessão expirada. Faça login novamente.",
@@ -177,33 +196,75 @@ export const finqzAuth = {
     }
   },
   getSession: async () => {
-    const nativeSession = getSessionSnapshot();
-    if (nativeSession.isAuthenticated) {
-      return nativeSession;
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      return getSessionSnapshot();
     }
 
-    return finqzClient.auth.getSession();
-  },
-  signOut: async () => {
-    let nativeLogout: FinqzLogoutResult | undefined;
-    let fallbackError: unknown = null;
+    if (!getAccessToken() && !getRefreshToken()) {
+      const refreshed = await refreshSessionTokens();
+
+      if (!refreshed.refreshed) {
+        return {
+          data: null,
+          error: null,
+        };
+      }
+    }
 
     try {
-      if (getAccessToken() || getRefreshToken()) {
-        nativeLogout = await finqzAuth.logoutNative();
+      const response = await finqzClient.get<BackendSessionResponse>("/api/v1/auth/profile");
+      const sessionUser = response.data?.data?.user;
+
+      if (!response.data.success || !sessionUser) {
+        return {
+          data: null,
+          error: null,
+        };
       }
 
-      if (!nativeLogout?.success) {
-        const fallback = await finqzClient.auth.signOut();
-        fallbackError = fallback.error;
-      }
+      const normalizedUser: MappedFinqzUser = {
+        ...mapBackendAuthUser({
+          id: sessionUser.id,
+          email: sessionUser.email,
+          firstName: sessionUser.firstName,
+          lastName: sessionUser.lastName,
+          roleId: sessionUser.roleId,
+          role: sessionUser.role,
+          tenantId: sessionUser.tenantId,
+          tenantName: sessionUser.tenantName,
+          permissions: sessionUser.permissions,
+        }),
+        perfil: sessionUser.perfil,
+        roleId: sessionUser.roleId,
+        tenantName: sessionUser.tenantName,
+        permissions: sessionUser.permissions,
+      };
+
+      setSessionUser(normalizedUser);
 
       return {
+        data: {
+          user: normalizedUser,
+        },
+        error: null,
+      };
+    } catch {
+      return {
         data: null,
-        error: nativeLogout?.success ? null : nativeLogout?.error ?? fallbackError,
+        error: null,
+      };
+    }
+  },
+  signOut: async () => {
+    try {
+      const nativeLogout = await finqzAuth.logoutNative();
+      return {
+        data: null,
+        error: nativeLogout.success ? null : nativeLogout.error ?? null,
       };
     } finally {
-      finalizeLocalLogout();
+      clearLocalAuthState();
     }
   },
 };

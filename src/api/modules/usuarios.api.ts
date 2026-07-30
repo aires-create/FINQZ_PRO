@@ -25,10 +25,10 @@ export interface UpdateUsuarioPayload {
   /** ID do parceiro vinculado (obrigatório para usuários não-admin) */
   partner_id?: number;
   status?: 'ativo' | 'inativo';
+  isActive?: boolean;
 }
 
-// TODO(legacy-cleanup): manter path relativo para compatibilidade com API_BASE_URL=/api/v1 sem gerar /api/v1/api/v1/*.
-const USERS_BASE_PATH = '/users';
+const USERS_BASE_PATH = '/api/v1/users';
 
 // ============================================
 // SCOPE HELPER FUNCTIONS
@@ -108,6 +108,16 @@ export const usuariosApi = {
     return apiCall<any>(`${USERS_BASE_PATH}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Reset usuário password
+   */
+  async resetPassword(id: number | string, newPassword: string): Promise<void> {
+    return apiCall<void>(`${USERS_BASE_PATH}/${id}/reset-password`, {
+      method: 'PATCH',
+      body: JSON.stringify({ newPassword }),
     });
   },
 

@@ -4,8 +4,7 @@ import { flushSync } from "react-dom";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import useAppStore from "./store";
 import { Layout } from "./layouts/MainLayout";
-import { ProtectedRoute, AccessDenied } from "./auth/guards";
-import { AuthUser, Module, Action } from "./auth/permissions";
+import { ProtectedRoute } from "./auth/guards";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AdminLoginScreen } from "./components/auth/AdminLoginScreen";
 import { finqzAuth } from "./auth/finqzAuth";
@@ -21,18 +20,10 @@ import {
   operacoesRoutes,
 } from "./routes";
 
-// Route governance:
-// 1) App.tsx is orchestration only (auth + layout + route-domain composition).
-// 2) Pages in src/pages/** must be loaded via React.lazy to protect bundle budget.
-// 3) Domain files in src/routes/** own route declarations and redirects.
-// See docs/frontend-architecture-governance.md for full policy.
 const DashboardPage = lazy(() => import("./pages/Dashboard"));
 const LoginParceiroPage = lazy(() => import("./pages/LoginParceiro"));
 const DashboardParceiroPage = lazy(() => import("./pages/DashboardParceiro"));
 
-import { generateSecurePassword } from "./utils/auth";
-
-// Page loader for lazy-loaded routes
 const PageLoader = () => (
   <div className="flex min-h-[400px] items-center justify-center">
     <div className="finqz-card flex items-center gap-3 px-4 py-3 text-sm text-[var(--text-secondary)]">
@@ -405,7 +396,6 @@ const AppRoutes = () => {
   );
 };
 
-// Root App
 const App = () => {
   return (
     <ErrorBoundary>
@@ -417,10 +407,10 @@ const App = () => {
       >
         <ThemeProvider>
           <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+            <AppRoutes />
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 };

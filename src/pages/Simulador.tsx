@@ -1,12 +1,13 @@
 // FINQZ PRO - Simulador Page
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { 
   Calculator, Users, Phone, Mail, FileText, DollarSign,
   Zap, Building2, Check, ChevronDown, ChevronRight,
-  TrendingUp, Star, Heart, Balance
+  TrendingUp, Star, Heart, Balance, X
 } from "lucide-react";
 import { Button, Modal } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
+import finqzLogoBlue from "../assets/brand/finqz-logo-blue.png";
 import { 
   simulatorRepository,
   simulationEngine,
@@ -36,6 +37,8 @@ import {
 } from "../data/commercialRepository";
 import { searchCities, getCityByName, City } from "../data/cityRepository";
 import { fetchAddressByCEP, formatCEP, CEPAddress } from "../data/cepService";
+import { createProposalPdfBlob, downloadPdfBlob, openPdfBlob } from "../features/proposals/proposalPdf";
+import { formatCurrency } from "../components/pipeline";
 
 export const SimuladorPage: React.FC = () => {
   // Step atual
@@ -93,6 +96,7 @@ export const SimuladorPage: React.FC = () => {
   const [cepError, setCepError] = useState("");
   const [generatedProposalId, setGeneratedProposalId] = useState<string | null>(null);
   const [showProposalPreview, setShowProposalPreview] = useState(false);
+  const simulationTimeoutRef = useRef<number | null>(null);
   
   // City search handler
   const handleCitySearch = (term: string) => {
@@ -138,6 +142,14 @@ export const SimuladorPage: React.FC = () => {
       }
     }
   }, [customerData.city, customerData.state, energyData.interested]);
+
+  useEffect(() => {
+    return () => {
+      if (simulationTimeoutRef.current !== null) {
+        window.clearTimeout(simulationTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // CEP Lookup handler
   const handleCEPLookup = async (cep: string) => {
@@ -212,8 +224,12 @@ export const SimuladorPage: React.FC = () => {
   // Executar simulação
   const handleSimulate = () => {
     setIsSimulating(true);
+
+    if (simulationTimeoutRef.current !== null) {
+      window.clearTimeout(simulationTimeoutRef.current);
+    }
     
-    setTimeout(() => {
+    simulationTimeoutRef.current = window.setTimeout(() => {
       // Simular crédito
       let creditOffers: CreditOffer[] = [];
       if (creditData.productId && creditData.desiredAmount > 0) {
@@ -261,6 +277,8 @@ export const SimuladorPage: React.FC = () => {
         desiredValue: creditData.desiredAmount,
         energyConsumption: energyData.averageConsumption
       });
+
+      simulationTimeoutRef.current = null;
     }, 1500);
   };
 
@@ -296,68 +314,105 @@ export const SimuladorPage: React.FC = () => {
     const proposalId = `prop_${Date.now()}`;
     setGeneratedProposalId(proposalId);
     setShowProposalPreview(true);
-    
-    // Save proposal to localStorage
-    const proposalData = {
-      id: proposalId,
-      simulationId: simulationResult.id,
-      simulationType: simulationResult.simulationType,
-      customer: customerData,
-      selectedCreditOffer: selectedCreditOffer || undefined,
-      selectedEnergyOffer: selectedEnergyOffer || undefined,
-      city: customerData.city,
-      state: customerData.state,
-      distributor: energyData.distributor || '',
-      createdAt: Date.now(),
-      status: 'GENERATED' as const
-    };
-    
-    // Save to localStorage
-    try {
-      const existingProposals = JSON.parse(localStorage.getItem('finqz_simulation_proposals') || '[]');
-      existingProposals.push(proposalData);
-      localStorage.setItem('finqz_simulation_proposals', JSON.stringify(existingProposals));
-    } catch (e) {
-      console.error('Error saving proposal:', e);
-    }
   };
   
-  // Print proposal
-  const handlePrintProposal = () => {
-    const printContent = document.getElementById('proposal-print-area');
-    if (!printContent) return;
-    
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Proposta Comercial - FINQZ PRO</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2563eb; padding-bottom: 20px; }
-              .header h1 { color: #2563eb; margin: 0; }
-              .header h2 { color: #64748b; margin: 10px 0 0 0; font-weight: normal; }
-              .section { margin-bottom: 25px; }
-              .section h3 { color: #2563eb; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; }
-              .field { display: flex; margin-bottom: 8px; }
-              .field-label { font-weight: bold; width: 180px; color: #374151; }
-              .field-value { color: #1f2937; }
-              .credit-offer, .energy-offer { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-              .credit-offer h4, .energy-offer h4 { margin: 0 0 10px 0; color: #2563eb; }
-              .benefit { background: #dcfce7; padding: 15px; border-radius: 8px; text-align: center; }
-              .benefit-amount { font-size: 24px; font-weight: bold; color: #166534; }
-              .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center; }
-              .disclaimer { background: #fef3c7; padding: 10px; border-radius: 4px; font-size: 11px; color: #92400e; }
-              @media print { body { padding: 0; } }
-            </style>
-          </head>
-          <body>${printContent.innerHTML}</body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-    }
+  // Gerar PDF real
+  const handleDownloadProposalPdf = () => {
+    if (!simulationResult) return;
+    const issueDate = new Date();
+    const validityDate = new Date(issueDate);
+    validityDate.setDate(validityDate.getDate() + 7);
+    const selectedInstallment = Number(selectedCreditOffer?.installment || 0);
+    const selectedRate = Number(selectedCreditOffer?.monthlyRate || 0);
+    const approvedAmount = Number(selectedCreditOffer?.approvedAmount || 0);
+    const proposalStatus = proposalAccepted ? "Aceita" : "Simulada";
+    const customerIncome = Number(customerData.income || 0);
+    const commitmentPercent = customerIncome > 0 && selectedInstallment > 0
+      ? (selectedInstallment / customerIncome) * 100
+      : Number(simulationResult.comprometimento || 0);
+    const vehicleValue = Number(
+      simulationResult.valorBem ||
+      (creditData.productId ? 0 : 0) ||
+      0,
+    );
+    const showAssetSection = simulationResult.simulationType === "emprestimo-garantia";
+
+    const pdf = createProposalPdfBlob({
+      headerLines: [
+        "FINQZ PRO",
+        "PROPOSTA COMERCIAL",
+        `Código: ${generatedProposalId || "-"}`,
+        `Emissão: ${issueDate.toLocaleString("pt-BR")}`,
+        `Validade: ${validityDate.toLocaleDateString("pt-BR")}`,
+      ],
+      bodyLines: [
+        "IDENTIFICACAO",
+        `Cliente: ${customerData.name || "-"}`,
+        `Documento: ${customerData.document || "-"}`,
+        `Telefone: ${customerData.phone || "-"}`,
+        `E-mail: ${customerData.email || "-"}`,
+        "",
+        "RESUMO DA OPERACAO",
+        `Produto: ${creditData.productId ? getProductsForSelect().find((item) => item.id === creditData.productId)?.name || "-" : "-"}`,
+        `Subproduto: ${creditData.subproductId ? getSubproductsForProduct(creditData.productId).find((item) => item.id === creditData.subproductId)?.name || "-" : "-"}`,
+        `Status da proposta: ${proposalStatus}`,
+        `Valor do bem: ${formatCurrency(vehicleValue)}`,
+        `Valor solicitado: ${formatCurrency(creditData.desiredAmount)}`,
+        `Valor liberado: ${formatCurrency(approvedAmount)}`,
+        `Prazo: ${selectedCreditOffer?.term || creditData.desiredTerm || 0} meses`,
+        `Taxa ao mês: ${Number(selectedRate || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% a.m.`,
+        `Parcela estimada: ${formatCurrency(selectedInstallment)}`,
+        `% Financiado: ${Number(simulationResult.percentualFinanciavel || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
+        `% da renda: ${Number(commitmentPercent || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`,
+        "",
+        ...(showAssetSection ? [
+          "DADOS DO BEM",
+          "Dados do veículo consultados no fluxo operacional do simulador.",
+          "",
+        ] : []),
+        "DOCUMENTOS OBRIGATORIOS",
+        "Cliente:",
+        "Documento de identificacao com foto",
+        "CPF",
+        "CNH",
+        "Comprovante de residencia",
+        "Comprovante de renda",
+        "",
+        ...(showAssetSection ? [
+          "Veiculo:",
+          "CRLV",
+          "DUT / ATPVe, quando aplicavel",
+          "Fotos do veiculo",
+          "Consulta de gravame",
+          "Laudo ou vistoria, quando aplicavel",
+          "",
+        ] : []),
+        "CARATER DA PROPOSTA",
+        "Esta proposta comercial possui carater preliminar e nao vinculante, sendo elaborada com base nas informacoes fornecidas pelo cliente e nas condicoes disponiveis no momento da simulacao.",
+        "A efetivacao da operacao esta condicionada a analise cadastral, documental, de credito e de conformidade, bem como a aprovacao final da instituicao financeira responsavel pela concessao do credito.",
+        "As condicoes apresentadas, incluindo valores, taxas, prazos e demais parametros da operacao, poderao sofrer alteracoes em razao do resultado da analise de credito, das politicas da instituicao financeira e das condicoes vigentes na data da contratacao.",
+        "",
+        "PRIVACIDADE E PROTECAO DE DADOS",
+        "A FINQZ PRO trata os dados pessoais de seus clientes em conformidade com a Lei Geral de Protecao de Dados Pessoais (Lei no 13.709/2018 - LGPD).",
+        "As informacoes fornecidas serao utilizadas exclusivamente para analise da operacao solicitada, cumprimento de obrigacoes legais e execucao dos servicos contratados.",
+        "Os dados poderao ser compartilhados apenas com instituicoes financeiras e parceiros operacionais estritamente necessarios para analise e processamento da proposta, sempre observando a legislacao vigente.",
+        "",
+        "DECLARACAO DO CLIENTE",
+        "Ao prosseguir com esta proposta, o cliente declara que as informacoes fornecidas sao verdadeiras e autoriza sua utilizacao para fins de analise da operacao de credito, nos termos da legislacao aplicavel.",
+        "",
+        "ASSINATURAS",
+        "Cliente",
+        "FINQZ PRO",
+      ],
+      footerLines: [
+        "Documento gerado automaticamente pelo FINQZ PRO.",
+        `Código da proposta: ${generatedProposalId || "-"}`,
+      ],
+    });
+
+    const fileName = `proposta-finqz-pro-${generatedProposalId || Date.now()}.pdf`;
+    downloadPdfBlob(pdf, fileName);
+    openPdfBlob(pdf);
   };
 
   // Reset
@@ -402,11 +457,39 @@ export const SimuladorPage: React.FC = () => {
   const proposalPreviewModal = (() => {
     if (!showProposalPreview || !simulationResult) return null;
 
-    const creditOffer = selectedCreditOffer;
-    const energyOffer = selectedEnergyOffer;
-    const totalBenefit = (creditOffer ? creditOffer.approvedAmount - creditData.desiredAmount : 0) + 
-      (energyOffer ? energyOffer.estimatedMonthlySavings * 12 : 0);
-    
+    const issueDate = new Date();
+    const validityDate = new Date(issueDate);
+    validityDate.setDate(validityDate.getDate() + 7);
+    const selectedInstallment = Number(selectedCreditOffer?.installment || 0);
+    const selectedRate = Number(selectedCreditOffer?.monthlyRate || 0);
+    const approvedAmount = Number(selectedCreditOffer?.approvedAmount || 0);
+    const proposalStatus = proposalAccepted ? "Aceita" : "Simulada";
+    const customerIncome = Number(customerData.income || 0);
+    const commitmentPercent = customerIncome > 0 && selectedInstallment > 0
+      ? (selectedInstallment / customerIncome) * 100
+      : Number(simulationResult.comprometimento || 0);
+    const vehicleValue = Number(simulationResult.valorBem || 0);
+    const showAssetSection = simulationResult.simulationType === "emprestimo-garantia";
+    const identificationRows = [
+      { label: "Cliente", value: customerData.name || "-" },
+      { label: "Documento", value: customerData.document || "-" },
+      { label: "Telefone", value: customerData.phone || "-" },
+      { label: "E-mail", value: customerData.email || "-" },
+      { label: "Status da proposta", value: proposalStatus },
+    ];
+    const summaryRows = [
+      { label: "Produto", value: getProductsForSelect().find((item) => item.id === creditData.productId)?.name || "-" },
+      { label: "Subproduto", value: creditData.subproductId ? getSubproductsForProduct(creditData.productId).find((item) => item.id === creditData.subproductId)?.name || "-" : "-" },
+      { label: "Valor do bem", value: formatCurrency(vehicleValue) },
+      { label: "Valor solicitado", value: formatCurrency(creditData.desiredAmount) },
+      { label: "Valor liberado", value: formatCurrency(approvedAmount) },
+      { label: "Prazo", value: `${selectedCreditOffer?.term || creditData.desiredTerm || 0} meses` },
+      { label: "Taxa ao mês", value: `${Number(selectedRate || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}% a.m.` },
+      { label: "Parcela estimada", value: formatCurrency(selectedInstallment) },
+      { label: "% Financiado", value: `${Number(simulationResult.percentualFinanciavel || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%` },
+      { label: "% da renda", value: `${Number(commitmentPercent || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%` },
+    ];
+
     return (
       <Modal
         isOpen={showProposalPreview}
@@ -415,107 +498,176 @@ export const SimuladorPage: React.FC = () => {
         size="xl"
       >
         <div className="space-y-4">
-          {/* Proposal Content - Printable Area */}
-          <div id="proposal-print-area" className="rounded-xl bg-white p-5 text-slate-900 shadow-inner sm:p-6">
-            {/* Header */}
-            <div className="text-center border-b-2 border-blue-600 pb-4 mb-6">
-              <h1 className="text-2xl font-bold text-blue-600">FINQZ PRO</h1>
-              <h2 className="text-lg text-slate-600">Proposta Comercial</h2>
-              <p className="text-sm text-slate-500 mt-2">
-                Data: {new Date().toLocaleDateString('pt-BR')} | Código: {generatedProposalId}
-              </p>
-            </div>
-            
-            {/* Customer Data */}
-            <div className="mb-6">
-              <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Dados do Cliente</h3>
-              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                <div><span className="font-bold">Nome:</span> {customerData.name}</div>
-                <div><span className="font-bold">CPF/CNPJ:</span> {customerData.document}</div>
-                <div><span className="font-bold">Telefone:</span> {customerData.phone}</div>
-                <div><span className="font-bold">E-mail:</span> {customerData.email}</div>
-                <div><span className="font-bold">Cidade/UF:</span> {customerData.city}/{customerData.state}</div>
-              </div>
-            </div>
-            
-            {/* Simulation Type */}
-            <div className="mb-6">
-              <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Resumo da Simulação</h3>
-              <p className="text-lg font-medium">{SIMULATION_TYPE_LABELS[simulationResult.simulationType]}</p>
-            </div>
-            
-            {/* Credit Offer */}
-            {creditOffer && (
-              <div className="mb-6">
-                <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Crédito</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-600 mb-2">{creditOffer.providerName}</h4>
-                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                    <div><span className="font-bold">Produto:</span> {creditOffer.productName}</div>
-                    <div><span className="font-bold">Subproduto:</span> {creditOffer.subproductName}</div>
-                    <div><span className="font-bold">Modalidade:</span> {creditOffer.modalityLabel}</div>
-                    <div><span className="font-bold">Valor Solicitado:</span> R$ {creditData.desiredAmount.toLocaleString()}</div>
-                    <div><span className="font-bold">Valor Liberado:</span> R$ {creditOffer.approvedAmount.toLocaleString()}</div>
-                    <div><span className="font-bold">Prazo:</span> {creditOffer.term} meses</div>
-                    <div><span className="font-bold">Taxa:</span> {creditOffer.monthlyRate}% a.m.</div>
-                    <div><span className="font-bold">CET:</span> {creditOffer.cetRate}%</div>
-                  </div>
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-inner">
+            <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 p-2">
+                  <img src={finqzLogoBlue} alt="FINQZ PRO" className="h-full w-full object-contain" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">FINQZ PRO</p>
+                  <h3 className="text-xl font-semibold text-slate-900">Proposta Comercial</h3>
+                  <p className="text-sm text-slate-500">Documento institucional pronto para WhatsApp, e-mail e assinatura eletrônica.</p>
                 </div>
               </div>
-            )}
-            
-            {/* Energy Offer */}
-            {energyOffer && (
-              <div className="mb-6">
-                <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Energia</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                    <div><span className="font-bold">Comercializadora:</span> {energyOffer.providerName}</div>
-                    <div><span className="font-bold">Tipo:</span> {ENERGY_TYPE_LABELS[energyOffer.energyType]}</div>
-                    <div><span className="font-bold">Distribuidora:</span> {energyData.distributor || 'Não informada'}</div>
-                    <div><span className="font-bold">Consumo Médio:</span> {energyOffer.consumptionRange} kWh</div>
-                    <div><span className="font-bold">Economia:</span> {energyOffer.savingsPercent}%</div>
-                    <div><span className="font-bold">Economia Mensal:</span> R$ {energyOffer.estimatedMonthlySavings.toLocaleString()}</div>
-                    <div><span className="font-bold">Economia Anual:</span> R$ {(energyOffer.estimatedMonthlySavings * 12).toLocaleString()}</div>
+              <button
+                type="button"
+                onClick={() => setShowProposalPreview(false)}
+                className="rounded-xl border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[78vh] overflow-y-auto px-5 py-5 sm:px-6">
+              <div id="proposal-print-area" className="space-y-4 text-slate-900">
+                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Cabeçalho institucional</p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <h4 className="text-lg font-semibold text-slate-900">Proposta Comercial</h4>
+                        <p className="text-sm text-slate-500">Documento corporativo para envio ao cliente.</p>
+                      </div>
+                      <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-3">
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Código</span>
+                          <span className="font-medium text-slate-900">{generatedProposalId || "-"}</span>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Emissão</span>
+                          <span className="font-medium text-slate-900">{issueDate.toLocaleString("pt-BR")}</span>
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                          <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Validade</span>
+                          <span className="font-medium text-slate-900">{validityDate.toLocaleDateString("pt-BR")}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+
+                  <div className="grid gap-4 p-4">
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Identificação</p>
+                      <div className="mt-3 space-y-2">
+                        {identificationRows.map((row) => (
+                          <div key={row.label} className="flex items-start justify-between gap-4 border-b border-slate-200/70 py-2 last:border-b-0">
+                            <span className="text-sm font-medium text-slate-600">{row.label}</span>
+                            <span className="max-w-[60%] text-right text-sm font-semibold text-slate-900">{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resumo da Operação</p>
+                      <div className="mt-3 space-y-2">
+                        {summaryRows.map((row) => (
+                          <div key={row.label} className="flex items-start justify-between gap-4 border-b border-slate-200/70 py-2 last:border-b-0">
+                            <span className="text-sm font-medium text-slate-600">{row.label}</span>
+                            <span className="max-w-[60%] text-right text-sm font-semibold text-slate-900">{row.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    {showAssetSection && (
+                      <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Dados do Bem</p>
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-700">
+                          Dados do veículo consultados no fluxo operacional do simulador.
+                        </div>
+                      </section>
+                    )}
+
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Documentos obrigatórios</p>
+                      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                          <p className="text-sm font-semibold text-slate-900">Cliente</p>
+                          <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                            <li>☐ Documento de identificação com foto</li>
+                            <li>☐ CPF</li>
+                            <li>☐ CNH</li>
+                            <li>☐ Comprovante de residência</li>
+                            <li>☐ Comprovante de renda</li>
+                          </ul>
+                        </div>
+                        {showAssetSection && (
+                          <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <p className="text-sm font-semibold text-slate-900">Veículo</p>
+                            <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                              <li>☐ CRLV</li>
+                              <li>☐ DUT/ATPVe, quando aplicável</li>
+                              <li>☐ Fotos do veículo</li>
+                              <li>☐ Consulta de gravame</li>
+                              <li>☐ Laudo ou vistoria, quando aplicável</li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Caráter da Proposta</p>
+                      <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                        <p>Esta proposta comercial possui caráter preliminar e não vinculante, sendo elaborada com base nas informações fornecidas pelo cliente e nas condições disponíveis no momento da simulação.</p>
+                        <p>A efetivação da operação está condicionada à análise cadastral, documental, de crédito e de conformidade, bem como à aprovação final da instituição financeira responsável pela concessão do crédito.</p>
+                        <p>As condições apresentadas, incluindo valores, taxas, prazos e demais parâmetros da operação, poderão sofrer alterações em razão do resultado da análise de crédito, das políticas da instituição financeira e das condições vigentes na data da contratação.</p>
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Privacidade e Proteção de Dados</p>
+                      <div className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                        <p>A FINQZ PRO trata os dados pessoais de seus clientes em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 - LGPD).</p>
+                        <p>As informações fornecidas serão utilizadas exclusivamente para análise da operação solicitada, cumprimento de obrigações legais e execução dos serviços contratados.</p>
+                        <p>Os dados poderão ser compartilhados apenas com instituições financeiras e parceiros operacionais estritamente necessários para análise e processamento da proposta, sempre observando a legislação vigente.</p>
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Declaração do Cliente</p>
+                      <p className="mt-3 text-sm leading-6 text-slate-700">
+                        Ao prosseguir com esta proposta, o cliente declara que as informações fornecidas são verdadeiras e autoriza sua utilização para fins de análise da operação de crédito, nos termos da legislação aplicável.
+                      </p>
+                    </section>
+
+                    <section className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assinaturas</p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4">
+                          <p className="text-sm font-semibold text-slate-900">Cliente</p>
+                          <div className="mt-8 border-t border-slate-200 pt-2 text-sm text-slate-500">Assinatura</div>
+                        </div>
+                        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4">
+                          <p className="text-sm font-semibold text-slate-900">FINQZ PRO</p>
+                          <div className="mt-8 border-t border-slate-200 pt-2 text-sm text-slate-500">Responsável institucional</div>
+                        </div>
+                      </div>
+                    </section>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-950 px-4 py-3 text-xs text-slate-200">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <p>Documento gerado automaticamente pelo FINQZ PRO.</p>
+                        <p>Código da proposta: {generatedProposalId || "-"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
               </div>
-            )}
-            
-            {/* Total Benefit */}
-            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 p-4 rounded-lg text-center mb-6">
-              <p className="text-slate-600">Benefício Estimado ao Cliente</p>
-              <p className="text-2xl font-bold text-green-600">R$ {totalBenefit.toLocaleString()}</p>
             </div>
-            
-            {/* Next Steps */}
-            <div className="mb-6">
-              <h3 className="text-blue-600 font-bold border-b border-[#1f2937] pb-2 mb-3">Próximos Passos</h3>
-              <ol className="list-decimal list-inside text-sm text-slate-300">
-                <li>Confirmação dos dados cadastrais</li>
-                <li>Análise de crédito (para operações de crédito)</li>
-                <li>Assinatura do contrato</li>
-                <li>Liberação do recurso ou ativação do serviço de energia</li>
-              </ol>
-            </div>
-            
-            {/* Footer */}
-            <div className="text-xs text-slate-500 text-center border-t pt-4">
-              <p className="disclaimer inline-block mb-2">
-                Proposta sujeita à análise cadastral, crédito, disponibilidade comercial e validação documental.
-              </p>
-              <p>Valores estimados podem variar conforme aprovação e condições vigentes.</p>
-            </div>
+
           </div>
-          
+
           {/* Modal Actions */}
           <div className="flex flex-col-reverse gap-3 border-t border-slate-700/60 pt-4 sm:flex-row">
             <Button variant="outline" onClick={() => setShowProposalPreview(false)} className="flex-1">
               Fechar
             </Button>
-            <Button variant="primary" onClick={handlePrintProposal} className="flex-1">
+            <Button variant="primary" onClick={handleDownloadProposalPdf} className="flex-1">
               <FileText className="w-4 h-4 mr-2" />
-              Imprimir / Salvar PDF
+              Baixar PDF
             </Button>
           </div>
         </div>

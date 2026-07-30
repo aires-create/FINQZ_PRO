@@ -1,11 +1,11 @@
 // FINQZ PRO - Campanhas Page
 import React, { useEffect, useState } from "react";
 import { Plus, Search, Play, Pause, Trash2, X, Send, Clock, CheckCircle, XCircle, AlertCircle, Eye, BarChart3 } from "lucide-react";
-import api from "../api/client";
+import { apiFetch } from "../api/http";
+import { clientesApi } from "../api/modules/clientes.api";
 import useAppStore from "../store";
 import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EmptyState, LoadingState, Modal, TextArea } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import { USE_MOCKS } from "../config/environment";
 
 // Tipos
 interface Campanha {
@@ -36,13 +36,6 @@ interface CampaignStats {
   deliveryRate: number;
 }
 
-// Seed inicial para modo mock
-const initialCampanhasSeed: Campanha[] = [
-  { id: 1, nome: "Boas-vindas 2024", descricao: "Mensagem de boas-vindas para novos clientes", tipo: "whatsapp", status: "completed", conteudo: "Olá {{nome}}! Seja bem-vindo(a) à FinQz Pro!", totalEnvios: 150, enviosSucesso: 145, enviosFalha: 5, createdAt: Date.now() - 86400000 * 7, updatedAt: Date.now() - 86400000 * 5 },
-  { id: 2, nome: "Promoção Dia do Cliente", descricao: "Desconto especial para clientes ativos", tipo: "whatsapp", status: "running", conteudo: "Olá {{nome}}! Você ganhou 20% de desconto!", totalEnvios: 500, enviosSucesso: 320, enviosFalha: 10, createdAt: Date.now() - 86400000 * 2, updatedAt: Date.now() },
-  { id: 3, nome: "Lembrete de Renovação", descricao: "Aviso de contrato próximo do vencimento", tipo: "email", status: "draft", conteudo: "Olá {{nome}}, seu contrato vence em 30 dias.", totalEnvios: 0, enviosSucesso: 0, enviosFalha: 0, createdAt: Date.now() - 86400000, updatedAt: Date.now() },
-];
-
 export default function Campanhas() {
   const { tenantId } = useAppStore();
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
@@ -71,27 +64,19 @@ export default function Campanhas() {
   // Carregar campanhas
   useEffect(() => {
     loadCampanhas();
-    if (USE_MOCKS) {
-      loadClientesMock();
-    } else {
-      loadClientes();
-    }
+    loadClientes();
   }, [tenantId]);
 
   const loadCampanhas = async () => {
     try {
       setLoading(true);
-      if (USE_MOCKS) {
-        const saved = localStorage.getItem('finqz_pro_campanhas');
-        const parsed = saved ? JSON.parse(saved) : null;
-        setCampanhas(parsed || initialCampanhasSeed);
-      } else {
-        const response = await api.get("/api/campanhas");
-        setCampanhas(response.data.campanhas || []);
-      }
+      const data = await apiFetch<{ campanhas?: Campanha[] }>("/api/campanhas", {
+        preserveApiPrefix: true,
+      });
+      setCampanhas(data.campanhas || []);
     } catch (error) {
       console.error("Erro ao carregar campanhas:", error);
-      setCampanhas(initialCampanhasSeed);
+      setCampanhas([]);
     } finally {
       setLoading(false);
     }
@@ -99,25 +84,11 @@ export default function Campanhas() {
 
   const loadClientes = async () => {
     try {
-      // TODO(operational-migration): manter consumo no namespace CRM oficial enquanto campanhas segue em legado.
-      const response = await api.get("/crm/clientes");
-      setClientes(response.data.clientes || []);
+      const clientesData = await clientesApi.getAll();
+      setClientes(Array.isArray(clientesData) ? clientesData : []);
     } catch (error) {
       console.error("Erro ao carregar clientes:", error);
     }
-  };
-
-  const loadClientesMock = () => {
-    setClientes([
-      { id: 1, nome: "João Silva", celular: "11999999999" },
-      { id: 2, nome: "Maria Santos", celular: "11988888888" },
-      { id: 3, nome: "Pedro Costa", celular: "11977777777" },
-    ]);
-  };
-
-  const saveCampanhas = (data: Campanha[]) => {
-    localStorage.setItem('finqz_pro_campanhas', JSON.stringify(data));
-    setCampanhas(data);
   };
 
   // Criar campanha
@@ -128,22 +99,12 @@ export default function Campanhas() {
         scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).getTime() : null,
       };
 
-      if (USE_MOCKS) {
-        const newCampanha: Campanha = {
-          id: Date.now(),
-          ...payload,
-          status: 'draft',
-          totalEnvios: formData.contatos.length,
-          enviosSucesso: 0,
-          enviosFalha: 0,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        saveCampanhas([newCampanha, ...campanhas]);
-      } else {
-        await api.post("/api/campanhas", payload);
-        await loadCampanhas();
-      }
+      await apiFetch("/api/campanhas", {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      await loadCampanhas();
       setShowModal(false);
       resetForm();
     } catch (error) {
@@ -154,26 +115,12 @@ export default function Campanhas() {
   // Executar campanha
   const handleExecutar = async (campanha: Campanha) => {
     try {
-      if (USE_MOCKS) {
-        // Simula execução
-        const updated = campanhas.map(c => {
-          if (c.id === campanha.id) {
-            return {
-              ...c,
-              status: 'running' as const,
-              enviosSucesso: Math.floor((c.totalEnvios || 0) * 0.9),
-              enviosFalha: Math.floor((c.totalEnvios || 0) * 0.1),
-              startedAt: Date.now(),
-              completedAt: Date.now(),
-            };
-          }
-          return c;
-        });
-        saveCampanhas(updated);
-      } else {
-        await api.post(`/api/campanhas/${campanha.id}/executar`, {});
-        await loadCampanhas();
-      }
+      await apiFetch(`/api/campanhas/${campanha.id}/executar`, {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      await loadCampanhas();
     } catch (error) {
       console.error("Erro ao executar campanha:", error);
     }
@@ -184,12 +131,11 @@ export default function Campanhas() {
     if (!confirm("Tem certeza que deseja excluir esta campanha?")) return;
     
     try {
-      if (USE_MOCKS) {
-        saveCampanhas(campanhas.filter(c => c.id !== id));
-      } else {
-        await api.delete(`/api/campanhas/${id}`);
-        await loadCampanhas();
-      }
+      await apiFetch(`/api/campanhas/${id}`, {
+        preserveApiPrefix: true,
+        method: "DELETE",
+      });
+      await loadCampanhas();
     } catch (error) {
       console.error("Erro ao deletar campanha:", error);
     }
@@ -199,24 +145,14 @@ export default function Campanhas() {
   const handleViewStats = async (campanha: Campanha) => {
     setSelectedCampanha(campanha);
     try {
-      if (USE_MOCKS) {
-        setStats({
-          total: campanha.totalEnvios || 0,
-          pending: 0,
-          sending: 0,
-          sent: campanha.enviosSucesso || 0,
-          delivered: Math.floor((campanha.enviosSucesso || 0) * 0.7),
-          failed: campanha.enviosFalha || 0,
-          successRate: campanha.totalEnvios ? ((campanha.enviosSucesso || 0) / campanha.totalEnvios) * 100 : 0,
-          deliveryRate: campanha.totalEnvios ? ((campanha.enviosSucesso || 0) * 0.7 / campanha.totalEnvios) * 100 : 0,
-        });
-      } else {
-        const response = await api.get(`/api/campanhas/${campanha.id}/stats`);
-        setStats(response.data);
-      }
+      const data = await apiFetch<CampaignStats>(`/api/campanhas/${campanha.id}/stats`, {
+        preserveApiPrefix: true,
+      });
+      setStats(data);
       setShowStatsModal(true);
     } catch (error) {
       console.error("Erro ao carregar estatísticas:", error);
+      setStats(null);
     }
   };
 

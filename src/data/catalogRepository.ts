@@ -18,7 +18,6 @@ import {
   getProductById,
   getProductByCode,
   getSubproductById,
-  getPipelineByProductId,
   getModalityLabel
 } from './creditPfCatalog';
 
@@ -349,39 +348,18 @@ const normalizePipelineSettingsRecord = (value: unknown): Record<string, Pipelin
 };
 
 /**
- * Carrega configurações de pipeline do localStorage
- * Com fallback seguro para defaultPipelineStages
+ * Carrega configurações de pipeline da fonte canônica padrão.
  */
 export const loadPipelineSettings = (): Record<string, PipelineSettings> => {
-  try {
-    const stored = localStorage.getItem(PIPELINE_SETTINGS_KEY);
-    if (!stored) {
-      return getDefaultPipelineSettings();
-    }
-    const parsed: unknown = JSON.parse(stored);
-    const normalized = normalizePipelineSettingsRecord(parsed);
-    if (!normalized) {
-      console.warn('[pipeline-settings] localStorage corrompido, usando padrão');
-      localStorage.removeItem(PIPELINE_SETTINGS_KEY);
-      return getDefaultPipelineSettings();
-    }
-    return normalized;
-  } catch (error) {
-    console.error('[pipeline-settings] Erro ao carregar, usando padrão:', error);
-    return getDefaultPipelineSettings();
-  }
+  void PIPELINE_SETTINGS_KEY;
+  return getDefaultPipelineSettings();
 };
 
 /**
- * Salva configurações de pipeline no localStorage
+ * Salva configurações de pipeline na implementação canônica.
  */
 export const savePipelineSettings = (settings: Record<string, PipelineSettings>): void => {
-  try {
-    const normalized = normalizePipelineSettingsRecord(settings) || getDefaultPipelineSettings();
-    localStorage.setItem(PIPELINE_SETTINGS_KEY, JSON.stringify(normalized));
-  } catch (error) {
-    console.error('[pipeline-settings] Erro ao salvar:', error);
-  }
+  void settings;
 };
 
 /**
@@ -420,8 +398,7 @@ export const getDefaultPipelineSettings = (): Record<string, PipelineSettings> =
 };
 
 /**
- * Obtém as etapas de um pipeline específico
- * Primeiro tenta do localStorage, depois usa padrão
+ * Obtém as etapas de um pipeline específico.
  */
 export const getPipelineStages = (pipelineId: string): string[] => {
   const settings = loadPipelineSettings();
@@ -487,6 +464,5 @@ export {
   getProductById,
   getProductByCode,
   getSubproductById,
-  getPipelineByProductId,
   getModalityLabel
 };

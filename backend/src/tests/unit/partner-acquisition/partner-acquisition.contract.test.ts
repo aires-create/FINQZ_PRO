@@ -102,7 +102,6 @@ describe('partner-acquisition.contract', () => {
     const lead = {
       tenantId: 'tenant-1',
       leadId: 'lead-1',
-      leadCode: 'lead-code-1',
       fullName: 'Parceiro Exemplo',
       email: 'parceiro@example.com',
       phone: '+5511999999999',
@@ -128,7 +127,6 @@ describe('partner-acquisition.contract', () => {
     const prospect = {
       tenantId: 'tenant-1',
       prospectId: 'prospect-1',
-      prospectCode: 'prospect-code-1',
       leadId: lead.leadId,
       fullName: lead.fullName,
       email: lead.email,

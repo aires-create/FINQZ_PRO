@@ -13,7 +13,7 @@ const proposal: IntegrationProposal = {
   status: 'approved',
   amount: 1500,
   createdAt: '2026-05-21T00:00:00.000Z',
-  providerKey: 'nova-promotora',
+  providerKey: 'sos-bolso',
   rawStatus: 'Aprovada',
 };
 
@@ -32,13 +32,13 @@ describe('ListIntegrationProviderProposalsUseCase', () => {
   it('returns normalized proposals from a provider capability', async () => {
     const useCase = new ListIntegrationProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider({
+        'sos-bolso': createProvider({
           listProposals: async () => [proposal],
         }),
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).resolves.toEqual([
+    await expect(useCase.execute('sos-bolso')).resolves.toEqual([
       proposal,
     ]);
   });
@@ -56,11 +56,11 @@ describe('ListIntegrationProviderProposalsUseCase', () => {
   it('throws ProviderCapabilityNotSupportedError when provider cannot list proposals', async () => {
     const useCase = new ListIntegrationProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider(),
+        'sos-bolso': createProvider(),
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).rejects.toThrow(
+    await expect(useCase.execute('sos-bolso')).rejects.toThrow(
       ProviderCapabilityNotSupportedError,
     );
   });
@@ -68,7 +68,7 @@ describe('ListIntegrationProviderProposalsUseCase', () => {
   it('normalizes unexpected provider failures as ProviderConnectionError', async () => {
     const useCase = new ListIntegrationProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider({
+        'sos-bolso': createProvider({
           listProposals: async () => {
             throw new Error('raw token=secret body={sensitive}');
           },
@@ -76,7 +76,7 @@ describe('ListIntegrationProviderProposalsUseCase', () => {
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).rejects.toThrow(
+    await expect(useCase.execute('sos-bolso')).rejects.toThrow(
       ProviderConnectionError,
     );
   });

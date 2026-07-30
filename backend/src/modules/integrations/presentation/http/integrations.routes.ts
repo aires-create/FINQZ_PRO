@@ -143,6 +143,18 @@ export const createIntegrationsRoutes = (
       },
       integrationsController.getProviderRuntimeDiagnostics,
     );
+
+    app.get(
+      '/operations/console',
+      {
+        preHandler: [
+          authenticate,
+          tenantContextMiddleware,
+          requirePermissions('tenant:read'),
+        ],
+      },
+      integrationsController.getProviderOperationsConsole,
+    );
   };
 };
 

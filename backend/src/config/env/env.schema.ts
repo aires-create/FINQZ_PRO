@@ -6,6 +6,12 @@ export const nodeEnvironments = [
   'production',
 ] as const;
 
+export const appEnvironments = [
+  'local',
+  'homologation',
+  'production',
+] as const;
+
 export const requiredEnvKeys = [
   'DATABASE_URL',
   'JWT_SECRET',
@@ -64,8 +70,15 @@ export const nodeEnvSchema = z.preprocess(
   z.enum(nodeEnvironments).default('development'),
 );
 
+export const appEnvSchema = z.preprocess(
+  emptyStringToUndefined,
+  z.enum(appEnvironments).default('local'),
+);
+
 export const rawEnvSchema = z.object({
   NODE_ENV: nodeEnvSchema,
+  APP_ENV: appEnvSchema,
+  EXTERNAL_EFFECTS_ENABLED: optionalEnvString,
   PORT: optionalEnvString,
   HOST: optionalEnvString,
   DATABASE_URL: optionalEnvString,
@@ -87,11 +100,6 @@ export const rawEnvSchema = z.object({
   SWAGGER_VERSION: optionalEnvString,
   SWAGGER_DESCRIPTION: optionalEnvString,
   SWAGGER_PATH: optionalEnvString,
-  NOVA_PROMOTORA_BASE_URL: optionalEnvString,
-  NOVA_PROMOTORA_API_KEY: optionalEnvString,
-  NOVA_PROMOTORA_HEALTH_PATH: optionalEnvString,
-  NOVA_PROMOTORA_PROPOSALS_PATH: optionalEnvString,
-  NOVA_PROMOTORA_TIMEOUT_MS: optionalEnvString,
   SOS_BOLSO_ENABLED: optionalEnvString,
   SOS_BOLSO_BASE_URL: optionalEnvString,
   SOS_BOLSO_TOKEN_PATH: optionalEnvString,
@@ -109,4 +117,6 @@ export const rawEnvSchema = z.object({
   HANDMAIS_API_KEY: optionalEnvString,
   HANDMAIS_TIMEOUT: optionalEnvString,
   HANDMAIS_ENV: optionalEnvString,
+  HANDMAIS_LOGIN: optionalEnvString,
+  HANDMAIS_PASSWORD: optionalEnvString,
 });

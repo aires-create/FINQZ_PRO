@@ -71,7 +71,7 @@ Lifecycle alvo sugerido para o adapter canônico:
 | rejeitado | `REJECTED` |
 
 Nota:
-- Mapas finais de status devem incluir `confidence` e `rawStatus` (mesma prática adotada em Nova Promotora).
+- Mapas finais de status devem incluir `confidence` e `rawStatus`.
 
 ## E. Webhook Matrix
 Eventos esperados para governança:
@@ -179,7 +179,7 @@ Métricas mínimas:
    - SLO, alertas, auditoria e runbook operacional.
 
 ## Comparação com Providers Atuais (FINQZ)
-- `nova-promotora`:
+- `sos-bolso`:
   - já opera esteira de propostas e mapping canônico; referência para status mapper e payload diagnostics.
 - `sos-bolso`:
   - referência para margem/auth flow e uso de runtime governance no HTTP client.

@@ -1,6 +1,6 @@
 // FINQZ PRO - Usuários Page
 import React, { useState, useMemo, useCallback } from "react";
-import { Plus, Search, Edit, Trash2, X, User, Shield, ToggleLeft, ToggleRight, UserCheck, UserX, Eye, Globe, Building2, Store, UserCircle, Lock, Unlock } from "lucide-react";
+import { Plus, Search, Edit, X, User, Shield, ToggleLeft, ToggleRight, UserCheck, UserX, Eye, Globe, Building2, Store, UserCircle, Lock, Unlock } from "lucide-react";
 import useAppStore from "../store";
 import { useEffect } from "react";
 import { usuariosApi } from "../api/modules/usuarios.api";
@@ -78,9 +78,6 @@ const ScopeIcon: React.FC<{ scope: string }> = ({ scope }) => {
 
 export const UsuariosPage: React.FC = () => {
  const {
-  updateUsuario,
-  deleteUsuario,
-  toggleUsuarioStatus,
   theme,
   parceiros
 } = useAppStore();
@@ -150,43 +147,33 @@ export const UsuariosPage: React.FC = () => {
   };
 
   // Função para bloquear usuário
-  const handleBlockUser = (id: string) => {
+  const handleBlockUser = async (id: string) => {
     if (isLastAdmin(id)) {
       alert("Não é possível bloquear o último administrador ativo.");
       return;
     }
     if (confirm("Tem certeza que deseja bloquear este usuário?")) {
-      updateUsuario(id, {
-        status: "BLOQUEADO",
-        locked_until: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 dias
-        updated_at: Date.now(),
-      });
+      try {
+        await usuariosApi.update(id, { isActive: false });
+        await loadUsuarios();
+      } catch (error) {
+        console.error("[USUARIOS] Failed to block user", error);
+      }
     }
   };
 
   // Função para desbloquear usuário
-  const handleUnlockUser = (id: string) => {
-    updateUsuario(id, {
-      status: "ATIVO",
-      failed_login_attempts: 0,
-      locked_until: undefined,
-      updated_at: Date.now(),
-    });
-  };
-
-  // Função para excluir usuário
-  const handleDelete = (id: string) => {
-    if (isLastAdmin(id)) {
-      alert("Não é possível excluir o último administrador ativo.");
-      return;
-    }
-    if (confirm("Tem certeza que deseja excluir este usuário?")) {
-      deleteUsuario(id);
+  const handleUnlockUser = async (id: string) => {
+    try {
+      await usuariosApi.update(id, { isActive: true });
+      await loadUsuarios();
+    } catch (error) {
+      console.error("[USUARIOS] Failed to unlock user", error);
     }
   };
 
   // Função para alternar status (ativo/inativo)
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
     const usuario = Array.isArray(usuarios) ? usuarios.find(u => u.id === id) : null;
     if (!usuario) return;
     
@@ -196,7 +183,12 @@ export const UsuariosPage: React.FC = () => {
     }
     
     const newStatus = usuario.status === "ATIVO" ? "INATIVO" : "ATIVO";
-    updateUsuario(id, { status: newStatus, updated_at: Date.now() });
+    try {
+      await usuariosApi.update(id, { isActive: newStatus === "ATIVO" });
+      await loadUsuarios();
+    } catch (error) {
+      console.error("[USUARIOS] Failed to toggle user status", error);
+    }
   };
 
   // Filtrar usuários
@@ -273,6 +265,12 @@ export const UsuariosPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nextPassword = formData.senha.trim();
+    const closeModalAfterSuccess = () => {
+      setShowModal(false);
+      setEditingUsuario(null);
+      resetForm();
+    };
 
     if (editingUsuario) {
       // Verificar se está tentando bloquear o último admin
@@ -286,24 +284,28 @@ export const UsuariosPage: React.FC = () => {
           editingUsuario.id,
           mapLegacyUsuarioFormToUpdatePayload(formData),
         );
+
+        if (nextPassword) {
+          await usuariosApi.resetPassword(editingUsuario.id, nextPassword);
+        }
+
         await loadUsuarios();
+        closeModalAfterSuccess();
       } catch (error) {
         console.error("[USUARIOS] Failed to update user", error);
         return;
       }
-    } else {
-      try {
-        await usuariosApi.create(mapLegacyUsuarioFormToCreatePayload(formData));
-        await loadUsuarios();
-      } catch (error) {
-        console.error("[USUARIOS] Failed to create user", error);
-        return;
-      }
+
+      return;
     }
 
-    setShowModal(false);
-    setEditingUsuario(null);
-    resetForm();
+    try {
+      await usuariosApi.create(mapLegacyUsuarioFormToCreatePayload(formData));
+      await loadUsuarios();
+      closeModalAfterSuccess();
+    } catch (error) {
+      console.error("[USUARIOS] Failed to create user", error);
+    }
   };
 
   const handleEdit = (usuario: any) => {
@@ -612,17 +614,6 @@ export const UsuariosPage: React.FC = () => {
                 >
                   <Edit size={16} />
                 </button>
-                {/* Botão Excluir */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(row.id);
-                  }}
-                  className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                  title="Excluir usuário"
-                >
-                  <Trash2 size={16} />
-                </button>
               </div>
             ),
             width: "140px",
@@ -643,6 +634,7 @@ export const UsuariosPage: React.FC = () => {
           onClose={() => setShowModal(false)}
           title={editingUsuario ? "Editar Usuário" : "Novo Usuário"}
           size="md"
+          closeOnOverlayClick={false}
         >
           <form onSubmit={handleSubmit} className="space-y-6">
             <Input
@@ -743,7 +735,7 @@ export const UsuariosPage: React.FC = () => {
               value={formData.access_code}
               readOnly={true}
               placeholder={editingUsuario ? "" : "Gerado automaticamente"}
-              helperText={editingUsuario ? "Código fixo após criação" : "Gerado automaticamente ao criar"}
+              helperText="Código visual temporário. Não é enviado à API oficial."
             />
 
             {/* Campo Status - apenas em modo edição */}

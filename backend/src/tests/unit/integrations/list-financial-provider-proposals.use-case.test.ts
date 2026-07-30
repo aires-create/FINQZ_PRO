@@ -8,7 +8,7 @@ import { ProviderEngine } from '../../../modules/integrations/application/provid
 
 const financialProposal: FinancialProposal = {
   proposalId: 'proposal-1',
-  providerKey: 'nova-promotora',
+  providerKey: 'sos-bolso',
   externalProposalId: 'EXT-1',
   customerDocument: '12345678900',
   bank: 'BANCO PAN',
@@ -31,13 +31,13 @@ describe('ListFinancialProviderProposalsUseCase', () => {
   it('returns financial proposals when provider supports FinancialProposalReader', async () => {
     const useCase = new ListFinancialProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider({
+        'sos-bolso': createProvider({
           listFinancialProposals: async () => [financialProposal],
         }),
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).resolves.toEqual([
+    await expect(useCase.execute('sos-bolso')).resolves.toEqual([
       financialProposal,
     ]);
   });
@@ -45,11 +45,11 @@ describe('ListFinancialProviderProposalsUseCase', () => {
   it('throws ProviderCapabilityNotSupportedError when provider does not support FinancialProposalReader', async () => {
     const useCase = new ListFinancialProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider(),
+        'sos-bolso': createProvider(),
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).rejects.toThrow(
+    await expect(useCase.execute('sos-bolso')).rejects.toThrow(
       ProviderCapabilityNotSupportedError,
     );
   });
@@ -57,10 +57,10 @@ describe('ListFinancialProviderProposalsUseCase', () => {
   it('preserves IntegrationError from provider', async () => {
     const useCase = new ListFinancialProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider({
+        'sos-bolso': createProvider({
           listFinancialProposals: async () => {
             throw new ProviderCapabilityNotSupportedError(
-              'nova-promotora',
+              'sos-bolso',
               'listFinancialProposals',
             );
           },
@@ -68,7 +68,7 @@ describe('ListFinancialProviderProposalsUseCase', () => {
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).rejects.toBeInstanceOf(
+    await expect(useCase.execute('sos-bolso')).rejects.toBeInstanceOf(
       IntegrationError,
     );
   });
@@ -76,7 +76,7 @@ describe('ListFinancialProviderProposalsUseCase', () => {
   it('maps generic errors to ProviderConnectionError', async () => {
     const useCase = new ListFinancialProviderProposalsUseCase(
       new ProviderEngine({
-        'nova-promotora': createProvider({
+        'sos-bolso': createProvider({
           listFinancialProposals: async () => {
             throw new Error('raw error');
           },
@@ -84,7 +84,7 @@ describe('ListFinancialProviderProposalsUseCase', () => {
       }),
     );
 
-    await expect(useCase.execute('nova-promotora')).rejects.toThrow(
+    await expect(useCase.execute('sos-bolso')).rejects.toThrow(
       ProviderConnectionError,
     );
   });

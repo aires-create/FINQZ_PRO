@@ -2,7 +2,15 @@
 // Owns base URL, headers, auth token injection and request correlation.
 
 import { API_BASE_URL, API_CONFIG } from "../config/environment";
-import { clearSession, canRefreshSession, getAccessToken, getRefreshToken, getSessionVersion, isSessionActive, storeSessionTokens } from "../auth/session";
+import {
+  canRefreshSession,
+  getAccessToken,
+  getRefreshToken,
+  getSessionVersion,
+  isSessionActive,
+  storeSessionTokens,
+} from "../auth/session";
+import { clearLocalAuthState } from "../auth/logout";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -17,6 +25,11 @@ export interface FinqzHttpResponse<T> {
   status: number;
   headers: Headers;
   requestId: string;
+}
+
+export interface RefreshSessionResult {
+  refreshed: boolean;
+  invalidated: boolean;
 }
 
 export class ApiException extends Error {
@@ -138,6 +151,10 @@ export const normalizeApiEndpoint = (endpoint: string, preserveApiPrefix = false
     return endpoint;
   }
 
+  if (/^\/api\/v\d+(?:\/|$)/i.test(endpoint)) {
+    return endpoint;
+  }
+
   if (endpoint.startsWith("/api/")) {
     return endpoint.replace(/^\/api/, "");
   }
@@ -219,12 +236,8 @@ const handleAuthError = (): void => {
     return;
   }
 
-  clearSession();
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("auth:error", {
-      detail: { message: "Sessao expirada" },
-    }));
-  }
+  clearLocalAuthState();
+  emitAuthError();
 };
 
 const parseErrorPayload = async (response: Response): Promise<Record<string, unknown>> => {
@@ -247,23 +260,46 @@ const parseJsonPayload = async <T>(response: Response): Promise<T | null> => {
 const canRetryAfterRefresh = (endpoint: string, options: FinqzRequestInit): boolean => {
   return Boolean(
     !options.skipAuthRefresh &&
-      !isAuthControlEndpoint(endpoint) &&
-      canRefreshSession()
+      canRefreshSession() &&
+      !isAuthControlEndpoint(endpoint)
   );
 };
 
-export const refreshSessionTokens = async (): Promise<boolean> => {
-  const sessionVersion = getSessionVersion();
-  const refreshToken = getRefreshToken();
-
-  if (!refreshToken || !canRefreshSession()) {
-    return false;
+const emitAuthError = (): void => {
+  if (typeof window === "undefined") {
+    return;
   }
 
-  const body = JSON.stringify({ refreshToken });
+  window.dispatchEvent(new CustomEvent("auth:error", {
+    detail: { message: "Sessao expirada" },
+  }));
+};
+
+const invalidateLocalSession = (emitError = true): void => {
+  clearLocalAuthState();
+
+  if (emitError) {
+    emitAuthError();
+  }
+};
+
+const shouldInvalidateRefreshFailure = (status: number): boolean => {
+  return status === 400 || status === 401 || status === 403;
+};
+
+let refreshSessionPromise: Promise<RefreshSessionResult> | null = null;
+
+const executeRefreshSessionTokens = async (): Promise<RefreshSessionResult> => {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken || !canRefreshSession()) {
+    return { refreshed: false, invalidated: false };
+  }
+
+  const sessionVersion = getSessionVersion();
   const requestId = generateRequestId();
   const headers = new Headers(API_CONFIG.DEFAULT_HEADERS);
   headers.set("X-Request-ID", requestId);
+  const body = JSON.stringify({ refreshToken });
 
   try {
     const response = await fetch(buildApiUrl("/api/v1/auth/refresh", { preserveApiPrefix: true }), {
@@ -273,22 +309,30 @@ export const refreshSessionTokens = async (): Promise<boolean> => {
       credentials: "include",
     });
 
-    if (!response.ok || sessionVersion !== getSessionVersion() || !isSessionActive()) {
-      return false;
+    if (!response.ok) {
+      if (sessionVersion !== getSessionVersion() || !isSessionActive()) {
+        return { refreshed: false, invalidated: true };
+      }
+
+      if (shouldInvalidateRefreshFailure(response.status)) {
+        invalidateLocalSession();
+        return { refreshed: false, invalidated: true };
+      }
+
+      return { refreshed: false, invalidated: false };
     }
 
     const payload = await parseJsonPayload<NativeRefreshResponse>(response);
     const accessToken = payload?.data?.accessToken;
     const nextRefreshToken = payload?.data?.refreshToken;
 
-    if (
-      !payload?.success ||
-      !accessToken ||
-      !nextRefreshToken ||
-      sessionVersion !== getSessionVersion() ||
-      !isSessionActive()
-    ) {
-      return false;
+    if (sessionVersion !== getSessionVersion() || !isSessionActive()) {
+      return { refreshed: false, invalidated: true };
+    }
+
+    if (!payload?.success || !accessToken || !nextRefreshToken) {
+      invalidateLocalSession();
+      return { refreshed: false, invalidated: true };
     }
 
     storeSessionTokens({
@@ -296,10 +340,22 @@ export const refreshSessionTokens = async (): Promise<boolean> => {
       refreshToken: nextRefreshToken,
     });
 
-    return true;
+    return { refreshed: true, invalidated: false };
   } catch {
-    return false;
+    return { refreshed: false, invalidated: false };
   }
+};
+
+export const refreshSessionTokens = async (): Promise<RefreshSessionResult> => {
+  if (refreshSessionPromise) {
+    return refreshSessionPromise;
+  }
+
+  refreshSessionPromise = executeRefreshSessionTokens().finally(() => {
+    refreshSessionPromise = null;
+  });
+
+  return refreshSessionPromise;
 };
 
 export async function httpRequest(
@@ -340,7 +396,16 @@ const sendApiRequest = async <T>(
     );
   }
 
-  const data = await response.json() as T;
+  if (response.status === 204) {
+    return {
+      data: undefined as T,
+      status: response.status,
+      headers: response.headers,
+      requestId,
+    };
+  }
+
+  const data = await parseJsonPayload<T>(response) as T;
   return {
     data,
     status: response.status,
@@ -363,7 +428,7 @@ export async function apiRequest<T>(
     ) {
       const refreshed = await refreshSessionTokens();
 
-      if (refreshed) {
+      if (refreshed.refreshed) {
         try {
           return await sendApiRequest<T>(endpoint, {
             ...options,
@@ -378,12 +443,15 @@ export async function apiRequest<T>(
         }
       }
 
-      handleAuthError();
+      if (!refreshed.invalidated) {
+        handleAuthError();
+      }
     } else if (
       error instanceof ApiException &&
       isAuthError(error.status) &&
       !options.skipAuthRefresh &&
-      !isAuthControlEndpoint(endpoint)
+      !isAuthControlEndpoint(endpoint) &&
+      isSessionActive()
     ) {
       handleAuthError();
     }

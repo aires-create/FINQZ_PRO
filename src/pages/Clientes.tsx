@@ -1,12 +1,12 @@
 // FINQZ PRO - Clientes Page
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, X, MessageCircle, Calendar, User, Building2, Clock, Shield, Upload } from "lucide-react";
-import api from "../api/client";
-import useAppStore from "../store";
+import { clientesApi } from "../api/modules/clientes.api";
+import { useLocation } from "react-router-dom";
 import type { Cliente } from "../types";
-import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard, ImportModal, ExportMenu } from "../components/ui";
+import { Button, Card as DSCard, Input, Select, Badge, StatusBadge, EntityAvatar, EmptyState, LoadingState, ErrorState, KpiCard, ImportModal, ExportMenu, SegmentedControl, Modal } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import { useTenantFilter } from "../hooks/useTenantFilter";
+import { fetchAddressByCEPWithStatus, formatCEP as formatCepMasked, isValidCEPFormat } from "../data/cepService";
 
 // Função utilitária para formatar código do cliente no padrão #C-0000
 const formatClientCode = (cliente: Cliente | undefined, index: number): string => {
@@ -14,8 +14,8 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
     return `#C-${String(index + 1).padStart(4, '0')}`;
   }
   
-  // Prioridade 1: código já existente
-  const raw = cliente?.codigo || cliente?.code || cliente?.id;
+  // Prioridade: código já existente, sem cair no id técnico
+  const raw = cliente?.codigo || cliente?.code || (cliente as any)?.customerCode;
   
   if (raw !== undefined && raw !== null) {
     const num = String(raw).replace(/\D/g, '');
@@ -29,18 +29,36 @@ const formatClientCode = (cliente: Cliente | undefined, index: number): string =
   return `#C-${String(fallback).padStart(4, '0')}`;
 };
 
+const formatClientCodeShort = (cliente: Cliente | undefined, index: number): string => {
+  const fullCode = formatClientCode(cliente, index);
+  const digits = fullCode.replace(/\D/g, "");
+
+  if (digits.length <= 4) {
+    return fullCode;
+  }
+
+  return `#C-${digits.slice(-4)}`;
+};
+
 export const ClientesPage: React.FC = () => {
-  const { clientes: storeClientes, setClientes } = useAppStore();
+  const location = useLocation();
   
   const [clientes, setClientesLocal] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [search, setSearch] = useState(() => new URLSearchParams(location.search).get("search") ?? "");
   // Lista apenas - sem Kanban
   const [showModal, setShowModal] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [tipoPessoa, setTipoPessoa] = useState<"CPF" | "CNPJ">("CPF");
-  const [cepLoading, setCepLoading] = useState(false);
+  const [tipoPessoa, setTipoPessoa] = useState<"" | "CPF" | "CNPJ">("");
+  const [cepError, setCepError] = useState<string | null>(null);
+  const tipoPessoaControlRef = useRef<HTMLDivElement | null>(null);
+  const cepLookupRequestRef = useRef(0);
+  const cepLookupLastResolvedRef = useRef("");
+  const loadClientesRequestRef = useRef(0);
+  const [cepLookupStatus, setCepLookupStatus] = useState<"idle" | "loading" | "found" | "not_found" | "error">("idle");
+  const [cepLookupMessage, setCepLookupMessage] = useState("");
   
   // Filtros avançados
   const [showFilters, setShowFilters] = useState(false);
@@ -53,6 +71,7 @@ export const ClientesPage: React.FC = () => {
   // Histórico de alterações
   const [showHistory, setShowHistory] = useState(false);
   const [historyCliente, setHistoryCliente] = useState<Cliente | null>(null);
+  const [deleteClienteTarget, setDeleteClienteTarget] = useState<Cliente | null>(null);
 
   // Import/Export
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -102,19 +121,57 @@ export const ClientesPage: React.FC = () => {
     doNotCallConsultedAt: "",
   });
 
+  const modalFieldClass =
+    "w-full h-9 rounded-xl border border-[#1f2937] bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#000dff] focus:outline-none focus:ring-2 focus:ring-[#000dff]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500";
+  const modalSelectClass = `${modalFieldClass} appearance-none pr-9`;
+  const modalTextareaClass =
+    "w-full rounded-xl border border-[#1f2937] bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition-colors focus:border-[#000dff] focus:outline-none focus:ring-2 focus:ring-[#000dff]/15 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 resize-none";
+  const modalCardClass = "rounded-xl border border-[#1f2937] bg-white/90 p-3 shadow-sm";
+  const modalSubtleCardClass = "rounded-xl border border-dashed border-[#1f2937] bg-white/60 p-3";
+  const modalSectionTitleClass = "text-sm font-medium text-slate-200 mb-2 flex items-center gap-2";
+
   useEffect(() => {
     loadClientes();
   }, [search]);
 
+  useEffect(() => {
+    const nextSearch = new URLSearchParams(location.search).get("search") ?? "";
+    setSearch((currentSearch) =>
+      currentSearch === nextSearch ? currentSearch : nextSearch,
+    );
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!showModal) return;
+
+    const focusTimer = window.setTimeout(() => {
+      tipoPessoaControlRef.current?.querySelector<HTMLButtonElement>('button[role="radio"]')?.focus();
+    }, 0);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        handleCloseModal();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [showModal]);
+
   const loadClientes = async () => {
+    const requestId = ++loadClientesRequestRef.current;
+
     try {
+      setLoadError(null);
       setLoading(true);
-      const response = await api.getClientes(search);
-      const clientesData = Array.isArray(response?.data)
-        ? response.data
-        : Array.isArray(response?.clientes)
-          ? response.clientes
-          : [];
+      const clientesData = await clientesApi.getAll({ search });
+      if (requestId !== loadClientesRequestRef.current) {
+        return;
+      }
 
       const normalizedClientes = clientesData.map((cliente: any) => {
         let parsedAddress: any = null;
@@ -128,17 +185,21 @@ export const ClientesPage: React.FC = () => {
           }
         }
 
-        return {
-          ...cliente,
-          nome:
-            cliente.nome ||
-            [cliente.firstName, cliente.lastName].filter(Boolean).join(' ') ||
+      return {
+        ...cliente,
+        nome:
+          cliente.nome ||
+          [cliente.firstName, cliente.lastName].filter(Boolean).join(' ') ||
             'Cliente sem nome',
           codigo: cliente.codigo || cliente.customerCode,
           cpf_cnpj: cliente.cpf_cnpj || cliente.cpf,
           telefone: cliente.telefone || cliente.phone,
           cidade: cliente.cidade || parsedAddress?.cidade || parsedAddress?.city,
           estado: cliente.estado || parsedAddress?.estado || parsedAddress?.state || parsedAddress?.uf,
+          tenant_id: cliente.tenant_id || cliente.tenantId,
+          owner_id: cliente.owner_id || cliente.ownerId,
+          franquia_id: cliente.franquia_id || cliente.franquiaId,
+          franqueado_id: cliente.franqueado_id || cliente.franqueadoId,
           created_at: cliente.created_at || cliente.createdAt,
           updated_at: cliente.updated_at || cliente.updatedAt,
           status:
@@ -151,13 +212,41 @@ export const ClientesPage: React.FC = () => {
       });
 
       setClientesLocal(normalizedClientes);
-      setClientes(normalizedClientes);
     } catch (error) {
+      if (requestId !== loadClientesRequestRef.current) {
+        return;
+      }
+
       console.error("Error loading clientes:", error);
+      setLoadError("Não foi possível carregar a lista de clientes a partir da API oficial.");
     } finally {
+      if (requestId !== loadClientesRequestRef.current) {
+        return;
+      }
+
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handleFocus = () => {
+      void loadClientes();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadClientes();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [search]);
 
   // Definições para importação/exportação
   const importColumns = [
@@ -254,7 +343,6 @@ export const ClientesPage: React.FC = () => {
 
     // Adicionar ao estado
     const updatedClientes = [...safeClientes, ...newClientes];
-    setClientes(updatedClientes as any);
     setClientesLocal(updatedClientes);
     
     alert(`${newClientes.length} cliente(s) importado(s) com sucesso!`);
@@ -270,12 +358,10 @@ export const ClientesPage: React.FC = () => {
   };
 
   // Função para filtrar clientes
-  // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
   const safeClientes = Array.isArray(clientes) ? clientes : [];
-  const tenantFilteredClientes = useTenantFilter(safeClientes);
   
   // Depois aplica os filtros de UI
-  const filteredClientes = tenantFilteredClientes.filter((cliente, index) => {
+  const filteredClientes = safeClientes.filter((cliente, index) => {
     const searchTerm = (search || '').trim().toLowerCase();
     if (searchTerm) {
       const digits = searchTerm.replace(/\D/g, "");
@@ -330,6 +416,9 @@ export const ClientesPage: React.FC = () => {
     
     return true;
   });
+
+  // Função segura para obter apenas números
+  const onlyNumbers = (value: any) => String(value || '').replace(/\D/g, '');
 
   // Função para validar CPF
   const validarCPF = (cpf: string): boolean => {
@@ -417,63 +506,119 @@ export const ClientesPage: React.FC = () => {
     }
   };
 
-  // Função para buscar endereço pelo CEP
-  const buscarEnderecoPorCEP = async (cep: string) => {
-    if (!cep || cep.replace(/\D/g, "").length !== 8) return;
-    
-    setCepLoading(true);
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, "")}/json/`);
-      const data = await response.json();
-      
-      if (!data.erro) {
-        setFormData({
-          ...formData,
-          rua: data.logradouro || "",
-          bairro: data.bairro || "",
-          cidade: data.localidade || "",
-          estado: data.uf || "",
-          complemento: data.complemento || "",
-        });
+  const duplicateCliente = useMemo(() => {
+    if (!tipoPessoa) return null;
+
+    const docNumbers = onlyNumbers(formData.cpf_cnpj || "");
+    const expectedLength = tipoPessoa === "CPF" ? 11 : 14;
+    if (docNumbers.length !== expectedLength) return null;
+    if (!validarDocumento(docNumbers, tipoPessoa)) return null;
+
+    return safeClientes.find((cliente) => {
+      if (editingCliente && String(cliente.id) === String(editingCliente.id)) {
+        return false;
       }
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
-    } finally {
-      setCepLoading(false);
+
+      const candidateDoc = onlyNumbers(cliente.cpf_cnpj || cliente.cpf || "");
+      if (candidateDoc.length !== expectedLength) return false;
+      return candidateDoc === docNumbers;
+    }) || null;
+  }, [safeClientes, formData.cpf_cnpj, tipoPessoa, editingCliente]);
+
+  const validateCEP = (cep: string) => {
+    const numbers = onlyNumbers(cep);
+    if (!numbers) {
+      setCepError(null);
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
+      return;
+    }
+
+    setCepError(numbers.length === 8 ? null : "CEP deve conter 8 dígitos");
+    if (numbers.length !== 8) {
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
     }
   };
 
-  // Funções de Consulta de Compliance
-  const handleConsultCredit = () => {
-    const doc = formData.cpf_cnpj?.replace(/\D/g, '');
-    if (!doc || doc.length < 11) {
-      alert('CPF/CNPJ inválido para consulta');
+  const lookupAddressByCEP = async (rawCep: string) => {
+    const cleanCEP = onlyNumbers(rawCep);
+
+    if (!cleanCEP) {
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
       return;
     }
-    
-    // Simulação de consulta (em produção, chamaria API)
-    const hasRestriction = Math.random() > 0.7; // 30% de chance de restrição
-    setFormData({
-      ...formData,
-      rdStatus: hasRestriction ? 'restricao' : 'sem_restricao',
-      rdConsultedAt: new Date().toISOString(),
-    });
+
+    if (!isValidCEPFormat(cleanCEP)) {
+      setCepError("CEP deve conter 8 dígitos");
+      setCepLookupStatus("idle");
+      setCepLookupMessage("");
+      return;
+    }
+
+    if (cepLookupLastResolvedRef.current === cleanCEP) {
+      return;
+    }
+
+    const requestId = ++cepLookupRequestRef.current;
+    setCepError(null);
+    setCepLookupStatus("loading");
+    setCepLookupMessage("Buscando endereço...");
+
+    const result = await fetchAddressByCEPWithStatus(cleanCEP);
+    if (requestId !== cepLookupRequestRef.current) return;
+
+    if (result.status === "found" && result.address) {
+      setFormData((prev) => ({
+        ...prev,
+        cep: onlyNumbers(result.address?.cep || cleanCEP),
+        rua: result.address?.street || prev.rua,
+        complemento: result.address?.complement || prev.complemento,
+        bairro: result.address?.neighborhood || prev.bairro,
+        cidade: result.address?.city || prev.cidade,
+        estado: result.address?.state || prev.estado,
+      }));
+      cepLookupLastResolvedRef.current = cleanCEP;
+      setCepLookupStatus("found");
+      setCepLookupMessage("Endereço localizado");
+      return;
+    }
+
+    if (result.status === "not_found") {
+      cepLookupLastResolvedRef.current = cleanCEP;
+      setCepLookupStatus("not_found");
+      setCepLookupMessage("CEP não encontrado");
+      return;
+    }
+
+    setCepLookupStatus("error");
+    setCepLookupMessage("Não foi possível consultar o CEP");
   };
 
-  const handleConsultDoNotCall = () => {
-    const phone = formData.celular || formData.telefone;
-    if (!phone || phone.length < 10) {
-      alert('Telefone/Celular inválido para consulta');
+  const handleFormKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (event.key !== "Enter") return;
+
+    const target = event.target as HTMLElement;
+    if (
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "BUTTON" ||
+      (target as HTMLInputElement).type === "submit"
+    ) {
       return;
     }
-    
-    // Simulação de consulta (em produção, chamaria API)
-    const isBlocked = Math.random() > 0.8; // 20% de chance de bloqueio
-    setFormData({
-      ...formData,
-      doNotCallStatus: isBlocked ? 'bloqueado' : 'liberado',
-      doNotCallConsultedAt: new Date().toISOString(),
-    });
+
+    const focusableElements = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])',
+      ),
+    ).filter((element) => element.offsetParent !== null);
+
+    const currentIndex = focusableElements.indexOf(target);
+    if (currentIndex === -1 || currentIndex >= focusableElements.length - 1) return;
+
+    event.preventDefault();
+    focusableElements[currentIndex + 1]?.focus();
   };
 
   // Renderizar status de compliance
@@ -517,12 +662,20 @@ export const ClientesPage: React.FC = () => {
       alert("Nome é obrigatório");
       return;
     }
+    if (!(formData?.email || '').trim()) {
+      alert("E-mail é obrigatório");
+      return;
+    }
     if (!(formData?.celular || '').trim()) {
       alert("Celular é obrigatório");
       return;
     }
     if (!(formData?.cpf_cnpj || '').trim()) {
       alert("CPF ou CNPJ é obrigatório");
+      return;
+    }
+    if (!tipoPessoa) {
+      alert("Selecione o tipo de pessoa");
       return;
     }
 
@@ -583,6 +736,13 @@ export const ClientesPage: React.FC = () => {
       const getClientId = (client: any) => client?.id || client?._id || client?.uuid || client?.clientId;
       
       try {
+        const normalizedStatus = formData?.status || 'ativo';
+        const statusPayload = {
+          isActive: normalizedStatus !== 'inativo',
+          doNotCallStatus:
+            formData.doNotCallStatus === 'bloqueado' ? 'bloqueado' : 'liberado',
+        };
+
         const apiPayload = {
           firstName: newClient.nome?.split(' ')[0] || '',
           lastName:
@@ -618,14 +778,14 @@ export const ClientesPage: React.FC = () => {
           rdStatus: formData?.rdStatus || null,
           rdConsultedAt: formData?.rdConsultedAt || null,
           rdNotes: formData?.rdNotes || null,
-          doNotCallStatus: formData?.doNotCallStatus || null,
           doNotCallConsultedAt: formData?.doNotCallConsultedAt || null,
+          ...statusPayload,
         };
 
         if (editingCliente) {
-          await api.updateCliente(editingCliente.id, apiPayload);
+          await clientesApi.update(editingCliente.id, apiPayload as any);
         } else {
-          await api.createCliente(apiPayload);
+          await clientesApi.create(apiPayload as any);
         }
 
         await loadClientes();
@@ -701,13 +861,10 @@ export const ClientesPage: React.FC = () => {
     setHistoryCliente(cliente);
     setShowHistory(true);
     try {
-      const response = await api.getAuditLogs({
-        entity: "Customer",
+      const logs = await clientesApi.getAuditLogs({
         entityId: String(cliente.id),
         limit: 20,
       });
-
-      const logs = Array.isArray(response?.data) ? response.data : [];
 
       const mappedHistory = logs.map((log: any) => {
         const changedFields = Array.isArray(log?.metadata?.changedFields)
@@ -762,11 +919,22 @@ export const ClientesPage: React.FC = () => {
 
   // Helper: verifica se campo deve estar editável
   const isEditable = !editingCliente || isEditing;
+  const isPessoaJuridica = tipoPessoa === "CNPJ";
+
+  const resolveTipoPessoa = (cliente: any): "CPF" | "CNPJ" => {
+    const explicitType = String(cliente?.documentType || cliente?.tipoPessoa || "").toUpperCase();
+    if (explicitType === "CNPJ" || explicitType === "PJ") return "CNPJ";
+    if (explicitType === "CPF" || explicitType === "PF") return "CPF";
+
+    const normalizedDoc = onlyNumbers(cliente?.cpf_cnpj || cliente?.cpf || "");
+    return normalizedDoc.length > 11 ? "CNPJ" : "CPF";
+  };
 
   const handleEdit = (cliente: Cliente) => {
     setEditingCliente(cliente);
     const address = (cliente.address || {}) as any;
     const bankData = (cliente.bankData || {}) as any;
+    const nextTipoPessoa = resolveTipoPessoa(cliente);
     const normalizedNome =
       cliente.nome ||
       [cliente.firstName, cliente.lastName].filter(Boolean).join(' ') ||
@@ -777,11 +945,9 @@ export const ClientesPage: React.FC = () => {
     const normalizedPhone = onlyNumbers(
       cliente.celular || cliente.telefone || cliente.phone || ''
     );
-    // Detectar tipo de pessoa
-    const isCNPJ = normalizedDoc.length > 11;
-    setTipoPessoa(isCNPJ ? "CNPJ" : "CPF");
+    setTipoPessoa(nextTipoPessoa);
     // Formatar CPF/CNPJ para exibição ao editar
-    const formattedDoc = isCNPJ 
+    const formattedDoc = nextTipoPessoa === "CNPJ"
       ? formatCNPJInput(normalizedDoc)
       : formatCPFInput(normalizedDoc);
     setFormData({
@@ -797,7 +963,7 @@ export const ClientesPage: React.FC = () => {
       bairro: address.bairro || cliente.bairro || "",
       cidade: address.cidade || cliente.cidade || "",
       estado: address.estado || cliente.estado || "",
-      status: cliente.status || "ativo",
+      status: cliente.status === "nao_perturbe" ? "inativo" : (cliente.status || "ativo"),
       observacao: cliente.notes || cliente.observacao || "",
       // Novos campos
       profissao: cliente.profession || cliente.profissao || "",
@@ -824,6 +990,11 @@ export const ClientesPage: React.FC = () => {
       doNotCallStatus: cliente.doNotCallStatus ?? "nao_consultado",
       doNotCallConsultedAt: cliente.doNotCallConsultedAt ?? "",
     });
+    setCepError(null);
+    setCepLookupStatus("idle");
+    setCepLookupMessage("");
+    cepLookupRequestRef.current = 0;
+    cepLookupLastResolvedRef.current = "";
     setIsEditing(false); // Modo visualização
     setShowModal(true);
   };
@@ -832,21 +1003,33 @@ export const ClientesPage: React.FC = () => {
   const handleNewCliente = () => {
     resetForm();
     setEditingCliente(null);
-    setTipoPessoa("CPF");
+    setTipoPessoa("");
+    setCepError(null);
+    setCepLookupStatus("idle");
+    setCepLookupMessage("");
+    cepLookupRequestRef.current = 0;
+    cepLookupLastResolvedRef.current = "";
     setIsEditing(true); // Novo cliente já em modo de edição
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Tem certeza que deseja excluir este cliente?")) {
-      try {
-        await api.deleteCliente(id);
-        await loadClientes();
-      } catch (apiError) {
-        console.error('API error deleting cliente:', apiError);
-        alert("Erro ao excluir cliente no servidor. Nenhuma alteração local foi aplicada.");
-        return;
-      }
+  const handleDelete = (cliente: Cliente) => {
+    setDeleteClienteTarget(cliente);
+  };
+
+  const confirmDeleteCliente = async () => {
+    if (!deleteClienteTarget?.id) {
+      setDeleteClienteTarget(null);
+      return;
+    }
+
+    try {
+      await clientesApi.delete(deleteClienteTarget.id);
+      setDeleteClienteTarget(null);
+      await loadClientes();
+    } catch (apiError) {
+      console.error('API error deleting cliente:', apiError);
+      alert("Erro ao excluir cliente no servidor. Nenhuma alteração local foi aplicada.");
     }
   };
 
@@ -870,7 +1053,7 @@ export const ClientesPage: React.FC = () => {
       };
       
       try {
-        await api.updateCliente(cliente.id, {
+        await clientesApi.update(cliente.id, {
           firstName: cliente.firstName || cliente.nome?.split(' ')[0] || '',
           lastName:
             cliente.lastName ||
@@ -880,7 +1063,7 @@ export const ClientesPage: React.FC = () => {
           cpf: onlyNumbers(cliente.cpf_cnpj || cliente.cpf || ''),
           phone: onlyNumbers(cliente.celular || cliente.telefone || cliente.phone || ''),
           ...statusPayload,
-        });
+        } as any);
         await loadClientes();
       } catch (apiError) {
         console.error("API error updating cliente status:", apiError);
@@ -925,7 +1108,14 @@ export const ClientesPage: React.FC = () => {
       rdStatus: "nao_consultado",
       rdConsultedAt: "",
       rdNotes: "",
+      doNotCallStatus: "nao_consultado",
+      doNotCallConsultedAt: "",
     });
+    setCepError(null);
+    setCepLookupStatus("idle");
+    setCepLookupMessage("");
+    cepLookupRequestRef.current = 0;
+    cepLookupLastResolvedRef.current = "";
     setIsEditing(false);
   };
 
@@ -939,9 +1129,6 @@ export const ClientesPage: React.FC = () => {
   const isCNPJ = (cpfCnpj: string) => {
     return cpfCnpj && cpfCnpj.length > 11;
   };
-
-  // Função segura para obter apenas números
-  const onlyNumbers = (value: any) => String(value || '').replace(/\D/g, '');
 
   // Função segura para formatar CPF/CNPJ
   const formatDocument = (value: any, personType?: string) => {
@@ -968,7 +1155,7 @@ export const ClientesPage: React.FC = () => {
 
   // Função para formatar telefone
   const formatPhone = (phone: string) => {
-    if (!phone) return "-";
+    if (!phone) return "";
     if (phone.length === 10) {
       return phone.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
     }
@@ -1090,6 +1277,7 @@ export const ClientesPage: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => setImportModalOpen(true)}
+              title="Importar clientes"
               className="flex items-center gap-1"
             >
               <Upload size={14} />
@@ -1141,6 +1329,17 @@ export const ClientesPage: React.FC = () => {
       <div className="table-container mt-5 overflow-hidden">
         {loading ? (
           <LoadingState text="Carregando clientes..." />
+        ) : loadError ? (
+          <ErrorState
+            title="Falha ao carregar clientes"
+            message={loadError}
+            action={{
+              label: "Tentar novamente",
+              onClick: () => {
+                void loadClientes();
+              },
+            }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px]">
@@ -1160,8 +1359,11 @@ export const ClientesPage: React.FC = () => {
                 {filteredClientes.map((cliente, index) => (
                   <tr key={cliente.id} className="border-b border-[var(--border-muted)] hover:bg-[var(--bg-surface-hover)] transition-colors">
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)] whitespace-nowrap">
-                      <span className="text-sm font-medium font-mono tabular-nums text-[var(--text-primary)]">
-                        {formatClientCode(cliente, index)}
+                      <span
+                        className="text-sm font-medium font-mono tabular-nums text-[var(--text-primary)]"
+                        title={formatClientCode(cliente, index)}
+                      >
+                        {formatClientCodeShort(cliente, index)}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 align-middle text-sm text-[var(--text-secondary)]">
@@ -1279,7 +1481,7 @@ export const ClientesPage: React.FC = () => {
                           <Edit size={16} />
                         </button>
                         <button
-                          onClick={() => handleDelete(cliente.id)}
+                          onClick={() => handleDelete(cliente)}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500/80 hover:text-red-600 hover:bg-red-500/10 transition-colors"
                           title="Excluir"
                         >
@@ -1313,144 +1515,206 @@ export const ClientesPage: React.FC = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#111827] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="flex items-center justify-between p-6 border-b border-[#1f2937]">
-              <h3 className="text-lg font-semibold text-white">
-                {editingCliente ? "Editar Cliente" : "Novo Cliente"}
-              </h3>
+          <div className="bg-[#111827] rounded-2xl w-full max-w-[950px] max-h-[86vh] overflow-hidden shadow-xl flex flex-col">
+            <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-[#1f2937] flex-none">
+              <div>
+                <h3 className="text-lg font-semibold text-white">
+                  {editingCliente ? "Editar Cliente" : "Novo Cliente"}
+                </h3>
+                <p className="text-sm text-slate-500">
+                  {editingCliente
+                    ? "Atualize as informações cadastrais."
+                    : "Cadastre um cliente Pessoa Física ou Pessoa Jurídica."}
+                </p>
+              </div>
               <button
                 onClick={handleCloseModal}
-                className="p-2 text-[#000dff] hover:text-slate-600 hover:bg-gray-100 rounded-2xl transition-colors"
+                className="p-2 text-[#000dff] hover:text-slate-300 hover:bg-white/10 rounded-xl transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
               {/* Dados Pessoais */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <User size={16} />
                   Dados Pessoais
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Nome Completo *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      disabled={!isEditable}
-                      value={formData.nome}
-                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Nome completo ou razão social"
-                    />
-                  </div>
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div ref={tipoPessoaControlRef} className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Tipo de Pessoa
                     </label>
-                    <select
+                    <SegmentedControl
+                      name="tipoPessoa"
+                      aria-label="Tipo de Pessoa"
                       value={tipoPessoa}
-                      onChange={(e) => setTipoPessoa(e.target.value as "CPF" | "CNPJ")}
+                      onChange={(nextValue) => setTipoPessoa(nextValue as "" | "CPF" | "CNPJ")}
                       disabled={!isEditable}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="CPF">Pessoa Física</option>
-                      <option value="CNPJ">Pessoa Jurídica</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      {tipoPessoa === "CPF" ? "CPF" : "CNPJ"}
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.cpf_cnpj}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (tipoPessoa === "CNPJ") {
-                          setFormData({ ...formData, cpf_cnpj: formatCNPJInput(value) });
-                        } else {
-                          setFormData({ ...formData, cpf_cnpj: formatCPFInput(value) });
-                        }
-                      }}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder={tipoPessoa === "CPF" ? "CPF (11 dígitos)" : "CNPJ (14 dígitos)"}
-                      maxLength={tipoPessoa === "CPF" ? 14 : 18}
+                      options={[
+                        { value: "CPF", label: "Pessoa Física", icon: <User size={16} /> },
+                        { value: "CNPJ", label: "Pessoa Jurídica", icon: <Building2 size={16} /> },
+                      ]}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Profissão
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.profissao}
-                      onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Profissão"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Estado Civil
-                    </label>
-                    <select
-                      disabled={!isEditable}
-                      value={formData.estado_civil}
-                      onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="solteiro">Solteiro</option>
-                      <option value="casado">Casado</option>
-                      <option value="divorciado">Divorciado</option>
-                      <option value="viuvo">Viúvo</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Sexo
-                    </label>
-                    <select
-                      disabled={!isEditable}
-                      value={formData.sexo}
-                      onChange={(e) => setFormData({ ...formData, sexo: e.target.value as any })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="masculino">Masculino</option>
-                      <option value="feminino">Feminino</option>
-                      <option value="outro">Outro</option>
-                      <option value="nao_informar">Prefiro não informar</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      {tipoPessoa === "CPF" ? "Data de Nascimento" : "Data de Abertura"}
-                    </label>
-                    <input
-                      type="date"
-                      disabled={!isEditable}
-                      value={formData.data_nascimento}
-                      onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    />
-                  </div>
+
+                  {tipoPessoa === "CPF" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">CPF</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.cpf_cnpj}
+                          onChange={(e) => setFormData({ ...formData, cpf_cnpj: formatCPFInput(e.target.value) })}
+                          className={modalFieldClass}
+                          placeholder="000.000.000-00"
+                          maxLength={14}
+                        />
+                        {duplicateCliente && (
+                          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+                            <p className="font-medium">
+                              Cliente já cadastrado: {duplicateCliente.nome || "Cliente sem nome"}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(duplicateCliente)}
+                              className="mt-1 inline-flex items-center text-[11px] font-medium text-amber-700 underline decoration-amber-500/60 underline-offset-2 hover:text-amber-800"
+                            >
+                              Editar cadastro existente
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
+                        <input
+                          type="text"
+                          required
+                          disabled={!isEditable}
+                          value={formData.nome}
+                          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Nome completo"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Data de Nascimento</label>
+                        <input
+                          type="date"
+                          disabled={!isEditable}
+                          value={formData.data_nascimento}
+                          onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
+                          className={modalFieldClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Sexo</label>
+                        <select
+                          disabled={!isEditable}
+                          value={formData.sexo}
+                          onChange={(e) => setFormData({ ...formData, sexo: e.target.value as any })}
+                          className={modalSelectClass}
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="masculino">Masculino</option>
+                          <option value="feminino">Feminino</option>
+                          <option value="outro">Outro</option>
+                          <option value="nao_informar">Prefiro não informar</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Estado Civil</label>
+                        <select
+                          disabled={!isEditable}
+                          value={formData.estado_civil}
+                          onChange={(e) => setFormData({ ...formData, estado_civil: e.target.value })}
+                          className={modalSelectClass}
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="solteiro">Solteiro</option>
+                          <option value="casado">Casado</option>
+                          <option value="divorciado">Divorciado</option>
+                          <option value="viuvo">Viúvo</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Profissão</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.profissao}
+                          onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Profissão"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {tipoPessoa === "CNPJ" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">CNPJ</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.cpf_cnpj}
+                          onChange={(e) => setFormData({ ...formData, cpf_cnpj: formatCNPJInput(e.target.value) })}
+                          className={modalFieldClass}
+                          placeholder="00.000.000/0000-00"
+                          maxLength={18}
+                        />
+                        {duplicateCliente && (
+                          <div className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
+                            <p className="font-medium">
+                              Cliente já cadastrado: {duplicateCliente.nome || "Cliente sem nome"}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(duplicateCliente)}
+                              className="mt-1 inline-flex items-center text-[11px] font-medium text-amber-700 underline decoration-amber-500/60 underline-offset-2 hover:text-amber-800"
+                            >
+                              Editar cadastro existente
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Razão Social</label>
+                        <input
+                          type="text"
+                          required
+                          disabled={!isEditable}
+                          value={formData.nome}
+                          onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Razão social"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Data de Abertura</label>
+                        <input
+                          type="date"
+                          disabled={!isEditable}
+                          value={formData.data_nascimento}
+                          onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
+                          className={modalFieldClass}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
               {/* Contato */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <Phone size={16} />
                   Informações de Contato
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
                       Celular *
@@ -1469,94 +1733,123 @@ export const ClientesPage: React.FC = () => {
                         const numbers = e.target.value.replace(/\D/g, "");
                         setFormData({ ...formData, celular: numbers });
                       }}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                      className={modalFieldClass}
                       placeholder="(00) 00000-0000"
                       maxLength={15}
                     />
                   </div>
-                  <div>
+                  {tipoPessoa === "CNPJ" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">
+                        Telefone Comercial
+                      </label>
+                      <input
+                        type="text"
+                        disabled={!isEditable}
+                        value={formatPhone(formData.telefone)}
+                        onChange={(e) => {
+                          const numbers = e.target.value.replace(/\D/g, "");
+                          setFormData({ ...formData, telefone: numbers.slice(0, 11) });
+                        }}
+                      onBlur={(e) => {
+                        const numbers = e.target.value.replace(/\D/g, "");
+                        setFormData({ ...formData, telefone: numbers });
+                      }}
+                        className={modalFieldClass}
+                        placeholder="(00) 0000-0000"
+                        maxLength={14}
+                      />
+                    </div>
+                  )}
+                  <div className={tipoPessoa === "CNPJ" ? "md:col-span-2" : ""}>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Email
+                      Email *
                     </label>
                     <input
                       type="email"
                       disabled={!isEditable}
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
+                      className={modalFieldClass}
                       placeholder="email@exemplo.com"
                     />
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className={modalCardClass}>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                        Não Perturbe
+                      </label>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.doNotCallStatus === "bloqueado"}
+                          disabled={!isEditable}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              doNotCallStatus: e.target.checked ? "bloqueado" : "liberado",
+                            })
+                          }
+                          className="w-4 h-4 rounded border-gray-300 text-[#000dff] focus:ring-[#000dff]"
+                        />
+                        <span className="text-sm text-slate-700">Bloquear contato</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Campos condicionais para CNPJ */}
-              {tipoPessoa === "CNPJ" && (
-                <div>
-                  <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
-                    <Building2 size={16} />
-                    Responsável Legal (CNPJ)
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        Nome do Responsável Legal
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!isEditable}
-                        value={formData.responsavel_legal}
-                        onChange={(e) => setFormData({ ...formData, responsavel_legal: e.target.value })}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                        placeholder="Nome do responsável legal"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        CPF do Responsável
-                      </label>
-                      <input
-                        type="text"
-                        disabled={!isEditable}
-                        value={formData.cpf_responsavel}
-                        onChange={(e) => setFormData({ ...formData, cpf_responsavel: e.target.value.replace(/\D/g, "") })}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                        placeholder="CPF do responsável"
-                        maxLength={11}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Endereço */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <MapPin size={16} />
                   Endereço
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      CEP {cepLoading && <span className="text-xs text-[#000dff]">buscando...</span>}
+                      CEP
                     </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        disabled={!isEditable}
-                        value={formData.cep}
-                        onChange={(e) => setFormData({ ...formData, cep: e.target.value.replace(/\D/g, "") })}
-                        onBlur={() => buscarEnderecoPorCEP(formData.cep)}
-                        className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 disabled:cursor-not-allowed pr-10"
-                        placeholder="00000-000"
-                        maxLength={8}
-                      />
-                      {cepLoading && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="w-4 h-4 border-2 border-[#000dff] border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      )}
-                    </div>
+                    <input
+                      type="text"
+                      disabled={!isEditable}
+                      value={formatCepMasked(formData.cep)}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+                        setFormData({ ...formData, cep: digits });
+                        if (cepError) setCepError(null);
+                        if (cepLookupStatus !== "idle") {
+                          setCepLookupStatus("idle");
+                          setCepLookupMessage("");
+                        }
+                      }}
+                      onBlur={(e) => {
+                        validateCEP(e.target.value);
+                        void lookupAddressByCEP(e.target.value);
+                      }}
+                      className={modalFieldClass}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                    {cepError && (
+                      <p className="mt-1 text-xs text-rose-500">{cepError}</p>
+                    )}
+                    {!cepError && cepLookupMessage && (
+                      <p
+                        className={`mt-1 text-xs ${
+                          cepLookupStatus === "found"
+                            ? "text-emerald-600"
+                            : cepLookupStatus === "loading"
+                              ? "text-slate-500"
+                              : cepLookupStatus === "not_found"
+                                ? "text-amber-600"
+                                : "text-rose-500"
+                        }`}
+                        aria-live="polite"
+                      >
+                        {cepLookupMessage}
+                      </p>
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-slate-300 mb-1">
@@ -1566,7 +1859,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.rua}
                       onChange={(e) => setFormData({ ...formData, rua: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Nome da rua"
                     />
                   </div>
@@ -1578,7 +1871,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.numero}
                       onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Nº"
                     />
                   </div>
@@ -1590,7 +1883,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.complemento}
                       onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Apto, sala, etc."
                     />
                   </div>
@@ -1602,7 +1895,7 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.bairro}
                       onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Bairro"
                     />
                   </div>
@@ -1614,19 +1907,19 @@ export const ClientesPage: React.FC = () => {
                       type="text"
                       value={formData.cidade}
                       onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="Cidade"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Estado
+                      UF
                     </label>
                     <input
                       type="text"
                       value={formData.estado}
                       onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                      className="w-full bg-gray-50 border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors"
+                      className={modalFieldClass}
                       placeholder="UF"
                       maxLength={2}
                     />
@@ -1636,240 +1929,223 @@ export const ClientesPage: React.FC = () => {
 
               {/* Dados Bancários */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <Building2 size={16} />
                   Dados Bancários
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Banco
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.banco}
-                      onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Nome do banco"
-                    />
+                <div className="space-y-2.5">
+                  <div className={modalCardClass}>
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">
+                      Conta Bancária
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Banco</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.banco}
+                          onChange={(e) => setFormData({ ...formData, banco: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Nome do banco"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Agência</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.agencia}
+                          onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Agência"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Conta</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.conta}
+                          onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Conta"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Conta</label>
+                        <select
+                          disabled={!isEditable}
+                          value={formData.tipoConta}
+                          onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value as any })}
+                          className={modalSelectClass}
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="corrente">Corrente</option>
+                          <option value="poupanca">Poupança</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Titular</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.titular}
+                          onChange={(e) => setFormData({ ...formData, titular: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Nome do titular"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-slate-300 mb-1">CPF/CNPJ do Titular</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.documentoTitular}
+                          onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value.replace(/\D/g, "") })}
+                          className={modalFieldClass}
+                          placeholder="CPF ou CNPJ do titular"
+                          maxLength={14}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Agência
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.agencia}
-                      onChange={(e) => setFormData({ ...formData, agencia: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Agência"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Conta
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.conta}
-                      onChange={(e) => setFormData({ ...formData, conta: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Conta"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Tipo de Conta
-                    </label>
-                    <select
-                      disabled={!isEditable}
-                      value={formData.tipoConta}
-                      onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value as any })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="corrente">Corrente</option>
-                      <option value="poupanca">Poupança</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Titular
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.titular}
-                      onChange={(e) => setFormData({ ...formData, titular: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Nome do titular"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Documento do Titular
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.documentoTitular}
-                      onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value.replace(/\D/g, "") })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="CPF ou CNPJ do titular"
-                      maxLength={14}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Tipo de Chave PIX
-                    </label>
-                    <select
-                      disabled={!isEditable}
-                      value={formData.pixTipo}
-                      onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value as any })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="cpf">CPF</option>
-                      <option value="cnpj">CNPJ</option>
-                      <option value="email">Email</option>
-                      <option value="telefone">Telefone</option>
-                      <option value="aleatoria">Chave Aleatória</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Chave PIX
-                    </label>
-                    <input
-                      type="text"
-                      disabled={!isEditable}
-                      value={formData.pixChave}
-                      onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-[#1f2937] px-3 text-sm bg-gray-50 disabled:bg-gray-100 disabled:text-slate-500 placeholder:text-slate-400"
-                      placeholder="Chave PIX"
-                    />
+                  <div className={modalCardClass}>
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">
+                      PIX
+                    </h5>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Chave PIX</label>
+                        <select
+                          disabled={!isEditable}
+                          value={formData.pixTipo}
+                          onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value as any })}
+                          className={modalSelectClass}
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="cpf">CPF</option>
+                          <option value="cnpj">CNPJ</option>
+                          <option value="email">Email</option>
+                          <option value="telefone">Telefone</option>
+                          <option value="aleatoria">Chave Aleatória</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">Chave PIX</label>
+                        <input
+                          type="text"
+                          disabled={!isEditable}
+                          value={formData.pixChave}
+                          onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })}
+                          className={modalFieldClass}
+                          placeholder="Chave PIX"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Status e Observações */}
               <div>
-                <h4 className="text-sm font-medium text-slate-600 mb-3 flex items-center gap-2">
+                <h4 className={modalSectionTitleClass}>
                   <Edit size={16} />
                   Informações Adicionais
                 </h4>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-medium text-slate-300">Status:</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="status"
-                          value="ativo"
-                          checked={formData.status === "ativo"}
-                          disabled={!isEditable}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" | "nao_perturbe" })}
-                          className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
-                        />
-                        <span className="text-slate-300">Ativo</span>
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 gap-2.5">
+                    <div className={modalCardClass}>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2.5">
+                        Status
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="status"
-                          value="inativo"
-                          checked={formData.status === "inativo"}
-                          disabled={!isEditable}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" | "nao_perturbe" })}
-                          className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
-                        />
-                        <span className="text-red-600">Inativo</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="status"
-                          value="nao_perturbe"
-                          checked={formData.status === "nao_perturbe"}
-                          disabled={!isEditable}
-                          onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" | "nao_perturbe" })}
-                          className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
-                        />
-                        <span className="text-slate-300">Não Perturbe</span>
-                      </label>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="status"
+                            value="ativo"
+                            checked={formData.status === "ativo"}
+                            disabled={!isEditable}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
+                            className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
+                          />
+                          <span className="text-slate-700">Ativo</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="status"
+                            value="inativo"
+                            checked={formData.status === "inativo"}
+                            disabled={!isEditable}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value as "ativo" | "inativo" })}
+                            className="w-4 h-4 text-[#000dff] bg-[#111827] border-gray-300 focus:ring-[#000dff] disabled:opacity-50"
+                          />
+                          <span className="text-rose-600">Inativo</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">
-                      Observações
-                    </label>
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <label className="block text-sm font-medium text-slate-300">
+                        Observações
+                      </label>
+                      <span className="text-xs text-slate-500">{formData.observacao.length}/500</span>
+                    </div>
                     <textarea
                       value={formData.observacao}
-                      onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
-                      className="w-full bg-[#111827] border border-[#1f2937] rounded-2xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-[#000dff] transition-colors resize-none"
+                      maxLength={500}
+                      onChange={(e) => setFormData({ ...formData, observacao: e.target.value.slice(0, 500) })}
+                      className={modalTextareaClass}
                       placeholder="Observações sobre o cliente..."
-                      rows={3}
+                      rows={4}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Compliance e Consultas */}
-              <div className="mt-6 pt-6 border-t border-[#1f2937]">
-                <h4 className="text-sm font-medium text-slate-600 mb-4 flex items-center gap-2">
+              <div className="pt-3 border-t border-[#1f2937]">
+                <h4 className={modalSectionTitleClass}>
                   <Shield size={16} />
-                  Compliance e Consultas
+                  Compliance
                 </h4>
-                <div className="space-y-4">
-                  {/* Restrição de Crédito */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">Restrição de Crédito</p>
-                      <p className="text-xs text-slate-500">Consulta SPC/Serasa por CPF/CNPJ</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {renderCreditStatus()}
-                      <button
-                        type="button"
-                        onClick={handleConsultCredit}
-                        className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
-                      >
-                        Consultar
-                      </button>
-                    </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  <div className={modalCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Restrição de Crédito</p>
+                    {renderCreditStatus()}
                   </div>
-
-                  {/* Não Perturbe */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-slate-300">Não Perturbe</p>
-                      <p className="text-xs text-slate-500">Bloqueio de contato por telefone</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {renderDoNotCallStatus()}
-                      <button
-                        type="button"
-                        onClick={handleConsultDoNotCall}
-                        className="h-9 px-3 text-xs rounded-lg border border-[#1f2937] bg-[#111827] hover:bg-gray-50 transition-colors"
-                      >
-                        Consultar
-                      </button>
-                    </div>
+                  <div className={modalCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Não Perturbe</p>
+                    {renderDoNotCallStatus()}
+                  </div>
+                  <div className={modalSubtleCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Receita Federal</p>
+                    <p className="text-xs text-slate-500">Futuro</p>
+                  </div>
+                  <div className={modalSubtleCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">GOV.BR</p>
+                    <p className="text-xs text-slate-500">Futuro</p>
+                  </div>
+                  <div className={modalSubtleCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">LGPD</p>
+                    <p className="text-xs text-slate-500">Disponivel futuramente</p>
+                  </div>
+                  <div className={modalSubtleCardClass}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">Cadastro Positivo</p>
+                    <p className="text-xs text-slate-500">Roadmap</p>
                   </div>
                 </div>
               </div>
 
               {/* Botões */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#1f2937]">
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#1f2937] flex-none">
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="px-4 py-2 text-slate-500 hover:text-slate-300 hover:bg-gray-100 rounded-2xl transition-colors"
+                  className="px-4 h-9 text-slate-400 hover:text-slate-200 hover:bg-white/10 rounded-xl transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1881,14 +2157,14 @@ export const ClientesPage: React.FC = () => {
                       e.stopPropagation();
                       setIsEditing(true);
                     }}
-                    className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-2xl transition-colors"
+                    className="px-4 h-9 bg-primary hover:bg-primary/80 text-white rounded-xl transition-colors"
                   >
                     Editar
                   </button>
                 ) : (
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-primary hover:bg-primary/80 text-white rounded-2xl transition-colors"
+                    className="px-4 h-9 bg-primary hover:bg-primary/80 text-white rounded-xl transition-colors"
                   >
                     {editingCliente ? "Salvar Alterações" : "Cadastrar Cliente"}
                   </button>
@@ -2040,9 +2316,57 @@ export const ClientesPage: React.FC = () => {
         onImport={handleImportClientes}
         columns={importColumns}
         title="Importar Clientes"
-        description="Importe clientes a partir de um arquivo CSV. Campo obrigatório: nome."
-        acceptedTypes={['.csv']}
+        description="Importe clientes por CSV, XLSX ou XLS. O campo Nome é obrigatório. Os demais campos são opcionais."
+        acceptedTypes={['.csv', '.xlsx', '.xls']}
       />
+
+      {deleteClienteTarget && (
+        <Modal
+          isOpen={Boolean(deleteClienteTarget)}
+          onClose={() => setDeleteClienteTarget(null)}
+          title="Excluir cliente"
+          size="md"
+        >
+          <div className="space-y-4">
+            <div className="rounded-xl border border-red-200/60 bg-red-50 px-4 py-3 text-sm text-red-900 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-100">
+              <p className="font-semibold">
+                Esta ação removerá o cliente de forma definitiva no ambiente oficial.
+              </p>
+              <p className="mt-1 text-sm text-red-800/90 dark:text-red-100/90">
+                Confirme apenas se desejar excluir <span className="font-semibold">{deleteClienteTarget.nome || "cliente sem nome"}</span>.
+              </p>
+            </div>
+
+            <div className="grid gap-2 rounded-xl border border-slate-200/70 bg-slate-50 p-4 text-sm text-slate-700 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-slate-200">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500 dark:text-slate-400">Cliente</span>
+                <span className="font-medium">{deleteClienteTarget.nome || "-"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-500 dark:text-slate-400">CPF/CNPJ</span>
+                <span className="font-mono text-xs">{formatDocument(deleteClienteTarget.cpf_cnpj, deleteClienteTarget.personType)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteClienteTarget(null)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => void confirmDeleteCliente()}
+                className="flex-1"
+              >
+                Excluir cliente
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

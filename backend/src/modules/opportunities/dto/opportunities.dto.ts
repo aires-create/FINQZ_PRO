@@ -1,0 +1,106 @@
+export interface ListOpportunitiesQueryDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  pipelineId?: string;
+  stageId?: string;
+  customerId?: string;
+  ownerId?: string;
+}
+
+export interface CreateOpportunityBodyDto {
+  title: string;
+  amount: number;
+  pipelineId: string;
+  stageId: string;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
+  customerId?: string | null;
+  leadId?: string | null;
+  ownerId?: string | null;
+  description?: string | null;
+  probability?: number;
+  currency?: string;
+  expectedCloseDate?: string | Date | null;
+}
+
+export interface UpdateOpportunityBodyDto {
+  title?: string;
+  description?: string | null;
+  amount?: number;
+  probability?: number;
+  status?: string;
+  expectedCloseDate?: string | Date | null;
+  ownerId?: string | null;
+  customerId?: string | null;
+  leadId?: string | null;
+  productId?: string | null;
+  subproductId?: string | null;
+  modalityId?: string | null;
+}
+
+export interface MoveOpportunityStageBodyDto {
+  stageId: string;
+  pipelineId?: string;
+  status?: string;
+  reason?: string | null;
+}
+
+export interface CreateOpportunityIntakeCustomerDto {
+  id?: string | null;
+  cpfCnpj?: string | null;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  birthDate?: string | Date | null;
+  documentType?: string | null;
+  address?: Record<string, unknown> | null;
+  bankData?: Record<string, unknown> | null;
+  profession?: string | null;
+  maritalStatus?: string | null;
+  gender?: string | null;
+  notes?: string | null;
+}
+
+export interface CreateOpportunityIntakeOptionsDto {
+  updateExistingCustomer?: boolean;
+  allowCreateCustomer?: boolean;
+}
+
+export interface CreateOpportunityIntakeBodyDto {
+  opportunity: {
+    title: string;
+    amount: number;
+    pipelineId: string;
+    stageId: string;
+    productId?: string | null;
+    subproductId?: string | null;
+    modalityId?: string | null;
+    ownerId?: string | null;
+    description?: string | null;
+    probability?: number;
+    currency?: string;
+    expectedCloseDate?: string | Date | null;
+  };
+  customer: CreateOpportunityIntakeCustomerDto;
+  options?: CreateOpportunityIntakeOptionsDto;
+}
+
+export interface CreateOpportunityIntakeResponseDto {
+  customer: {
+    id: string;
+    status: 'linked_existing' | 'created';
+  };
+  opportunity: {
+    id: string;
+    customerId: string;
+    pipelineId: string;
+    stageId: string;
+    productId?: string | null;
+    subproductId?: string | null;
+    modalityId?: string | null;
+  };
+}

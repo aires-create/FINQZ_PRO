@@ -1,0 +1,13 @@
+{
+  "id": "fail-checksum",
+  "description": "Checksum failure propagates as a failing consolidation run",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "FAIL",
+    "contractStatus": "PASS",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

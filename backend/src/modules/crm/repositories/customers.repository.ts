@@ -40,6 +40,10 @@ export type CreateCustomerRepositoryInput = {
 };
 
 export class CustomersRepository {
+  private getClient(client?: Prisma.TransactionClient) {
+    return client ?? prisma;
+  }
+
   async findAll(params: FindAllCustomersParams) {
     const { tenantId, page, limit, search } = params;
     const skip = (page - 1) * limit;
@@ -98,11 +102,43 @@ export class CustomersRepository {
     };
   }
 
-  async findById(tenantId: string, customerId: string) {
-    return prisma.customer.findFirst({
+  async findById(
+    tenantId: string,
+    customerId: string,
+    client?: Prisma.TransactionClient,
+  ) {
+    return this.getClient(client).customer.findFirst({
       where: {
         id: customerId,
         tenantId,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async findByCpf(
+    tenantId: string,
+    cpf: string,
+    client?: Prisma.TransactionClient,
+  ) {
+    return this.getClient(client).customer.findFirst({
+      where: {
+        tenantId,
+        cpf,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async findByEmailNormalized(
+    tenantId: string,
+    emailNormalized: string,
+    client?: Prisma.TransactionClient,
+  ) {
+    return this.getClient(client).customer.findFirst({
+      where: {
+        tenantId,
+        emailNormalized,
         deletedAt: null,
       },
     });

@@ -425,7 +425,7 @@ describe('partner-acquisition routes', () => {
       phone: null,
       companyName: null,
       document: null,
-      channel: 'CAMPAIGN',
+      source: 'CAMPAIGN',
       sourceName: null,
       sourceReference: null,
       campaignId: null,

@@ -1,0 +1,11 @@
+flowchart TD
+  A[Branch homologation/bootstrap-vps] --> B[Local HEAD cce8840]
+  B --> C[Attempt HML inventory]
+  C -->|SSH denied| D[DEFERRED_PENDING_HML_ACCESS]
+  C -->|SSH granted| E[Fingerprint frontend HML]
+  E --> F[Preserve frontend HML]
+  F --> G[Target backend service api]
+  G --> H[Build api only]
+  H --> I[Up -d --no-deps api]
+  I --> J[Health live ready smoke]
+  D --> K[No deploy]

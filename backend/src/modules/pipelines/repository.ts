@@ -1,0 +1,483 @@
+import { Prisma } from '@prisma/client';
+
+import { prisma } from '../../core/prisma/client.js';
+import { ConflictError } from '../../shared/errors/AppError.js';
+import type {
+  CreatePipelineInput,
+} from './domain/pipeline.contract.js';
+import type { PipelineRepositoryContract } from './domain/pipeline-repository.contract.js';
+
+type PipelinesPrismaClient = typeof prisma | Prisma.TransactionClient;
+export type PipelinesTransactionClient = Prisma.TransactionClient;
+
+type FindByIdInput = { tenantId: string; pipelineId: string };
+type FindStageByIdInput = { tenantId: string; stageId: string };
+type HasLinkedOpportunitiesForPipelineInput = { tenantId: string; pipelineId: string };
+type HasLinkedOpportunitiesForStageInput = { tenantId: string; stageId: string };
+type CountActiveByTenantInput = { tenantId: string };
+type CountActiveStagesByPipelineInput = { tenantId: string; pipelineId: string };
+type UpdatePipelineRepositoryInput = {
+  tenantId: string;
+  pipelineId: string;
+  name?: string;
+  description?: string | null;
+  isDefault?: boolean;
+  isActive?: boolean;
+};
+type CreateStageRepositoryInput = {
+  tenantId: string;
+  pipelineId: string;
+  name: string;
+  order?: number;
+  isWon?: boolean;
+  isLost?: boolean;
+};
+type UpdateStageRepositoryInput = {
+  tenantId: string;
+  stageId: string;
+  name?: string;
+  order?: number;
+  isWon?: boolean;
+  isLost?: boolean;
+  isActive?: boolean;
+};
+type SoftDeletePipelineRepositoryInput = { tenantId: string; pipelineId: string; actorUserId?: string };
+type SoftDeleteStageRepositoryInput = { tenantId: string; stageId: string; actorUserId?: string };
+type ReorderStagesRepositoryInput = {
+  tenantId: string;
+  pipelineId: string;
+  stages: Array<{ stageId: string; order: number }>;
+};
+
+const pipelineReadInclude = {
+  stages: {
+    where: {
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      pipelineId: true,
+      name: true,
+      order: true,
+      isWon: true,
+      isLost: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      deletedAt: true,
+    },
+    orderBy: {
+      order: 'asc',
+    },
+  },
+} satisfies Prisma.PipelineInclude;
+
+const stageReadSelect = {
+  id: true,
+  tenantId: true,
+  pipelineId: true,
+  name: true,
+  order: true,
+  isWon: true,
+  isLost: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+} satisfies Prisma.StageSelect;
+
+const runInTransaction = async <T>(
+  client: PipelinesPrismaClient,
+  action: (transaction: Prisma.TransactionClient) => Promise<T>,
+) => {
+  if (client === prisma) {
+    return prisma.$transaction((transaction) => action(transaction));
+  }
+
+  return action(client);
+};
+
+const runInSerializableTransaction = async <T>(
+  client: PipelinesPrismaClient,
+  action: (transaction: Prisma.TransactionClient) => Promise<T>,
+) => {
+  if (client === prisma) {
+    return prisma.$transaction(
+      (transaction) => action(transaction),
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
+  }
+
+  return action(client);
+};
+
+export const runPipelinesSerializableTransaction = async <T>(
+  action: (transaction: PipelinesTransactionClient) => Promise<T>,
+) => {
+  return prisma.$transaction(action, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
+};
+
+const clearOtherActiveDefaultPipelines = (
+  transaction: Prisma.TransactionClient,
+  tenantId: string,
+  pipelineId: string,
+) => {
+  return transaction.pipeline.updateMany({
+    where: {
+      tenantId,
+      deletedAt: null,
+      isActive: true,
+      isDefault: true,
+      id: {
+        not: pipelineId,
+      },
+    },
+    data: {
+      isDefault: false,
+    },
+  });
+};
+
+const listByTenant = (
+  input: { tenantId: string; includeInactive?: boolean },
+  client: PipelinesPrismaClient = prisma,
+) => {
+  return client.pipeline.findMany({
+    where: {
+      tenantId: input.tenantId,
+      deletedAt: null,
+      ...(input.includeInactive === true ? {} : { isActive: true }),
+    },
+    include: pipelineReadInclude,
+    orderBy: [
+      { isDefault: 'desc' },
+      { createdAt: 'asc' },
+    ],
+  });
+};
+
+export const pipelinesRepository = {
+  listByTenant,
+  listActiveByTenant(tenantId: string, client: PipelinesPrismaClient = prisma) {
+    return listByTenant({ tenantId }, client);
+  },
+  findActiveByTenant(tenantId: string, client: PipelinesPrismaClient = prisma) {
+    return listByTenant({ tenantId }, client);
+  },
+
+  findById(
+    input: FindByIdInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.pipeline.findFirst({
+      where: {
+        id: input.pipelineId,
+        tenantId: input.tenantId,
+        deletedAt: null,
+      },
+      include: pipelineReadInclude,
+    });
+  },
+
+  findStageById(
+    input: FindStageByIdInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.stage.findFirst({
+      where: {
+        id: input.stageId,
+        tenantId: input.tenantId,
+        deletedAt: null,
+      },
+      select: stageReadSelect,
+    });
+  },
+
+  async hasLinkedOpportunitiesForPipeline(
+    input: HasLinkedOpportunitiesForPipelineInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    const linkedCount = await client.opportunity.count({
+      where: {
+        tenantId: input.tenantId,
+        pipelineId: input.pipelineId,
+        deletedAt: null,
+      },
+    });
+
+    return linkedCount > 0;
+  },
+
+  async hasLinkedOpportunitiesForStage(
+    input: HasLinkedOpportunitiesForStageInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    const linkedCount = await client.opportunity.count({
+      where: {
+        tenantId: input.tenantId,
+        stageId: input.stageId,
+        deletedAt: null,
+      },
+    });
+
+    return linkedCount > 0;
+  },
+
+  async countActiveByTenant(
+    input: CountActiveByTenantInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.pipeline.count({
+      where: {
+        tenantId: input.tenantId,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+  },
+
+  async countActiveStagesByPipeline(
+    input: CountActiveStagesByPipelineInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.stage.count({
+      where: {
+        tenantId: input.tenantId,
+        pipelineId: input.pipelineId,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+  },
+
+  createPipeline(
+    input: CreatePipelineInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    if (input.isDefault !== true) {
+      return client.pipeline.create({
+        data: {
+          tenantId: input.tenantId,
+          name: input.name,
+          description: input.description ?? null,
+          isDefault: input.isDefault ?? false,
+          isActive: input.isActive ?? true,
+        },
+        include: pipelineReadInclude,
+      });
+    }
+
+    return runInSerializableTransaction(client, async (transaction) => {
+      const pipeline = await transaction.pipeline.create({
+        data: {
+          tenantId: input.tenantId,
+          name: input.name,
+          description: input.description ?? null,
+          isDefault: true,
+          isActive: input.isActive ?? true,
+        },
+        include: pipelineReadInclude,
+      });
+
+      await clearOtherActiveDefaultPipelines(
+        transaction,
+        input.tenantId,
+        pipeline.id,
+      );
+
+      return pipeline;
+    });
+  },
+
+  async updatePipeline(
+    input: UpdatePipelineRepositoryInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    if (input.isDefault === undefined) {
+      await client.pipeline.updateMany({
+        where: {
+          id: input.pipelineId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        },
+      });
+      return;
+    }
+
+    await runInSerializableTransaction(client, async (transaction) => {
+      const existingPipeline = await transaction.pipeline.findFirst({
+        where: {
+          id: input.pipelineId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          isDefault: true,
+        },
+      });
+
+      if (
+        input.isDefault === false &&
+        existingPipeline?.isDefault === true
+      ) {
+        const activeDefaultCount = await transaction.pipeline.count({
+          where: {
+            tenantId: input.tenantId,
+            deletedAt: null,
+            isActive: true,
+            isDefault: true,
+          },
+        });
+
+        if (activeDefaultCount <= 1) {
+          throw new ConflictError(
+            'Tenant must keep one active default pipeline',
+          );
+        }
+      }
+
+      await transaction.pipeline.updateMany({
+        where: {
+          id: input.pipelineId,
+          tenantId: input.tenantId,
+          deletedAt: null,
+        },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        },
+      });
+
+      if (input.isDefault === true && existingPipeline) {
+        await clearOtherActiveDefaultPipelines(
+          transaction,
+          input.tenantId,
+          input.pipelineId,
+        );
+      }
+    });
+  },
+
+  async softDeletePipeline(
+    input: SoftDeletePipelineRepositoryInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    await client.pipeline.updateMany({
+      where: {
+        id: input.pipelineId,
+        tenantId: input.tenantId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+  },
+
+  createStage(
+    input: CreateStageRepositoryInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    return client.stage.create({
+      data: {
+        tenantId: input.tenantId,
+        pipelineId: input.pipelineId,
+        name: input.name,
+        order: input.order ?? 1,
+        isWon: input.isWon ?? false,
+        isLost: input.isLost ?? false,
+        isActive: true,
+      },
+      select: stageReadSelect,
+    });
+  },
+
+  async updateStage(
+    input: UpdateStageRepositoryInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    await client.stage.updateMany({
+      where: {
+        id: input.stageId,
+        tenantId: input.tenantId,
+        deletedAt: null,
+      },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.order !== undefined ? { order: input.order } : {}),
+        ...(input.isWon !== undefined ? { isWon: input.isWon } : {}),
+        ...(input.isLost !== undefined ? { isLost: input.isLost } : {}),
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+      },
+    });
+  },
+
+  async softDeleteStage(
+    input: SoftDeleteStageRepositoryInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    await client.stage.updateMany({
+      where: {
+        id: input.stageId,
+        tenantId: input.tenantId,
+        deletedAt: null,
+      },
+      data: {
+        deletedAt: new Date(),
+      },
+    });
+  },
+
+  async reorderStages(
+    input: ReorderStagesRepositoryInput,
+    client: PipelinesPrismaClient = prisma,
+  ) {
+    await runInTransaction(client, async (transaction) => {
+      const ensureUpdated = async (stageId: string, order: number) => {
+        const result = await transaction.stage.updateMany({
+          where: {
+            id: stageId,
+            tenantId: input.tenantId,
+            pipelineId: input.pipelineId,
+            deletedAt: null,
+          },
+          data: {
+            order,
+          },
+        });
+
+        if (result.count !== 1) {
+          throw new ConflictError(
+            'Unable to reorder stages because one or more stages no longer belong to the pipeline',
+          );
+        }
+      };
+
+      const temporaryOrders = input.stages.map((stage, index) => ({
+        stageId: stage.stageId,
+        order: -(input.stages.length + index + 1),
+      }));
+
+      for (const stage of temporaryOrders) {
+        await ensureUpdated(stage.stageId, stage.order);
+      }
+
+      for (const stage of input.stages) {
+        await ensureUpdated(stage.stageId, stage.order);
+      }
+    });
+  },
+} satisfies PipelineRepositoryContract;

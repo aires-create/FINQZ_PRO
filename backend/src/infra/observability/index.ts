@@ -3,6 +3,10 @@ import { initializeProcessMetrics } from './process.js';
 
 export { metricsRegistry } from './registry.js';
 export { recordHttpRequestMetrics } from './http.js';
+export {
+  recordProviderHealthStatusMetric,
+  recordProviderRequestMetrics,
+} from './provider.js';
 export { recordRateLimitExceeded } from './rate-limit.js';
 
 export const initializeObservability = () => {

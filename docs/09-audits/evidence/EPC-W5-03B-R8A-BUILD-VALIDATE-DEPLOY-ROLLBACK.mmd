@@ -1,0 +1,15 @@
+flowchart TD
+  A[Git SHA 874a3a827e061ffad0490c934c418da2afbecb84] --> B[Build]
+  B --> C[Validate once]
+  C --> D[docker save]
+  D --> E[TAR SHA-256]
+  E --> F[Secure transfer]
+  F --> G[Remote SHA-256]
+  G --> H[docker load]
+  H --> I[Image ID verification]
+  I --> J[HML image availability]
+  J --> K[API-only deploy with --no-build]
+  K --> L[Smoke]
+  L --> M{Promote or rollback}
+  M --> N[Promote]
+  M --> O[Rollback exact image]

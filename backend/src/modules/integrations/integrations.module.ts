@@ -9,6 +9,7 @@ import { GetProviderPayloadDiagnosticsUseCase } from './application/get-provider
 import { GetProviderRuntimeDiagnosticsUseCase } from './application/get-provider-runtime-diagnostics.use-case.js';
 import { GetProviderRuntimeIssuesUseCase } from './application/get-provider-runtime-issues.use-case.js';
 import { GetProviderRuntimeSummaryUseCase } from './application/get-provider-runtime-summary.use-case.js';
+import { GetProviderOperationsConsoleUseCase } from './application/get-provider-operations-console.use-case.js';
 import { TestIntegrationProviderConnectionUseCase } from './application/test-integration-provider-connection.use-case.js';
 import { TestIntegrationProviderMarginInquiryUseCase } from './application/test-integration-provider-margin-inquiry.use-case.js';
 import { TestIntegrationProviderInitialSimulationUseCase } from './application/test-integration-provider-initial-simulation.use-case.js';
@@ -16,22 +17,11 @@ import { ProviderHealthTracker } from './application/provider-health-tracker.js'
 import { ProviderRuntimeDiagnosticsService } from './application/provider-runtime-diagnostics.service.js';
 import { IntegrationsController } from './presentation/http/integrations.controller.js';
 import { createIntegrationsRoutes } from './presentation/http/integrations.routes.js';
-import { BluepayService } from './providers/bluepay/bluepay.service.js';
-import { HandmaisService } from './providers/handmais/handmais.service.js';
-import { NovaPromotoraService } from './providers/nova-promotora/nova-promotora.service.js';
-import { SosBolsoService } from './providers/sos-bolso/sos-bolso.service.js';
+import { buildProviderRuntimeRegistry } from './provider-runtime-registry.js';
 
-const providerRegistry = {
-  'nova-promotora': new NovaPromotoraService(),
-  'sos-bolso': new SosBolsoService(),
-  handmais: new HandmaisService(),
-  bluepay: new BluepayService(),
-} satisfies IntegrationProviderRegistry;
+const providerRegistry = buildProviderRuntimeRegistry() satisfies IntegrationProviderRegistry;
 const providerEngine = new ProviderEngine(providerRegistry);
 
-const testConnectionUseCase = new TestIntegrationProviderConnectionUseCase(
-  providerEngine,
-);
 const listProposalsUseCase = new ListIntegrationProviderProposalsUseCase(
   providerEngine,
 );
@@ -42,13 +32,18 @@ const getProviderPayloadDiagnosticsUseCase = new GetProviderPayloadDiagnosticsUs
   providerEngine,
 );
 const listProviderCapabilitiesUseCase = new ListProviderCapabilitiesUseCase();
+const providerHealthTracker = new ProviderHealthTracker();
 const testProviderMarginInquiryUseCase = new TestIntegrationProviderMarginInquiryUseCase(
   providerEngine,
 );
 const testProviderInitialSimulationUseCase = new TestIntegrationProviderInitialSimulationUseCase(
   providerEngine,
+  providerHealthTracker,
 );
-const providerHealthTracker = new ProviderHealthTracker();
+const testConnectionUseCase = new TestIntegrationProviderConnectionUseCase(
+  providerEngine,
+  providerHealthTracker,
+);
 const providerRuntimeDiagnosticsService = new ProviderRuntimeDiagnosticsService(
   providerHealthTracker,
 );
@@ -59,6 +54,9 @@ const getProviderRuntimeIssuesUseCase = new GetProviderRuntimeIssuesUseCase(
   providerRuntimeDiagnosticsService,
 );
 const getProviderRuntimeDiagnosticsUseCase = new GetProviderRuntimeDiagnosticsUseCase(
+  providerRuntimeDiagnosticsService,
+);
+const getProviderOperationsConsoleUseCase = new GetProviderOperationsConsoleUseCase(
   providerRuntimeDiagnosticsService,
 );
 const integrationsController = new IntegrationsController(
@@ -72,6 +70,7 @@ const integrationsController = new IntegrationsController(
   getProviderRuntimeSummaryUseCase,
   getProviderRuntimeIssuesUseCase,
   getProviderRuntimeDiagnosticsUseCase,
+  getProviderOperationsConsoleUseCase,
 );
 
 export const integrationsRoutes = createIntegrationsRoutes(
@@ -210,3 +209,4 @@ export type {
   ProviderIdempotencyInput,
 } from './application/provider-idempotency-contract.js';
 export { TokenManager } from './application/token-manager.js';
+export { GetProviderOperationsConsoleUseCase } from './application/get-provider-operations-console.use-case.js';

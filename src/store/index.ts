@@ -4,84 +4,29 @@ import { persist } from "zustand/middleware";
 import type { Cliente, Produto, Parceiro, Oportunidade, DashboardKPIs, DashboardProducao, DashboardFunil, Pipeline, PipelineColumn, OportunidadeKanban, PROFILE_PERMISSIONS, EstruturaComercial, RoteiroOperacional, TransacaoFinanceira, FinanceiroSaldo, ContaCorrenteMovimento, ContaCorrenteSaldo } from "../types";
 import { PROFILE_PERMISSIONS, ROLE_PERMISSIONS } from "../types";
 import { creditPfCatalog } from "../data/creditPfCatalog";
+import { canAccess, type AuthUser } from "../auth/permissions";
 
-// Initial mock data
-const initialPipelines: Pipeline[] = [
-  {
-    id: "finqz-auto",
-    nome: "FINQZ Auto",
-    ativo: true,
-    colunas: [
-      { id: "entrada", nome: "Entrada", ordem: 1, cor: "#3b82f6" },
-      { id: "triagem", nome: "Triagem", ordem: 2, cor: "#8b5cf6" },
-      { id: "analise", nome: "Análise", ordem: 3, cor: "#a855f7" },
-      { id: "aprovacao", nome: "Aprovação", ordem: 4, cor: "#f59e0b" },
-      { id: "documentacao", nome: "Documentação", ordem: 5, cor: "#06b6d4" },
-      { id: "formalizacao", nome: "Formalização", ordem: 6, cor: "#0ea5e9" },
-      { id: "liberacao", nome: "Liberação", ordem: 7, cor: "#22c55e" },
-      { id: "encerrado", nome: "Encerrado", ordem: 8, cor: "#6b7280" },
-    ],
-  },
-  {
-    id: "finqz-consignado",
-    nome: "FINQZ Consignado",
-    ativo: true,
-    colunas: [
-      { id: "entrada", nome: "Entrada", ordem: 1, cor: "#3b82f6" },
-      { id: "triagem", nome: "Triagem", ordem: 2, cor: "#8b5cf6" },
-      { id: "analise", nome: "Análise", ordem: 3, cor: "#a855f7" },
-      { id: "aprovacao", nome: "Aprovação", ordem: 4, cor: "#f59e0b" },
-      { id: "contratacao", nome: "Contratação", ordem: 5, cor: "#06b6d4" },
-      { id: "formalizacao", nome: "Formalização", ordem: 6, cor: "#0ea5e9" },
-      { id: "liberacao", nome: "Liberação", ordem: 7, cor: "#22c55e" },
-      { id: "encerrado", nome: "Encerrado", ordem: 8, cor: "#6b7280" },
-    ],
-  },
-  {
-    id: "fgts",
-    nome: "FGTS",
-    ativo: true,
-    colunas: [
-      { id: "saque", nome: "Saque", ordem: 1, cor: "#3b82f6" },
-      { id: "triagem", nome: "Triagem", ordem: 2, cor: "#8b5cf6" },
-      { id: "analise", nome: "Análise", ordem: 3, cor: "#a855f7" },
-      { id: "aprovacao", nome: "Aprovação", ordem: 4, cor: "#f59e0b" },
-      { id: "documentacao", nome: "Documentação", ordem: 5, cor: "#06b6d4" },
-      { id: "formalizacao", nome: "Formalização", ordem: 6, cor: "#0ea5e9" },
-      { id: "liberacao", nome: "Liberação", ordem: 7, cor: "#22c55e" },
-      { id: "encerrado", nome: "Encerrado", ordem: 8, cor: "#6b7280" },
-    ],
-  },
-];
+const initialPipelines: Pipeline[] = [];
 
-const initialOportunidades: OportunidadeKanban[] = [
-  { id: 1, nome: "João Silva", telefone: "11999999999", produto: "Empréstimo Pessoal", pipeline_id: "finqz-auto", coluna_id: "entrada", valor: 15000, cliente_nome: "João Silva" },
-  { id: 2, nome: "Maria Santos", telefone: "11988888888", produto: "Crédito Consignado", pipeline_id: "finqz-consignado", coluna_id: "triagem", valor: 25000, cliente_nome: "Maria Santos" },
-  { id: 3, nome: "Pedro Costa", telefone: "11977777777", produto: "Empréstimo Pessoal", pipeline_id: "finqz-auto", coluna_id: "analise", valor: 10000, cliente_nome: "Pedro Costa" },
-  { id: 4, nome: "Ana Oliveira", telefone: "11966666666", produto: "FGTS", pipeline_id: "fgts", coluna_id: "triagem", valor: 5000, cliente_nome: "Ana Oliveira" },
-  { id: 5, nome: "Carlos Lima", telefone: "11955555555", produto: "Crédito Consignado", pipeline_id: "finqz-consignado", coluna_id: "aprovacao", valor: 30000, cliente_nome: "Carlos Lima" },
-];
+const serializeUserPermissions = (permissions: Record<string, string[]>): string[] => {
+  if (!permissions || typeof permissions !== "object") {
+    return [];
+  }
 
-const initialClientes: Cliente[] = [
-  { id: 1, nome: "João Silva", cpf_cnpj: "12345678901", email: "joao@email.com", telefone: "11999999999", created_at: Date.now(), updated_at: Date.now() },
-  { id: 2, nome: "Maria Santos", cpf_cnpj: "23456789012", email: "maria@email.com", telefone: "11988888888", created_at: Date.now(), updated_at: Date.now() },
-  { id: 3, nome: "Pedro Costa", cpf_cnpj: "34567890123", email: "pedro@email.com", telefone: "11977777777", created_at: Date.now(), updated_at: Date.now() },
-  { id: 4, nome: "Ana Oliveira", cpf_cnpj: "45678901234", email: "ana@email.com", telefone: "11966666666", created_at: Date.now(), updated_at: Date.now() },
-  { id: 5, nome: "Carlos Lima", cpf_cnpj: "56789012345", email: "carlos@email.com", telefone: "11955555555", created_at: Date.now(), updated_at: Date.now() },
-];
+  if (permissions["*"]?.includes("*")) {
+    return ["*"];
+  }
 
-const initialProdutos: Produto[] = [
-  { id: 1, nome: "Empréstimo Pessoal", descricao: "Empréstimo sem garantia", pipeline: "default", documentos: "RG, CPF, Comprovante de renda", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 2, nome: "Crédito Consignado", descricao: "Crédito com desconto em folha", pipeline: "default", documentos: "RG, CPF, Contracheque", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 3, nome: "Cartão de Crédito", descricao: "Cartão de crédito sem anuidade", pipeline: "default", documentos: "RG, CPF", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 4, nome: "Empréstimo com Garantia", descricao: "Empréstimo com garantia de imóvel", pipeline: "default", documentos: "RG, CPF, Escritura do imóvel", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 5, nome: "Financiamento de Veículo", descricao: "Financiamento de carros e motos", pipeline: "default", documentos: "RG, CPF, Comprovante de renda", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 6, nome: "Assinatura de Veículos", descricao: "Locação de veículos por assinatura", pipeline: "default", documentos: "RG, CPF, Comprovante de renda", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 7, nome: "Energia Solar GD", descricao: "Geração distribuída de energia solar", pipeline: "default", documentos: "RG, CPF, Conta de energia", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 8, nome: "Mercado Livre de Energia", descricao: "Comercialização de energia no mercado livre", pipeline: "default", documentos: "RG, CPF, Conta de energia", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 9, nome: "Seguro de Vida", descricao: "Seguro de vida individual ou familiar", pipeline: "default", documentos: "RG, CPF", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-  { id: 10, nome: "Plano de Saúde", descricao: "Plano de saúde individual ou familiar", pipeline: "default", documentos: "RG, CPF", ativo: 1, created_at: Date.now(), updated_at: Date.now() },
-];
+  return Object.entries(permissions).flatMap(([module, actions]) =>
+    (actions || []).map((action) => `${module}_${action}`.toUpperCase()),
+  );
+};
+
+const initialOportunidades: OportunidadeKanban[] = [];
+
+const initialClientes: Cliente[] = [];
+
+const initialProdutos: Produto[] = [];
 
 // ============================================
 // HELPER: Gerar Estrutura Comercial a partir do creditPfCatalog
@@ -229,11 +174,7 @@ const buildEstruturaComercialFromCatalog = (): EstruturaComercial[] => {
 // Agora usa creditPfCatalog como fonte
 const initialEstruturaComercial: EstruturaComercial[] = buildEstruturaComercialFromCatalog();
 
-const initialParceiros: Parceiro[] = [
-  { id: 1, codigo: 1000, nome: "Fintech Solutions", tipo: "COMPANY", cpf_cnpj: "12345678000100", responsavel: "João Manager", telefone: "11999999000", email: "contato@fintech.com", status: "ativo", comissao_company: 5, comissao_franquia: 10, comissao_franqueado: 15, created_at: Date.now(), updated_at: Date.now(), observacao: "Parceiro estratégico", login: "1000", parent_id: null },
-  { id: 2, codigo: 1001, nome: "Franquia São Paulo", tipo: "FRANQUIA", cpf_cnpj: "23456789000111", responsavel: "Maria Franca", telefone: "11988888000", email: "sp@franquia.com", status: "ativo", parent_id: 1, comissao_company: 5, comissao_franquia: 10, comissao_franqueado: 15, created_at: Date.now(), updated_at: Date.now(), observacao: "", login: "1001" },
-  { id: 3, codigo: 1002, nome: "Franqueado Rio de Janeiro", tipo: "FRANQUEADO", cpf_cnpj: "34567890000122", responsavel: "Pedro Franco", telefone: "11977777000", email: "rj@franquiado.com", status: "ativo", parent_id: 2, comissao_company: 5, comissao_franquia: 10, comissao_franqueado: 15, created_at: Date.now(), updated_at: Date.now(), observacao: "Franqueado da Franquia São Paulo", login: "1002" },
-];
+const initialParceiros: Parceiro[] = [];
 
 interface UsuarioMock {
   id: string;
@@ -258,13 +199,7 @@ interface UsuarioMock {
   updated_at: number;
 }
 
-const initialUsuarios: UsuarioMock[] = [
-  { id: "1", nome: "Admin Sistema", email: "admin@finqz.com.br", access_code: "FINQZ-0001", senha: "admin123", perfil: "Admin Sistema", role: "ROLE_ADMIN_SISTEMA", scope: "GLOBAL", permissions: ["*"], status: "ATIVO", created_at: Date.now(), updated_at: Date.now() },
-  { id: "2", nome: "Aires Fernandes Muniz", email: "aires@finqz.com.br", access_code: "FINQZ-0002", senha: "aires123", perfil: "CEO", role: "ROLE_CEO", scope: "GLOBAL", permissions: ["*"], status: "ATIVO", created_at: Date.now(), updated_at: Date.now() },
-  { id: "3", nome: "Gerente Fintech Solutions", email: "gerente@fintech.com", access_code: "P-1001", senha: "gerente123", perfil: "Gerente de Franquia", role: "ROLE_GERENTE_FRANQUIA", scope: "COMPANY", permissions: ["dashboard", "clientes", "oportunidades", "financeiro"], partner_id: 1, status: "ATIVO", created_at: Date.now(), updated_at: Date.now() },
-  { id: "4", nome: "Vendedor Franquia São Paulo", email: "vendedor@franquiasp.com", access_code: "P-1002", senha: "venda123", perfil: "Vendedor", role: "ROLE_VENDEDOR_FRANQUIA", scope: "FRANQUIA", permissions: ["dashboard", "clientes", "oportunidades"], partner_id: 2, status: "ATIVO", created_at: Date.now(), updated_at: Date.now() },
-  { id: "5", nome: "Franqueado Rio", email: "franqueado@riocliente.com", access_code: "P-1003", senha: "franquia123", perfil: "Franqueado", role: "ROLE_FRANQUEADO", scope: "FRANQUEADO", permissions: ["dashboard", "clientes", "oportunidades"], partner_id: 3, status: "ATIVO", created_at: Date.now(), updated_at: Date.now() },
-];
+const initialUsuarios: UsuarioMock[] = [];
 
 interface AppState {
   // Theme
@@ -304,14 +239,6 @@ interface AppState {
   // UI State
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-
-  // Data Cache
-  kpis: DashboardKPIs | null;
-  setKpis: (kpis: DashboardKPIs) => void;
-  producao: DashboardProducao | null;
-  setProducao: (producao: DashboardProducao) => void;
-  funil: DashboardFunil | null;
-  setFunil: (funil: DashboardFunil) => void;
 
   // Lists
   clientes: Cliente[];
@@ -399,10 +326,6 @@ interface AppState {
   deleteOportunidade: (id: string) => void;
   moveOportunidade: (id: string, updates: { etapa_id?: string; status?: string }) => void;
 
-  // Filters
-  filtroPeriodo: string;
-  setFiltroPeriodo: (periodo: string) => void;
-
   // Permissions
   userPermissions: Record<string, string[]>;
   setUserPermissions: (permissions: Record<string, string[]>) => void;
@@ -476,11 +399,21 @@ const useAppStore = create<AppState>()(
                 return acc;
               }
 
-              const normalizedPermission = permission.toUpperCase();
+              const trimmedPermission = permission.trim();
+              const normalizedPermission = trimmedPermission.toUpperCase();
 
               if (normalizedPermission === "*") {
                 acc["*"] = ["*"];
                 return acc;
+              }
+
+              if (trimmedPermission.includes(":")) {
+                const [moduleName, actionName] = trimmedPermission.toLowerCase().split(":");
+                if (moduleName && actionName) {
+                  acc[moduleName] = acc[moduleName] || [];
+                  acc[moduleName].push(actionName);
+                  return acc;
+                }
               }
 
               const lastSeparatorIndex = normalizedPermission.lastIndexOf("_");
@@ -521,14 +454,6 @@ const useAppStore = create<AppState>()(
       // UI State
       sidebarOpen: true,
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
-
-      // Data Cache
-      kpis: null,
-      setKpis: (kpis) => set({ kpis }),
-      producao: null,
-      setProducao: (producao) => set({ producao }),
-      funil: null,
-      setFunil: (funil) => set({ funil }),
 
       // Lists
       clientes: initialClientes,
@@ -588,7 +513,6 @@ const useAppStore = create<AppState>()(
         return state.estruturaComercial;
       },
       migrateProdutosToEstruturaComercial: () => set((state) => {
-        // Migra produtos antigos para estruturaComercial
         const produtos = state.produtos;
         if (produtos.length === 0) return state;
         
@@ -855,13 +779,6 @@ const useAppStore = create<AppState>()(
 
       currentPipelineId: "",
       setCurrentPipelineId: (id) => set({ currentPipelineId: id }),
-      
-      // Função para resetar pipelines para valores padrão
-      resetPipelines: () => set({ 
-        pipelines: initialPipelines,
-        currentPipelineId: "",
-        oportunidadesKanban: initialOportunidades,
-      }),
 
       oportunidadesKanban: initialOportunidades,
       setOportunidadesKanban: (oportunidades) => set({ oportunidadesKanban: oportunidades }),
@@ -882,10 +799,6 @@ const useAppStore = create<AppState>()(
         ),
       })),
 
-      // Filters
-      filtroPeriodo: "hoje",
-      setFiltroPeriodo: (periodo) => set({ filtroPeriodo: periodo }),
-
       // Permissions
       userPermissions: {},
       setUserPermissions: (permissions) => set({ userPermissions: permissions }),
@@ -893,42 +806,43 @@ const useAppStore = create<AppState>()(
         const state = useAppStore.getState();
         const normalizedModule = String(module).toLowerCase();
         const normalizedAction = String(action).toLowerCase();
-        
-        // Admin tem acesso total
-        if (
-          state.user?.role === 'ROLE_ADMIN_SISTEMA' ||
-          state.user?.perfil === 'admin' ||
-          state.user?.perfil === 'Admin Sistema'
-        ) return true;
-        
-        // Se tem permissões customizadas, usa elas
-        const modulePerms = state.userPermissions[normalizedModule];
-        if (modulePerms && modulePerms.length > 0) {
-          // Admin no perfil tem todas as permissões
-          if (modulePerms.includes('*')) return true;
-          return modulePerms.includes(normalizedAction);
-        }
-        
-        // Fallback: usa permissões baseadas no role do usuário
+
+        const explicitPermissions = Array.isArray(state.user?.permissions)
+          ? state.user.permissions.filter((permission): permission is string => typeof permission === "string" && permission.length > 0)
+          : [];
+
+        const cachedPermissions = serializeUserPermissions(state.userPermissions);
         const userRole = state.user?.role;
-        if (userRole) {
-          const rolePerms = ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS];
-          if (rolePerms && rolePerms.length > 0) {
-            const rolePermsAsStrings: readonly string[] = rolePerms;
-            // Admin role tem todas as permissões
-            if (rolePermsAsStrings.includes('*')) return true;
-            return rolePermsAsStrings.includes(action);
-          }
-        }
-        
-        return false;
+        const rolePerms = userRole
+          ? [...(ROLE_PERMISSIONS[userRole as keyof typeof ROLE_PERMISSIONS] || [])]
+          : [];
+
+        const mergedPermissions = Array.from(
+          new Set<string>([
+            ...explicitPermissions,
+            ...cachedPermissions,
+            ...rolePerms.map((permission) => String(permission)),
+          ]),
+        );
+
+        const authUser: AuthUser | null = state.user
+          ? {
+              ...state.user,
+              permissions: mergedPermissions,
+            }
+          : null;
+
+        return canAccess(
+          authUser,
+          normalizedModule as never,
+          normalizedAction as never,
+        );
       },
     }),
     {
       name: "finqz-pro-storage",
       version: 2,
       migrate: (persistedState: any, version: number) => {
-        // TODO(legacy-cleanup): manter somente estado de UI em persist para evitar stale de dados operacionais.
         if (!persistedState || typeof persistedState !== "object") {
           return persistedState;
         }
@@ -943,10 +857,6 @@ const useAppStore = create<AppState>()(
       },
       partialize: (state) => ({
         theme: state.theme,
-        pipelines: state.pipelines,
-        currentPipelineId: state.currentPipelineId,
-        oportunidadesKanban: state.oportunidadesKanban,
-        // TODO(legacy-cleanup): listas operacionais nao devem ficar em cache local persistente.
       }),
     }
   )

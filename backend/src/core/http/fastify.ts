@@ -10,7 +10,6 @@ import { config } from '../../config/app.js';
 import { swaggerSpec } from '../../config/swagger.js';
 import { logger, sanitizeLogText } from '../../shared/logger.js';
 import { AppError } from '../../shared/errors/AppError.js';
-import { prisma } from '../prisma/client.js';
 import { connectRedis } from '../redis/index.js';
 import {
   getPrometheusMetrics,
@@ -29,10 +28,23 @@ import {
 import { crmRoutes } from '../../modules/crm/routes.js';
 import { auditRoutes } from '../../modules/audit/routes.js';
 import { commercialRoutes } from '../../modules/commercial/index.js';
+import { commercialGovernanceRoutes } from '../../modules/commercial-governance/commercial-governance.module.js';
 import { integrationsRoutes } from '../../modules/integrations/integrations.module.js';
 import { organizationRoutes } from '../../modules/organization/organization.routes.js';
-import { partnerAcquisitionRoutes } from '../../modules/partner-acquisition/http/partner-acquisition.routes.js';
+import { membershipsRoutes } from '../../modules/memberships/memberships.routes.js';
 import usersRoutes from '../../modules/users/users.routes.js';
+import { rolesFastifyRoutes } from '../../modules/roles/roles.fastify.routes.js';
+import { permissionsFastifyRoutes } from '../../modules/permissions/permissions.fastify.routes.js';
+import { opportunitiesRoutes } from '../../modules/opportunities/routes.js';
+import { operationRoutes } from '../../modules/operation/presentation/http/operation.routes.js';
+import { masterCatalogRoutes } from '../../modules/master-catalog/presentation/http/master-catalog.routes.js';
+import { simulationRuntimeRoutes } from '../../modules/simulation/presentation/http/simulation-runtime.routes.js';
+import { simulationRuntimeEvidenceRoutes } from '../../modules/simulation/evidence/presentation/http/simulation-runtime-evidence.routes.js';
+import { pipelinesRoutes } from '../../modules/pipelines/routes.js';
+import { partnerRoutes } from '../../modules/partners/presentation/http/partner.routes.js';
+import { partnerAcquisitionRoutes } from '../../modules/partner-acquisition/http/partner-acquisition.routes.js';
+import { edpRoutes } from '../../modules/edp/presentation/http/edp.routes.js';
+
 import {
   applyRequestSanitization,
   baselineSecurityHeaders,
@@ -44,6 +56,7 @@ import {
   trustProxy,
 } from './security-governance.js';
 import { applyRequestCorrelation } from './request-correlation.js';
+import { testDatabaseConnection } from '../../database/prisma.js';
 
 const developmentCorsOrigins = [
   'http://localhost:5173',
@@ -191,12 +204,27 @@ const isOperationalError = (error: unknown): error is OperationalError => {
     return true;
   }
 
-  return (
-    error instanceof Error &&
-    isRecord(error) &&
-    error.isOperational === true &&
-    typeof error.statusCode === 'number'
-  );
+  // Accept legacy operational errors by shape or by well-known names
+  if (error instanceof Error && isRecord(error)) {
+    // If the legacy error class set isOperational or numeric statusCode, treat as operational
+    if (error.isOperational === true && typeof error.statusCode === 'number') {
+      return true;
+    }
+
+    // Some legacy errors may not share prototype across bundles; fall back to name-based detection
+    const legacyNames = ['AuthenticationError', 'AuthorizationError', 'ValidationError', 'AppError'];
+    if (typeof error.name === 'string' && legacyNames.includes(error.name)) {
+      return true;
+    }
+
+    // Also accept objects that expose a numeric status via common properties
+    const statusCandidate = (error as any).statusCode ?? (error as any).status ?? (error as any).code;
+    if (typeof statusCandidate === 'number' && Number.isInteger(statusCandidate) && statusCandidate >= 400 && statusCandidate <= 599) {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 const getErrorCode = (error: unknown) => {
@@ -214,11 +242,32 @@ const getErrorCode = (error: unknown) => {
 };
 
 const getErrorStatusCode = (error: OperationalError) => {
-  const statusCode = Number(error.statusCode);
+  // Prefer explicit numeric fields in several common shapes
+  const candidates: Array<number | undefined> = [];
 
-  return Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599
-    ? statusCode
-    : 500;
+  if (typeof error.statusCode === 'number') candidates.push(Number(error.statusCode));
+  if ((error as any).status && typeof (error as any).status === 'number') candidates.push(Number((error as any).status));
+  if ((error as any).code && typeof (error as any).code === 'number') candidates.push(Number((error as any).code));
+  // Some legacy errors stored status in `status_code`
+  if ((error as any).status_code && typeof (error as any).status_code === 'number') candidates.push(Number((error as any).status_code));
+
+  for (const c of candidates) {
+    if (c != null && Number.isInteger(c) && c >= 400 && c <= 599) return c as number;
+  }
+
+  // Fallback: try to parse string numbers
+  const strCandidates = [
+    (error as any).statusCode,
+    (error as any).status,
+    (error as any).code,
+    (error as any).status_code,
+  ].map((v) => (typeof v === 'string' && /^[0-9]+$/.test(v) ? Number(v) : undefined));
+
+  for (const c of strCandidates) {
+    if (c != null && Number.isInteger(c) && c >= 400 && c <= 599) return c as number;
+  }
+
+  return 500;
 };
 
 const getErrorResponseErrors = (error: OperationalError) => {
@@ -483,6 +532,16 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
     uptime: process.uptime(),
   }));
 
+  // Liveness
+  app.get('/live', async () => ({
+    success: true,
+    status: 'live',
+    service: 'FINQZ PRO API',
+    environment: config.nodeEnv,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+  }));
+
   // Readiness
   app.get('/ready', async (request, reply) => {
     const timestamp = new Date().toISOString();
@@ -490,7 +549,10 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
     let redis: 'connected' | 'disconnected' = 'connected';
 
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      const databaseReady = await testDatabaseConnection();
+      if (!databaseReady) {
+        throw new Error('Database readiness check failed');
+      }
     } catch (error) {
       database = 'disconnected';
       logger.warn(
@@ -537,14 +599,35 @@ export async function buildFastifyApp(): Promise<FastifyInstance> {
   // Auth routes
   await authRoutes(app);
 
-  // Protected module routes
+    // Protected module routes
   await app.register(crmRoutes, { prefix: '/api/v1/crm' });
-  await app.register(partnerAcquisitionRoutes, { prefix: '/api/v1/partner-acquisition' });
   await app.register(auditRoutes, { prefix: '/api/v1/audit' });
   await app.register(commercialRoutes, { prefix: '/api/v1/commercial' });
+
+  await app.register(commercialGovernanceRoutes, {
+    prefix: '/api/v1/commercial-governance',
+  });
+
   await app.register(integrationsRoutes, { prefix: '/api/v1/integrations' });
   await app.register(organizationRoutes, { prefix: '/api/v1/organizations' });
+  await app.register(membershipsRoutes, { prefix: '/api/v1/memberships' });
   await app.register(usersRoutes, { prefix: '/api/v1/users' });
+
+  // AUD-RBAC-010 - RBAC Enterprise Fastify routes
+  await app.register(rolesFastifyRoutes, { prefix: '/api/v1/roles' });
+  await app.register(permissionsFastifyRoutes, { prefix: '/api/v1/permissions' });
+
+  await app.register(pipelinesRoutes, { prefix: '/api/v1/pipelines' });
+  await app.register(partnerRoutes, { prefix: '/api/v1/partners' });
+  await app.register(partnerAcquisitionRoutes, {
+    prefix: '/api/v1/partner-acquisition',
+  });
+  await app.register(opportunitiesRoutes, { prefix: '/api/v1/opportunities' });
+  await app.register(operationRoutes, { prefix: '/api/v1/operations' });
+  await app.register(masterCatalogRoutes, { prefix: '/api/v1/master-catalog' });
+  await app.register(simulationRuntimeRoutes, { prefix: '/api/v1/simulations' });
+  await app.register(simulationRuntimeEvidenceRoutes, { prefix: '/api/v1/simulations' });
+  await app.register(edpRoutes, { prefix: '/api/v1/edp' });
 
   // Error handler
   app.setErrorHandler(sendErrorResponse);

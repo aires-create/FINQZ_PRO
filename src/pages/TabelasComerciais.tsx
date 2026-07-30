@@ -227,20 +227,6 @@ const mergeProvidersFromTables = (
   return Array.from(providersById.values());
 };
 
-const loadLocalCommercialData = (): LoadedCommercialData => {
-  const loadedProviders = providerRepository.listProviders();
-
-  // TODO tecnico: remover esta leitura emergencial em localStorage quando /api/v1/commercial cobrir todos os cenarios legados.
-  const loadedTables = commercialTableRepository.listCommercialTables();
-  const allConditions = commercialConditionRepository.getAllConditions();
-
-  return {
-    providers: mergeProvidersFromTables(loadedProviders, loadedTables),
-    tables: loadedTables,
-    conditions: groupLocalConditionsByTable(allConditions),
-  };
-};
-
 const getApiErrorMessage = (error: unknown): string => (
   error instanceof Error ? error.message : "Erro desconhecido ao acessar a API"
 );
@@ -252,7 +238,6 @@ export const TabelasComerciaisPage: React.FC = () => {
   const [conditions, setConditions] = useState<Record<string, CommercialCondition[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [usingFallback, setUsingFallback] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   
   // Filters
@@ -340,19 +325,15 @@ export const TabelasComerciaisPage: React.FC = () => {
       setProviders(mergeProvidersFromTables(loadedProviders, loadedTables));
       setTables(loadedTables);
       setConditions(groupApiConditionsByTable(apiTables));
-      setUsingFallback(false);
       setFeedback(null);
     } catch (error) {
       console.error("Error loading commercial data from API:", error);
-
-      const fallbackData = loadLocalCommercialData();
-      setProviders(fallbackData.providers);
-      setTables(fallbackData.tables);
-      setConditions(fallbackData.conditions);
-      setUsingFallback(true);
+      setProviders([]);
+      setTables([]);
+      setConditions({});
       setFeedback({
         type: "warning",
-        message: `API de tabelas comerciais indisponivel (${getApiErrorMessage(error)}). Os dados locais podem estar desatualizados.`,
+        message: `API de tabelas comerciais indisponivel (${getApiErrorMessage(error)}). Nenhum fallback local sera usado.`,
       });
     } finally {
       setIsLoading(false);
@@ -516,19 +497,17 @@ export const TabelasComerciaisPage: React.FC = () => {
     let currentTable = table;
     let tableConditions = conditions[table.id] || [];
 
-    if (!usingFallback) {
-      try {
-        const apiTable = await commercialApi.getTableById(table.id);
-        currentTable = mapApiTableToLocal(apiTable);
-        tableConditions = apiTable.conditions.map(mapApiConditionToLocal);
-        setTables(prev => prev.map(item => item.id === currentTable.id ? currentTable : item));
-        setConditions(prev => ({ ...prev, [currentTable.id]: tableConditions }));
-      } catch (error) {
-        setFeedback({
-          type: "warning",
-          message: `Nao foi possivel atualizar os detalhes pela API (${getApiErrorMessage(error)}). Usando os dados ja carregados na tela.`,
-        });
-      }
+    try {
+      const apiTable = await commercialApi.getTableById(table.id);
+      currentTable = mapApiTableToLocal(apiTable);
+      tableConditions = apiTable.conditions.map(mapApiConditionToLocal);
+      setTables(prev => prev.map(item => item.id === currentTable.id ? currentTable : item));
+      setConditions(prev => ({ ...prev, [currentTable.id]: tableConditions }));
+    } catch (error) {
+      setFeedback({
+        type: "warning",
+        message: `Nao foi possivel atualizar os detalhes pela API (${getApiErrorMessage(error)}). Os dados carregados permanecem somente na tela.`,
+      });
     }
 
     setEditingTable(currentTable);
@@ -1183,7 +1162,7 @@ export const TabelasComerciaisPage: React.FC = () => {
         }}
       />
 
-      {(feedback || isLoading || usingFallback) && (
+      {(feedback || isLoading) && (
         <div className={`rounded-lg border px-4 py-3 text-sm ${
           feedback?.type === "error"
             ? "border-red-500/30 bg-red-500/10 text-red-200"

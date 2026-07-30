@@ -1,0 +1,68 @@
+{
+  "id": "EPC-W5-03B-R6D",
+  "title": "Release Manifest Freeze And HML Readiness",
+  "objective": "Prepare the release manifest and HML readiness evidence for the backend-only candidate without deploy or production change.",
+  "verdict": "DEFERRED_PENDING_HML_RECONCILIATION",
+  "evidenceClassification": "INSUFFICIENT_EVIDENCE - OFFICIAL_RELEASE_RUNTIME_UNAVAILABLE",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "8daa4610c9b42f28697e15297569325beefcf8a3",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "leftRight": "0 0"
+  },
+  "hashes": {
+    "backend/package.json": "46FFB3793600CA2491776BA717A8568ED02EB3949D4AE55C76C2E907DD994BCE",
+    "backend/package-lock.json": "97DC963BBBE7E65FDC2E3BC03496965F60BD7687A80205998A27ED39A4F515E7"
+  },
+  "workingTree": {
+    "dirty": true,
+    "residualsPreserved": [
+      ".env.example",
+      "_worktrees/",
+      "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "docs/09-audits/* preexisting W5-03B artifacts",
+      "scripts/sdc-3.4h-f-local-readiness.mjs"
+    ],
+    "sixPromotedFiles": [
+      "backend/package-lock.json",
+      "backend/src/tests/integration/edp.runtime.e2e.test.ts",
+      "backend/src/tests/integration/edp.persistence.memory.test.ts",
+      "backend/src/tests/integration/edp.runtime.memory.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.memory.test.ts",
+      "backend/src/tests/integration/simulation-runtime-evidence.persistence.memory.test.ts"
+    ]
+  },
+  "linuxNode20": {
+    "environment": "unavailable",
+    "dockerDaemon": "unavailable",
+    "wslLinuxDistro": "unavailable",
+    "npmCi": "not_executed",
+    "npmLsYamlAll": "not_executed",
+    "npmExplainYaml": "not_executed",
+    "npmExplainYaml290": "not_executed",
+    "npmLsViteVitestYamlAll": "not_executed",
+    "npmRunBuild": "not_executed"
+  },
+  "hml": {
+    "sshInventory": "not_executed",
+    "health": "not_executed",
+    "live": "not_executed",
+    "ready": "not_executed",
+    "frontendFingerprint": "not_executed",
+    "rollbackImage": "not_executed"
+  },
+  "constraints": {
+    "noStaging": true,
+    "noCommit": true,
+    "noPush": true,
+    "noDeploy": true,
+    "noMigration": true,
+    "noProductionChange": true
+  },
+  "blocker": "BLOCKER-R6D-01 - LINUX_NODE20_EXECUTION_ENVIRONMENT_UNAVAILABLE",
+  "notes": [
+    "The official Linux release runtime could not be started in this session.",
+    "Docker Desktop Linux containers were unavailable.",
+    "No usable WSL Linux distribution was available."
+  ]
+}

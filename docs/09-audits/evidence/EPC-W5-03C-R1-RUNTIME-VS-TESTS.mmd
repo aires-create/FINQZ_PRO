@@ -1,0 +1,42 @@
+flowchart LR
+  subgraph Root["Repo root"]
+    R1["R1: cwd = repo root"]
+    R1DOT["dotenv.config() reads default env at repo root"]
+    R1MISS["Required backend vars absent"]
+    R1FAIL["Environment validation fails before Prisma"]
+    R1 --> R1DOT --> R1MISS --> R1FAIL
+  end
+
+  subgraph Backend["Backend cwd"]
+    R2["R2: cwd = backend"]
+    RUNTIME["R3: runtime readiness path"]
+    TESTS["R4: test loader emulation"]
+    DOTENV["dotenv.config() reads backend/.env"]
+    PRISMA["PrismaClient"]
+    CONNECT["$connect() succeeds"]
+    QUERY["SELECT 1 succeeds"]
+    READY["testDatabaseConnection() = true"]
+    R2 --> DOTENV
+    RUNTIME --> DOTENV
+    TESTS --> DOTENV
+    DOTENV --> PRISMA --> CONNECT --> QUERY
+    QUERY --> READY
+  end
+
+  subgraph Network["Sanitized network evidence"]
+    DNS["dnsResolution: PASS"]
+    TCP["tcpPoolerConnectivity: PASS"]
+    DNS --> TCP
+  end
+
+  R2 -.-> Network
+  RUNTIME -.-> Network
+  TESTS -.-> Network
+
+  classDef fail fill:#ffe3e3,stroke:#cc0000,color:#5a0000;
+  classDef ok fill:#e7f7e7,stroke:#2f8f2f,color:#0d4d0d;
+  classDef neutral fill:#eef3ff,stroke:#3558a6,color:#17306c;
+
+  class R1,R1DOT,R1MISS,R1FAIL fail;
+  class R2,RUNTIME,TESTS,DOTENV,PRISMA,CONNECT,QUERY,READY,DNS,TCP ok;
+  class Network neutral;

@@ -1,0 +1,12 @@
+# HML override for FINQZ PRO Enterprise
+# Apply this file together with backend/docker-compose.yml from the backend directory.
+# Secrets must come from --env-file .env.production or host materialization, never from Git.
+
+services:
+  api:
+    image: ${FINQZ_BACKEND_IMAGE:?FINQZ_BACKEND_IMAGE is required}
+    build: !reset null
+    pull_policy: never
+    environment:
+      APP_ENV: ${APP_ENV:-homologation}
+      LOG_LEVEL: ${LOG_LEVEL:-info}

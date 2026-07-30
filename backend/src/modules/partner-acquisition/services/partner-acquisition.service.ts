@@ -433,7 +433,7 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
       const prospect = await this.repository.promoteLeadToProspectInTransaction({
         tenantId,
         leadId: command.leadId,
-        prospectCode: command.leadId,
+        prospectCode: lead.leadCode,
       });
 
       if (!prospect) {
@@ -625,10 +625,6 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
         }
       }
 
-      const versionAfterLink = prospect.partnerId !== effectivePartnerId
-        ? input.expectedVersion + 1
-        : input.expectedVersion;
-
       await acquisitionService.recordConversionDecision({
         tenantId,
         prospectId: input.prospectId,
@@ -642,7 +638,7 @@ export class PartnerAcquisitionService implements PartnerAcquisitionServiceContr
       const convertedProspect = await acquisitionService.updateProspectLifecycle({
         tenantId,
         prospectId: input.prospectId,
-        expectedVersion: versionAfterLink,
+        expectedVersion: input.expectedVersion,
         status: 'CONVERTED',
         convertedAt: input.conversionApprovedAt ?? input.requestedAt,
       });

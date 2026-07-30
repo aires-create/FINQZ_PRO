@@ -9,9 +9,6 @@ const SdrIaHubPage = lazy(() => import("../pages/SdrIaHub"));
 const HubDisparosPage = lazy(() =>
   import("../pages/Placeholders").then((module) => ({ default: module.HubDisparos })),
 );
-const HubAutomacaoPage = lazy(() =>
-  import("../pages/Placeholders").then((module) => ({ default: module.HubAutomacao })),
-);
 const HubHigienizacaoPage = lazy(() =>
   import("../pages/Placeholders").then((module) => ({ default: module.HubHigienizacao })),
 );
@@ -21,30 +18,9 @@ const HubEmailMarketingPage = lazy(() =>
 
 export const hubRoutes = (
   <>
-    <Route
-      path="campanhas"
-      element={
-        <ProtectedRoute requiredModule="campanhas" requiredAction="view">
-          <CampanhasPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="conversas"
-      element={
-        <ProtectedRoute requiredModule="conversas" requiredAction="view">
-          <ConversasPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="audiencias"
-      element={
-        <ProtectedRoute requiredModule="audiencias" requiredAction="view">
-          <AudienciasPage />
-        </ProtectedRoute>
-      }
-    />
+    <Route path="campanhas" element={<Navigate to="/app/hub/campanhas" replace />} />
+    <Route path="conversas" element={<Navigate to="/app/hub/whatsapp" replace />} />
+    <Route path="audiencias" element={<Navigate to="/app/hub/audiencias" replace />} />
     <Route
       path="hub/audiencias"
       element={
@@ -78,14 +54,6 @@ export const hubRoutes = (
       }
     />
     <Route
-      path="hub/automacao"
-      element={
-        <ProtectedRoute requiredModule="hub" requiredAction="view">
-          <HubAutomacaoPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
       path="hub/sdr-ia"
       element={
         <ProtectedRoute requiredModule="hub" requiredAction="view">
@@ -109,9 +77,6 @@ export const hubRoutes = (
         </ProtectedRoute>
       }
     />
-    <Route path="campanhas" element={<Navigate to="/app/hub/campanhas" replace />} />
-    <Route path="conversas" element={<Navigate to="/app/hub/whatsapp" replace />} />
     <Route path="hub/conversas" element={<Navigate to="/app/hub/whatsapp" replace />} />
-    <Route path="audiencias" element={<Navigate to="/app/hub/audiencias" replace />} />
   </>
 );

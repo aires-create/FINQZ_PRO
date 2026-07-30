@@ -27,8 +27,8 @@ export interface UpdateUserPayload {
 }
 
 export interface ChangePasswordPayload {
-  current_password: string;
-  new_password: string;
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface ResetPasswordPayload {
@@ -36,8 +36,7 @@ export interface ResetPasswordPayload {
   send_email?: boolean;
 }
 
-// TODO(legacy-cleanup): manter relativo ao prefixo /api/v1 do API_BASE_URL para evitar /api/v1/api/*.
-const AUTH_BASE_PATH = '/auth';
+const AUTH_BASE_PATH = '/api/v1/auth';
 
 // ============================================
 // API FUNCTIONS
@@ -96,7 +95,7 @@ export const authApi = {
    */
   async verifyAuth(): Promise<AuthUser | null> {
     try {
-      return await apiCall<AuthUser>('/api/auth/verify');
+      return await apiCall<AuthUser>('/api/v1/auth/profile');
     } catch {
       return null;
     }
@@ -107,8 +106,8 @@ export const authApi = {
    */
   async changePassword(data: ChangePasswordPayload): Promise<ApiResult<void>> {
     try {
-      await apiCall<void>('/api/auth/change-password', {
-        method: 'POST',
+      await apiCall<void>('/api/v1/auth/change-password', {
+        method: 'PATCH',
         body: JSON.stringify(data),
       });
       return { success: true };
@@ -122,7 +121,7 @@ export const authApi = {
    */
   async requestPasswordReset(email: string): Promise<ApiResult<void>> {
     try {
-      await apiCall<void>('/api/auth/reset-password', {
+      await apiCall<void>('/api/v1/auth/reset-password', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
@@ -137,7 +136,7 @@ export const authApi = {
    */
   async confirmPasswordReset(token: string, newPassword: string): Promise<ApiResult<void>> {
     try {
-      await apiCall<void>('/api/auth/reset-password/confirm', {
+      await apiCall<void>('/api/v1/auth/reset-password/confirm', {
         method: 'POST',
         body: JSON.stringify({ token, new_password: newPassword }),
       });
@@ -152,7 +151,7 @@ export const authApi = {
    */
   async validateResetToken(token: string): Promise<boolean> {
     try {
-      await apiCall<{ valid: boolean }>('/api/auth/reset-password/validate', {
+      await apiCall<{ valid: boolean }>('/api/v1/auth/reset-password/validate', {
         method: 'POST',
         body: JSON.stringify({ token }),
       });

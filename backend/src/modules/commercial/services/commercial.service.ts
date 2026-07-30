@@ -1,6 +1,4 @@
-import type { CommercialCondition, Prisma } from '@prisma/client';
-
-import { prisma } from '../../../core/prisma/client.js';
+import type { CommercialCondition } from '@prisma/client';
 import { NotFoundError } from '../../../shared/errors/index.js';
 import type {
   CommercialConditionResponseDto,
@@ -14,11 +12,14 @@ import {
   calculateOperationalCommissionTotal,
   commercialConditionRepository,
 } from '../repositories/commercial-condition.repository.js';
-import { commercialTableRepository } from '../repositories/commercial-table.repository.js';
+import {
+  commercialTableRepository,
+  runCommercialSerializableTransaction,
+} from '../repositories/commercial-table.repository.js';
 
-type CommercialTableWithConditions = Prisma.CommercialTableGetPayload<{
-  include: { conditions: true };
-}>;
+type CommercialTableWithConditions = NonNullable<
+  Awaited<ReturnType<typeof commercialTableRepository.findById>>
+>;
 
 const normalizeRequiredText = (value: string) => value.trim();
 
@@ -39,8 +40,8 @@ const normalizeDate = (value?: string | number | Date | null) => {
 const buildCommercialTableCreateData = (
   tenantId: string,
   body: CreateCommercialTableDto,
-): Prisma.CommercialTableUncheckedCreateInput => {
-  const data: Prisma.CommercialTableUncheckedCreateInput = {
+): Parameters<typeof commercialTableRepository.create>[1] => {
+  const data: Parameters<typeof commercialTableRepository.create>[1] = {
     tenantId,
     providerId: normalizeRequiredText(body.providerId),
     providerCode: normalizeRequiredText(body.providerCode),
@@ -100,7 +101,7 @@ const applyNullableTextUpdate = <T extends Record<string, unknown>>(
 
 const buildCommercialTableUpdateData = (
   body: UpdateCommercialTableDto,
-): Prisma.CommercialTableUncheckedUpdateInput => {
+): Parameters<typeof commercialTableRepository.update>[3] => {
   const data: Record<string, unknown> = {};
 
   applyTextUpdate(data, 'providerId', body.providerId);
@@ -126,7 +127,7 @@ const buildCommercialTableUpdateData = (
   if (body.startDate !== undefined) data.startDate = normalizeDate(body.startDate);
   if (body.endDate !== undefined) data.endDate = normalizeDate(body.endDate);
 
-  return data as Prisma.CommercialTableUncheckedUpdateInput;
+  return data as Parameters<typeof commercialTableRepository.update>[3];
 };
 
 const toIsoString = (value: Date | null) => value?.toISOString() ?? null;
@@ -234,7 +235,7 @@ export const commercialService = {
     tenantId: string,
     body: CreateCommercialTableDto,
   ): Promise<CommercialTableResponseDto> {
-    return prisma.$transaction(async (transaction) => {
+    return runCommercialSerializableTransaction(async (transaction) => {
       const table = await commercialTableRepository.create(
         transaction,
         buildCommercialTableCreateData(tenantId, body),
@@ -260,7 +261,7 @@ export const commercialService = {
     id: string,
     body: UpdateCommercialTableDto,
   ): Promise<CommercialTableResponseDto> {
-    return prisma.$transaction(async (transaction) => {
+    return runCommercialSerializableTransaction(async (transaction) => {
       assertTableFound(
         await commercialTableRepository.findById(tenantId, id, transaction),
       );
@@ -298,7 +299,7 @@ export const commercialService = {
     id: string,
     body: ReplaceCommercialConditionsDto,
   ): Promise<CommercialTableResponseDto> {
-    return prisma.$transaction(async (transaction) => {
+    return runCommercialSerializableTransaction(async (transaction) => {
       assertTableFound(
         await commercialTableRepository.findById(tenantId, id, transaction),
       );
@@ -319,7 +320,7 @@ export const commercialService = {
   },
 
   async deleteTable(tenantId: string, id: string): Promise<void> {
-    await prisma.$transaction(async (transaction) => {
+    await runCommercialSerializableTransaction(async (transaction) => {
       assertTableFound(
         await commercialTableRepository.findById(tenantId, id, transaction),
       );

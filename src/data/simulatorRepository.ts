@@ -1,6 +1,6 @@
 // ============================================
 // Repository: Simulador
-// Armazenamento local com localStorage
+// Estado efêmero em memória, sem persistência local.
 // ============================================
 
 import {
@@ -10,10 +10,7 @@ import {
   ProviderType,
   CommercialCondition,
 } from "./commercialRepository";
-
-// Storage keys
-const STORAGE_KEY_SIMULATIONS = "finqz_simulations";
-const STORAGE_KEY_PROPOSALS = "finqz_simulation_proposals";
+import { PIPELINES } from "../config/pipelines";
 
 // ============================================
 // Types
@@ -176,17 +173,32 @@ export const RANKING_TYPE_LABELS: Record<RankingType, string> = {
 // Repository
 // ============================================
 
+let simulationState: Map<string, SimulationResult> = new Map();
+let proposalState: Map<string, SimulationProposal> = new Map();
+
+const cloneSimulation = (simulation: SimulationResult): SimulationResult => ({
+  ...simulation,
+  customer: { ...simulation.customer },
+  creditOffers: simulation.creditOffers.map((offer) => ({ ...offer })),
+  energyOffers: simulation.energyOffers.map((offer) => ({ ...offer })),
+});
+
+const cloneProposal = (proposal: SimulationProposal): SimulationProposal => ({
+  ...proposal,
+  customer: { ...proposal.customer },
+  selectedCreditOffer: proposal.selectedCreditOffer ? { ...proposal.selectedCreditOffer } : undefined,
+  selectedEnergyOffer: proposal.selectedEnergyOffer ? { ...proposal.selectedEnergyOffer } : undefined,
+});
+
 export const simulatorRepository = {
   // Criar simulação
   createSimulation(result: Omit<SimulationResult, "id" | "createdAt">): SimulationResult {
-    const simulations = this.listSimulations();
     const newSimulation: SimulationResult = {
       ...result,
       id: `sim_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: Date.now()
     };
-    simulations.push(newSimulation);
-    this.saveSimulations(simulations);
+    simulationState.set(newSimulation.id, cloneSimulation(newSimulation));
     
     // Emitir evento
     emitAutomationEvent('SIMULATION_CREATED', { simulationId: newSimulation.id });
@@ -196,48 +208,31 @@ export const simulatorRepository = {
 
   // Listar simulações
   listSimulations(): SimulationResult[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_SIMULATIONS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading simulations:", e);
-      // Reset seguro se corrompido
-      localStorage.removeItem(STORAGE_KEY_SIMULATIONS);
-    }
-    return [];
+    return Array.from(simulationState.values()).map((simulation) => cloneSimulation(simulation));
   },
 
   // Obter simulação por ID
   getSimulationById(id: string): SimulationResult | undefined {
-    const simulations = this.listSimulations();
-    return simulations.find(s => s.id === id);
+    const simulation = simulationState.get(id);
+    return simulation ? cloneSimulation(simulation) : undefined;
   },
 
   // Salvar simulações
   saveSimulations(simulations: SimulationResult[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_SIMULATIONS, JSON.stringify(simulations));
-    } catch (e) {
-      console.error("Error saving simulations:", e);
-    }
+    simulationState = new Map(
+      simulations.map((simulation) => [simulation.id, cloneSimulation(simulation)]),
+    );
   },
 
   // Aceitar proposta
   acceptProposal(proposal: Omit<SimulationProposal, "id" | "acceptedAt" | "opportunityCreated">): SimulationProposal {
-    const proposals = this.listProposals();
     const newProposal: SimulationProposal = {
       ...proposal,
       id: `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       acceptedAt: Date.now(),
       opportunityCreated: false
     };
-    proposals.push(newProposal);
-    this.saveProposals(proposals);
+    proposalState.set(newProposal.id, cloneProposal(newProposal));
     
     // Emitir evento
     emitAutomationEvent('SIMULATION_PROPOSAL_ACCEPTED', { proposalId: newProposal.id });
@@ -247,34 +242,19 @@ export const simulatorRepository = {
 
   // Listar propostas
   listProposals(): SimulationProposal[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_PROPOSALS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Error loading proposals:", e);
-      localStorage.removeItem(STORAGE_KEY_PROPOSALS);
-    }
-    return [];
+    return Array.from(proposalState.values()).map((proposal) => cloneProposal(proposal));
   },
 
   // Salvar propostas
   saveProposals(proposals: SimulationProposal[]): void {
-    try {
-      localStorage.setItem(STORAGE_KEY_PROPOSALS, JSON.stringify(proposals));
-    } catch (e) {
-      console.error("Error saving proposals:", e);
-    }
+    proposalState = new Map(
+      proposals.map((proposal) => [proposal.id, cloneProposal(proposal)]),
+    );
   },
 
   // Criar oportunidade no pipeline a partir de proposta aceita
   createOpportunityFromAcceptedProposal(proposalId: string): string | null {
-    const proposals = this.listProposals();
-    const proposal = proposals.find(p => p.id === proposalId);
+    const proposal = proposalState.get(proposalId);
     
     if (!proposal) {
       console.error("Proposal not found:", proposalId);
@@ -283,46 +263,22 @@ export const simulatorRepository = {
 
     // Criar oportunidade
     const opportunityId = `opp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Obter dados do pipeline
     const pipelines = getPipelines();
     let pipelineId = pipelines[0]?.id || 'default';
-    
-    // Se é energia ou híbrido, usar pipeline de energia
+
     if (proposal.simulationType === 'ENERGY' || proposal.simulationType === 'HYBRID') {
-      const energyPipeline = pipelines.find(p => p.name.toLowerCase().includes('energia'));
+      const energyPipeline = pipelines.find(p => String(p.nome).toLowerCase().includes('energia'));
       if (energyPipeline) {
         pipelineId = energyPipeline.id;
       }
     }
 
-    // Salvar oportunidade no localStorage (formato simplificado para demo)
-    const opportunities = getOpportunities();
-    const newOpportunity = {
-      id: opportunityId,
-      customerName: proposal.customer.name,
-      document: proposal.customer.document,
-      phone: proposal.customer.phone,
-      email: proposal.customer.email,
-      simulationType: proposal.simulationType,
-      selectedCreditOffer: proposal.selectedCreditOffer,
-      selectedEnergyOffer: proposal.selectedEnergyOffer,
-      totalEstimatedBenefit: proposal.totalEstimatedBenefit,
-      pipelineId,
-      stage: 'Novo Lead',
-      source: 'SIMULADOR',
-      status: 'ACCEPTED',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    
-    opportunities.push(newOpportunity);
-    saveOpportunities(opportunities);
-    
     // Marcar proposta como tendo oportunidade criada
-    proposal.opportunityCreated = true;
-    proposal.opportunityId = opportunityId;
-    this.saveProposals(proposals);
+    proposalState.set(proposal.id, {
+      ...cloneProposal(proposal),
+      opportunityCreated: true,
+      opportunityId,
+    });
     
     return opportunityId;
   }
@@ -332,39 +288,12 @@ export const simulatorRepository = {
 // Funções auxiliares
 // ============================================
 
-// Obter pipelines do localStorage
 function getPipelines(): any[] {
-  try {
-    const stored = localStorage.getItem('finqz_pipelines');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error("Error loading pipelines:", e);
-  }
-  return [];
-}
-
-// Obter oportunidades do localStorage
-function getOpportunities(): any[] {
-  try {
-    const stored = localStorage.getItem('finqz_opportunities');
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (e) {
-    console.error("Error loading opportunities:", e);
-  }
-  return [];
-}
-
-// Salvar oportunidades
-function saveOpportunities(opportunities: any[]): void {
-  try {
-    localStorage.setItem('finqz_opportunities', JSON.stringify(opportunities));
-  } catch (e) {
-    console.error("Error saving opportunities:", e);
-  }
+  return PIPELINES.map((pipeline) => ({
+    id: pipeline.id,
+    name: pipeline.nome,
+    tipo: pipeline.tipo,
+  }));
 }
 
 // ============================================

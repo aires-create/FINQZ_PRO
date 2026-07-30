@@ -29,30 +29,121 @@ model Tenant {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  users           User[]
-  organizations   Organization[]
-  memberships     Membership[]
-  roles           Role[]
-  partners        Partner[]
-  leads           Lead[]
-  customers       Customer[]
-  pipelines       Pipeline[]
-  stages          Stage[]
-  opportunities   Opportunity[]
-  activities      Activity[]
-  bankProposals   BankProposal[]
-  commissions     Commission[]
-  commercialTables CommercialTable[]
-  commercialConditions CommercialCondition[]
-  rolePermissions RolePermission[]
-  userRoles       UserRole[]
-  auditLogs       AuditLog[]
-  securityEventLogs SecurityEventLog[]
+  users                                 User[]
+  organizations                         Organization[]
+  memberships                           Membership[]
+  roles                                 Role[]
+  partners                              Partner[]
+  leads                                 Lead[]
+  customers                             Customer[]
+  pipelines                             Pipeline[]
+  stages                                Stage[]
+  opportunities                         Opportunity[]
+  operations                            Operation[]
+  activities                            Activity[]
+  bankProposals                         BankProposal[]
+  commissions                           Commission[]
+  partnerAcquisitionLeads               PartnerAcquisitionLead[]
+  partnerAcquisitionProspects           PartnerAcquisitionProspect[]
+  partnerAcquisitionCommandInboxes      PartnerAcquisitionCommandInbox[]
+  partnerAcquisitionEvents              PartnerAcquisitionEvent[]
+  partnerAcquisitionOutboxes            PartnerAcquisitionOutbox[]
+  partnerAcquisitionConversionDecisions PartnerAcquisitionConversionDecision[]
+  commercialTables                      CommercialTable[]
+  commercialConditions                  CommercialCondition[]
+  masterCatalogSegments                 MasterCatalogSegment[]
+  masterCatalogProducts                 MasterCatalogProduct[]
+  masterCatalogSubproducts              MasterCatalogSubproduct[]
+  masterCatalogModalities               MasterCatalogModality[]
+  rolePermissions                       RolePermission[]
+  userRoles                             UserRole[]
+  auditLogs                             AuditLog[]
+  securityEventLogs                     SecurityEventLog[]
+  simulationRuntimeEvidences            SimulationRuntimeEvidence[]
+  edpDecisions                          EdpDecision[]
+  edpDecisionPolicies                   EdpDecisionPolicy[]
+  edpDecisionStrategies                 EdpDecisionStrategy[]
+  edpSimulations                        EdpSimulation[]
+  edpRecommendations                    EdpRecommendation[]
+  edpProposals                          EdpProposal[]
+  edpProviderCapabilities               EdpProviderCapability[]
+  edpProviderExecutions                 EdpProviderExecution[]
+  edpOperationCandidates                EdpOperationCandidate[]
+  edpAuditTimelineEvents                EdpAuditTimelineEvent[]
+  edpEventStore                         EdpEventStore[]
+  edpOutboxMessages                     EdpOutboxMessage[]
+  edpIdempotencyRecords                 EdpIdempotencyRecord[]
+  edpCorrelationRecords                 EdpCorrelationRecord[]
 
   @@index([domain])
   @@index([isActive])
   @@index([deletedAt])
   @@map("tenants")
+}
+
+model SimulationRuntimeEvidence {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  evidenceId  String
+  campaignId  String
+  timestamp   DateTime
+  environment String
+
+  tenantIdHash      String?
+  opportunityIdHash String?
+
+  requestId     String
+  correlationId String
+  executionId   String
+
+  productCode    String
+  subproductCode String
+
+  legacyStatus    String?
+  canonicalStatus String
+
+  comparisonStatus   String
+  divergenceCategory String
+
+  divergenceCount            Int
+  financialCriticalCount     Int
+  financialMinorCount        Int
+  structuralCount            Int
+  missingCanonicalFieldCount Int
+  missingLegacyFieldCount    Int
+
+  mappingFailure      Boolean
+  runtimeFailure      Boolean
+  unsupportedScenario Boolean
+
+  legacyDurationMs  Int?
+  runtimeDurationMs Int?
+
+  fallbackUsed Boolean
+  shadowMode   Boolean
+
+  comparatorVersion String
+  contractVersion   String
+  catalogVersion    String
+  engineVersion     String
+  policyVersion     String
+  strategyVersion   String
+
+  receivedByUserId String?
+  receivedAt       DateTime
+  createdAt        DateTime @default(now())
+
+  @@unique([tenantId, campaignId, evidenceId])
+  @@index([tenantId])
+  @@index([tenantId, campaignId])
+  @@index([tenantId, campaignId, subproductCode])
+  @@index([tenantId, campaignId, comparisonStatus])
+  @@index([tenantId, campaignId, divergenceCategory])
+  @@index([tenantId, campaignId, timestamp])
+  @@index([tenantId, correlationId])
+  @@map("simulation_runtime_evidence")
 }
 
 model Organization {
@@ -141,12 +232,14 @@ model Partner {
   parent   Partner?  @relation("PartnerHierarchy", fields: [parentId], references: [id])
   children Partner[] @relation("PartnerHierarchy")
 
-  users         User[]
-  customers     Customer[]
-  leads         Lead[]
-  opportunities Opportunity[]
-  bankProposals BankProposal[]
-  commissions   Commission[]
+  users                                 User[]
+  customers                             Customer[]
+  leads                                 Lead[]
+  opportunities                         Opportunity[]
+  bankProposals                         BankProposal[]
+  commissions                           Commission[]
+  partnerAcquisitionProspects           PartnerAcquisitionProspect[]
+  partnerAcquisitionConversionDecisions PartnerAcquisitionConversionDecision[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -178,6 +271,35 @@ enum PermissionAction {
   APPROVE
   ASSIGN
   REVOKE
+}
+
+enum CommercialRequestStatus {
+  Draft
+  Submitted
+  Approved
+  Rejected
+  Closed
+}
+
+enum OperationStatus {
+  CREATED
+  PROPOSAL_REQUESTED
+  PROPOSAL_RECEIVED
+  PROPOSAL_APPROVED
+  EXECUTED
+  COMMISSION_CALCULATED
+  SETTLEMENT_PENDING
+  SETTLED
+  REJECTED
+  FAILED
+  CANCELED
+}
+
+enum CatalogStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
 }
 
 model Role {
@@ -288,17 +410,18 @@ model User {
   partner   Partner? @relation(fields: [partnerId], references: [id])
 
   userRoles          UserRole[]
-  createdLeads       Lead[]         @relation("LeadCreatedBy")
-  ownedLeads         Lead[]         @relation("LeadOwner")
-  ownedOpportunities Opportunity[]  @relation("OpportunityOwner")
-  createdProposals   BankProposal[] @relation("ProposalCreatedBy")
+  createdLeads       Lead[]             @relation("LeadCreatedBy")
+  ownedLeads         Lead[]             @relation("LeadOwner")
+  ownedOpportunities Opportunity[]      @relation("OpportunityOwner")
+  createdProposals   BankProposal[]     @relation("ProposalCreatedBy")
+  createdOperations  Operation[]        @relation("OperationCreatedBy")
   activities         Activity[]
   commissions        Commission[]
   auditLogs          AuditLog[]
   securityEventLogs  SecurityEventLog[]
   refreshTokens      RefreshToken[]
   memberships        Membership[]
-  invitedMemberships Membership[]   @relation("MembershipInvitedBy")
+  invitedMemberships Membership[]       @relation("MembershipInvitedBy")
 
   @@unique([tenantId, emailNormalized])
   @@index([tenantId])
@@ -365,36 +488,36 @@ model Lead {
 }
 
 model Customer {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customerCode    String
-  firstName       String
-  lastName        String
-  email           String
-  emailNormalized String
-  phone           String?
-  cpf             String
-  birthDate       DateTime?
-  monthlyIncome   Float?
-  annualIncome    Float?
-  profession        String?
-  maritalStatus     String?
-  gender            String?
-  documentType      String?
-  address           Json?
-  bankData          Json?
-  notes             String?
-  rdStatus          String?   @default("nao_consultado")
-  rdConsultedAt     DateTime?
-  rdNotes           String?
-  doNotCallStatus   String?   @default("nao_consultado")
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerCode         String
+  firstName            String
+  lastName             String
+  email                String
+  emailNormalized      String
+  phone                String?
+  cpf                  String
+  birthDate            DateTime?
+  monthlyIncome        Float?
+  annualIncome         Float?
+  profession           String?
+  maritalStatus        String?
+  gender               String?
+  documentType         String?
+  address              Json?
+  bankData             Json?
+  notes                String?
+  rdStatus             String?   @default("nao_consultado")
+  rdConsultedAt        DateTime?
+  rdNotes              String?
+  doNotCallStatus      String?   @default("nao_consultado")
   doNotCallConsultedAt DateTime?
-  kycStatus       String    @default("pending")
-  kycVerifiedAt   DateTime?
-  riskLevel       String    @default("medium")
-  isActive        Boolean   @default(true)
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  kycStatus            String    @default("pending")
+  kycVerifiedAt        DateTime?
+  riskLevel            String    @default("medium")
+  isActive             Boolean   @default(true)
+  deletedAt            DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -438,8 +561,9 @@ model Pipeline {
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  stages        Stage[]
-  opportunities Opportunity[]
+  stages                      Stage[]
+  opportunities               Opportunity[]
+  partnerAcquisitionProspects PartnerAcquisitionProspect[]
 
   @@index([tenantId])
   @@index([isDefault])
@@ -453,6 +577,7 @@ model Stage {
   order     Int       @default(0)
   isWon     Boolean   @default(false)
   isLost    Boolean   @default(false)
+  isActive  Boolean   @default(true)
   deletedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -463,7 +588,8 @@ model Stage {
   tenantId String @db.Uuid
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  opportunities Opportunity[]
+  opportunities               Opportunity[]
+  partnerAcquisitionProspects PartnerAcquisitionProspect[]
 
   @@unique([pipelineId, order])
   @@index([pipelineId])
@@ -497,6 +623,15 @@ model Opportunity {
   customerId String?   @db.Uuid
   customer   Customer? @relation(fields: [customerId], references: [id])
 
+  productId String?               @db.Uuid
+  product   MasterCatalogProduct? @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  subproductId String?                  @db.Uuid
+  subproduct   MasterCatalogSubproduct? @relation(fields: [subproductId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  modalityId String?                @db.Uuid
+  modality   MasterCatalogModality? @relation(fields: [modalityId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   pipelineId String   @db.Uuid
   pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
 
@@ -508,6 +643,7 @@ model Opportunity {
 
   activities    Activity[]
   bankProposals BankProposal[]
+  operations    Operation[]
   commissions   Commission[]
 
   @@index([tenantId])
@@ -515,10 +651,216 @@ model Opportunity {
   @@index([stageId])
   @@index([leadId])
   @@index([customerId])
+  @@index([productId])
+  @@index([subproductId])
+  @@index([modalityId])
   @@index([ownerId])
   @@index([partnerId])
   @@index([deletedAt])
   @@map("opportunities")
+}
+
+model PartnerAcquisitionLead {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadCode        String
+  fullName        String
+  email           String?
+  phone           String?
+  companyName     String?
+  document        String?
+  channel         String
+  sourceName      String?
+  sourceReference String?
+  campaignId      String?
+  hubContextId    String?
+  ownerUserId     String?   @db.Uuid
+  status          String    @default("NEW")
+  score           Int?
+  version         Int       @default(0)
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  partnerAcquisitionProspects PartnerAcquisitionProspect[]
+
+  @@unique([tenantId, leadCode])
+  @@unique([tenantId, sourceReference])
+  @@index([tenantId])
+  @@index([tenantId, channel])
+  @@index([tenantId, status])
+  @@index([tenantId, ownerUserId])
+  @@index([tenantId, deletedAt])
+  @@map("partner_acquisition_leads")
+}
+
+model PartnerAcquisitionProspect {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospectCode        String
+  leadId              String    @db.Uuid
+  fullName            String
+  email               String?
+  phone               String?
+  companyName         String?
+  document            String?
+  channel             String
+  sourceName          String?
+  sourceReference     String?
+  campaignId          String?
+  hubContextId        String?
+  sdrAgentId          String?
+  status              String    @default("NEW")
+  pipelineId          String?   @db.Uuid
+  stageId             String?   @db.Uuid
+  pipelineCode        String?
+  stageCode           String?
+  score               Int?
+  qualificationReason String?
+  assignedUserId      String?   @db.Uuid
+  nextActionAt        DateTime?
+  signedAt            DateTime?
+  convertedAt         DateTime?
+  partnerId           String?   @db.Uuid
+  version             Int       @default(0)
+  deletedAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  lead     PartnerAcquisitionLead @relation(fields: [leadId], references: [id])
+  partner  Partner?               @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  pipeline Pipeline?              @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  stage    Stage?                 @relation(fields: [stageId], references: [id], onDelete: SetNull)
+
+  conversionDecisions PartnerAcquisitionConversionDecision[]
+
+  @@unique([tenantId, prospectCode])
+  @@unique([tenantId, leadId])
+  @@unique([tenantId, partnerId])
+  @@unique([tenantId, sourceReference])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, pipelineCode])
+  @@index([tenantId, stageCode])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId, signedAt])
+  @@index([tenantId, convertedAt])
+  @@index([tenantId, deletedAt])
+  @@map("partner_acquisition_prospects")
+}
+
+model PartnerAcquisitionCommandInbox {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commandType    String
+  aggregateId    String?   @db.Uuid
+  aggregateType  String
+  actorUserId    String    @db.Uuid
+  requestId      String
+  correlationId  String
+  idempotencyKey String
+  status         String    @default("RECEIVED")
+  receivedAt     DateTime  @default(now())
+  processedAt    DateTime?
+  payload        Json
+  result         Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId])
+  @@index([tenantId, commandType])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, receivedAt])
+  @@map("partner_acquisition_command_inbox")
+}
+
+model PartnerAcquisitionEvent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId        String   @db.Uuid
+  aggregateId    String   @db.Uuid
+  aggregateType  String
+  eventType      String
+  actorUserId    String   @db.Uuid
+  requestId      String
+  correlationId  String
+  idempotencyKey String
+  occurredAt     DateTime
+  payload        Json
+  metadata       Json?
+  version        Int
+  createdAt      DateTime @default(now())
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, eventType])
+  @@index([tenantId, occurredAt])
+  @@map("partner_acquisition_events")
+}
+
+model PartnerAcquisitionOutbox {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId       String    @db.Uuid
+  aggregateId   String    @db.Uuid
+  aggregateType String
+  eventType     String
+  status        String    @default("PENDING")
+  attemptCount  Int       @default(0)
+  availableAt   DateTime
+  processedAt   DateTime?
+  lastError     String?
+  payload       Json
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, availableAt])
+  @@index([tenantId, eventType])
+  @@map("partner_acquisition_outbox")
+}
+
+model PartnerAcquisitionConversionDecision {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  prospectId      String   @db.Uuid
+  partnerId       String?  @db.Uuid
+  approved        Boolean
+  decidedByUserId String   @db.Uuid
+  decidedAt       DateTime
+  reason          String?
+  version         Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenantId String @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  prospect PartnerAcquisitionProspect @relation(fields: [prospectId], references: [id])
+  partner  Partner?                   @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, prospectId])
+  @@unique([tenantId, partnerId])
+  @@index([tenantId])
+  @@index([tenantId, approved])
+  @@index([tenantId, decidedAt])
+  @@map("partner_acquisition_conversion_decisions")
 }
 
 model Activity {
@@ -604,6 +946,8 @@ model BankProposal {
   createdById String @db.Uuid
   creator     User   @relation("ProposalCreatedBy", fields: [createdById], references: [id])
 
+  operations Operation[]
+
   @@unique([tenantId, proposalNumber])
   @@index([tenantId])
   @@index([partnerId])
@@ -615,6 +959,45 @@ model BankProposal {
   @@index([createdById])
   @@index([deletedAt])
   @@map("bank_proposals")
+}
+
+model Operation {
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String          @db.Uuid
+  operationNumber     String
+  year                Int
+  sequence            Int
+  opportunityId       String          @db.Uuid
+  bankProposalId      String?         @db.Uuid
+  createdById         String          @db.Uuid
+  amount              Float
+  currency            String          @default("BRL")
+  status              OperationStatus @default(CREATED)
+  executedAt          DateTime?
+  referenceDate       DateTime?
+  providerOperationId String?
+  externalReference   String?
+  metadata            Json?
+  notes               String?
+  correlationId       String?
+  deletedAt           DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunity  Opportunity   @relation(fields: [opportunityId], references: [id])
+  bankProposal BankProposal? @relation(fields: [bankProposalId], references: [id])
+  creator      User          @relation("OperationCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([tenantId, operationNumber])
+  @@unique([tenantId, year, sequence])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([opportunityId])
+  @@index([bankProposalId])
+  @@index([createdById])
+  @@index([deletedAt])
+  @@map("operations")
 }
 
 model Commission {
@@ -656,6 +1039,29 @@ model Commission {
   @@index([opportunityId])
   @@index([deletedAt])
   @@map("commissions")
+}
+
+model CommercialRequest {
+  id                String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId          String                  @db.Uuid
+  requestNumber     String
+  year              Int
+  sequence          Int
+  status            CommercialRequestStatus
+  requestedByUserId String                  @db.Uuid
+  requestedAt       DateTime
+  reason            String
+  justification     String
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([tenantId, requestNumber])
+  @@unique([tenantId, year, sequence])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, requestedByUserId])
+  @@index([tenantId, requestedAt])
+  @@map("commercial_requests")
 }
 
 model CommercialTable {
@@ -747,6 +1153,96 @@ model CommercialCondition {
   @@map("commercial_conditions")
 }
 
+model MasterCatalogSegment {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String        @db.Uuid
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  status       CatalogStatus @default(ACTIVE)
+  displayOrder Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_segments")
+}
+
+model MasterCatalogProduct {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String        @db.Uuid
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  status       CatalogStatus @default(ACTIVE)
+  displayOrder Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+
+  subproducts   MasterCatalogSubproduct[]
+  opportunities Opportunity[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_products")
+}
+
+model MasterCatalogSubproduct {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String               @db.Uuid
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  productId    String               @db.Uuid
+  product      MasterCatalogProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  code         String
+  name         String
+  status       CatalogStatus        @default(ACTIVE)
+  displayOrder Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  deletedAt    DateTime?
+
+  modalities    MasterCatalogModality[]
+  opportunities Opportunity[]
+
+  @@unique([tenantId, productId, code])
+  @@index([tenantId])
+  @@index([tenantId, productId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_subproducts")
+}
+
+model MasterCatalogModality {
+  id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String                  @db.Uuid
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subproductId String                  @db.Uuid
+  subproduct   MasterCatalogSubproduct @relation(fields: [subproductId], references: [id], onDelete: Restrict)
+  code         String
+  name         String
+  status       CatalogStatus           @default(ACTIVE)
+  displayOrder Int                     @default(0)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  deletedAt    DateTime?
+
+  opportunities Opportunity[]
+
+  @@unique([tenantId, subproductId, code])
+  @@index([tenantId])
+  @@index([tenantId, subproductId])
+  @@index([tenantId, status])
+  @@index([tenantId, displayOrder])
+  @@map("master_catalog_modalities")
+}
+
 // ============================================
 // AUDIT & SECURITY
 // ============================================
@@ -792,7 +1288,7 @@ model AuditLog {
 }
 
 model SecurityEventLog {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   eventType String
   severity  String
   outcome   String
@@ -841,191 +1337,328 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+// EDP PERSISTENCE
 // ============================================
-// PARTNER ACQUISITION
-// ============================================
 
-model PartnerAcquisitionLead {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  leadCode        String
-  fullName        String
-  email           String?
-  phone           String?
-  companyName     String?
-  document        String?
-  channel         String
-  sourceName      String?
-  sourceReference String?
-  campaignId      String?
-  hubContextId    String?
-  ownerUserId     String?   @db.Uuid
-  status          String    @default("NEW")
-  score           Int?
-  version         Int       @default(0)
-  deletedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  tenantId String @db.Uuid
-
-  @@unique([tenantId, leadCode])
-  @@unique([tenantId, sourceReference])
-  @@index([tenantId])
-  @@index([tenantId, channel])
-  @@index([tenantId, status])
-  @@index([tenantId, ownerUserId])
-  @@index([tenantId, deletedAt])
-  @@map("partner_acquisition_leads")
-}
-
-model PartnerAcquisitionProspect {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  prospectCode        String
-  leadId              String    @db.Uuid
-  fullName            String
-  email               String?
-  phone               String?
-  companyName         String?
-  document            String?
-  channel             String
-  sourceName          String?
-  sourceReference     String?
-  campaignId          String?
-  hubContextId        String?
-  sdrAgentId          String?
-  status              String    @default("NEW")
-  pipelineId          String?   @db.Uuid
-  stageId             String?   @db.Uuid
-  pipelineCode        String?
-  stageCode           String?
-  score               Int?
-  qualificationReason String?
-  assignedUserId      String?   @db.Uuid
-  nextActionAt        DateTime?
-  signedAt            DateTime?
-  convertedAt         DateTime?
-  partnerId           String?   @db.Uuid
-  version             Int       @default(0)
-  deletedAt           DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  tenantId String @db.Uuid
-
-  @@unique([tenantId, prospectCode])
-  @@unique([tenantId, leadId])
-  @@unique([tenantId, partnerId])
-  @@unique([tenantId, sourceReference])
-  @@index([tenantId])
-  @@index([tenantId, status])
-  @@index([tenantId, pipelineCode])
-  @@index([tenantId, stageCode])
-  @@index([tenantId, assignedUserId])
-  @@index([tenantId, signedAt])
-  @@index([tenantId, convertedAt])
-  @@index([tenantId, deletedAt])
-  @@map("partner_acquisition_prospects")
-}
-
-model PartnerAcquisitionCommandInbox {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commandType    String
-  aggregateId    String?   @db.Uuid
-  aggregateType  String
-  actorUserId    String    @db.Uuid
-  requestId      String
-  correlationId  String
-  idempotencyKey String
-  status         String    @default("RECEIVED")
-  receivedAt     DateTime  @default(now())
-  processedAt    DateTime?
-  payload        Json
-  result         Json?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  tenantId String @db.Uuid
-
-  @@unique([tenantId, idempotencyKey])
-  @@index([tenantId])
-  @@index([tenantId, commandType])
-  @@index([tenantId, aggregateType])
-  @@index([tenantId, aggregateId])
-  @@index([tenantId, status])
-  @@index([tenantId, receivedAt])
-  @@map("partner_acquisition_command_inbox")
-}
-
-model PartnerAcquisitionEvent {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId        String   @db.Uuid
-  aggregateId    String   @db.Uuid
-  aggregateType  String
-  eventType      String
-  actorUserId    String   @db.Uuid
-  requestId      String
-  correlationId  String
-  idempotencyKey String
-  occurredAt     DateTime
-  payload        Json
-  metadata       Json?
-  version        Int
-  createdAt      DateTime @default(now())
-
-  tenantId String @db.Uuid
-
-  @@unique([tenantId, eventId])
-  @@index([tenantId])
-  @@index([tenantId, aggregateId])
-  @@index([tenantId, aggregateType])
-  @@index([tenantId, eventType])
-  @@index([tenantId, occurredAt])
-  @@map("partner_acquisition_events")
-}
-
-model PartnerAcquisitionOutbox {
+model EdpDecision {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  eventId       String    @db.Uuid
-  aggregateId   String    @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
   aggregateType String
-  eventType     String
-  status        String    @default("PENDING")
-  attemptCount  Int       @default(0)
-  availableAt   DateTime
-  processedAt   DateTime?
-  lastError     String?
-  payload       Json
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  tenantId String @db.Uuid
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, eventId])
+  @@unique([tenantId, aggregateId])
   @@index([tenantId])
-  @@index([tenantId, status])
-  @@index([tenantId, availableAt])
-  @@index([tenantId, eventType])
-  @@map("partner_acquisition_outbox")
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_decisions")
 }
 
-model PartnerAcquisitionConversionDecision {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  prospectId      String   @db.Uuid
-  partnerId       String?  @db.Uuid
-  approved        Boolean
-  decidedByUserId String   @db.Uuid
-  decidedAt       DateTime
-  reason          String?
-  version         Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model EdpDecisionPolicy {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @db.Uuid
+  aggregateId    String
+  version        Int
+  status         String
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  approvedBy     String?
+  approvedAt     DateTime?
+  rollbackOf     String?
+  configSnapshot Json
+  audit          Json?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  tenantId String @db.Uuid
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique([tenantId, prospectId])
-  @@unique([tenantId, partnerId])
+  @@unique([tenantId, aggregateId, version])
   @@index([tenantId])
-  @@index([tenantId, approved])
-  @@index([tenantId, decidedAt])
-  @@map("partner_acquisition_conversion_decisions")
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@map("edp_decision_policies")
+}
+
+model EdpDecisionStrategy {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String    @db.Uuid
+  aggregateId    String
+  version        Int
+  status         String
+  effectiveFrom  DateTime?
+  effectiveTo    DateTime?
+  approvedBy     String?
+  approvedAt     DateTime?
+  rollbackOf     String?
+  configSnapshot Json
+  audit          Json?
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId, version])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, status])
+  @@index([tenantId, deletedAt])
+  @@map("edp_decision_strategies")
+}
+
+model EdpSimulation {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_simulations")
+}
+
+model EdpRecommendation {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_recommendations")
+}
+
+model EdpProposal {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_proposals")
+}
+
+model EdpProviderCapability {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_provider_capabilities")
+}
+
+model EdpProviderExecution {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_provider_executions")
+}
+
+model EdpOperationCandidate {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  version       Int
+  state         String
+  snapshot      Json
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, aggregateId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_operation_candidates")
+}
+
+model EdpAuditTimelineEvent {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  aggregateId   String
+  aggregateType String
+  eventName     String
+  actor         String
+  action        String
+  correlationId String?
+  payload       Json
+  metadata      Json?
+  timestamp     DateTime
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, correlationId])
+  @@index([tenantId, eventName])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, deletedAt])
+  @@map("edp_audit_timeline_events")
+}
+
+model EdpEventStore {
+  eventId          String   @id
+  eventName        String
+  eventVersion     String
+  tenantId         String   @db.Uuid
+  aggregateId      String
+  aggregateType    String
+  aggregateVersion Int
+  correlationId    String
+  causationId      String?
+  payload          Json
+  metadata         Json?
+  occurredAt       DateTime
+  createdAt        DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, correlationId])
+  @@index([tenantId, eventName])
+  @@index([tenantId, occurredAt])
+  @@map("edp_event_store")
+}
+
+model EdpOutboxMessage {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  eventName     String
+  aggregateId   String?
+  aggregateType String?
+  payload       Json
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime?
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, nextAttemptAt])
+  @@index([tenantId, deletedAt])
+  @@map("edp_outbox_messages")
+}
+
+model EdpIdempotencyRecord {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @db.Uuid
+  idempotencyKey   String
+  commandName      String
+  commandHash      String
+  responseSnapshot Json?
+  status           String    @default("RECEIVED")
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId])
+  @@index([tenantId, commandName])
+  @@index([tenantId, status])
+  @@index([tenantId, expiresAt])
+  @@index([tenantId, deletedAt])
+  @@map("edp_idempotency_records")
+}
+
+model EdpCorrelationRecord {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid
+  correlationId String
+  aggregateId   String?
+  aggregateType String?
+  causationId   String?
+  metadata      Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, correlationId])
+  @@index([tenantId])
+  @@index([tenantId, aggregateId])
+  @@index([tenantId, aggregateType])
+  @@index([tenantId, deletedAt])
+  @@map("edp_correlation_records")
 }

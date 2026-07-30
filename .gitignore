@@ -5,11 +5,14 @@ node_modules/
 dist/
 build/
 .out/
+!scripts/build/
+!scripts/build/build-frontend.sh
 
 # Environment
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Backend env
 backend/.env
@@ -48,3 +51,21 @@ __generated__/
 .tmp-*
 .tmp-chrome-*
 **/*.tsbuildinfo
+
+# Local deployment artifacts
+dist-hml-*.tar.gz
+
+# Local Git worktrees
+/_worktrees/
+
+# Generated runtime validation evidence
+/release/runtime-validation/*
+!/release/runtime-validation/.gitkeep
+
+# Generated release gate evidence
+/release/gate/*
+!/release/gate/.gitkeep
+
+# Generated consolidation evidence
+/release/consolidation/*
+!/release/consolidation/.gitkeep

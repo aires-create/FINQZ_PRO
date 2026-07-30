@@ -62,8 +62,8 @@ import {
 } from "lucide-react";
 import { Button, Card, Badge, Input, Modal, TextArea, Select } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
-import api from "../api/client";
-import { dataService } from "../api/dataService";
+import { apiFetch } from "../api/http";
+import { opportunitiesApi } from "../api/modules/opportunities.api";
 import useAppStore from "../store";
 
 // Types
@@ -196,172 +196,47 @@ interface SdrAgent {
   createdAt: string;
 }
 
-// Mock templates
-const mockTemplates: SdrTemplate[] = [
-  {
-    id: 1,
-    nome: 'Lead Quente - Primeiro Contato',
-    categoria: 'lead_quente',
-    conteudo: 'Olá {{nome}}! Vi que você demonstrou interesse em {{produto}}. Gostaria de agendar uma conversa rápida de 15 minutos para apresentar as melhores opções para seu negócio? 📞',
-    ativo: true,
-    variaveis: ['nome', 'produto', 'empresa'],
-    createdAt: '2026-04-30T10:00:00'
-  },
-  {
-    id: 2,
-    nome: 'Reengajamento - Lead em Risco',
-    categoria: 'risco',
-    conteudo: 'Olá {{nome}}, percebi que você não respondeu nossa última mensagem. Gostaria de saber se ainda tem interesse em {{produto}}. Posso te ajudar de alguma forma? 😊',
-    ativo: true,
-    variaveis: ['nome', 'produto', 'dias_sem_contato'],
-    createdAt: '2026-04-30T09:00:00'
-  },
-  {
-    id: 3,
-    nome: 'Objeção - Preço Alto',
-    categoria: 'objecao',
-    conteudo: 'Entendo sua preocupação com o investimento, {{nome}}. Nosso {{produto}} oferece ROI de 300% em 6 meses. Posso apresentar uma opção parcelada sem juros que se adapta ao seu orçamento?',
-    ativo: true,
-    variaveis: ['nome', 'produto', 'preco_atual', 'roi'],
-    createdAt: '2026-04-30T08:00:00'
-  },
-  {
-    id: 4,
-    nome: 'Follow-up Automático',
-    categoria: 'followup',
-    conteudo: 'Olá {{nome}}! Só passando para lembrar que nossa oferta especial em {{produto}} termina em {{dias_prazo}}. Não perca essa oportunidade de otimizar seus resultados! 🚀',
-    ativo: true,
-    variaveis: ['nome', 'produto', 'dias_prazo', 'valor'],
-    createdAt: '2026-04-30T07:00:00'
-  },
-  {
-    id: 5,
-    nome: 'Obrigado pela Conversa',
-    categoria: 'obrigado',
-    conteudo: 'Obrigado pela conversa, {{nome}}! Foi um prazer conhecer mais sobre sua empresa. Qualquer dúvida sobre {{produto}}, estou à disposição. Até breve! 👋',
-    ativo: true,
-    variaveis: ['nome', 'produto', 'proxima_data'],
-    createdAt: '2026-04-30T06:00:00'
-  },
-  {
-    id: 6,
-    nome: 'Reagendamento',
-    categoria: 'reagendamento',
-    conteudo: 'Olá {{nome}}, vi que não foi possível conversar ontem. Gostaria de remarcar nossa reunião para outro horário que seja mais conveniente para você?',
-    ativo: true,
-    variaveis: ['nome', 'data_original', 'hora_original'],
-    createdAt: '2026-04-30T05:00:00'
-  }
-];
+// Mock templates descomissionados nesta wave.
+const emptyTemplates: SdrTemplate[] = [];
 
 // Mock data
-const mockMetrics: SdrMetrics = {
-  leadsAnalisadosHoje: 47,
-  leadsQualificados: 23,
-  taxaInteresse: 48.9,
-  conversoesGeradas: 12,
-  conversoesHoje: 3,
-  leadsQuentes: 8,
-  leadsEmRisco: 3,
-  leadsProximoFechar: 5,
-  scoreMedio: 72,
-  melhorHorario: "09:00 - 11:00",
-  melhorCampanha: "Black Friday",
-  tendenciaInteresse: 'alta',
-  variacaoConversao: 12.5,
-  objecoes: [
-    { tipo: "preço alto", count: 12, acaoRecomendada: "aplicar_script_negociacao", script: "Entendo sua preocupação com o investimento. Nosso plano oferece ROI de 300% em 6 meses. Posso apresentar uma opção parcelada sem juros?" },
-    { tipo: "preciso pensar", count: 8, acaoRecomendada: "disparar_followup", script: "Sem problemas! Vou te enviar um resumo das principais vantagens para você avaliar. Quando seria um bom momento para conversarmos novamente?" },
-    { tipo: "concorrente", count: 6, acaoRecomendada: "enviar_argumento_diferencial", script: "Nossa diferença principal: suporte 24/7, integração nativa com +200 ferramentas e SLA de 99.9% de uptime. Posso fazer um comparativo detalhado?" }
-  ]
+const emptyMetrics: SdrMetrics = {
+  leadsAnalisadosHoje: 0,
+  leadsQualificados: 0,
+  taxaInteresse: 0,
+  conversoesGeradas: 0,
+  conversoesHoje: 0,
+  leadsQuentes: 0,
+  leadsEmRisco: 0,
+  leadsProximoFechar: 0,
+  scoreMedio: 0,
+  melhorHorario: "Sem dados",
+  melhorCampanha: "Sem dados",
+  tendenciaInteresse: 'estavel',
+  variacaoConversao: 0,
+  objecoes: [],
 };
 
-const mockChannelMetrics: SdrChannelMetrics = {
-  whatsapp: 32,
-  sms: 10,
-  email: 5
+const emptyChannelMetrics: SdrChannelMetrics = {
+  whatsapp: 0,
+  sms: 0,
+  email: 0
 };
 
-const mockOriginMetrics: SdrOriginMetrics = {
-  organic: 18,
-  paid: 15,
-  referral: 9,
-  direct: 5
+const emptyOriginMetrics: SdrOriginMetrics = {
+  organic: 0,
+  paid: 0,
+  referral: 0,
+  direct: 0
 };
 
-const mockProductMetrics: SdrProductMetrics = {
-  finqzPro: 25,
-  contaCorrente: 15,
-  produtos: 7
+const emptyProductMetrics: SdrProductMetrics = {
+  finqzPro: 0,
+  contaCorrente: 0,
+  produtos: 0
 };
 
-const mockAnalyses: SdrAnalysis[] = [
-  {
-    id: 1,
-    leadNome: "João Silva",
-    intent: "interessado",
-    intentPriority: "alta",
-    confidence: 0.92,
-    score: 85,
-    suggestedResponse: "Ótimo! Vamos agendar uma reunião para apresentar nosso produto.",
-    canal: "whatsapp",
-    origem: "organic",
-    produto: "FINQZ PRO",
-    createdAt: "2026-04-30T10:30:00"
-  },
-  {
-    id: 2,
-    leadNome: "Maria Santos",
-    intent: "duvida",
-    intentPriority: "media",
-    confidence: 0.78,
-    score: 65,
-    suggestedResponse: "Fico à disposição para esclarecer todas as suas dúvidas sobre o produto.",
-    canal: "whatsapp",
-    origem: "paid",
-    produto: "Conta Corrente",
-    createdAt: "2026-04-30T10:15:00"
-  },
-  {
-    id: 3,
-    leadNome: "Pedro Costa",
-    intent: "preco",
-    intentPriority: "alta",
-    confidence: 0.88,
-    score: 72,
-    suggestedResponse: "Temos opções de planos que se adaptam ao seu orçamento. Posso apresentar?",
-    canal: "sms",
-    origem: "direct",
-    produto: "FINQZ PRO",
-    createdAt: "2026-04-30T09:45:00"
-  },
-  {
-    id: 4,
-    leadNome: "Ana Oliveira",
-    intent: "sem_interesse",
-    intentPriority: "baixa",
-    confidence: 0.95,
-    score: 25,
-    suggestedResponse: "Agradecemos o contato. Qualquer dúvida, estamos à disposição.",
-    canal: "whatsapp",
-    origem: "referral",
-    produto: "Produtos",
-    createdAt: "2026-04-30T09:30:00"
-  },
-  {
-    id: 5,
-    leadNome: "Carlos Lima",
-    intent: "interessado",
-    intentPriority: "alta",
-    confidence: 0.91,
-    score: 88,
-    suggestedResponse: "Perfeito! Vou enviar os detalhes do plano premium para você.",
-    canal: "email",
-    origem: "organic",
-    produto: "FINQZ PRO",
-    createdAt: "2026-04-30T09:15:00"
-  }
-];
+const emptyAnalyses: SdrAnalysis[] = [];
 
 const defaultPrompt = `Você é um assistente de vendas (SDR) da FINQZ PRO.
 Sua função é analisar mensagens de leads e determinar:
@@ -396,24 +271,24 @@ export const SdrIaHubPage: React.FC = () => {
   const user = store.user;
   
   // States
-  const [metrics, setMetrics] = useState<SdrMetrics>(mockMetrics);
-  const [channelMetrics, setChannelMetrics] = useState<SdrChannelMetrics>(mockChannelMetrics);
-  const [originMetrics, setOriginMetrics] = useState<SdrOriginMetrics>(mockOriginMetrics);
-  const [productMetrics, setProductMetrics] = useState<SdrProductMetrics>(mockProductMetrics);
-  const [analyses, setAnalyses] = useState<SdrAnalysis[]>(mockAnalyses);
+  const [metrics, setMetrics] = useState<SdrMetrics>(emptyMetrics);
+  const [channelMetrics, setChannelMetrics] = useState<SdrChannelMetrics>(emptyChannelMetrics);
+  const [originMetrics, setOriginMetrics] = useState<SdrOriginMetrics>(emptyOriginMetrics);
+  const [productMetrics, setProductMetrics] = useState<SdrProductMetrics>(emptyProductMetrics);
+  const [analyses, setAnalyses] = useState<SdrAnalysis[]>(emptyAnalyses);
   const [status, setStatus] = useState<SdrStatus>({
-    online: true,
-    latência: 145,
-    apiStatus: 'online',
-    uptime: 99.8
+    online: false,
+    latência: 0,
+    apiStatus: 'offline',
+    uptime: 0
   });
   const [config, setConfig] = useState<SdrConfig>({
     prompt: defaultPrompt,
     tone: 'consultivo',
-    autoMode: true,
+    autoMode: false,
     assistedResponse: true,
-    apiConnected: true,
-    apiLatency: 145
+    apiConnected: false,
+    apiLatency: 0
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -432,18 +307,13 @@ export const SdrIaHubPage: React.FC = () => {
   });
   const [isCreatingOpp, setIsCreatingOpp] = useState(false);
   const [filterPriority, setFilterPriority] = useState<string>('all');
-  const [insights, setInsights] = useState<{tipo: string; mensagem: string; icone: string}[]>([
-    { tipo: 'tendencia', mensagem: 'IA detectou aumento de 23% no interesse por FINQZ PRO', icone: 'TrendingUp' },
-    { tipo: 'campanha', mensagem: 'Campanha "Black Friday" tem melhor performance hoje', icone: 'Megaphone' },
-    { tipo: 'conversao', mensagem: 'Probabilidade de conversão subiu 15% esta semana', icone: 'Percent' },
-    { tipo: 'sugestao', mensagem: 'Recomendação: Foque em leads com score acima de 75', icone: 'Lightbulb' }
-  ]);
+  const [insights, setInsights] = useState<{tipo: string; mensagem: string; icone: string}[]>([]);
   const [showObjectionModal, setShowObjectionModal] = useState(false);
   const [selectedObjection, setSelectedObjection] = useState<SdrObjection | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   // Template states
-  const [templates, setTemplates] = useState<SdrTemplate[]>(mockTemplates);
+  const [templates, setTemplates] = useState<SdrTemplate[]>(emptyTemplates);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<SdrTemplate | null>(null);
   
@@ -507,7 +377,7 @@ export const SdrIaHubPage: React.FC = () => {
   const loadMetrics = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/api/sdr/metrics");
+      const response = await apiFetch("/api/sdr/metrics");
       if (response.data.success) {
         setMetrics(response.data.metrics);
         setChannelMetrics(response.data.channelMetrics);
@@ -515,10 +385,25 @@ export const SdrIaHubPage: React.FC = () => {
         setProductMetrics(response.data.productMetrics);
       }
     } catch {
-      setMetrics(mockMetrics);
-      setChannelMetrics(mockChannelMetrics);
-      setOriginMetrics(mockOriginMetrics);
-      setProductMetrics(mockProductMetrics);
+      setMetrics({
+        leadsAnalisadosHoje: 0,
+        leadsQualificados: 0,
+        taxaInteresse: 0,
+        conversoesGeradas: 0,
+        conversoesHoje: 0,
+        leadsQuentes: 0,
+        leadsEmRisco: 0,
+        leadsProximoFechar: 0,
+        scoreMedio: 0,
+        melhorHorario: "Sem dados",
+        melhorCampanha: "Sem dados",
+        tendenciaInteresse: 'estavel',
+        variacaoConversao: 0,
+        objecoes: [],
+      });
+      setChannelMetrics({ whatsapp: 0, sms: 0, email: 0 });
+      setOriginMetrics({ organic: 0, paid: 0, referral: 0, direct: 0 });
+      setProductMetrics({ finqzPro: 0, contaCorrente: 0, produtos: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -527,12 +412,12 @@ export const SdrIaHubPage: React.FC = () => {
   // Load recent analyses
   const loadAnalyses = async () => {
     try {
-      const response = await api.get("/api/sdr/analyses/recent");
+      const response = await apiFetch("/api/sdr/analyses/recent");
       if (response.data.success) {
         setAnalyses(response.data.analyses);
       }
     } catch {
-      setAnalyses(mockAnalyses);
+      setAnalyses([]);
     }
   };
 
@@ -540,7 +425,7 @@ export const SdrIaHubPage: React.FC = () => {
   const checkApiStatus = async () => {
     try {
       const start = Date.now();
-      await api.get("/api/sdr/status");
+      await apiFetch("/api/sdr/status");
       const latency = Date.now() - start;
       setStatus(prev => ({
         ...prev,
@@ -562,8 +447,11 @@ export const SdrIaHubPage: React.FC = () => {
     setTestResult(null);
     
     try {
-      const response = await api.post("/api/sdr/test", {
-        testMessage: "Olá, tenho interesse no produto, qual o preço?"
+      const response = await apiFetch("/api/sdr/test", {
+        method: "POST",
+        body: JSON.stringify({
+          testMessage: "Olá, tenho interesse no produto, qual o preço?"
+        }),
       });
       
       if (response.data.success) {
@@ -582,7 +470,7 @@ export const SdrIaHubPage: React.FC = () => {
   const handleForceAnalysis = async () => {
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/force-analysis");
+      await apiFetch("/api/sdr/force-analysis", { method: "POST" });
       await loadMetrics();
       await loadAnalyses();
     } catch (error) {
@@ -596,7 +484,7 @@ export const SdrIaHubPage: React.FC = () => {
   const handleReprocessLeads = async () => {
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/reprocess");
+      await apiFetch("/api/sdr/reprocess", { method: "POST" });
       await loadMetrics();
       await loadAnalyses();
     } catch (error) {
@@ -611,7 +499,7 @@ export const SdrIaHubPage: React.FC = () => {
     setIsLoading(true);
     setActionFeedback(null);
     try {
-      await api.post("/api/sdr/attack-hot-leads");
+      await apiFetch("/api/sdr/attack-hot-leads", { method: "POST" });
       setActionFeedback('Leads quentes atacados com sucesso!');
       setTimeout(() => setActionFeedback(null), 3000);
     } catch (error) {
@@ -627,7 +515,7 @@ export const SdrIaHubPage: React.FC = () => {
     setIsLoading(true);
     setActionFeedback(null);
     try {
-      await api.post("/api/sdr/generate-responses");
+      await apiFetch("/api/sdr/generate-responses", { method: "POST" });
       setActionFeedback('Respostas geradas para todos os leads pendentes!');
       setTimeout(() => setActionFeedback(null), 3000);
     } catch (error) {
@@ -649,9 +537,12 @@ export const SdrIaHubPage: React.FC = () => {
     if (!selectedObjection) return;
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/objection-action", {
-        tipo: selectedObjection.tipo,
-        acao: selectedObjection.acaoRecomendada
+      await apiFetch("/api/sdr/objection-action", {
+        method: "POST",
+        body: JSON.stringify({
+          tipo: selectedObjection.tipo,
+          acao: selectedObjection.acaoRecomendada
+        }),
       });
       setShowObjectionModal(false);
       setActionFeedback(`Ação executada: ${selectedObjection.acaoRecomendada.replace('_', ' ')}`);
@@ -912,7 +803,7 @@ export const SdrIaHubPage: React.FC = () => {
   const handleSendFollowUp = async () => {
     setIsLoading(true);
     try {
-      await api.post("/api/sdr/followup");
+      await apiFetch("/api/sdr/followup", { method: "POST" });
     } catch (error) {
       console.error("[SDR] Follow-up error:", error);
     } finally {
@@ -926,8 +817,11 @@ export const SdrIaHubPage: React.FC = () => {
     setConfig(prev => ({ ...prev, autoMode: newMode }));
     
     try {
-      await api.post("/api/sdr/config", {
-        autoMode: newMode
+      await apiFetch("/api/sdr/config", {
+        method: "POST",
+        body: JSON.stringify({
+          autoMode: newMode
+        }),
       });
     } catch (error) {
       console.error("[SDR] Toggle automation error:", error);
@@ -938,9 +832,12 @@ export const SdrIaHubPage: React.FC = () => {
   // Save prompt
   const handleSavePrompt = async () => {
     try {
-      await api.post("/api/sdr/config", {
-        prompt: config.prompt,
-        tone: config.tone
+      await apiFetch("/api/sdr/config", {
+        method: "POST",
+        body: JSON.stringify({
+          prompt: config.prompt,
+          tone: config.tone
+        }),
       });
       setShowConfigModal(false);
     } catch (error) {
@@ -1010,7 +907,7 @@ export const SdrIaHubPage: React.FC = () => {
     
     setIsCreatingOpp(true);
     try {
-      await dataService.oportunidades.create({
+      await opportunitiesApi.create({
         nome: oppData.nome,
         telefone: oppData.telefone,
         valor: oppData.valor,
@@ -1018,7 +915,7 @@ export const SdrIaHubPage: React.FC = () => {
         observacoes: oppData.observacoes,
         status: 'novo',
         etapa: 'novo'
-      });
+      } as any);
       
       setShowCreateOppModal(false);
       setSelectedAnalysis(null);

@@ -666,12 +666,7 @@ const AutomacoesPage: React.FC = () => {
   const [selectedAutomationLogs, setSelectedAutomationLogs] = useState<AutomationLog[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Dados mockados para demonstração
-  const mockLogs: AutomationLog[] = [
-    { id: 1, automacaoId: 1, automacaoNome: 'Notificar nova oportunidade', entidadeTipo: 'oportunidade', entidadeId: 1, entidadeNome: 'João Silva', status: 'sucesso', tentativa: 1, timestamp: Date.now() - 3600000 },
-    { id: 2, automacaoId: 1, automacaoNome: 'Notificar nova oportunidade', entidadeTipo: 'oportunidade', entidadeId: 2, entidadeNome: 'Maria Santos', status: 'sucesso', tentativa: 1, timestamp: Date.now() - 7200000 },
-    { id: 3, automacaoId: 2, automacaoNome: 'Mover para triagem', entidadeTipo: 'oportunidade', entidadeId: 3, entidadeNome: 'Pedro Costa', status: 'erro', erro: 'Webhook retornou 500', tentativa: 3, timestamp: Date.now() - 10800000 },
-  ];
+  const activityLogs: AutomationLog[] = [];
   
   // Filtrar automações
   const filteredAutomations = useMemo(() => {
@@ -709,7 +704,7 @@ const AutomacoesPage: React.FC = () => {
   };
   
   const handleViewLogs = (automation: Automation) => {
-    setSelectedAutomationLogs(mockLogs.filter(l => l.automacaoId === automation.id));
+    setSelectedAutomationLogs(activityLogs.filter(l => l.automacaoId === automation.id));
     setShowLogsModal(true);
   };
   

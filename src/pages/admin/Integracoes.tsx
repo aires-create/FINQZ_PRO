@@ -4,10 +4,6 @@ import { ExternalLink } from "lucide-react";
 import { Button } from "../../components/ui";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { finqzClient } from "../../api/finqzClient";
-import {
-  getProviderPayloadDiagnostics,
-  type ProviderPayloadDiagnostics,
-} from "../../api/modules/integrations.api";
 
 type CapabilitySupport = boolean | "planned";
 
@@ -36,9 +32,6 @@ export const IntegracoesPage: React.FC = () => {
   const [providers, setProviders] = useState<ProviderCapabilityItem[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [providersError, setProvidersError] = useState<string | null>(null);
-  const [diagnosticsByProvider, setDiagnosticsByProvider] = useState<Record<string, ProviderPayloadDiagnostics>>({});
-  const [diagnosticsLoadingByProvider, setDiagnosticsLoadingByProvider] = useState<Record<string, boolean>>({});
-  const [diagnosticsErrorByProvider, setDiagnosticsErrorByProvider] = useState<Record<string, string | null>>({});
 
   const loadCapabilities = async () => {
     setLoadingProviders(true);
@@ -58,23 +51,6 @@ export const IntegracoesPage: React.FC = () => {
   useEffect(() => {
     loadCapabilities();
   }, []);
-
-  const loadPayloadDiagnostics = async (providerKey: string) => {
-    setDiagnosticsLoadingByProvider((prev) => ({ ...prev, [providerKey]: true }));
-    setDiagnosticsErrorByProvider((prev) => ({ ...prev, [providerKey]: null }));
-
-    try {
-      const diagnostics = await getProviderPayloadDiagnostics(providerKey);
-      setDiagnosticsByProvider((prev) => ({ ...prev, [providerKey]: diagnostics }));
-    } catch {
-      setDiagnosticsErrorByProvider((prev) => ({
-        ...prev,
-        [providerKey]: "Não foi possível carregar o diagnóstico de payload.",
-      }));
-    } finally {
-      setDiagnosticsLoadingByProvider((prev) => ({ ...prev, [providerKey]: false }));
-    }
-  };
 
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(providers, null, 2)], { type: 'application/json' });
@@ -143,16 +119,6 @@ export const IntegracoesPage: React.FC = () => {
 
             {!loadingProviders && !providersError && providers.map((provider) => (
               <div key={provider.providerKey} className="border border-[#1f2937] rounded-xl p-4">
-                {(() => {
-                  const diagnostics = diagnosticsByProvider[provider.providerKey];
-                  const diagnosticsLoading = diagnosticsLoadingByProvider[provider.providerKey] === true;
-                  const diagnosticsError = diagnosticsErrorByProvider[provider.providerKey];
-                  const issuesBySeverity = diagnostics?.issues?.reduce<Record<string, number>>((acc, issue) => {
-                    acc[issue.severity] = (acc[issue.severity] ?? 0) + 1;
-                    return acc;
-                  }, {}) ?? {};
-
-                  return (
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -174,66 +140,6 @@ export const IntegracoesPage: React.FC = () => {
                         renderCapabilityBadge(key, value),
                       )}
                     </div>
-
-                    {provider.providerKey === "nova-promotora" && (
-                      <div className="mt-4 space-y-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => loadPayloadDiagnostics(provider.providerKey)}
-                          disabled={diagnosticsLoading}
-                        >
-                          {diagnosticsLoading ? "Carregando diagnóstico..." : "Ver diagnóstico do payload"}
-                        </Button>
-
-                        {diagnosticsError && (
-                          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-400">
-                            {diagnosticsError}
-                          </div>
-                        )}
-
-                        {diagnostics && (
-                          <div className="rounded-lg border border-[#374151] bg-[#0f172a] p-3 text-xs text-slate-200 space-y-2">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              <div>Total: <span className="font-semibold">{diagnostics.totalRecords}</span></div>
-                              <div>Válidos: <span className="font-semibold">{diagnostics.validRecords}</span></div>
-                              <div>Inválidos: <span className="font-semibold">{diagnostics.invalidRecords}</span></div>
-                              <div>Status desconhecidos: <span className="font-semibold">{diagnostics.unknownStatuses.length}</span></div>
-                            </div>
-
-                            {diagnostics.unknownStatuses.length > 0 && (
-                              <div>
-                                <span className="text-slate-400">Unknown statuses:</span>{" "}
-                                {diagnostics.unknownStatuses.join(", ")}
-                              </div>
-                            )}
-
-                            <div className="flex flex-wrap gap-2">
-                              <span className="rounded-full bg-slate-700 px-2 py-0.5">
-                                info: {issuesBySeverity.info ?? 0}
-                              </span>
-                              <span className="rounded-full bg-amber-700/40 px-2 py-0.5">
-                                warning: {issuesBySeverity.warning ?? 0}
-                              </span>
-                              <span className="rounded-full bg-red-700/40 px-2 py-0.5">
-                                error: {issuesBySeverity.error ?? 0}
-                              </span>
-                            </div>
-
-                            {diagnostics.issues.length > 0 && (
-                              <ul className="space-y-1 text-slate-300">
-                                {diagnostics.issues.map((issue, index) => (
-                                  <li key={`${issue.code}-${index}`}>
-                                    [{issue.severity}] {issue.code}: {issue.message}
-                                    {issue.path ? ` (${issue.path})` : ""}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="sm" disabled>
@@ -244,8 +150,6 @@ export const IntegracoesPage: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                  );
-                })()}
               </div>
             ))}
           </div>

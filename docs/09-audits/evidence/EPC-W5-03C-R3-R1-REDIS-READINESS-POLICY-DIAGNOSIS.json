@@ -1,0 +1,164 @@
+{
+  "auditId": "EPC-W5-03C-R3-R1",
+  "title": "Redis Readiness Policy Diagnosis",
+  "branch": "homologation/bootstrap-vps",
+  "head": "852c10d2651aae5e27f24da251476f5fd700c1c9",
+  "verdict": "REDIS_REQUIRED_FOR_READYNESS_NOT_FOR_HEALTH_OR_LIVE",
+  "scope": {
+    "codeChangesAllowed": false,
+    "filesCreated": [
+      "docs/09-audits/EPC-W5-03C-R3-R1-REDIS-READINESS-POLICY-DIAGNOSIS.md",
+      "docs/09-audits/evidence/EPC-W5-03C-R3-R1-REDIS-READINESS-POLICY-DIAGNOSIS.json",
+      "docs/09-audits/evidence/EPC-W5-03C-R3-R1-REDIS-DEPENDENCY-MAP.mmd"
+    ],
+    "filesNotModified": [
+      "backend/src/core/http/fastify.ts",
+      "backend/src/core/redis/redis.client.ts",
+      "backend/src/core/http/plugins/rate-limit.plugin.ts",
+      "backend/src/config/app.ts",
+      "backend/src/config/env/env.schema.ts",
+      "backend/docker-compose.yml",
+      "backend/docs/staging-smoke-checklist.md",
+      "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md"
+    ]
+  },
+  "runtimePolicy": {
+    "development": {
+      "health": "ok",
+      "live": "ok",
+      "ready": "requires redis connectivity"
+    },
+    "test": {
+      "health": "ok",
+      "live": "ok",
+      "ready": "inherits runtime check; no special redis fallback observed"
+    },
+    "homologation": {
+      "health": "ok",
+      "live": "ok",
+      "ready": "requires redis connectivity"
+    },
+    "production": {
+      "health": "ok",
+      "live": "ok",
+      "ready": "requires redis connectivity"
+    }
+  },
+  "staticEvidence": [
+    {
+      "file": "backend/src/core/http/fastify.ts",
+      "finding": "GET /ready pings Redis and returns 503 when redis is disconnected."
+    },
+    {
+      "file": "backend/src/core/redis/redis.client.ts",
+      "finding": "Redis client uses ioredis with lazyConnect, short timeouts and bounded retries."
+    },
+    {
+      "file": "backend/src/core/http/plugins/rate-limit.plugin.ts",
+      "finding": "Distributed rate limit is backed by Redis."
+    },
+    {
+      "file": "backend/docker-compose.yml",
+      "finding": "Compose declares a redis service and injects REDIS_URL."
+    },
+    {
+      "file": "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md",
+      "finding": "Redis is documented as integrated with readiness."
+    }
+  ],
+  "liveEvidence": [
+    {
+      "signal": "backend_started",
+      "value": true,
+      "detail": "HTTP server reached listen state on localhost:3001"
+    },
+    {
+      "signal": "health",
+      "value": "200 ok"
+    },
+    {
+      "signal": "live",
+      "value": "200 live"
+    },
+    {
+      "signal": "ready",
+      "value": "503 not_ready",
+      "detail": "database: connected, redis: disconnected"
+    },
+    {
+      "signal": "redis_port_6379",
+      "value": "no listener observed"
+    },
+    {
+      "signal": "docker_desktop",
+      "value": "not available in the observed environment"
+    }
+  ],
+  "dependencyMap": {
+    "direct": [
+      "process.env -> backend/src/config/env/* -> backend/src/config/app.ts",
+      "backend/src/config/app.ts -> backend/src/core/redis/redis.client.ts",
+      "backend/src/core/redis/redis.client.ts -> backend/src/core/http/fastify.ts (/ready)",
+      "backend/src/core/redis/redis.client.ts -> backend/src/core/http/plugins/rate-limit.plugin.ts"
+    ],
+    "indirect": [
+      "backend/src/core/http/fastify.ts -> readiness gate for release checks",
+      "backend/docker-compose.yml -> redis service for local or composed execution"
+    ],
+    "nonDependenciesObserved": [
+      "no direct Redis dependency found in Master Catalog runtime path inspected",
+      "no direct Redis dependency found in Auth runtime path inspected",
+      "no separate cache backend fallback found"
+    ]
+  },
+  "hypotheses": [
+    { "id": "R-H1", "status": "confirmed", "summary": "/ready depends on Redis." },
+    { "id": "R-H2", "status": "rejected", "summary": "/health depends on Redis." },
+    { "id": "R-H3", "status": "rejected", "summary": "/live depends on Redis." },
+    { "id": "R-H4", "status": "confirmed", "summary": "Distributed rate limit depends on Redis." },
+    { "id": "R-H5", "status": "confirmed", "summary": "Redis client is singleton with bounded retries and timeouts." },
+    { "id": "R-H6", "status": "rejected", "summary": "There is a memory fallback for Redis." },
+    { "id": "R-H7", "status": "confirmed", "summary": "docker-compose includes a Redis service." },
+    { "id": "R-H8", "status": "confirmed", "summary": "Redis is an operational runtime component." },
+    { "id": "R-H9", "status": "not_evidenced", "summary": "Master Catalog has direct Redis dependency." },
+    { "id": "R-H10", "status": "not_evidenced", "summary": "Auth has direct Redis dependency in the inspected path." },
+    { "id": "R-H11", "status": "rejected", "summary": "Test bootstrap changes Redis runtime policy." },
+    { "id": "R-H12", "status": "confirmed", "summary": "Readiness failure without Redis is expected." }
+  ],
+  "riskRegister": [
+    {
+      "severity": "BLOCKER",
+      "risk": "Readiness may block Go/No-Go even when API and database are healthy if Redis is absent."
+    },
+    {
+      "severity": "CRITICAL",
+      "risk": "Distributed rate limiting loses backend availability when Redis is unavailable."
+    },
+    {
+      "severity": "HIGH",
+      "risk": "Staging or VPS validation can fail without a Redis service or injected Redis URL."
+    }
+  ],
+  "gaps": [
+    "No evidence of a sanctioned fallback for Redis absent environments.",
+    "No code change was made to soften readiness semantics.",
+    "No secondary auth path using Redis was validated in this audit."
+  ],
+  "goNoGoImpacts": [
+    "Release readiness requires Redis availability where /ready is enforced.",
+    "Staging smoke checklist already treats Redis as a prerequisite.",
+    "Rate limit protection remains coupled to Redis availability."
+  ],
+  "operationalNotes": {
+    "redisStarted": false,
+    "dockerDesktopStarted": false,
+    "containersCreated": false,
+    "codeChanged": false,
+    "dotenvChanged": false,
+    "readinessChanged": false,
+    "migrationTouched": false,
+    "deployPerformed": false,
+    "commitPerformed": false,
+    "pushPerformed": false
+  }
+}

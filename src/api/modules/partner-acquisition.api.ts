@@ -1,26 +1,26 @@
-import { apiCall, buildQueryString } from './base';
+import { apiCall, buildQueryString } from "./base";
 
-const PARTNER_ACQUISITION_BASE_PATH = '/api/v1/partner-acquisition';
+const PARTNER_ACQUISITION_BASE_PATH = "/api/v1/partner-acquisition";
 
-export type PartnerAcquisitionSource = 'MANUAL' | 'HUB' | 'CAMPAIGN' | 'IMPORT' | 'REFERRAL' | 'OTHER';
+export type PartnerAcquisitionSource = "MANUAL" | "HUB" | "CAMPAIGN" | "IMPORT" | "REFERRAL" | "OTHER";
 
-export type PartnerAcquisitionLeadStatus = 'NEW' | 'ENRICHED' | 'CONTACTED' | 'QUALIFIED' | 'DISCARDED';
+export type PartnerAcquisitionLeadStatus = "NEW" | "ENRICHED" | "CONTACTED" | "QUALIFIED" | "DISCARDED";
 
 export type PartnerProspectStatus =
-  | 'NEW'
-  | 'ENRICHED'
-  | 'CONTACTED'
-  | 'QUALIFIED'
-  | 'NEGOTIATING'
-  | 'DOCUMENTATION'
-  | 'CONTRACT_PENDING'
-  | 'AWAITING_SIGNATURE'
-  | 'SIGNED'
-  | 'CONVERSION_PENDING'
-  | 'CONVERTED'
-  | 'LOST'
-  | 'ARCHIVED'
-  | 'REJECTED';
+  | "NEW"
+  | "ENRICHED"
+  | "CONTACTED"
+  | "QUALIFIED"
+  | "NEGOTIATING"
+  | "DOCUMENTATION"
+  | "CONTRACT_PENDING"
+  | "AWAITING_SIGNATURE"
+  | "SIGNED"
+  | "CONVERSION_PENDING"
+  | "CONVERTED"
+  | "LOST"
+  | "ARCHIVED"
+  | "REJECTED";
 
 export interface PartnerAcquisitionMeta {
   page: number;
@@ -140,12 +140,12 @@ export interface CreatePartnerAcquisitionLeadPayload {
 }
 
 export interface TransitionPartnerAcquisitionLeadPayload {
-  nextStatus: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'DISQUALIFIED' | 'CONVERTED' | 'ARCHIVED';
+  nextStatus: "NEW" | "CONTACTED" | "QUALIFIED" | "DISQUALIFIED" | "CONVERTED" | "ARCHIVED";
   reason?: string;
 }
 
 export interface PromotePartnerAcquisitionLeadToProspectPayload {
-  source: 'MANUAL';
+  source: "MANUAL";
 }
 
 export interface PromotePartnerAcquisitionLeadToProspectResult {
@@ -190,12 +190,12 @@ export interface CreatePartnerProspectPayload {
 }
 
 const withIdempotencyKey = (idempotencyKey: string): HeadersInit => ({
-  'idempotency-key': idempotencyKey,
+  "idempotency-key": idempotencyKey,
 });
 
 export const partnerAcquisitionApi = {
   async getLeads(params?: ListPartnerAcquisitionLeadsParams): Promise<ListPartnerAcquisitionLeadsResponse> {
-    const query = params ? buildQueryString(params as Record<string, unknown>) : '';
+    const query = params ? buildQueryString(params as Record<string, unknown>) : "";
     return apiCall<ListPartnerAcquisitionLeadsResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/leads${query}`);
   },
 
@@ -208,43 +208,44 @@ export const partnerAcquisitionApi = {
     idempotencyKey: string,
   ): Promise<PartnerAcquisitionLeadResponse> {
     return apiCall<PartnerAcquisitionLeadResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/leads`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
       body: JSON.stringify(payload),
     });
   },
 
-async transitionLead(
-  leadId: string,
-  payload: TransitionPartnerAcquisitionLeadPayload,
-  idempotencyKey: string,
-): Promise<PartnerAcquisitionLeadResponse> {
-  return apiCall<PartnerAcquisitionLeadResponse>(
-    `${PARTNER_ACQUISITION_BASE_PATH}/leads/${leadId}/transition`,
-    {
-      method: 'POST',
-      headers: withIdempotencyKey(idempotencyKey),
-      body: JSON.stringify(payload),
-    },
-  );
-},
+  async transitionLead(
+    leadId: string,
+    payload: TransitionPartnerAcquisitionLeadPayload,
+    idempotencyKey: string,
+  ): Promise<PartnerAcquisitionLeadResponse> {
+    return apiCall<PartnerAcquisitionLeadResponse>(
+      `${PARTNER_ACQUISITION_BASE_PATH}/leads/${leadId}/transition`,
+      {
+        method: "POST",
+        headers: withIdempotencyKey(idempotencyKey),
+        body: JSON.stringify(payload),
+      },
+    );
+  },
 
-async promoteLeadToProspect(
-  leadId: string,
-  payload: PromotePartnerAcquisitionLeadToProspectPayload,
-  idempotencyKey: string,
-): Promise<PromotePartnerAcquisitionLeadToProspectResponse> {
-  return apiCall<PromotePartnerAcquisitionLeadToProspectResponse>(
-    `${PARTNER_ACQUISITION_BASE_PATH}/leads/${leadId}/promote-to-prospect`,
-    {
-      method: 'POST',
-      headers: withIdempotencyKey(idempotencyKey),
-      body: JSON.stringify(payload),
-    },
-  );
-},
+  async promoteLeadToProspect(
+    leadId: string,
+    payload: PromotePartnerAcquisitionLeadToProspectPayload,
+    idempotencyKey: string,
+  ): Promise<PromotePartnerAcquisitionLeadToProspectResponse> {
+    return apiCall<PromotePartnerAcquisitionLeadToProspectResponse>(
+      `${PARTNER_ACQUISITION_BASE_PATH}/leads/${leadId}/promote-to-prospect`,
+      {
+        method: "POST",
+        headers: withIdempotencyKey(idempotencyKey),
+        body: JSON.stringify(payload),
+      },
+    );
+  },
+
   async getProspects(params?: ListPartnerProspectsParams): Promise<ListPartnerProspectsResponse> {
-    const query = params ? buildQueryString(params as Record<string, unknown>) : '';
+    const query = params ? buildQueryString(params as Record<string, unknown>) : "";
     return apiCall<ListPartnerProspectsResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects${query}`);
   },
 
@@ -257,7 +258,7 @@ async promoteLeadToProspect(
     idempotencyKey: string,
   ): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
       body: JSON.stringify(payload),
     });
@@ -265,70 +266,70 @@ async promoteLeadToProspect(
 
   async qualifyProspect(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/qualify`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async disqualifyProspect(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/disqualify`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async moveProspectToNegotiation(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/negotiation`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async requestProspectDocumentation(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/documentation/request`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async markProspectDocumentationReceived(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/documentation/received`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async requestProspectContract(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/contract/request`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async markProspectContractSigned(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/contract/signed`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async approveProspectConversion(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/conversion/approve`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async rejectProspectConversion(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/conversion/reject`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },
 
   async convertProspect(prospectId: string, idempotencyKey: string): Promise<PartnerProspectResponse> {
     return apiCall<PartnerProspectResponse>(`${PARTNER_ACQUISITION_BASE_PATH}/prospects/${prospectId}/convert`, {
-      method: 'POST',
+      method: "POST",
       headers: withIdempotencyKey(idempotencyKey),
     });
   },

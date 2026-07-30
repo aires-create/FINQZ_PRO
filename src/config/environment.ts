@@ -6,7 +6,6 @@
 // ============================================
 
 // SECURITY: Modo de desenvolvimento controlado por variável de ambiente
-// Em produção, FORçar uso de API real (não mocks)
 export const IS_DEV_MODE = import.meta.env.VITE_DEV_MODE === 'true';
 
 // SECURITY: Validar API_BASE_URL obrigatória em produção
@@ -28,13 +27,6 @@ const getApiBaseUrl = (): string => {
   console.warn('DEV: VITE_API_BASE_URL não definida, usando fallback de desenvolvimento');
   return 'http://localhost:8787';
 };
-
-// Use mocks/data local when API is not available (APENAS em modo DEV explícito)
-export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true' && IS_DEV_MODE;
-// SECURITY: Legacy auth fallback is only allowed in explicit development mode.
-// This prevents frontend mock users/passwords from becoming an implicit auth source.
-export const ENABLE_LEGACY_AUTH_FALLBACK =
-  import.meta.env.VITE_ENABLE_LEGACY_AUTH_FALLBACK === 'true' && IS_DEV_MODE;
 
 // Base URL da API
 export const API_BASE_URL = getApiBaseUrl();
@@ -76,7 +68,6 @@ const getEndpoint = (base: string, id: number) => `${base}/${id}`;
 export const ENDPOINTS = {
   // Autenticação
   AUTH: {
-    // TODO(legacy-cleanup): manter catálogo legado mínimo sincronizado com o runtime Fastify oficial.
     LOGIN: '/api/v1/auth/login',
     LOGOUT: '/api/v1/auth/logout',
     REFRESH: '/api/v1/auth/refresh',
@@ -93,7 +84,6 @@ export const ENDPOINTS = {
   
   // Clientes
   CLIENTES: {
-    // TODO(legacy-cleanup): padronizar todos os consumidores no namespace crm oficial.
     LIST: '/api/v1/crm/clientes',
     GET: (id: number) => getEndpoint('/api/v1/crm/clientes', id),
     CREATE: '/api/v1/crm/clientes',
@@ -114,35 +104,14 @@ export const ENDPOINTS = {
     DOCUMENTOS: (id: number) => getEndpoint('/api/documentos', id),
   },
   
-  // Parceiros
-  PARCEIROS: {
-    LIST: '/api/parceiros',
-    GET: (id: number) => getEndpoint('/api/parceiros', id),
-    CREATE: '/api/parceiros',
-    UPDATE: (id: number) => getEndpoint('/api/parceiros', id),
-    DELETE: (id: number) => getEndpoint('/api/parceiros', id),
-    RESET_SENHA: (id: number) => `${getEndpoint('/api/parceiros', id)}/reset-senha`,
-    TOGGLE_STATUS: (id: number) => `${getEndpoint('/api/parceiros', id)}/toggle-status`,
-  },
-  
   // Usuários
   USUARIOS: {
-    // TODO(legacy-cleanup): manter alinhado ao endpoint oficial Fastify.
     LIST: '/api/v1/users',
     GET: (id: number) => getEndpoint('/api/v1/users', id),
     CREATE: '/api/v1/users',
     UPDATE: (id: number) => getEndpoint('/api/v1/users', id),
     DELETE: (id: number) => getEndpoint('/api/v1/users', id),
     TOGGLE_STATUS: (id: number) => `${getEndpoint('/api/v1/users', id)}/toggle-status`,
-  },
-  
-  // Produtos
-  PRODUTOS: {
-    LIST: '/api/produtos',
-    GET: (id: number) => getEndpoint('/api/produtos', id),
-    CREATE: '/api/produtos',
-    UPDATE: (id: number) => getEndpoint('/api/produtos', id),
-    DELETE: (id: number) => getEndpoint('/api/produtos', id),
   },
   
   // Financeiro
@@ -292,7 +261,6 @@ export const INTEGRATIONS = {
 // ============================================
 
 export const STORAGE_KEYS = {
-  USER: 'finqz_user',
   TOKEN: 'finqz_token',
   REFRESH_TOKEN: 'finqz_refresh_token',
   THEME: 'finqz_theme',
@@ -305,7 +273,6 @@ export const STORAGE_KEYS = {
 // ============================================
 
 export default {
-  USE_MOCKS,
   API_BASE_URL,
   IS_DEV,
   IS_PROD,

@@ -1,20 +1,57 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import useAppStore from "../store";
-import api from "../api/client";
+import { opportunitiesApi } from "../api/modules/opportunities.api";
+import { pipelinesApi } from "../api/modules/pipelines.api";
+import { masterCatalogApi, type MasterCatalogTreeDto } from "../api/modules/master-catalog.api";
+import { clientesApi } from "../api/modules/clientes.api";
+import { partnersApi } from "../api/modules/partners.api";
+import { usuariosApi } from "../api/modules/usuarios.api";
 import { useTenantFilter } from "../hooks/useTenantFilter";
 import { Plus, X, Edit2, Trash2, MoreVertical, MoreHorizontal, Search, RefreshCw, Calendar, Filter, LayoutGrid, List, ChevronDown, MessageCircle, Phone, Mail, Clock, User, Timer, ArrowUpDown, ArrowUp, ArrowDown, ArrowUpDown as SortIcon, FileText, Package, ArrowLeft, ArrowRight, AlertCircle, CheckCircle, XCircle, Tag, Paperclip, History, File, Upload, Send, Check, Circle, FileCheck, FileX, FilePlus, GripVertical, Calculator, DollarSign, Percent, CalendarDays, Wallet, Save, TrendingUp, MapPin, Target, FileSignature, Shield } from "lucide-react";
 import { Button, Card as DSCard, Input, Select, PageActions, FilterButton, ExportButtons, PrimaryButton, RefreshButton, StatusBadge, EntityAvatar, EmptyState, LoadingState, KpiCard } from "../components/ui";
 import { generateId } from "../utils/idGenerator";
 import { PageHeader } from "../components/layout/PageHeader";
-import { pipelines, podeAvancar, getPipelineById, PIPELINES, getPipelinesOrdenados, getPipelineConfigById, mapearProdutoLegadoParaPipeline, pipelineRequerAssinaturaDigital, getDocumentosObrigatorios, isPipelineOnboarding, isPipelineParceiro, isPipelineColaborador, getPipelineTipoLabel } from "../config/pipelines";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { KanbanColumn, PipelineSelect, getStageColor, formatCurrency, filterOportunitiesByPipeline, groupOportunitiesByStage, calculateTotalsByStage } from "../components/pipeline";
-import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, getPipelineByProductId, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages, getPipelineStageColor } from "../data/catalogRepository";
-import { buildOpportunityWorkspaceUpdatePayload, normalizeOpportunityWorkspace, persistOpportunityWorkspaceMutation, resolveOpportunityWorkspaceMutationId } from "../components/pipeline/workspaceOpportunity";
+import { KanbanColumn, formatCurrency } from "../components/pipeline";
+import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
+
+const mapKanbanOpportunityToCreateIntakePayload = (formData: any, oportunidade: any, selectedPipelineId: string, selectedStageId: string) => {
+  const name = String(formData?.nome || oportunidade?.nome || oportunidade?.cliente_nome || "Sem nome").trim();
+  const amount = Number(formData?.valor ?? oportunidade?.valor ?? oportunidade?.amount ?? 0);
+  const customerNameParts = name.split(" ").filter(Boolean);
+  const firstName = customerNameParts[0] || name || "Cliente";
+  const lastName = customerNameParts.slice(1).join(" ") || "Não informado";
+
+  return {
+    customer: {
+      id: oportunidade?.cliente_id ?? oportunidade?.customerId ?? null,
+      firstName,
+      lastName,
+      email: String(formData?.email || oportunidade?.email || ""),
+      cpfCnpj: String(formData?.cpf_cnpj || oportunidade?.cpf_cnpj || "").replace(/\D/g, ""),
+      phone: String(formData?.telefone || formData?.celular || oportunidade?.telefone || oportunidade?.celular || ""),
+      birthDate: formData?.data_nascimento || null,
+      documentType: formData?.tipoPessoa || null,
+    },
+    opportunity: {
+      title: name,
+      amount,
+      pipelineId: String(selectedPipelineId || oportunidade?.pipelineId || oportunidade?.backendPipelineId || ""),
+      stageId: String(selectedStageId || oportunidade?.stageId || oportunidade?.backendStageId || ""),
+      ownerId: formData?.responsavel_id || oportunidade?.ownerId || null,
+      description: String(formData?.observacoes || oportunidade?.observacoes || oportunidade?.description || ""),
+    },
+    options: {
+      allowCreateCustomer: true,
+      updateExistingCustomer: true,
+    },
+  };
+};
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
 const normalizeKey = (value: any): string => {
@@ -38,28 +75,7 @@ const toStageLabel = (stage: any): string => {
   return String(stage?.nome || stage?.label || stage?.id || stage?.key || "Etapa");
 };
 
-// LISTA ÚNICA OFICIAL DE ETAPAS DO PIPELINE (inclui etapas de onboarding)
-export const OFICIAL_ETAPAS = [
-  // Etapas básicas
-  { key: "novo_lead", label: "Novo Lead" },
-  { key: "negociacao", label: "Negociação" },
-  // Etapas de documentação
-  { key: "documentacao", label: "Documentação" },
-  // Etapas de aceite/contrato
-  { key: "aceite", label: "Aceite" },
-  { key: "contrato_enviado", label: "Contrato Enviado" },
-  { key: "aguardando_assinatura", label: "Aguardando Assinatura" },
-  { key: "contrato_assinado", label: "Contrato Assinado" },
-  // Etapas de ativação
-  { key: "ativo", label: "Ativo" },
-  // Etapas de fechamento
-  { key: "formalizacao", label: "Formalização" },
-  { key: "integrado", label: "Integrado" },
-  { key: "pendencia", label: "Pendência" },
-  { key: "perdido", label: "Perdido" }
-] as const;
-
-export type EtapaKey = typeof OFICIAL_ETAPAS[number]['key'];
+export type EtapaKey = string;
 
 type PipelineRuntimeConfig = {
   id: string;
@@ -68,6 +84,373 @@ type PipelineRuntimeConfig = {
   descricao?: string;
   etapas?: string[];
   colunas?: PipelineColumn[];
+};
+
+type OpportunityIdentitySource = "stageId" | "backendStageId" | "etapa_id" | "etapa" | "pipelineId" | "backendPipelineId" | "pipeline_id" | "missing";
+
+type KanbanRuntimeDragEvent = {
+  timestamp: string;
+  opportunityId: string;
+  tenantId?: string | null;
+  previousPipelineId: string;
+  nextPipelineId: string;
+  previousStageId: string;
+  nextStageId: string;
+  patchStatus: "pending" | "success" | "error";
+  patchMessage?: string;
+  postGetStatus?: "pending" | "success" | "miss" | "error";
+  postGetStageId?: string;
+};
+
+export type KanbanRuntimeHealthReport = {
+  reportVersion: "H18-C";
+  environment: "dev" | "hml" | "disabled";
+  generatedAt: string;
+  totalOpportunitiesAudited: number;
+  totalWithOfficialStageId: number;
+  totalWithOfficialPipelineId: number;
+  totalUsingAliases: number;
+  totalUsingEtapa: number;
+  totalUsingEtapaId: number;
+  totalUsingPipelineIdAlias: number;
+  totalUsingBackendStageId: number;
+  totalUsingBackendPipelineId: number;
+  totalUsingSemanticStageId: number;
+  totalUsingSemanticPipelineId: number;
+  totalMissingOfficialStage: number;
+  totalMissingOfficialPipeline: number;
+  totalFallbackFirstStage: number;
+  totalStageEtapaDivergence: number;
+  totalPipelineDivergence: number;
+  totalGroupedByUuid: number;
+  totalGroupedByAlias: number;
+  totalGroupedByFallback: number;
+  totalInconsistent: number;
+  totalCorrectedAutomatically: number;
+  recentDragEvents: KanbanRuntimeDragEvent[];
+  recentObservations: Array<{
+    timestamp: string;
+    type: string;
+    details: Record<string, unknown>;
+  }>;
+};
+
+type KanbanRuntimeObservable = Partial<OpportunityUiShape> & {
+  tenantId?: string | null;
+  semanticStageId?: string;
+  semanticPipelineId?: string;
+};
+
+const KANBAN_RUNTIME_REPORT_KEY = "__FINQZ_KANBAN_RUNTIME_HEALTH__";
+const KANBAN_RUNTIME_EVENT_LIMIT = 25;
+
+const getKanbanRuntimeEnvironment = (): KanbanRuntimeHealthReport["environment"] => {
+  if (typeof window === "undefined") return "disabled";
+
+  const host = String(window.location.hostname ?? "").toLowerCase();
+  if (import.meta.env.DEV) return "dev";
+  if (host.includes("hml")) return "hml";
+  return "disabled";
+};
+
+const isKanbanRuntimeObservabilityEnabled = (): boolean => getKanbanRuntimeEnvironment() !== "disabled";
+
+const createEmptyKanbanRuntimeHealthReport = (): KanbanRuntimeHealthReport => ({
+  reportVersion: "H18-C",
+  environment: getKanbanRuntimeEnvironment(),
+  generatedAt: new Date().toISOString(),
+  totalOpportunitiesAudited: 0,
+  totalWithOfficialStageId: 0,
+  totalWithOfficialPipelineId: 0,
+  totalUsingAliases: 0,
+  totalUsingEtapa: 0,
+  totalUsingEtapaId: 0,
+  totalUsingPipelineIdAlias: 0,
+  totalUsingBackendStageId: 0,
+  totalUsingBackendPipelineId: 0,
+  totalUsingSemanticStageId: 0,
+  totalUsingSemanticPipelineId: 0,
+  totalMissingOfficialStage: 0,
+  totalMissingOfficialPipeline: 0,
+  totalFallbackFirstStage: 0,
+  totalStageEtapaDivergence: 0,
+  totalPipelineDivergence: 0,
+  totalGroupedByUuid: 0,
+  totalGroupedByAlias: 0,
+  totalGroupedByFallback: 0,
+  totalInconsistent: 0,
+  totalCorrectedAutomatically: 0,
+  recentDragEvents: [],
+  recentObservations: [],
+});
+
+const getKanbanRuntimeHealthReportTarget = (): Record<string, unknown> | null => {
+  if (typeof window !== "undefined") return window as unknown as Record<string, unknown>;
+  if (typeof globalThis !== "undefined") return globalThis as unknown as Record<string, unknown>;
+  return null;
+};
+
+export const getKanbanRuntimeHealthReport = (): KanbanRuntimeHealthReport => {
+  const target = getKanbanRuntimeHealthReportTarget();
+  if (!target) return createEmptyKanbanRuntimeHealthReport();
+
+  const existing = target[KANBAN_RUNTIME_REPORT_KEY];
+  if (existing && typeof existing === "object") {
+    return existing as KanbanRuntimeHealthReport;
+  }
+
+  const report = createEmptyKanbanRuntimeHealthReport();
+  target[KANBAN_RUNTIME_REPORT_KEY] = report;
+  return report;
+};
+
+export const resetKanbanRuntimeHealthReport = (): KanbanRuntimeHealthReport => {
+  const report = createEmptyKanbanRuntimeHealthReport();
+  const target = getKanbanRuntimeHealthReportTarget();
+  if (target) {
+    target[KANBAN_RUNTIME_REPORT_KEY] = report;
+  }
+  return report;
+};
+
+export const resetKanbanRuntimeHealthMetrics = (): KanbanRuntimeHealthReport => {
+  const report = getKanbanRuntimeHealthReport();
+  const next = createEmptyKanbanRuntimeHealthReport();
+  next.recentDragEvents = report.recentDragEvents;
+  next.recentObservations = report.recentObservations;
+
+  const target = getKanbanRuntimeHealthReportTarget();
+  if (target) {
+    target[KANBAN_RUNTIME_REPORT_KEY] = next;
+  }
+
+  return next;
+};
+
+const mutateKanbanRuntimeHealthReport = (
+  mutator: (report: KanbanRuntimeHealthReport) => void,
+): KanbanRuntimeHealthReport => {
+  const report = getKanbanRuntimeHealthReport();
+  mutator(report);
+  report.generatedAt = new Date().toISOString();
+  return report;
+};
+
+const appendKanbanRuntimeObservation = (
+  type: string,
+  details: Record<string, unknown>,
+) => {
+  if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+  mutateKanbanRuntimeHealthReport((report) => {
+    report.recentObservations.unshift({
+      timestamp: new Date().toISOString(),
+      type,
+      details,
+    });
+    report.recentObservations = report.recentObservations.slice(0, KANBAN_RUNTIME_EVENT_LIMIT);
+  });
+};
+
+const upsertKanbanRuntimeDragEvent = (
+  opportunityId: string,
+  patch: Partial<KanbanRuntimeDragEvent>,
+) => {
+  if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+  mutateKanbanRuntimeHealthReport((report) => {
+    const index = report.recentDragEvents.findIndex((event) => event.opportunityId === opportunityId);
+    const current: KanbanRuntimeDragEvent = index >= 0
+      ? report.recentDragEvents[index]
+      : {
+          timestamp: new Date().toISOString(),
+          opportunityId,
+          tenantId: null,
+          previousPipelineId: "",
+          nextPipelineId: "",
+          previousStageId: "",
+          nextStageId: "",
+          patchStatus: "pending",
+        };
+
+    const nextEvent = {
+      ...current,
+      ...patch,
+      timestamp: new Date().toISOString(),
+    };
+
+    if (index >= 0) {
+      report.recentDragEvents[index] = nextEvent;
+    } else {
+      report.recentDragEvents.unshift(nextEvent);
+    }
+
+    report.recentDragEvents = report.recentDragEvents.slice(0, KANBAN_RUNTIME_EVENT_LIMIT);
+  });
+};
+
+const resolveOpportunityStageIdentity = (
+  opportunity: Partial<OpportunityUiShape> | null | undefined,
+): { value: string; source: OpportunityIdentitySource } => {
+  const candidates: Array<[OpportunityIdentitySource, unknown]> = [
+    ["stageId", opportunity?.stageId],
+    ["backendStageId", opportunity?.backendStageId],
+    ["etapa_id", opportunity?.etapa_id],
+    ["etapa", opportunity?.etapa],
+  ];
+
+  for (const [source, candidate] of candidates) {
+    const value = String(candidate ?? "").trim();
+    if (value) return { value, source };
+  }
+
+  return { value: "", source: "missing" };
+};
+
+const resolveOpportunityPipelineIdentity = (
+  opportunity: Partial<OpportunityUiShape> | null | undefined,
+): { value: string; source: OpportunityIdentitySource } => {
+  const candidates: Array<[OpportunityIdentitySource, unknown]> = [
+    ["pipelineId", opportunity?.pipelineId],
+    ["backendPipelineId", opportunity?.backendPipelineId],
+    ["pipeline_id", opportunity?.pipeline_id],
+  ];
+
+  for (const [source, candidate] of candidates) {
+    const value = String(candidate ?? "").trim();
+    if (value) return { value, source };
+  }
+
+  return { value: "", source: "missing" };
+};
+
+const inspectKanbanOpportunityRuntime = (
+  opportunity: KanbanRuntimeObservable,
+  details: Partial<Record<string, unknown>> = {},
+) => {
+  const stageIdentity = resolveOpportunityStageIdentity(opportunity);
+  const pipelineIdentity = resolveOpportunityPipelineIdentity(opportunity);
+  const etapaId = String(opportunity?.etapa_id ?? "").trim();
+  const etapa = String(opportunity?.etapa ?? "").trim();
+  const backendStageId = String(opportunity?.backendStageId ?? "").trim();
+  const backendPipelineId = String(opportunity?.backendPipelineId ?? "").trim();
+  const stageId = String(opportunity?.stageId ?? "").trim();
+  const pipelineId = String(opportunity?.pipelineId ?? "").trim();
+  const semanticStageId = String(opportunity?.semanticStageId ?? "").trim();
+  const semanticPipelineId = String(opportunity?.semanticPipelineId ?? "").trim();
+  const usesAlias =
+    (stageIdentity.source !== "stageId" && stageIdentity.source !== "missing") ||
+    (pipelineIdentity.source !== "pipelineId" && pipelineIdentity.source !== "missing");
+
+  const hasStageEtapaDivergence = Boolean(stageId && etapaId && stageId !== etapaId);
+  const hasPipelineDivergence = Boolean(pipelineId && backendPipelineId && pipelineId !== backendPipelineId);
+  const isInconsistent = Boolean(!stageIdentity.value || !pipelineIdentity.value || hasStageEtapaDivergence || hasPipelineDivergence);
+
+  return {
+    id: String(opportunity?.id ?? ""),
+    stageIdentity,
+    pipelineIdentity,
+    etapaId,
+    etapa,
+    stageId,
+    pipelineId,
+    backendStageId,
+    backendPipelineId,
+    semanticStageId,
+    semanticPipelineId,
+    usesAlias,
+    hasStageEtapaDivergence,
+    hasPipelineDivergence,
+    isInconsistent,
+    details,
+  };
+};
+
+const publishKanbanRuntimeHealthReport = (
+  reason: string,
+  extra: Record<string, unknown> = {},
+) => {
+  if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+  const report = mutateKanbanRuntimeHealthReport(() => {});
+  appendKanbanRuntimeObservation("report", {
+    reason,
+    totalOpportunitiesAudited: report.totalOpportunitiesAudited,
+    totalWithOfficialStageId: report.totalWithOfficialStageId,
+    totalWithOfficialPipelineId: report.totalWithOfficialPipelineId,
+    totalUsingAliases: report.totalUsingAliases,
+    totalFallbackFirstStage: report.totalFallbackFirstStage,
+    totalInconsistent: report.totalInconsistent,
+    totalCorrectedAutomatically: report.totalCorrectedAutomatically,
+    ...extra,
+  });
+};
+
+export const getOpportunityVisualStageId = (opportunity: Partial<OpportunityUiShape> | null | undefined): string => {
+  return resolveOpportunityStageIdentity(opportunity).value;
+};
+
+export const getOpportunityVisualPipelineId = (opportunity: Partial<OpportunityUiShape> | null | undefined): string => {
+  return resolveOpportunityPipelineIdentity(opportunity).value;
+};
+
+export const normalizeOpportunityForKanbanStage = (
+  opportunity: any,
+  validStageIds: Set<string>,
+  fallbackStageId: string,
+) => {
+  if (!opportunity || typeof opportunity !== "object") return opportunity;
+
+  const visualStageId = getOpportunityVisualStageId(opportunity);
+  if (visualStageId && validStageIds.has(visualStageId)) {
+    return {
+      ...opportunity,
+      etapa_id: visualStageId,
+      etapa: visualStageId,
+    };
+  }
+
+  return {
+    ...opportunity,
+    etapa_id: fallbackStageId,
+    etapa: fallbackStageId,
+  };
+};
+
+export const buildOpportunitiesByStage = (
+  opportunities: OpportunityUiShape[],
+  stages: Array<{ id: string }>,
+  columnSort: Record<string, string>,
+) => {
+  const grouped: Record<string, OpportunityUiShape[]> = {};
+
+  for (const stage of stages) {
+    const stageOpportunities = opportunities.filter(
+      (opportunity) => getOpportunityVisualStageId(opportunity) === String(stage.id),
+    );
+    const sortOption = columnSort[stage.id] || "data_desc";
+
+    grouped[stage.id] = stageOpportunities.sort((a, b) => {
+      const valorA = Number(a.valor ?? 0);
+      const valorB = Number(b.valor ?? 0);
+      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+
+      switch (sortOption) {
+        case "valor_asc":
+          return valorA - valorB;
+        case "valor_desc":
+          return valorB - valorA;
+        case "data_asc":
+          return dateA - dateB;
+        case "data_desc":
+        default:
+          return dateB - dateA;
+      }
+    });
+  }
+
+  return grouped;
 };
 
 const DETAIL_TABS = [
@@ -81,26 +464,104 @@ const DETAIL_TABS = [
 
 type DetailTabId = typeof DETAIL_TABS[number]['id'];
 
-const LEGACY_PIPELINE_IDS_BY_CATALOG: Record<string, string[]> = {
-  "pipeline-antecipacao": ["pipeline-antecipacao", "fgts"],
-  "pipeline-cartao": ["pipeline-cartao"],
-  "pipeline-consignado": ["pipeline-consignado", "finqz-consignado", "credito_consignado", "consignado"],
-  "pipeline-consorcio": ["pipeline-consorcio"],
-  "pipeline-credito-pessoal-cdc": ["pipeline-credito-pessoal-cdc", "finqz-auto", "emprestimo_pessoal", "personalizado"],
-  "pipeline-emprestimo-com-garantia": ["pipeline-emprestimo-com-garantia", "emprestimo_com_garantia"],
-  "pipeline-energia": ["pipeline-energia", "energia_gd", "mercado_livre_energia"],
-  "pipeline-financiamento": ["pipeline-financiamento", "financiamento_veiculo"],
-  "pipeline-seguro": ["pipeline-seguro"],
+type ResponsibleUser = {
+  id: string;
+  nome: string;
+  status: string;
+  scope?: string;
 };
 
-const getEquivalentPipelineIds = (pipelineId: string): string[] => {
-  return LEGACY_PIPELINE_IDS_BY_CATALOG[pipelineId] || [pipelineId];
+const normalizeOfficialPipelinesForRead = (payload: any): any[] => {
+  const rawItems = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : [];
+
+  return rawItems
+    .map((pipeline: any, pipelineIndex: number) => {
+      const rawStages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+
+      return {
+        ...pipeline,
+        id: String(pipeline?.id ?? ""),
+        name: String(pipeline?.name ?? pipeline?.nome ?? "Pipeline"),
+        description: String(pipeline?.description ?? pipeline?.descricao ?? ""),
+        isDefault: Boolean(pipeline?.isDefault ?? pipeline?.default ?? false),
+        isActive:
+          pipeline?.isActive !== undefined
+            ? Boolean(pipeline.isActive)
+            : pipeline?.active !== undefined
+              ? Boolean(pipeline.active)
+              : true,
+        stages: rawStages
+          .map((stage: any, stageIndex: number) => ({
+            ...stage,
+            id: String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? `stage-${pipelineIndex}-${stageIndex}`),
+            name: String(stage?.name ?? stage?.nome ?? stage?.label ?? stage?.id ?? stage?.key ?? "Etapa"),
+            order: Number.isFinite(Number(stage?.order)) ? Number(stage.order) : stageIndex + 1,
+            isWon: Boolean(stage?.isWon),
+            isLost: Boolean(stage?.isLost),
+          }))
+          .filter((stage: any) => String(stage?.id ?? stage?.name ?? "").length > 0),
+      };
+    })
+    .filter((pipeline: any) => String(pipeline?.id ?? "").length > 0);
+};
+
+const getClienteSearchValue = (cardData: any): string => {
+  const candidates = [
+    cardData?.cpf_cnpj,
+    cardData?.cpfCnpj,
+    cardData?.email,
+    cardData?.telefone,
+    cardData?.celular,
+    cardData?.nome,
+    cardData?.cliente,
+    cardData?.cliente_id,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) {
+      continue;
+    }
+
+    const value = String(candidate).trim();
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
 };
 
 const inferPipelineTipo = (pipelineId: string): PipelineTipo => {
   if (pipelineId === "pipeline-energia") return "energia";
   if (pipelineId === "pipeline-financiamento") return "veiculo";
   return "credito";
+};
+
+const mapBackendPipelineNameToSemanticId = (
+  pipelineName: string | undefined,
+  backendPipelineId: string | undefined,
+): string => {
+  const normalizedName = normalizeKey(pipelineName || "");
+
+  if (normalizedName.includes("consignado")) return "pipeline-consignado";
+  if (normalizedName.includes("credito_pessoal") || normalizedName.includes("cdc")) {
+    return "pipeline-credito-pessoal-cdc";
+  }
+  if (normalizedName.includes("garantia")) return "pipeline-emprestimo-com-garantia";
+  if (normalizedName.includes("financiamento")) return "pipeline-financiamento";
+  if (normalizedName.includes("energia")) return "pipeline-energia";
+  if (normalizedName.includes("cartao")) return "pipeline-cartao";
+  if (normalizedName.includes("antecipacao") || normalizedName.includes("fgts")) {
+    return "pipeline-antecipacao";
+  }
+  if (normalizedName.includes("seguro")) return "pipeline-seguro";
+  if (normalizedName.includes("consorcio")) return "pipeline-consorcio";
+
+  return String(backendPipelineId || "");
 };
 
 
@@ -113,6 +574,75 @@ export const MOTIVOS_PENDENCIA = [
   { key: "aguardando_retorno", label: "Aguardando retorno do cliente" },
   { key: "outro", label: "Outro" }
 ] as const;
+
+export interface OpportunityUiShape {
+  id: string | number;
+  displayId?: string;
+
+  nome?: string;
+  title?: string;
+
+  valor?: number;
+  amount?: number;
+
+  status?: string;
+
+  cliente_id?: string | null;
+  customerId?: string | null;
+  cliente_nome?: string;
+
+  responsavel_id?: string | null;
+  ownerId?: string | null;
+  responsavel_nome?: string;
+
+  produto?: string;
+  produto_id?: string | number | null;
+  productId?: string | number | null;
+  productCode?: string;
+
+  subproduto?: string;
+  subproduto_id?: string | number | null;
+  subproductId?: string | number | null;
+  subproductCode?: string;
+
+  modality?: string;
+  modalityId?: string | number | null;
+  modality_id?: string | number | null;
+
+  pipeline_id?: string;
+  pipelineId?: string;
+  pipelineCode?: string;
+
+  etapa_id?: string;
+  etapa?: string;
+  stageId?: string;
+
+  backendPipelineId?: string;
+  backendPipelineName?: string;
+
+  backendStageId?: string;
+  backendStageName?: string;
+  backendStageOrder?: number;
+  backendStageIsWon?: boolean;
+  backendStageIsLost?: boolean;
+
+  observacoes?: string;
+  description?: string;
+
+  tags?: string[];
+
+  rdStatus?: string;
+  doNotCallStatus?: string;
+
+  racionalCompany_id?: string | null;
+  franquia_id?: string | null;
+  franqueado_id?: string | null;
+
+  createdAt?: string;
+  updatedAt?: string;
+
+  __officialApiSource?: boolean;
+}
 
 // VALIDAÇÕES DE CAMPOS POR ETAPA
 export const VALIDACOES_ETAPA: Partial<Record<EtapaKey, { obrigatorios: string[]; mensagem: string }>> = {
@@ -167,53 +697,71 @@ export const VALIDACOES_ETAPA: Partial<Record<EtapaKey, { obrigatorios: string[]
 };
 
 // Função para validar se a oportunidade pode avançar para uma etapa
-export const validarEtapa = (oportunidade: any, etapaDestino: EtapaKey): { valido: boolean; mensagem: string; camposFaltantes: string[] } => {
-  // PROTEÇÃO DE VALIDACOES_ETAPA
+export const validarEtapa = (
+  oportunidade: any,
+  etapaDestino: EtapaKey
+): { valido: boolean; mensagem: string; camposFaltantes: string[] } => {
   const validacao = VALIDACOES_ETAPA?.[etapaDestino];
-  if (!validacao || !Array.isArray(validacao.obrigatorios)) return { valido: true, mensagem: '', camposFaltantes: [] };
-  
+
+  if (!validacao || !Array.isArray(validacao.obrigatorios)) {
+    return { valido: true, mensagem: "", camposFaltantes: [] };
+  }
+
+  const getCampoCanonicamente = (campo: string) => {
+    if (campo === "produto") {
+      return (
+        oportunidade?.produto ||
+        oportunidade?.productId ||
+        oportunidade?.product_id ||
+        oportunidade?.produto_id ||
+        ""
+      );
+    }
+
+    if (campo === "valor") {
+      return oportunidade?.valor ?? oportunidade?.amount ?? null;
+    }
+
+    return oportunidade?.[campo];
+  };
+
   const camposFaltantes: string[] = [];
-  
+
   for (const campo of validacao.obrigatorios) {
-    const valor = oportunidade[campo];
-    if (valor === undefined || valor === null || valor === '' || valor === 0) {
+    const valor = getCampoCanonicamente(campo);
+
+    if (
+      valor === undefined ||
+      valor === null ||
+      valor === "" ||
+      (campo === "valor" && Number(valor) <= 0)
+    ) {
       camposFaltantes.push(campo);
     }
   }
-  
+
   if (camposFaltantes.length > 0) {
-    const camposFormatados = camposFaltantes.map(c => {
+    const camposFormatados = camposFaltantes.map((c) => {
       const nomes: Record<string, string> = {
-        nome: 'Nome',
-        telefone: 'Telefone',
-        produto: 'Produto',
-        valor: 'Valor',
-        email: 'E-mail',
-        observacoes: 'Observações'
+        nome: "Nome",
+        telefone: "Telefone",
+        produto: "Produto",
+        valor: "Valor",
+        email: "E-mail",
+        observacoes: "Observações",
       };
+
       return nomes[c] || c;
     });
+
     return {
       valido: false,
-      mensagem: `${validacao.mensagem}. Campos faltando: ${camposFormatados.join(', ')}`,
-      camposFaltantes
+      mensagem: `${validacao.mensagem}. Campos faltando: ${camposFormatados.join(", ")}`,
+      camposFaltantes,
     };
   }
-  
-  return { valido: true, mensagem: '', camposFaltantes: [] };
-};
 
-// 🔵 ETAPAS DINÂMICAS DO PIPELINE - USA CONFIGURAÇÃO OU PADRÃO
-const getEtapasAtivas = (pipelineId: string) => {
-  // Tenta carregar etapas configuradas em Administração > Pipelines
-  const stages = getPipelineStages(pipelineId);
-  
-  // Mapeia as etapas para o formato esperado pelo Kanban
-  return stages.map((nome, index) => ({
-    id: normalizeKey(nome),
-    nome: nome,
-    cor: getCorEtapa(normalizeKey(nome), index)
-  }));
+  return { valido: true, mensagem: "", camposFaltantes: [] };
 };
 
 // Cores para cada etapa
@@ -240,147 +788,647 @@ const getCorEtapa = (key: string, index: number): string => {
   return cores[key] || "#6b7280";
 };
 
-// Fallback para compatibilidade - USA LISTA OFICIAL
-const ETAPAS_PIPELINE = OFICIAL_ETAPAS.map((e, index) => ({
-  id: e.key,
-  nome: e.label,
-  cor: getCorEtapa(e.key, index)
-}));
-
 const OverlayPortal = ({ children }: { children: React.ReactNode }) => {
   if (typeof document === "undefined") return null;
   return createPortal(children, document.body);
 };
 
+const getShortUuid = (value: unknown): string => {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+
+  const compact = normalized.replace(/-/g, "");
+  if (compact.length >= 8) return compact.slice(0, 8).toUpperCase();
+  return normalized.toUpperCase();
+};
+
+const getVisualOpportunityId = (opportunity: OpportunityUiShape): string => {
+  const explicitDisplayId = String(
+    opportunity?.code ??
+      opportunity?.displayId ??
+      opportunity?.externalCode ??
+      "",
+  ).trim();
+
+  if (explicitDisplayId) return explicitDisplayId;
+
+  const shortUuid = getShortUuid(opportunity?.id);
+  return shortUuid || "SEM-ID-VISUAL";
+};
+
+export const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape => {
+  const backendPipelineId = String(opportunity?.pipelineId ?? "");
+  const backendStageId = String(opportunity?.stageId ?? "");
+  const stageName = String(opportunity?.stage?.name ?? "");
+  const pipelineName = String(opportunity?.pipeline?.name ?? "");
+  const rawTitle = opportunity?.title ?? "";
+  const rawAmount = opportunity?.amount ?? 0;
+  const rawDescription = opportunity?.description ?? "";
+  const rawCustomerId = opportunity?.customerId ?? null;
+  const rawCustomerEmail =
+    opportunity?.customer?.email ??
+    opportunity?.email ??
+    "";
+  const rawCustomerPhone =
+    opportunity?.customer?.phone ??
+    opportunity?.telefone ??
+    opportunity?.phone ??
+    opportunity?.celular ??
+    "";
+  const rawOwnerId = opportunity?.ownerId ?? null;
+  const rawProductId = opportunity?.productId ?? opportunity?.product?.id ?? opportunity?.product_id ?? opportunity?.produto_id ?? null;
+  const rawSubproductId = opportunity?.subproductId ?? opportunity?.subproduct?.id ?? opportunity?.subproduto_id ?? null;
+  const rawModalityId = opportunity?.modalityId ?? opportunity?.modality?.id ?? opportunity?.modality_id ?? null;
+  const rawProdutoText = opportunity?.produto ?? opportunity?.product?.name ?? "";
+  const rawSubprodutoText = opportunity?.subproduto ?? opportunity?.subproduct?.name ?? "";
+  const rawModalityText = opportunity?.modality?.name ?? opportunity?.modality?.code ?? opportunity?.modality ?? "";
+  const rawClienteNome =
+    opportunity?.customer?.name ??
+    opportunity?.customer?.fullName ??
+    opportunity?.customerName ??
+    "";
+  const rawResponsavelNome = opportunity?.owner?.name ?? opportunity?.ownerName ?? "";
+  const legacyProductAliases = { product_id: rawProductId };
+  const semanticStageId = normalizeKey(stageName) || "novo_lead";
+  const visualStageId = backendStageId || semanticStageId;
+  const semanticPipelineId = mapBackendPipelineNameToSemanticId(
+    pipelineName,
+    backendPipelineId,
+  );
+  const visualPipelineId = backendPipelineId || semanticPipelineId;
+  const mapped: OpportunityUiShape = {
+    id: String(opportunity?.id ?? ""),
+    displayId: getVisualOpportunityId(opportunity),
+    title: String(rawTitle),
+    amount: Number(rawAmount ?? 0),
+    nome: String(rawTitle ?? "Sem nome"),
+    valor: Number(rawAmount ?? 0),
+    status: String(opportunity?.status ?? "ativo"),
+    customerId: rawCustomerId,
+    pipeline_id: visualPipelineId,
+    pipelineId: backendPipelineId,
+    etapa_id: visualStageId,
+    etapa: visualStageId,
+    stageId: backendStageId,
+    backendPipelineId,
+    backendPipelineName: pipelineName,
+    backendStageId,
+    backendStageName: stageName,
+    backendStageOrder: opportunity?.stage?.order,
+    backendStageIsWon: Boolean(opportunity?.stage?.isWon),
+    backendStageIsLost: Boolean(opportunity?.stage?.isLost),
+    cliente_id: rawCustomerId,
+    cliente_nome: String(rawClienteNome),
+    email: String(rawCustomerEmail ?? ""),
+    telefone: String(rawCustomerPhone ?? ""),
+    ownerId: rawOwnerId,
+    responsavel_id: rawOwnerId,
+    responsavel_nome: String(rawResponsavelNome),
+    produto: String(rawProdutoText),
+    produto_id: rawProductId,
+    productId: rawProductId,
+    product_id: rawProductId,
+    productCode: String(opportunity?.productCode ?? ""),
+    subproduto: String(rawSubprodutoText),
+    subproduto_id: rawSubproductId,
+    subproductId: rawSubproductId,
+    subproductCode: String(opportunity?.subproductCode ?? ""),
+    modality: String(rawModalityText),
+    modalityId: rawModalityId,
+    modality_id: rawModalityId,
+    observacoes: String(rawDescription),
+    description: String(rawDescription),
+    createdAt: opportunity?.createdAt ?? new Date().toISOString(),
+    updatedAt: opportunity?.updatedAt ?? opportunity?.createdAt ?? new Date().toISOString(),
+    __officialApiSource: true,
+  };
+
+  return mapped;
+};
+
+const UUID_V4_LIKE_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const getCanonicalOpportunityId = (opportunity: OpportunityUiShape): string | null => {
+  const rawId = opportunity?.id;
+  if (rawId === null || rawId === undefined) return null;
+
+  const id = String(rawId).trim();
+  if (!id) return null;
+  if (/^L-\d+$/i.test(id)) return null;
+  if (!UUID_V4_LIKE_REGEX.test(id)) return null;
+
+  return id;
+};
+
+const LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE =
+  "Esta oportunidade não possui identificador interno oficial. Recarregue os dados da API antes de editar.";
+
+const isOfficialApiOpportunity = (opportunity: OpportunityUiShape | null | undefined): boolean =>
+  Boolean(opportunity?.__officialApiSource === true);
+
+const hasCanonicalOpportunityId = (opportunity: OpportunityUiShape | null | undefined): boolean =>
+  Boolean(getCanonicalOpportunityId(opportunity));
+
+const buildConservativeOpportunityFingerprint = (opportunity: any): string | null => {
+  const nome = String(opportunity?.cliente_nome ?? opportunity?.nome ?? "").trim().toLowerCase();
+  const email = String(opportunity?.email ?? "").trim().toLowerCase();
+  const telefone = String(opportunity?.telefone ?? opportunity?.celular ?? "").replace(/\D/g, "");
+  const produto = String(opportunity?.produto ?? "").trim().toLowerCase();
+  const valor = Number(opportunity?.valor ?? 0);
+  const createdAt = String(opportunity?.createdAt ?? opportunity?.created_at ?? "").trim().toLowerCase();
+
+  const populatedParts =
+    [nome, email, telefone, produto, createdAt].filter(Boolean).length +
+    (Number.isFinite(valor) && valor > 0 ? 1 : 0);
+
+  if (populatedParts < 4) return null;
+
+  return ["fallback", nome, email, telefone, produto, String(valor), createdAt].join("|");
+};
+
+const dedupeOportunidades = (items: any[]): any[] => {
+  const deduped = new Map<string, any>();
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+
+    const canonicalId = getCanonicalOpportunityId(item);
+    const key = canonicalId ? `id:${canonicalId}` : buildConservativeOpportunityFingerprint(item);
+
+    if (!key) {
+      deduped.set(`unique:${deduped.size}:${String(item?.id ?? "")}`, item);
+      continue;
+    }
+
+    const existing = deduped.get(key);
+    if (!existing) {
+      deduped.set(key, item);
+      continue;
+    }
+
+    const itemIsPreferred =
+      isOfficialApiOpportunity(item) &&
+      hasCanonicalOpportunityId(item) &&
+      (!isOfficialApiOpportunity(existing) || !hasCanonicalOpportunityId(existing));
+
+    if (itemIsPreferred) {
+      deduped.set(key, item);
+      continue;
+    }
+
+    const existingTimestamp = new Date(existing?.updatedAt ?? existing?.createdAt ?? 0).getTime();
+    const itemTimestamp = new Date(item?.updatedAt ?? item?.createdAt ?? 0).getTime();
+
+    if (itemTimestamp > existingTimestamp) {
+      deduped.set(key, item);
+    }
+  }
+
+  return Array.from(deduped.values());
+};
+
 const OportunidadesPageInner = () => {
-  const { 
-    pipelines, 
-    oportunidadesKanban, 
-    currentPipelineId, 
-    setCurrentPipelineId,
-    moveOportunidade,
-    addOportunidade,
-    updateOportunidade,
-    deleteOportunidade,
-    addPipeline,
-    updatePipeline,
-    deletePipeline,
-    addColumn,
-    updateColumn,
-    deleteColumn,
-    produtos,
-    usuarios,
+  const navigate = useNavigate();
+  const {
     user,
     theme,
-    hasPermission 
+    hasPermission
   } = useAppStore();
+  const [responsibleUsers, setResponsibleUsers] = useState<ResponsibleUser[]>([]);
+  const [apiOportunidadesReadOnly, setApiOportunidadesReadOnly] = useState<any[] | null>(null);
+  const [officialPipelines, setOfficialPipelines] = useState<any[]>([]);
+  const [masterCatalogTree, setMasterCatalogTree] = useState<MasterCatalogTreeDto>({ segments: [], products: [] });
+  const [apiReadError, setApiReadError] = useState<string | null>(null);
+  const [apiReadReloadKey, setApiReadReloadKey] = useState(0);
+  const [selectedPipelineId, setSelectedPipelineId] = useState("");
+  const pendingMoveAuditRef = useRef<KanbanRuntimeDragEvent | null>(null);
 
-  // PROTEÇÃO COMPLETA DO STORE - Safe fallbacks para todos os dados
-  const safePipelinesStore = Array.isArray(pipelines) ? pipelines : [];
-  const safeOportunidadesKanban = Array.isArray(oportunidadesKanban) ? oportunidadesKanban : [];
-  const safeProdutos = Array.isArray(produtos) ? produtos : [];
-  const safeUsuarios = Array.isArray(usuarios) ? usuarios : [];
+  useEffect(() => {
+    let cancelled = false;
 
-  // Safe currentPipelineId sem pipeline default operacional
-  const safeCurrentPipelineId =
-    typeof currentPipelineId === "string" && currentPipelineId
-      ? currentPipelineId
-      : "";
+    const loadOfficialUsers = async () => {
+      try {
+        const response = await usuariosApi.getAll();
+        const rawUsers = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
 
-  // Safe setters e actions do store
-  const safeSetCurrentPipelineId =
-    typeof setCurrentPipelineId === "function"
-      ? setCurrentPipelineId
-      : () => {};
+        const normalizedUsers = rawUsers
+          .map((usuario: any): ResponsibleUser | null => {
+            const id = String(usuario?.id ?? "").trim();
+            if (!id) {
+              return null;
+            }
 
-  const safeMoveOportunidade =
-    typeof moveOportunidade === "function"
-      ? moveOportunidade
-      : () => {};
+            const nome = String(
+              usuario?.nome ??
+                [usuario?.firstName, usuario?.lastName].filter(Boolean).join(" ") ??
+                "Usuário",
+            ).trim();
 
-  const safeAddOportunidade =
-    typeof addOportunidade === "function"
-      ? addOportunidade
-      : () => {};
+            return {
+              id,
+              nome: nome || "Usuário",
+              status: String(
+                usuario?.status ??
+                  (usuario?.isActive === false ? "inativo" : "ativo"),
+              ),
+              scope: usuario?.scope ?? usuario?.userScope ?? undefined,
+            };
+          })
+          .filter((usuario: ResponsibleUser | null): usuario is ResponsibleUser => Boolean(usuario));
 
-  const safeUpdateOportunidade =
-    typeof updateOportunidade === "function"
-      ? updateOportunidade
-      : () => {};
+        if (!cancelled) {
+          setResponsibleUsers(normalizedUsers);
+        }
+      } catch (error) {
+        console.error("[Oportunidades] Falha ao carregar usuários oficiais:", error);
 
-  const safeDeleteOportunidade =
-    typeof deleteOportunidade === "function"
-      ? deleteOportunidade
-      : () => {};
+        if (!cancelled) {
+          setResponsibleUsers([]);
+        }
+      }
+    };
+
+    void loadOfficialUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMasterCatalogTree = async () => {
+      try {
+        const tree = await masterCatalogApi.getCatalogTree({ status: "ACTIVE" });
+
+        if (!cancelled) {
+          setMasterCatalogTree(tree);
+        }
+      } catch (error) {
+        console.error("[Oportunidades] Falha ao carregar catálogo mestre oficial:", error);
+
+        if (!cancelled) {
+          setMasterCatalogTree({ segments: [], products: [] });
+        }
+      }
+    };
+
+    void loadMasterCatalogTree();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOportunitiesReadOnly = async () => {
+      try {
+        setApiReadError(null);
+        const response = await opportunitiesApi.getAll();
+        const rawData = Array.isArray(response?.data) ? response.data : [];
+        const mappedData = rawData.map(mapApiOpportunityToKanbanShape);
+
+        if (!cancelled) {
+          setApiOportunidadesReadOnly(mappedData);
+          if (isKanbanRuntimeObservabilityEnabled()) {
+            appendKanbanRuntimeObservation("api:getAll:success", {
+              reloadKey: apiReadReloadKey,
+              total: mappedData.length,
+            });
+          }
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro ao carregar oportunidades";
+        console.error("[Oportunidades] Falha no carregamento read-only da API oficial:", message);
+
+        if (!cancelled) {
+          setApiReadError(message);
+          setApiOportunidadesReadOnly(null);
+          if (isKanbanRuntimeObservabilityEnabled()) {
+            appendKanbanRuntimeObservation("api:getAll:error", {
+              reloadKey: apiReadReloadKey,
+              message,
+            });
+          }
+        }
+      }
+    };
+
+    void loadOportunitiesReadOnly();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [apiReadReloadKey]);
+
+  useEffect(() => {
+    if (apiReadError) {
+      console.warn("[Oportunidades] Erro ao carregar oportunidades da API oficial:", apiReadError);
+    }
+  }, [apiReadError]);
+
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    resetKanbanRuntimeHealthMetrics();
+    const snapshot = Array.isArray(apiOportunidadesReadOnly) ? apiOportunidadesReadOnly : [];
+
+    for (const opportunity of snapshot) {
+      const inspected = inspectKanbanOpportunityRuntime(opportunity, {
+        context: "post-get",
+        reloadKey: apiReadReloadKey,
+      });
+
+      mutateKanbanRuntimeHealthReport((report) => {
+        report.totalOpportunitiesAudited += 1;
+        if (inspected.stageId) report.totalWithOfficialStageId += 1;
+        else report.totalMissingOfficialStage += 1;
+
+        if (inspected.pipelineId) report.totalWithOfficialPipelineId += 1;
+        else report.totalMissingOfficialPipeline += 1;
+
+        if (inspected.usesAlias) report.totalUsingAliases += 1;
+        if (inspected.stageIdentity.source === "backendStageId") report.totalUsingBackendStageId += 1;
+        if (inspected.stageIdentity.source === "etapa_id") report.totalUsingEtapaId += 1;
+        if (inspected.stageIdentity.source === "etapa") report.totalUsingEtapa += 1;
+        if (inspected.pipelineIdentity.source === "backendPipelineId") report.totalUsingBackendPipelineId += 1;
+        if (inspected.pipelineIdentity.source === "pipeline_id") report.totalUsingPipelineIdAlias += 1;
+        if (inspected.semanticStageId) report.totalUsingSemanticStageId += 1;
+        if (inspected.semanticPipelineId) report.totalUsingSemanticPipelineId += 1;
+        if (inspected.hasStageEtapaDivergence) report.totalStageEtapaDivergence += 1;
+        if (inspected.hasPipelineDivergence) report.totalPipelineDivergence += 1;
+        if (inspected.isInconsistent) report.totalInconsistent += 1;
+      });
+    }
+
+    if (pendingMoveAuditRef.current?.opportunityId) {
+      const movedOpportunity = snapshot.find(
+        (opportunity) => String(opportunity?.id ?? "") === pendingMoveAuditRef.current?.opportunityId,
+      );
+
+      upsertKanbanRuntimeDragEvent(pendingMoveAuditRef.current.opportunityId, movedOpportunity
+        ? {
+            postGetStatus: getOpportunityVisualStageId(movedOpportunity) === pendingMoveAuditRef.current.nextStageId ? "success" : "miss",
+            postGetStageId: getOpportunityVisualStageId(movedOpportunity),
+          }
+        : {
+            postGetStatus: "miss",
+          });
+
+      appendKanbanRuntimeObservation("drag:post-get", {
+        opportunityId: pendingMoveAuditRef.current.opportunityId,
+        expectedStageId: pendingMoveAuditRef.current.nextStageId,
+        receivedStageId: movedOpportunity ? getOpportunityVisualStageId(movedOpportunity) : "",
+        matched: movedOpportunity
+          ? getOpportunityVisualStageId(movedOpportunity) === pendingMoveAuditRef.current.nextStageId
+          : false,
+      });
+
+      pendingMoveAuditRef.current = null;
+    }
+
+    publishKanbanRuntimeHealthReport("post-get-snapshot", {
+      reloadKey: apiReadReloadKey,
+      total: snapshot.length,
+    });
+  }, [apiOportunidadesReadOnly, apiReadReloadKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadOfficialPipelines = async () => {
+      try {
+        const response = await pipelinesApi.getAll();
+        const normalizedPipelines = normalizeOfficialPipelinesForRead(response);
+
+        if (!cancelled) {
+          setOfficialPipelines(normalizedPipelines);
+          setSelectedPipelineId((current) => {
+            if (current && normalizedPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === current)) {
+              return current;
+            }
+
+            return String(normalizedPipelines[0]?.id ?? "");
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro ao carregar pipelines oficiais";
+        console.error("[Oportunidades] Falha ao carregar pipelines oficiais:", message);
+
+        if (!cancelled) {
+          setOfficialPipelines([]);
+          setSelectedPipelineId("");
+        }
+      }
+    };
+
+    void loadOfficialPipelines();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPartnersHierarchy = async () => {
+      try {
+        const response = await partnersApi.getAll({ limit: 100 });
+        const rawPartners = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+
+        const partnerMap = new Map<string, any>();
+        rawPartners.forEach((partner: any) => {
+          const id = String(partner?.id ?? "").trim();
+          if (id) {
+            partnerMap.set(id, partner);
+          }
+        });
+
+        const companies = rawPartners
+          .filter((partner: any) => String(partner?.type ?? "").toUpperCase() === "COMPANY")
+          .map((partner: any) => ({
+            id: String(partner.id),
+            nome: String(partner.name ?? partner.nome ?? ""),
+          }))
+          .filter((partner: any) => partner.id && partner.nome);
+
+        const franquiasList = rawPartners
+          .filter((partner: any) => String(partner?.type ?? "").toUpperCase() === "FRANQUIA")
+          .map((partner: any) => {
+            const parentId = String(partner?.parentId ?? "").trim();
+            const parent = parentId ? partnerMap.get(parentId) : null;
+            return {
+              id: String(partner.id),
+              nome: String(partner.name ?? partner.nome ?? ""),
+              racionalCompany_id: parent && String(parent?.type ?? "").toUpperCase() === "COMPANY" ? String(parent.id) : null,
+            };
+          })
+          .filter((partner: any) => partner.id && partner.nome);
+
+        const franqueadosList = rawPartners
+          .filter((partner: any) => String(partner?.type ?? "").toUpperCase() === "FRANQUEADO")
+          .map((partner: any) => {
+            const parentId = String(partner?.parentId ?? "").trim();
+            const parent = parentId ? partnerMap.get(parentId) : null;
+            return {
+              id: String(partner.id),
+              nome: String(partner.name ?? partner.nome ?? ""),
+              franquia_id: parent && String(parent?.type ?? "").toUpperCase() === "FRANQUIA" ? String(parent.id) : null,
+            };
+          })
+          .filter((partner: any) => partner.id && partner.nome);
+
+        if (!cancelled) {
+          setRacionalCompanies(companies);
+          setFranquias(franquiasList);
+          setFranqueados(franqueadosList);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRacionalCompanies([]);
+          setFranquias([]);
+          setFranqueados([]);
+          console.error("[Oportunidades] Falha ao carregar hierarquia comercial oficial:", error);
+        }
+      }
+    };
+
+    void loadPartnersHierarchy();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const isDark = theme === "dark";
   // Fallback seguro para hasPermission - evita erro se store ainda não carregou
   const can = typeof hasPermission === "function" ? hasPermission : () => false;
-  
+
   // ETAPAS QUE PERMITEM EDIÇÃO LIVRE (até Negociação)
   const ETAPAS_EDICAO_LIVRE = ['novo_lead', 'negociacao'];
-  
+
   // Função helper para verificar se pode editar (por permissão OU por etapa)
   const canEditOportunidade = (oportunidade: any): boolean => {
+    if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
+      return false;
+    }
+
     // Se tem permissão, pode editar
     if (can('oportunidades', 'edit')) return true;
-    
+
     // Se não tem permissão, verifica se a etapa permite edição livre
     const etapa = oportunidade?.etapa_id ?? oportunidade?.etapa ?? 'novo_lead';
     return ETAPAS_EDICAO_LIVRE.includes(etapa);
   };
-  
+
  // Toolbar State
 const [searchQuery, setSearchQuery] = useState("");
 const [showFilters, setShowFilters] = useState(false);
 const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 const [showAdvanced, setShowAdvanced] = useState(false);
 const [selectedProductId, setSelectedProductId] = useState<string>("");
-  
+
   // NOVA TAXONOMIA PF - Estado para subproduto e modalidade
   const [selectedSubproductId, setSelectedSubproductId] = useState<string>("");
   const [selectedModality, setSelectedModality] = useState<string>("");
-  const [pipelineSelectionReady, setPipelineSelectionReady] = useState(false);
-  
-  // Opções do catálogo de crédito PF (memoized para performance)
-  const catalogPipelineOptions = useMemo(() => getPipelineOptions(), []);
-  const selectedPipelineId = useMemo(() => {
-    if (!pipelineSelectionReady) return "";
-    if (!safeCurrentPipelineId) return "";
-    return catalogPipelineOptions.some((pipeline) => pipeline.id === safeCurrentPipelineId)
-      ? safeCurrentPipelineId
-      : "";
-  }, [catalogPipelineOptions, pipelineSelectionReady, safeCurrentPipelineId]);
-  const catalogProductOptions = useMemo(() => getProductOptions(), []);
-  const catalogSubproducts = useMemo(() => 
-    selectedProductId ? getSubproductsByProductId(selectedProductId) : [], 
-    [selectedProductId]
+
+  const syncPipelineSelection = (nextPipelineId: string) => {
+    const normalizedNextPipelineId = typeof nextPipelineId === "string" ? nextPipelineId : "";
+    setSelectedPipelineId(normalizedNextPipelineId);
+  };
+  const catalogProductOptions = useMemo(
+    () =>
+      (masterCatalogTree.products ?? [])
+        .map((product) => ({
+          id: String(product.id),
+          code: String(product.code),
+          name: String(product.name),
+          subproducts: Array.isArray(product.subproducts)
+            ? product.subproducts.map((subproduct) => ({
+                id: String(subproduct.id),
+                code: String(subproduct.code),
+                name: String(subproduct.name),
+                modalities: Array.isArray(subproduct.modalities)
+                  ? subproduct.modalities.map((modality) => ({
+                      id: String(modality.id),
+                      code: String(modality.code),
+                      name: String(modality.name),
+                    }))
+                  : [],
+              }))
+            : [],
+        }))
+        .filter((product) => product.id.length > 0),
+    [masterCatalogTree],
   );
-  const catalogModalities = useMemo(() => 
-    selectedProductId && selectedSubproductId 
-      ? getModalitiesByProductAndSubproduct(selectedProductId, selectedSubproductId) 
-      : [],
-    [selectedProductId, selectedSubproductId]
+  const selectedCatalogProduct = useMemo(
+    () => catalogProductOptions.find((product) => product.id === selectedProductId) ?? null,
+    [catalogProductOptions, selectedProductId],
+  );
+  const catalogSubproducts = useMemo(
+    () => selectedCatalogProduct?.subproducts ?? [],
+    [selectedCatalogProduct],
+  );
+  const selectedCatalogSubproduct = useMemo(
+    () => catalogSubproducts.find((subproduct) => subproduct.id === selectedSubproductId) ?? null,
+    [catalogSubproducts, selectedSubproductId],
+  );
+  const catalogModalities = useMemo(
+    () => selectedCatalogSubproduct?.modalities ?? [],
+    [selectedCatalogSubproduct],
   );
 
   React.useEffect(() => {
-    if (!pipelineSelectionReady) {
-      safeSetCurrentPipelineId("");
+    if (!officialPipelines.length) {
+      setSelectedPipelineId("");
       setSelectedProductId("");
       setSelectedSubproductId("");
       setSelectedModality("");
-      setPipelineSelectionReady(true);
       return;
     }
 
-    if (safeCurrentPipelineId && !selectedPipelineId) {
-      safeSetCurrentPipelineId("");
+    setSelectedPipelineId((current) => {
+      if (current && officialPipelines.some((pipeline: any) => String(pipeline?.id ?? "") === current)) {
+        return current;
+      }
+
+      return String(officialPipelines[0]?.id ?? "");
+    });
+  }, [officialPipelines]);
+
+  React.useEffect(() => {
+    if (!catalogProductOptions.length) {
+      setSelectedProductId("");
+      setSelectedSubproductId("");
+      setSelectedModality("");
+      return;
     }
-  }, [pipelineSelectionReady, safeCurrentPipelineId, safeSetCurrentPipelineId, selectedPipelineId]);
-  
+
+    setSelectedProductId((current) => {
+      if (current && catalogProductOptions.some((product) => product.id === current)) {
+        return current;
+      }
+
+      return String(catalogProductOptions[0]?.id ?? "");
+    });
+  }, [catalogProductOptions]);
+
   // Ordenação por coluna: { [etapaId]: 'valor_asc' | 'valor_desc' | 'data_asc' | 'data_desc' }
   const [columnSort, setColumnSort] = useState<Record<string, string>>({});
-  
+
   // Drawer states for lead details
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [openLeadDrawer, setOpenLeadDrawer] = useState(false);
@@ -391,7 +1439,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
     setWorkspaceMutationError(null);
     setOpenLeadDrawer(false);
-    setShowEditDrawerModal(false);
     setShowOpportunityForm(false);
     setShowFullscreenModal(true);
   }
@@ -399,11 +1446,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const handleCloseNegotiation = () => {
     setShowFullscreenModal(false);
     setOpenLeadDrawer(false);
-    setShowEditDrawerModal(false);
     setShowOpportunityForm(false);
     setWorkspaceMutationError(null);
   };
-  
+
   // Filter state
   const [filters, setFilters] = useState({
     etapa_id: "",
@@ -418,11 +1464,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     dataIntegradoInicio: "",
     dataIntegradoFim: ""
   });
-  
+
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
-  
+
   const resetFilters = () => {
     setFilters({
       etapa_id: "",
@@ -438,24 +1484,209 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       dataIntegradoFim: ""
     });
   };
-  
+
   // Data helper
   const currentDate = useMemo(() => {
     const date = new Date();
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     };
     return date.toLocaleDateString('pt-BR', options);
   }, []);
-  
+
+  const formatPhoneInput = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  };
+
+  const formatCepInput = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 5) return digits;
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  };
+
+  const normalizeDateInput = (value: unknown): string => {
+    if (!value) return "";
+    return String(value).slice(0, 10);
+  };
+
+  const buscarEnderecoPorCEP = async (rawCep: string) => {
+    const cep = String(rawCep || "").replace(/\D/g, "");
+    if (cep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (data?.erro) return;
+
+      setFormData((prev) => ({
+        ...prev,
+        cep: formatCepInput(cep),
+        rua: data?.logradouro || prev.rua,
+        bairro: data?.bairro || prev.bairro,
+        cidade: data?.localidade || prev.cidade,
+        estado: data?.uf || prev.estado,
+      }));
+    } catch (error) {
+      console.error("[Oportunidades] Falha ao buscar CEP no ViaCEP:", error);
+    }
+  };
+
+  const normalizeDocumentoDigits = (value: string) => value.replace(/\D/g, "");
+
+  const getClienteDisplayName = (cliente: any) => {
+    const firstName = String(cliente?.firstName || "").trim();
+    const lastName = String(cliente?.lastName || "").trim();
+    return [firstName, lastName].filter(Boolean).join(" ").trim();
+  };
+
+  const resetCustomerLookupState = () => {
+    customerLookupRequestRef.current += 1;
+    setCustomerLookupLoading(false);
+    setCustomerLookupMessage("");
+    setCustomerLookupFound(false);
+    setCustomerLookupResult(null);
+  };
+
+  const buscarClientePorDocumento = async (rawDocumento: string) => {
+    const requestSessionId = modalSessionRef.current;
+    const requestId = customerLookupRequestRef.current + 1;
+    customerLookupRequestRef.current = requestId;
+    const documento = normalizeDocumentoDigits(rawDocumento);
+    const isModalSessionActive = () =>
+      modalOpenRef.current &&
+      modalSessionRef.current === requestSessionId &&
+      customerLookupRequestRef.current === requestId;
+
+    if (!isModalSessionActive()) return;
+
+    setCustomerLookupMessage("");
+    setCustomerLookupFound(false);
+    setCustomerLookupResult(null);
+
+    if (!documento) {
+      if (!isModalSessionActive()) return;
+      setFormData((prev) => ({ ...prev, cliente_id: null }));
+      return;
+    }
+
+    if (!isModalSessionActive()) return;
+    setCustomerLookupLoading(true);
+
+    try {
+      const results = await clientesApi.search(documento);
+      if (!isModalSessionActive()) return;
+
+      const matched = Array.isArray(results)
+        ? results.find((cliente: any) =>
+            normalizeDocumentoDigits(String(cliente?.cpf || cliente?.cpf_cnpj || "")) === documento,
+          )
+        : null;
+
+        if (!matched) {
+        if (!isModalSessionActive()) return;
+        setFormData((prev) => ({ ...prev, cliente_id: null }));
+        setCustomerLookupResult(null);
+        setCustomerLookupMessage("Cliente não encontrado. Preencha manualmente.");
+        return;
+      }
+      const clienteCompleto = matched?.id
+      ? await clientesApi.getById(matched.id)
+           : matched;
+
+      if (!isModalSessionActive()) return;
+
+      const clienteHidratadoRaw = clienteCompleto || matched;
+      const clienteHidratado =
+  clienteHidratadoRaw?.data ??
+  clienteHidratadoRaw?.customer ??
+  clienteHidratadoRaw?.cliente ??
+  clienteHidratadoRaw;
+
+      const nomeCliente = getClienteDisplayName(clienteHidratado);
+
+      if (!isModalSessionActive()) return;
+      setFormData((prev) => {
+  const address = clienteHidratado?.address ?? {};
+  const bankData = clienteHidratado?.bankData ?? {};
+  const phone = String(clienteHidratado?.phone || clienteHidratado?.telefone || "");
+  const cell = String(clienteHidratado?.celular || clienteHidratado?.phone || clienteHidratado?.telefone || "");
+
+  const nextFormData = {
+    ...prev,
+    cliente_id: String(clienteHidratado.id),
+    nome: nomeCliente || clienteHidratado?.nome || prev.nome || "",
+    cpf_cnpj: normalizeDocumentoDigits(String(clienteHidratado?.cpf || clienteHidratado?.cpf_cnpj || prev.cpf_cnpj || "")),
+    email: clienteHidratado?.email || prev.email || "",
+    telefone: phone ? formatPhoneInput(phone) : prev.telefone || "",
+    celular: cell ? formatPhoneInput(cell) : prev.celular || "",
+    profissao: clienteHidratado?.profession || clienteHidratado?.profissao || prev.profissao || "",
+    estado_civil: clienteHidratado?.maritalStatus || clienteHidratado?.estado_civil || prev.estado_civil || "",
+    sexo: clienteHidratado?.gender || clienteHidratado?.sexo || prev.sexo || "",
+    data_nascimento: normalizeDateInput(
+      clienteHidratado?.birthDate ??
+        clienteHidratado?.data_nascimento ??
+        clienteHidratado?.dataNascimento ??
+        prev.data_nascimento,
+    ),
+    cep: address?.cep ? formatCepInput(String(address.cep)) : prev.cep || "",
+    rua: address?.rua || address?.street || prev.rua || "",
+    numero: address?.numero || address?.number || prev.numero || "",
+    complemento: address?.complemento || address?.complement || prev.complemento || "",
+    bairro: address?.bairro || address?.district || prev.bairro || "",
+    cidade: address?.cidade || address?.city || prev.cidade || "",
+    estado: address?.estado || address?.uf || address?.state || prev.estado || "",
+    banco: bankData?.banco || prev.banco || "",
+    agencia: bankData?.agencia || prev.agencia || "",
+    conta: bankData?.conta || prev.conta || "",
+    tipoConta: bankData?.tipoConta || prev.tipoConta || "",
+    titular: bankData?.titular || prev.titular || "",
+    documentoTitular: bankData?.documentoTitular
+      ? String(bankData.documentoTitular).replace(/\D/g, "")
+      : prev.documentoTitular || "",
+    pixTipo: bankData?.pixTipo || prev.pixTipo || "",
+    pixChave: bankData?.pixChave || prev.pixChave || "",
+  };
+
+  console.log("[CustomerHydration] nextFormData", nextFormData);
+
+  return nextFormData;
+});
+
+      if (!isModalSessionActive()) return;
+      setCustomerLookupResult(clienteHidratado);
+      setCustomerLookupFound(true);
+      setCustomerLookupMessage("Cliente vinculado com sucesso.");
+    } catch (error) {
+      console.error("[Oportunidades] Falha ao buscar cliente por documento:", error);
+      if (!isModalSessionActive()) return;
+      setFormData((prev) => ({ ...prev, cliente_id: null }));
+      setCustomerLookupResult(null);
+      setCustomerLookupMessage("Não foi possível consultar clientes agora.");
+    } finally {
+      if (!isModalSessionActive()) return;
+      setCustomerLookupLoading(false);
+    }
+  };
+
   // UI State
   const [showModal, setShowModal] = useState(false);
+  const modalSessionRef = useRef(0);
+  const modalOpenRef = useRef(false);
+  const customerLookupRequestRef = useRef(0);
   const [showPipelineModal, setShowPipelineModal] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
-  const [showEditDrawerModal, setShowEditDrawerModal] = useState(false);
   const [showFullscreenModal, setShowFullscreenModal] = useState(false);
   const [editingColumn, setEditingColumn] = useState<any>(null);
   const [editingPipeline, setEditingPipeline] = useState<any>(null);
@@ -463,18 +1694,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [showPipelineMenu, setShowPipelineMenu] = useState(false);
   const [showOpportunityForm, setShowOpportunityForm] = useState(false);
   const [workspaceMutationError, setWorkspaceMutationError] = useState<string | null>(null);
-  
+
   // Aba ativa no modal fullscreen
   const [activeTab, setActiveTab] = useState<DetailTabId>('tarefas');
-  
+
   // Estado do simulador
   const [tipoSimulacao, setTipoSimulacao] = useState('');
   const [simulacaoCalculada, setSimulacaoCalculada] = useState(false);
   const [simulacaoLoading, setSimulacaoLoading] = useState(false);
-  
+
   // Estado dos anexos
   const [anexos, setAnexos] = useState<any[]>([]);
-  
+
   // Função para upload de anexos
   const handleUploadAnexo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -490,7 +1721,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
     setAnexos((prev) => [...prev, ...novosAnexos]);
   };
-  
+
   // Subprodutos oficiais de Consignado
   const SUBPRODUTOS_CONSIGNADO = [
     { key: 'emprestimo_inss', label: 'Empréstimo Consignado INSS' },
@@ -500,13 +1731,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     { key: 'cartao_rmc', label: 'Cartão RMC' },
     { key: 'cartao_beneficio', label: 'Cartão Benefício' },
   ];
-  
+
   // Estado do subproduto para Consignado
   const [subprodutoConsignado, setSubprodutoConsignado] = useState('');
   const [rendaLiquidaMensal, setRendaLiquidaMensal] = useState(0);
   const [prazoConsignado, setPrazoConsignado] = useState(0);
   const [taxaMensalConsignado, setTaxaMensalConsignado] = useState(0);
-  
+
   // Helper de texto por tipo de simulação
   const getHelperText = (tipo: string) => {
     switch (tipo) {
@@ -518,7 +1749,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       default: return '';
     }
   };
-  
+
   // Estado dos campos do simulador por tipo
   const [simuladorCampos, setSimuladorCampos] = useState({
     // Empréstimo com Garantia (Refinanciamento de Auto)
@@ -542,7 +1773,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     salarioBruto: 0,
     margemPermitida: 35,
   });
-  
+
   // Resultado específico do Consignado
   const [resultadoConsignado, setResultadoConsignado] = useState<{
     subproduto: string;
@@ -559,7 +1790,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     status: 'valida' | 'incompleto' | 'inviavel';
     mensagem: string;
   } | null>(null);
-  
+
   // Resultados da simulação
   const [simuladorResultado, setSimuladorResultado] = useState<{
     valorBruto: number;
@@ -573,14 +1804,33 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     status: 'valida' | 'atencao' | 'inviavel' | 'incompleto';
     mensagem: string;
   } | null>(null);
-  
+
   // Estado do aceite da simulação
   const [simulationStatus, setSimulationStatus] = useState<'simulada' | 'aceita' | 'recusada' | null>(null);
   const [simulationAcceptedAt, setSimulationAcceptedAt] = useState<number | null>(null);
   const [simulationResult, setSimulationResult] = useState<any>(null);
-  const [novaFaseAposAceite, setNovaFaseAposAceite] = useState<string>('aguardando_assinatura');
+  const [novaFaseAposAceite, setNovaFaseAposAceite] = useState<string>('novo_lead');
   const [showFaseSelector, setShowFaseSelector] = useState(false);
-  
+  const simulationRuntimeShadow = useSimulationRuntimeShadow({
+    opportunity: selectedLead,
+    simulationType: tipoSimulacao,
+    simulationFields: simuladorCampos,
+    selectedProduct: {
+      id: "product-emprestimo-com-garantia",
+      code: "EMPRESTIMO_COM_GARANTIA",
+      name: "Empréstimo com Garantia",
+    },
+    selectedSubproduct: {
+      id: "subproduct-auto-equity",
+      productId: "product-emprestimo-com-garantia",
+      code: "AUTO_EQUITY",
+      name: "Auto Equity",
+    },
+    tenantId: selectedLead?.tenantId ?? user?.tenant_id ?? null,
+    currentUserId: user?.id ?? null,
+    currentUserName: user?.nome ?? null,
+  });
+
   // Reset simulação quando o tipo muda
   React.useEffect(() => {
     if (tipoSimulacao) {
@@ -600,7 +1850,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       }
     }
   }, [tipoSimulacao]);
-  
+
   // Reset quando muda subproduto
   React.useEffect(() => {
     if (tipoSimulacao === 'consignado') {
@@ -612,7 +1862,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       setShowFaseSelector(false);
     }
   }, [subprodutoConsignado, rendaLiquidaMensal, prazoConsignado, taxaMensalConsignado]);
-  
+
   // Função para calcular simulação
   const calcularSimulacao = () => {
     // Validação inicial
@@ -620,10 +1870,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       alert("Selecione um tipo de simulação.");
       return;
     }
-    
+
     const t = tipoSimulacao;
     const c = simuladorCampos;
-    
+
     let resultado = {
       valorBruto: 0,
       parcela: 0,
@@ -636,7 +1886,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       status: 'incompleto' as const,
       mensagem: '',
     };
-    
+
     if (t === 'emprestimo-garantia') {
       // Validações básicas
       if ((c.valorVeiculo || 0) <= 0) {
@@ -660,17 +1910,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         setSimulacaoCalculada(true);
         return;
       }
-      
+
       // Se veículo quitado, saldo devedor = 0
       const saldoDevedor = c.veiculoQuitado ? 0 : (c.saldoDevedor || 0);
-      
+
       const valorBruto = (c.valorVeiculo || 0) * ((c.percentualFinanciavel || 0) / 100);
       const valorLiberado = valorBruto - saldoDevedor;
       const taxa = (c.taxaMes || 0) / 100;
       const meses = c.prazo || 1;
-      
+
       resultado.valorBruto = valorBruto;
-      
+
       if (valorLiberado <= 0) {
         resultado.status = 'inviavel';
         resultado.mensagem = 'Simulação inviável: saldo devedor maior que valor financiável';
@@ -679,7 +1929,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         setSimulacaoCalculada(true);
         return;
       }
-      
+
       // Cálculo parcela: sistema francês (Tabela Price)
       let parcela = 0;
       if (taxa > 0 && meses > 0) {
@@ -687,19 +1937,19 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       } else if (meses > 0) {
         parcela = valorLiberado / meses;
       }
-      
+
       resultado.parcela = isFinite(parcela) && !isNaN(parcela) ? parcela : 0;
       resultado.valorLiberado = isFinite(valorLiberado) && !isNaN(valorLiberado) ? valorLiberado : 0;
       resultado.custoTotal = isFinite(resultado.parcela * meses) ? resultado.parcela * meses : 0;
       resultado.cetEstimado = (c.taxaMes || 0) + 0.7;
-      
+
       // Comprometimento - com fallbacks para evitar NaN
       if (c.rendaMensal > 0 && resultado.parcela > 0) {
         resultado.comprometimento = isFinite((resultado.parcela / c.rendaMensal) * 100) ? (resultado.parcela / c.rendaMensal) * 100 : 0;
       } else {
         resultado.comprometimento = 0;
       }
-      
+
       // Status
       if (resultado.comprometimento > 50) {
         resultado.status = 'atencao';
@@ -708,7 +1958,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         resultado.status = 'valida';
         resultado.mensagem = 'Simulação válida';
       }
-      
+
       setSimuladorResultado(resultado);
       setSimulacaoCalculada(true);
       return;
@@ -718,17 +1968,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const meses = prazoConsignado || 0;
       const taxa = taxaMensalConsignado || 0;
       const subproduto = subprodutoConsignado;
-      
+
       // Cálculo das margens
       const margemEmprestimo = Number.isFinite(renda * 0.35) ? renda * 0.35 : 0;
       const margemRMC = Number.isFinite(renda * 0.05) ? renda * 0.05 : 0;
       const margemCartaoBeneficio = Number.isFinite(renda * 0.05) ? renda * 0.05 : 0;
       const totalMargemConsignavel = Number.isFinite(margemEmprestimo + margemRMC + margemCartaoBeneficio) ? margemEmprestimo + margemRMC + margemCartaoBeneficio : 0;
-      
+
       // Determinar margem disponível e parcela conforme subproduto
       let margemDisponivelSubproduto = 0;
       let parcelaEstimada = 0;
-      
+
       if (subproduto.startsWith('emprestimo')) {
         margemDisponivelSubproduto = Number.isFinite(margemEmprestimo) ? margemEmprestimo : 0;
         parcelaEstimada = Number.isFinite(margemEmprestimo) ? margemEmprestimo : 0;
@@ -739,7 +1989,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         margemDisponivelSubproduto = Number.isFinite(margemCartaoBeneficio) ? margemCartaoBeneficio : 0;
         parcelaEstimada = Number.isFinite(margemCartaoBeneficio) ? margemCartaoBeneficio : 0;
       }
-      
+
       // Validações
       if (renda <= 0) {
         resultado.status = 'incompleto';
@@ -756,7 +2006,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         const custoTotal = Number.isFinite(parcelaEstimada * meses) ? parcelaEstimada * meses : 0;
         const cetEstimado = Number.isFinite(taxa + 0.7) ? taxa + 0.7 : 0;
         const comprometimentoRenda = Number.isFinite(renda > 0 ? (parcelaEstimada / renda) * 100 : 0) ? (parcelaEstimada / renda) * 100 : 0;
-        
+
         // Resultado específico do Consignado
         const resultadoConsignadoObj = {
           subproduto: subproduto,
@@ -773,9 +2023,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
           status: 'valida' as const,
           mensagem: 'Simulação válida'
         };
-        
+
         setResultadoConsignado(resultadoConsignadoObj);
-        
+
         // Preencher resultado padrão para compatibilidade
         resultado.parcela = Number.isFinite(parcelaEstimada) ? parcelaEstimada : 0;
         resultado.valorLiberado = Number.isFinite(valorLiberadoEstimado) ? valorLiberadoEstimado : 0;
@@ -789,10 +2039,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const saldo = c.saldoFGTS || 0;
       const taxa = (c.taxaMes || 0) / 100;
       const parcelas = c.parcelasAntecipadas || 1;
-      
+
       resultado.valorBruto = isFinite(saldo * 0.75) ? saldo * 0.75 : 0;
       resultado.cetEstimado = isFinite(taxa * 100 + 0.7) ? taxa * 100 + 0.7 : 0;
-      
+
       if (saldo <= 0) {
         resultado.status = 'incompleto';
         resultado.mensagem = 'Informe o saldo do FGTS';
@@ -800,7 +2050,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         const valorAntecipado = isFinite(saldo * 0.75) ? saldo * 0.75 : 0;
         const custo = isFinite(valorAntecipado * taxa * parcelas) ? valorAntecipado * taxa * parcelas : 0;
         const valorLiquido = valorAntecipado - custo;
-        
+
         if (valorLiquido < 100) {
           resultado.status = 'inviavel';
           resultado.mensagem = 'Valor baixo para operação (mínimo R$ 100)';
@@ -819,11 +2069,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const margem = (c.margemPermitida || 0) / 100;
       const taxa = (c.taxaMes || 0) / 100;
       const meses = c.prazo || 1;
-      
+
       resultado.valorBruto = isFinite(salario * margem * meses) ? salario * margem * meses : 0;
       resultado.cetEstimado = isFinite(taxa * 100 + 0.7) ? taxa * 100 + 0.7 : 0;
       resultado.prazo = meses;
-      
+
       if (salario <= 0) {
         resultado.status = 'incompleto';
         resultado.mensagem = 'Informe o salário bruto';
@@ -832,7 +2082,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         resultado.valorLiberado = isFinite((salario * margem * meses) / 12) ? (salario * margem * meses) / 12 : 0;
         resultado.custoTotal = isFinite(resultado.parcela * meses) ? resultado.parcela * meses : 0;
         resultado.comprometimento = (salario > 0 && resultado.parcela > 0) ? isFinite((resultado.parcela / salario) * 100) ? (resultado.parcela / salario) * 100 : 0 : 0;
-        
+
         if (resultado.comprometimento > 35) {
           resultado.status = 'atencao';
           resultado.mensagem = 'Alerta: comprometimento acima de 35%';
@@ -845,10 +2095,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const valorEmprestimo = c.valorEmprestimoPessoal || 0;
       const taxa = (c.taxaJurosPessoal || 0) / 100;
       const meses = c.prazoPessoal || 1;
-      
+
       resultado.taxaMes = c.taxaJurosPessoal || 0;
       resultado.prazo = meses;
-      
+
       if (valorEmprestimo <= 0) {
         resultado.status = 'incompleto';
         resultado.mensagem = 'Informe o valor do empréstimo';
@@ -863,17 +2113,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         } else if (meses > 0) {
           parcela = valorEmprestimo / meses;
         }
-        
+
         resultado.valorLiberado = isFinite(valorEmprestimo) ? valorEmprestimo : 0;
         resultado.parcela = isFinite(parcela) && !isNaN(parcela) ? parcela : 0;
         resultado.custoTotal = isFinite(parcela * meses) ? parcela * meses : 0;
         resultado.cetEstimado = (c.taxaJurosPessoal || 0) + 1.2;
-        
+
         // Sem garantia, comprometimento calculado sobre renda informada
         if (c.rendaMensal > 0 && resultado.parcela > 0) {
           resultado.comprometimento = isFinite((resultado.parcela / c.rendaMensal) * 100) ? (resultado.parcela / c.rendaMensal) * 100 : 0;
         }
-        
+
         if (resultado.comprometimento > 50) {
           resultado.status = 'atencao';
           resultado.mensagem = 'Atenção: comprometimento acima de 50%';
@@ -883,7 +2133,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         }
       }
     }
-    
+
     setSimuladorResultado(resultado);
     // Marcar que a simulação foi calculada
     setSimulacaoCalculada(true);
@@ -892,12 +2142,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setSimulationAcceptedAt(null);
     setSimulationResult(null);
     setShowFaseSelector(false);
+    void simulationRuntimeShadow.runShadowExecution(resultado);
   };
-  
+
   // Função para aceitar a simulação
   const aceitarSimulacao = async () => {
     if (!selectedLead || !simuladorResultado) return;
-    
+    if (!isOfficialApiOpportunity(selectedLead) || !hasCanonicalOpportunityId(selectedLead)) {
+      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+      return;
+    }
+
     const now = Date.now();
     const novoValor = Number(simuladorResultado.valorLiberado || 0);
     const mutationId = resolveOpportunityWorkspaceMutationId(selectedLead);
@@ -907,16 +2162,25 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       simulationAcceptedAt: now,
       simulationResult: simuladorResultado,
     };
-    
+
     // Atualizar estados de simulação
     setSimulationStatus('aceita');
     setSimulationAcceptedAt(now);
     setSimulationResult({ ...simuladorResultado });
     setShowFaseSelector(true);
 
-    const localId = mutationId ?? selectedLead.id ?? selectedLead.displayId;
-    if (localId !== null && localId !== undefined && localId !== '') {
-      updateOportunidade(String(localId), payload);
+    try {
+      const opportunityId = String(getCanonicalOpportunityId(selectedLead) ?? "");
+      if (!opportunityId) {
+        throw new Error("Oportunidade sem identificador para persistência oficial.");
+      }
+
+      await opportunitiesApi.update(opportunityId, {
+        amount: novoValor,
+      });
+      setApiReadReloadKey((prev) => prev + 1);
+    } catch (error) {
+      console.error('Erro ao atualizar valor da oportunidade:', error);
     }
 
     setSelectedLead((prev: any) => prev ? normalizeOpportunityWorkspace({
@@ -928,7 +2192,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       stageCatalog: workspaceStageCatalog,
     }) : null);
   };
-  
+
   // Função para recusar a simulação
   const recusarSimulacao = () => {
     setSimulationStatus('recusada');
@@ -936,93 +2200,70 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setSimulationResult(null);
     setShowFaseSelector(false);
   };
-  
+
   // Função para confirmar a mudança de fase
-  const confirmarMudancaFase = () => {
+  const confirmarMudancaFase = async () => {
     if (!selectedLead) return;
-    
-    const novoStatus = novaFaseAposAceite === 'perdido' ? 'perdido' : 'ativo';
-
-    const mutationId = resolveOpportunityWorkspaceMutationId(selectedLead);
-    const payload = {
-      etapa_id: novaFaseAposAceite,
-      etapa: novaFaseAposAceite,
-      status: novoStatus,
-    };
-
-    const localId = mutationId ?? selectedLead.id ?? selectedLead.displayId;
-    if (localId !== null && localId !== undefined && localId !== '') {
-      moveOportunidade(String(localId), {
-        etapa_id: novaFaseAposAceite,
-        status: novoStatus,
-      });
+    if (!isOfficialApiOpportunity(selectedLead) || !hasCanonicalOpportunityId(selectedLead)) {
+      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+      return;
     }
 
-    setSelectedLead((prev: any) => prev ? normalizeOpportunityWorkspace({
-      ...prev,
-      ...payload,
-    }, {
-      source: 'session',
-      pipelineLabel: currentPipelineConfig?.nome ?? null,
-      stageCatalog: workspaceStageCatalog,
-    }) : null);
+    const selectedLeadId = String(getCanonicalOpportunityId(selectedLead) ?? "");
+    if (!selectedLeadId) {
+      alert("Não foi possível mover: oportunidade sem identificador.");
+      return;
+    }
 
+    const origemPipelineSemantico = String(
+      selectedLead?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
+    );
+    const resolvedBackendPipelineId = String(
+      selectedLead?.backendPipelineId ||
+      selectedLead?.pipelineId ||
+      currentPipelineConfig?.id ||
+      selectedPipelineId ||
+      oportunidadesBase.find((op: any) =>
+        String(op?.pipeline_id ?? "") === origemPipelineSemantico && String(op?.backendPipelineId ?? "").length > 0,
+      )?.backendPipelineId ||
+      "",
+    );
+
+    const pipelineIdForStageLookup = resolvedBackendPipelineId;
+    const targetOfficialStage = resolveOfficialStageById(pipelineIdForStageLookup, novaFaseAposAceite);
+    const resolvedBackendStageId = String(targetOfficialStage?.id ?? "");
+
+    if (!resolvedBackendPipelineId || !resolvedBackendStageId) {
+      console.error("[Oportunidades] Confirmação de fase cancelada: stageId UUID não resolvido.", {
+        selectedLeadId,
+        novaFaseAposAceite,
+        origemPipelineSemantico,
+        resolvedBackendPipelineId,
+      });
+      alert("Não foi possível confirmar fase: estágio de destino não mapeado no backend.");
+      return;
+    }
+
+    try {
+      await opportunitiesApi.moveStage(selectedLeadId, {
+        stageId: resolvedBackendStageId,
+        pipelineId: resolvedBackendPipelineId || undefined,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao confirmar mudança de fase";
+      console.error("[Oportunidades] Falha ao confirmar mudança de fase via API oficial:", {
+        selectedLeadId,
+        resolvedBackendStageId,
+        resolvedBackendPipelineId,
+        message,
+      });
+      alert(`Erro ao confirmar mudança de fase: ${message}`);
+      return;
+    }
+
+    setApiReadReloadKey((prev) => prev + 1);
     setShowFaseSelector(false);
   };
-  
-  // Dados para edição do drawer
-  const [editDrawerData, setEditDrawerData] = useState({
-    // Dados Pessoais / Cliente
-    nome: "",
-    tipoPessoa: "CPF" as "CPF" | "CNPJ",
-    cpf_cnpj: "",
-    profissao: "",
-    estado_civil: "",
-    sexo: "" as "" | "masculino" | "feminino" | "outro" | "nao_informar",
-    data_nascimento: "",
-    data_abertura: "",
-    // Contato
-    celular: "",
-    telefone: "",
-    email: "",
-    cep: "",
-    rua: "",
-    numero: "",
-    complemento: "",
-    bairro: "",
-    cidade: "",
-    estado: "",
-    // Dados da Oportunidade
-    produto: "",
-    valor: 0,
-    etapa_id: "novo_lead" as string,
-    responsavel_id: null as string | null,
-    responsavel_nome: "",
-    observacoes: "",
-    tags: [] as string[],
-    // Dados Bancários
-    banco: "",
-    agencia: "",
-    conta: "",
-    tipoConta: "" as "" | "corrente" | "poupanca",
-    titular: "",
-    documentoTitular: "",
-    pixTipo: "" as "" | "cpf" | "cnpj" | "email" | "telefone" | "aleatoria",
-    pixChave: "",
-    // RD / Consulta Restrição
-    rdStatus: "nao_consultado" as "nao_consultado" | "sem_restricao" | "restricao",
-    rdConsultedAt: "",
-    rdNotes: "",
-    // Não Perturbe
-    doNotCallStatus: "nao_consultado" as "nao_consultado" | "liberado" | "bloqueado",
-    doNotCallConsultedAt: "",
-    // Hierarquia Comercial
-    racionalCompany_id: null as number | null,
-    franquia_id: null as number | null,
-    franqueado_id: null as number | null,
-    // Motivo de pendência
-    pendenciaMotivo: ""
-  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -1060,7 +2301,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     valor: 0,
     etapa_id: "novo_lead" as string,
     tags: [] as string[],
-    cliente_id: null as number | null,
+    cliente_id: null as string | null,
     responsavel_id: null as string | null,
     responsavel_nome: "",
     observacoes: "",
@@ -1105,22 +2346,26 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     experienciaProfissional: "",
     disponibilidade: [] as string[]
   });
-  
+  const [customerLookupLoading, setCustomerLookupLoading] = useState(false);
+  const [customerLookupMessage, setCustomerLookupMessage] = useState("");
+  const [customerLookupFound, setCustomerLookupFound] = useState(false);
+  const [customerLookupResult, setCustomerLookupResult] = useState<any | null>(null);
+
   // Estado para Assinatura Digital
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [signatureLoading, setSignatureLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ProvedorAssinatura>('clicksign');
   const [envelopeStatus, setEnvelopeStatus] = useState<RespostaAssinatura | null>(null);
-  
+
   // Função para iniciar processo de assinatura digital
   const handleIniciarAssinatura = async () => {
     if (!formData.email) {
       alert("É necessário ter um e-mail cadastrado para enviar solicitação de assinatura.");
       return;
     }
-    
+
     setSignatureLoading(true);
-    
+
     try {
       const requisicao: RequisicaoAssinatura = {
         oportunidadeId: editingOportunidade?.id || 'nova-oportunidade',
@@ -1140,26 +2385,24 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         ],
         provider: selectedProvider
       };
-      
+
       const resultado = await criarEnvelopeAssinatura(requisicao);
       setEnvelopeStatus(resultado);
-      
+
       // Atualiza a oportunidade com o ID do envelope
       if (editingOportunidade) {
-        const mutationId = resolveOpportunityWorkspaceMutationId(editingOportunidade);
-        const payload = {
-          envelopeId: resultado.id,
-          envelopeStatus: resultado.status,
-          envelopeUrl: resultado.urlAssinatura,
-          envelopeProvider: selectedProvider
-        };
-
-        const localId = mutationId ?? editingOportunidade.id ?? editingOportunidade.displayId;
-        if (localId !== null && localId !== undefined && localId !== '') {
-          updateOportunidade(String(localId), payload);
+        const envelopeOpportunityId = String(getCanonicalOpportunityId(editingOportunidade) ?? editingOportunidade.id ?? "");
+        if (envelopeOpportunityId) {
+          await opportunitiesApi.update(envelopeOpportunityId, {
+            envelopeId: resultado.id,
+            envelopeStatus: resultado.status,
+            envelopeUrl: resultado.urlAssinatura,
+            envelopeProvider: selectedProvider
+          });
         }
       }
-      
+
+      setApiReadReloadKey((prev) => prev + 1);
       alert(`Assinatura enviada com sucesso! ID: ${resultado.id}`);
     } catch (error) {
       console.error('Erro ao iniciar assinatura:', error);
@@ -1168,17 +2411,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       setSignatureLoading(false);
     }
   };
-  
+
   // Função para confirmar assinatura e executar automações
   const handleConfirmarAssinatura = async () => {
     if (!editingOportunidade && !selectedLead) {
       alert('Selecione uma oportunidade primeiro');
       return;
     }
-    
+
     const oportunidade = editingOportunidade || selectedLead;
     if (!oportunidade) return;
-    
+
     // Atualizar status para assinado
     const novoStatus: RespostaAssinatura = {
       ...envelopeStatus!,
@@ -1186,42 +2429,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       dataAssinatura: new Date().toISOString()
     };
     setEnvelopeStatus(novoStatus);
-    
-    // Atualizar oportunidade
-    const mutationId = resolveOpportunityWorkspaceMutationId(oportunidade);
-    const payload = {
-      envelopeStatus: 'assinado',
-      etapa_id: 'ativo',
-      etapa: 'ativo',
-      status: 'ganho',
-      dataAssinatura: novoStatus.dataAssinatura
-    };
 
-    const localId = mutationId ?? oportunidade.id ?? oportunidade.displayId;
-    if (localId !== null && localId !== undefined && localId !== '') {
-      updateOportunidade(String(localId), payload);
-    }
-
-    setSelectedLead(normalizeOpportunityWorkspace({
-      ...oportunidade,
-      ...payload,
-    }, {
-      source: 'session',
-      pipelineLabel: currentPipelineConfig?.nome ?? null,
-      stageCatalog: workspaceStageCatalog,
-    }));
-
-    if (editingOportunidade) {
-      setEditingOportunidade(normalizeOpportunityWorkspace({
-        ...editingOportunidade,
-        ...payload,
-      }, {
-        source: 'session',
-        pipelineLabel: currentPipelineConfig?.nome ?? null,
-        stageCatalog: workspaceStageCatalog,
-      }));
-    }
-    
     // Preparar dados para automação
     const oportunidadeAssinada: OportunidadeAssinada = {
       id: oportunidade.id,
@@ -1258,31 +2466,30 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       franquia_id: formData.franquia_id,
       franqueado_id: formData.franqueado_id
     };
-    
+
     // Executar automações
     try {
       const resultados = await executarAutomacoes(oportunidadeAssinada);
-      
+
       // Mostrar resumo das automações
       const sucesso = resultados.filter(r => r.status === 'sucesso').length;
       const erro = resultados.filter(r => r.status === 'erro').length;
-      
+
       alert(`Contrato assinado com sucesso.\n\nAutomações executadas:\n${sucesso} concluídas\n${erro > 0 ? `${erro} com erro` : ''}`);
-      
+
       // Fechar modal se estiver editando
       if (editingOportunidade) {
-        setShowModal(false);
-        setEditingOportunidade(null);
+        closeNewOpportunityModal();
       }
     } catch (error) {
       console.error('Erro ao executar automações:', error);
       alert('Contrato assinado, mas houve erro ao executar automações.');
     }
   };
-  
+
   // Tipo de pessoa para CPF/CNPJ
   const [tipoPessoa, setTipoPessoa] = useState<"CPF" | "CNPJ">("CPF");
-  
+
   // Funções de máscara (igual Clientes)
   const formatCPFInput = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -1291,7 +2498,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     if (digits.length <= 9) return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6)}`;
     return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
   };
-  
+
   const formatCNPJInput = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 14);
     if (digits.length <= 2) return digits;
@@ -1300,7 +2507,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     if (digits.length <= 12) return `${digits.slice(0,2)}.${digits.slice(2,5)}.${digits.slice(5,8)}.${digits.slice(8)}`;
     return `${digits.slice(0,2)}.${digits.slice(2,5)}.${digits.slice(5,8)}.${digits.slice(8,12)}-${digits.slice(12)}`;
   };
-  
+
   const formatCell = (value: string) => {
     const digits = value.replace(/\D/g, "").slice(0, 11);
     if (digits.length <= 2) return `(${digits}`;
@@ -1308,242 +2515,352 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     if (digits.length <= 7) return `(${digits.slice(0,2)}) ${digits.slice(2,3)} ${digits.slice(3)}`;
     return `(${digits.slice(0,2)}) ${digits.slice(2,3)} ${digits.slice(3,7)}-${digits.slice(7)}`;
   };
-  
-  // Dados de Hierarquia Comercial (mock - substituir por API depois)
-  const [racionalCompanies, setRacionalCompanies] = useState<any[]>([
-    { id: 1, nome: "Racional Company SP" },
-    { id: 2, nome: "Racional Company RJ" },
-    { id: 3, nome: "Racional Company MG" }
-  ]);
-  
-  const [franquias, setFranquias] = useState<any[]>([
-    { id: 1, nome: "Franquia São Paulo", racionalCompany_id: 1 },
-    { id: 2, nome: "Franquia Campinas", racionalCompany_id: 1 },
-    { id: 3, nome: "Franquia Rio de Janeiro", racionalCompany_id: 2 },
-    { id: 4, nome: "Franquia Belo Horizonte", racionalCompany_id: 3 }
-  ]);
-  
-  const [franqueados, setFranqueados] = useState<any[]>([
-    { id: 1, nome: "Franqueado João Silva", franquia_id: 1 },
-    { id: 2, nome: "Franqueado Maria Santos", franquia_id: 1 },
-    { id: 3, nome: "Franqueado Pedro Costa", franquia_id: 2 },
-    { id: 4, nome: "Franqueado Ana Oliveira", franquia_id: 3 },
-    { id: 5, nome: "Franqueado Carlos Lima", franquia_id: 4 }
-  ]);
-  
+
+  // Dados de Hierarquia Comercial carregados da API oficial de partners
+  const [racionalCompanies, setRacionalCompanies] = useState<any[]>([]);
+  const [franquias, setFranquias] = useState<any[]>([]);
+  const [franqueados, setFranqueados] = useState<any[]>([]);
+
   // Estado da Hierarquia selecionada
-  const [selectedRacionalCompany, setSelectedRacionalCompany] = useState<number | null>(null);
-  const [selectedFranquia, setSelectedFranquia] = useState<number | null>(null);
-  const [selectedFranqueado, setSelectedFranqueado] = useState<number | null>(null);
-  
+  const [selectedRacionalCompany, setSelectedRacionalCompany] = useState<string | null>(null);
+  const [selectedFranquia, setSelectedFranquia] = useState<string | null>(null);
+  const [selectedFranqueado, setSelectedFranqueado] = useState<string | null>(null);
+
   // Handlers de Hierarquia
-  const handleRacionalCompanyChange = (companyId: number | null) => {
+  const handleRacionalCompanyChange = (companyId: string | null) => {
     setSelectedRacionalCompany(companyId);
     setSelectedFranquia(null);
     setSelectedFranqueado(null);
     setFormData({ ...formData, racionalCompany_id: companyId, franquia_id: null, franqueado_id: null });
   };
-  
-  const handleFranquiaChange = (franquiaId: number | null) => {
+
+  const handleFranquiaChange = (franquiaId: string | null) => {
     setSelectedFranquia(franquiaId);
     setSelectedFranqueado(null);
     setFormData({ ...formData, franquia_id: franquiaId, franqueado_id: null });
   };
-  
+
+  const safeUsuarios = Array.isArray(responsibleUsers) ? responsibleUsers : [];
+
   // Função para obter responsáveis disponíveis conforme hierarquia
   const getAvailableResponsibles = () => {
     const currentUser = user;
-    const allUsuarios = usuarios || [];
-    
+    const allUsuarios = safeUsuarios;
+
     if (!currentUser) {
       return allUsuarios.filter((u: any) => u.status === "ativo");
     }
-    
+
     const userRole = currentUser.role || currentUser.perfil || "";
     const userScope = currentUser.scope || "";
-    
+
     if (userRole.includes("ADMIN_SISTEMA") || userRole.includes("CEO") || userScope === "GLOBAL") {
       return allUsuarios.filter((u: any) => u.status === "ativo");
     }
-    
+
     if (userScope === "FRANQUIA") {
-      return allUsuarios.filter((u: any) => 
-        u.status === "ativo" && 
+      return allUsuarios.filter((u: any) =>
+        u.status === "ativo" &&
         (u.scope === "FRANQUIA" || u.scope === "FRANQUEADO" || u.id === currentUser.id)
       );
     }
-    
+
     if (userScope === "FRANQUEADO") {
-      return allUsuarios.filter((u: any) => 
-        u.status === "ativo" && 
+      return allUsuarios.filter((u: any) =>
+        u.status === "ativo" &&
         (u.scope === "FRANQUEADO" || u.id === currentUser.id)
       );
     }
-    
-    return allUsuarios.filter((u: any) => 
+
+    return allUsuarios.filter((u: any) =>
       u.status === "ativo" && u.id === currentUser.id
     );
   };
-  
+
   const availableResponsibles = getAvailableResponsibles();
-  
+
   const [pipelineFormData, setPipelineFormData] = useState({
     nome: ""
   });
-  
+
   const [columnFormData, setColumnFormData] = useState({
     nome: "",
     cor: "#3b82f6"
   });
-  
+
   // Drag state
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-  
-  // Get pipeline for selected product
-  const getPipelineForProduct = (produtoId: string) => {
-    if (!produtoId) return null;
-    const produto = safeProdutos.find(p => p.id.toString() === produtoId || p.id === parseInt(produtoId));
-    if (produto?.pipeline) {
-      return pipelines.find(p => p.id === produto.pipeline);
-    }
-    return null;
-  };
-  
+
   // Handle product/pipeline selection - switch pipeline
   const handleProductChange = (produtoId: string) => {
     if (!produtoId) {
       setSelectedProductId("");
       setSelectedSubproductId("");
       setSelectedModality("");
-      safeSetCurrentPipelineId("");
+      syncPipelineSelection("");
       return;
     }
 
-    const selectedCatalogProductId =
-      catalogPipelineOptions.find((pipeline) => pipeline.id === produtoId)?.productId || produtoId;
-
-    setSelectedProductId(selectedCatalogProductId);
-    // Limpar subproduto e modalidade ao mudar de produto
+    setSelectedProductId("");
     setSelectedSubproductId("");
     setSelectedModality("");
-    
-    // Usar novo sistema de PIPELINES do catálogo
-    if (selectedCatalogProductId) {
-      // Primeiro tenta usar o catálogo novo
-      const catalogPipeline = getPipelineByProductId(selectedCatalogProductId);
-      if (catalogPipeline) {
-        safeSetCurrentPipelineId(catalogPipeline.id);
-      } else {
-        // Fallback para o sistema antigo de pipelines
-        const pipelineConfig = getPipelineConfigById(selectedCatalogProductId);
-        if (pipelineConfig) {
-          safeSetCurrentPipelineId(pipelineConfig.id);
-        }
-      }
-    }
+    syncPipelineSelection(produtoId);
   };
-  
+
+  const resolveOfficialStagesForSelectedPipeline = (officialPipeline: any): Array<{
+    id: string;
+    name: string;
+    order: number;
+    isWon: boolean;
+    isLost: boolean;
+  }> => {
+    const rawStages = Array.isArray(officialPipeline?.stages) ? officialPipeline.stages : [];
+
+    return rawStages
+      .map((stage: any, index: number) => ({
+        id: String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? `stage-${index}`),
+        name: String(stage?.name ?? stage?.nome ?? stage?.label ?? stage?.id ?? stage?.key ?? "Etapa"),
+        order: Number.isFinite(Number(stage?.order)) ? Number(stage.order) : index + 1,
+        isWon: Boolean(stage?.isWon),
+        isLost: Boolean(stage?.isLost),
+      }))
+      .filter((stage) => stage.id.length > 0);
+  };
+
   // Get current pipeline config - considers selected product with fallback
-  const selectedCatalogPipeline = catalogPipelineOptions.find((pipeline) => pipeline.id === selectedPipelineId);
-  const selectedCatalogStages = selectedCatalogPipeline ? getPipelineStages(selectedCatalogPipeline.id) : [];
-  const currentPipelineConfig: PipelineRuntimeConfig | null = selectedCatalogPipeline
+  const selectedOfficialPipeline = useMemo(
+    () =>
+      officialPipelines.find((pipeline: any) => String(pipeline?.id ?? "") === selectedPipelineId) ?? null,
+    [officialPipelines, selectedPipelineId],
+  );
+  const selectedOfficialStages = resolveOfficialStagesForSelectedPipeline(selectedOfficialPipeline);
+  const currentPipelineConfig: PipelineRuntimeConfig | null = selectedOfficialPipeline
     ? {
-        id: selectedCatalogPipeline.id,
-        nome: selectedCatalogPipeline.name,
-        tipo: inferPipelineTipo(selectedCatalogPipeline.id),
-        descricao: selectedCatalogPipeline.name,
-        etapas: selectedCatalogStages,
+        id: String(selectedOfficialPipeline.id),
+        nome: `Pipeline - ${String(selectedOfficialPipeline.name ?? "Pipeline")}`,
+        tipo: inferPipelineTipo(
+          mapBackendPipelineNameToSemanticId(
+            String(selectedOfficialPipeline.name ?? ""),
+            String(selectedOfficialPipeline.id ?? ""),
+          ),
+        ),
+        descricao: String(selectedOfficialPipeline.name ?? ""),
+        etapas: selectedOfficialStages.map((stage) => stage.name),
+        colunas: selectedOfficialStages.map((stage) => ({
+          id: String(stage.id),
+          nome: String(stage.name),
+          ordem: Number(stage.order ?? 0),
+          cor: getCorEtapa(normalizeKey(stage.name), Math.max(0, Number(stage.order ?? 1) - 1)),
+          ativo: true,
+        })),
       }
     : null;
-  
-  // ETAPAS DINÂMICAS do pipeline atual - usar OFICIAL_ETAPAS como base
-  // HARDENING: Com normalizeKey e fallback seguro
-  const etapasAtivasRaw = Array.isArray(currentPipelineConfig?.etapas)
-    ? currentPipelineConfig.etapas.map((key: string, index: number) => {
-        const stageName = selectedCatalogStages[index] || String(key);
-        const etapaOriginal = OFICIAL_ETAPAS.find(
-          e => normalizeKey(e.key) === normalizeKey(key) || normalizeKey(e.label) === normalizeKey(stageName)
-        );
-        return {
-          id: normalizeKey(key),
-          nome: etapaOriginal?.label ?? stageName,
-          ordem: index + 1,
-          ativo: true,
-          cor: currentPipelineConfig
-            ? getPipelineStageColor(currentPipelineConfig.id, stageName, index)
-            : getCorEtapa(normalizeKey(key), index)
-        };
-      })
-    : [];
+
+  const etapasAtivasRaw = selectedOfficialStages.map((stage, index) => ({
+    id: String(stage.id),
+    nome: String(stage.name),
+    ordem: Number(stage.order ?? index + 1),
+    ativo: true,
+    cor: getCorEtapa(normalizeKey(stage.name), index),
+  }));
   const etapasAtivas = Array.isArray(etapasAtivasRaw) ? etapasAtivasRaw : [];
-  
+  const resolveOfficialStageById = (pipelineId: string, stageId: string) => {
+    const pipeline = officialPipelines.find((item: any) => String(item?.id ?? "") === String(pipelineId ?? ""));
+    const rawStages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+
+    return rawStages.find((stage: any) =>
+      String(stage?.id ?? stage?.key ?? stage?.name ?? stage?.nome ?? "") === String(stageId ?? ""),
+    ) ?? null;
+  };
+  const hasSelectedOfficialPipeline = Boolean(selectedOfficialPipeline);
+  const hasSelectedPipelineWithoutStages = hasSelectedOfficialPipeline && etapasAtivas.length === 0;
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    if (selectedPipelineId && !selectedOfficialPipeline) {
+      mutateKanbanRuntimeHealthReport((report) => {
+        report.totalPipelineDivergence += 1;
+        report.totalInconsistent += 1;
+      });
+      appendKanbanRuntimeObservation("pipeline:missing", {
+        selectedPipelineId,
+      });
+      return;
+    }
+
+    if (selectedOfficialPipeline && selectedOfficialStages.length === 0) {
+      appendKanbanRuntimeObservation("pipeline:no-stages", {
+        selectedPipelineId,
+        pipelineName: String(selectedOfficialPipeline?.name ?? ""),
+      });
+    }
+  }, [selectedOfficialPipeline, selectedOfficialStages, selectedPipelineId]);
+
+  const etapasPosSimulacao = etapasAtivas.length > 0 ? etapasAtivas : [];
+  const etapasNovaOportunidade = etapasAtivas.length > 0
+    ? etapasAtivas.map((etapa) => ({
+        id: String(etapa.id),
+        nome: String(etapa.nome ?? etapa.id),
+      }))
+    : [];
+  const fasePosAceiteFallbackId = String(etapasPosSimulacao[0]?.id || "");
+  const fasePosAceiteSelecionada =
+    etapasPosSimulacao.find((etapa) => String(etapa.id) === String(novaFaseAposAceite)) || null;
+
+  React.useEffect(() => {
+    const faseAtualValida = etapasPosSimulacao.some(
+      (etapa) => String(etapa.id) === String(novaFaseAposAceite),
+    );
+
+    if (!faseAtualValida) {
+      setNovaFaseAposAceite(fasePosAceiteFallbackId);
+    }
+  }, [etapasPosSimulacao, novaFaseAposAceite, fasePosAceiteFallbackId]);
+
+  const buildNewOpportunityFormData = () => ({
+    nome: "",
+    tipoPessoa: "CPF" as "CPF" | "CNPJ",
+    cpf_cnpj: "",
+    profissao: "",
+    estado_civil: "",
+    sexo: "" as "" | "masculino" | "feminino" | "outro" | "nao_informar",
+    data_nascimento: "",
+    data_abertura: "",
+    celular: "",
+    telefone: "",
+    email: "",
+    cep: "",
+    rua: "",
+    numero: "",
+    complemento: "",
+    bairro: "",
+    cidade: "",
+    estado: "",
+    produto: "",
+    productId: "",
+    productCode: "",
+    subproductId: "",
+    subproductCode: "",
+    modality: "",
+    pipelineId: "",
+    pipelineCode: "",
+    catalogVersion: 1,
+    valor: 0,
+    etapa_id: String(etapasNovaOportunidade[0]?.id || "novo_lead"),
+    tags: [] as string[],
+    cliente_id: null as string | null,
+    responsavel_id: null as string | null,
+    responsavel_nome: "",
+    observacoes: "",
+    banco: "",
+    agencia: "",
+    conta: "",
+    tipoConta: "" as "" | "corrente" | "poupanca",
+    titular: "",
+    documentoTitular: "",
+    pixTipo: "" as "" | "cpf" | "cnpj" | "email" | "telefone" | "aleatoria",
+    pixChave: "",
+    rdStatus: "nao_consultado" as "nao_consultado" | "sem_restricao" | "restricao",
+    rdConsultedAt: "",
+    rdNotes: "",
+    doNotCallStatus: "nao_consultado" as "nao_consultado" | "liberado" | "bloqueado",
+    doNotCallConsultedAt: "",
+    racionalCompany_id: null as number | null,
+    franquia_id: null as number | null,
+    franqueado_id: null as number | null,
+    pendenciaMotivo: "",
+    parceiroTipo: "",
+    razaoSocial: "",
+    cnpj: "",
+    telefoneComercial: "",
+    emailCorporativo: "",
+    responsavelLegal: "",
+    cpfResponsavel: "",
+    cargoResponsavel: "",
+    documentosEnviados: [] as string[],
+    vinculoTipo: "",
+    cargo: "",
+    departamento: "",
+    salario: "",
+    formacao: "",
+    experienciaProfissional: "",
+    disponibilidade: [] as string[],
+  });
+
+  const resetNewOpportunityForm = () => {
+    setFormData(buildNewOpportunityFormData());
+    setSelectedProductId("");
+    setSelectedSubproductId("");
+    setSelectedModality("");
+    resetCustomerLookupState();
+    setSelectedRacionalCompany(null);
+    setSelectedFranquia(null);
+    setSelectedFranqueado(null);
+    setAnexos([]);
+    setEditingOportunidade(null);
+  };
+
+  const openNewOpportunityModal = () => {
+    modalSessionRef.current += 1;
+    modalOpenRef.current = true;
+    resetNewOpportunityForm();
+    setShowModal(true);
+  };
+
+  const closeNewOpportunityModal = () => {
+    modalSessionRef.current += 1;
+    modalOpenRef.current = false;
+    setShowModal(false);
+    resetNewOpportunityForm();
+  };
+
+  useEffect(() => {
+    modalOpenRef.current = showModal;
+  }, [showModal]);
+
   // Protection: Check if pipeline is valid
   const isPipelineValid = currentPipelineConfig && etapasAtivas.length > 0;
+  const selectedPipelineName = String(selectedOfficialPipeline?.name ?? currentPipelineConfig?.nome ?? "").toLowerCase();
+  const requerAssinaturaDigital = selectedPipelineName.includes("contrato") || selectedPipelineName.includes("assinatura");
+  const documentosObrigatorios: string[] = [];
+  const isOnboarding = selectedPipelineName.includes("onboard") || selectedPipelineName.includes("integra") || selectedPipelineName.includes("entrada");
+  const isParceiro = selectedPipelineName.includes("parceir");
+  const isColaborador = selectedPipelineName.includes("colabor");
+  const pipelineTipoLabel = currentPipelineConfig ? String(currentPipelineConfig.nome ?? "") : '';
 
-  const workspaceStageCatalog = useMemo(
-    () => (etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map((etapa) => ({
-      id: String(etapa.id),
-      key: String(etapa.id),
-      label: String(etapa.nome ?? etapa.label ?? etapa.id),
-      nome: String(etapa.nome ?? etapa.label ?? etapa.id),
-    })),
-    [etapasAtivas],
-  );
-
-  const selectedWorkspaceLead = useMemo(
-    () => selectedLead
-      ? normalizeOpportunityWorkspace(selectedLead, {
-        source: 'session',
-        pipelineLabel: currentPipelineConfig?.nome ?? null,
-        stageCatalog: workspaceStageCatalog,
-      })
-      : null,
-    [selectedLead, currentPipelineConfig?.nome, workspaceStageCatalog],
-  );
-  
-  // Check if current pipeline requires digital signature
-  const requerAssinaturaDigital = currentPipelineConfig ? pipelineRequerAssinaturaDigital(currentPipelineConfig.id) : false;
-  
-  // Get required documents for current pipeline
-  const documentosObrigatorios = currentPipelineConfig ? getDocumentosObrigatorios(currentPipelineConfig.id) : [];
-  
-  // Check if current pipeline is onboarding type
-  const isOnboarding = currentPipelineConfig ? isPipelineOnboarding(currentPipelineConfig.id) : false;
-  const isParceiro = currentPipelineConfig ? isPipelineParceiro(currentPipelineConfig.id) : false;
-  const isColaborador = currentPipelineConfig ? isPipelineColaborador(currentPipelineConfig.id) : false;
-  const pipelineTipoLabel = currentPipelineConfig ? getPipelineTipoLabel(currentPipelineConfig.tipo) : '';
-  
   // BLINDAGEM DE ARRAY - Filter oportunidades - based on current pipeline (novo sistema PIPELINES)
-  const oportunidadesBase = Array.isArray(safeOportunidadesKanban) ? safeOportunidadesKanban : [];
-  const equivalentPipelineIds = currentPipelineConfig
-    ? getEquivalentPipelineIds(currentPipelineConfig.id)
+  // O store local nao deve mascarar falha da API oficial de oportunidades.
+  const oportunidadesReadSource = Array.isArray(apiOportunidadesReadOnly)
+    ? apiOportunidadesReadOnly
     : [];
-  const oportunidades = oportunidadesBase.filter((o: any) => {
-    // Proteção: verificar se o objeto existe
-    if (!o) return false;
-    
-    // Se currentPipelineConfig não existe, não filtrar (mostrar tudo)
-    if (!currentPipelineConfig?.id) return true;
+  const oportunidadesBaseRaw = Array.isArray(oportunidadesReadSource) ? oportunidadesReadSource : [];
+  const etapasReferencia = etapasAtivas;
+  const etapaFallbackId = String(etapasReferencia[0]?.id || "");
+  const etapaIdsValidas = new Set(etapasReferencia.map((etapa) => String(etapa.id)));
+  const oportunidadesBase = oportunidadesBaseRaw.map((op: any) => {
+    if (!op || typeof op !== "object") return op;
 
-    // Se a oportunidade tem o novo campo pipeline_id, usar ele
-    if (o?.pipeline_id) {
-      return equivalentPipelineIds.includes(String(o.pipeline_id));
-    }
-    // Se não, verificar se o produto antigo mapeia para o pipeline atual
-    if (o?.produto && typeof mapearProdutoLegadoParaPipeline === "function") {
-      const mappedPipelineId = mapearProdutoLegadoParaPipeline(o.produto);
-      return mappedPipelineId ? equivalentPipelineIds.includes(mappedPipelineId) : false;
-    }
-    // Se não tem pipeline_id nem produto, mostrar (dados legados sem categorização)
-    return true;
+    return normalizeOpportunityForKanbanStage(op, etapaIdsValidas, etapaFallbackId);
   });
-  
+  const oportunidades = oportunidadesBase.filter((o: any) => {
+    if (!o) return false;
+
+    if (!selectedPipelineId) {
+      return true;
+    }
+
+    const canonicalPipelineId = getOpportunityVisualPipelineId(o);
+    return (
+      canonicalPipelineId === selectedPipelineId
+    );
+  });
+
   // APLICAR FILTRAGEM DE TENANT PRIMEIRO (segurança multi-tenant)
   // Fallback seguro para useTenantFilter
   const tenantFilteredResult = useTenantFilter(oportunidades);
   const tenantFilteredOportunidades = Array.isArray(tenantFilteredResult) ? tenantFilteredResult : [];
-  
+
   // Filter by search term - includes nome, CPF/CNPJ, telefone
   // OTIMIZAÇÃO: useMemo para evitar recálculos desnecessários
   const filteredOportunidadesBase = Array.isArray(tenantFilteredOportunidades) ? tenantFilteredOportunidades : [];
@@ -1553,7 +2870,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const term = searchQuery.toLowerCase().replace(/\D/g, '');
       const telefoneDigits = op.telefone?.replace(/\D/g, '') || '';
       const documentosDigits = op.documentos?.replace(/\D/g, '') || '';
-      const matchSearch = 
+      const matchSearch =
         String(op.nome || "").toLowerCase().includes(term) ||
         String(op.cliente_nome || "").toLowerCase().includes(term) ||
         String(op.produto || "").toLowerCase().includes(term) ||
@@ -1561,12 +2878,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         documentosDigits.includes(term);
       if (!matchSearch) return false;
     }
-    
+
     // Filter by responsavel_id
     if (filters.responsavel_id) {
       if (op.responsavel_id !== filters.responsavel_id) return false;
     }
-    
+
     // Filter by etapa
     if (filters.etapa_id) {
       if (op.etapa_id !== filters.etapa_id) return false;
@@ -1589,14 +2906,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const filterVal = Number(filters.franqueado_id);
       if (isNaN(filterVal) || op.franqueado_id !== filterVal) return false;
     }
-    
+
     // Filter by data de criação - início
     if (filters.dataCriacaoInicio) {
       const dataCriacao = op.created_at ? new Date(op.created_at).getTime() : 0;
       const dataInicio = new Date(filters.dataCriacaoInicio).getTime();
       if (isNaN(dataInicio) || dataCriacao < dataInicio) return false;
     }
-    
+
     // Filter by data de criação - fim
     if (filters.dataCriacaoFim) {
       const dataCriacao = op.created_at ? new Date(op.created_at).getTime() : 0;
@@ -1606,7 +2923,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const dataFimCompleta = dataFim + (24 * 60 * 60 * 1000);
       if (dataCriacao > dataFimCompleta) return false;
     }
-    
+
     // Filter by data de movimentação - início
     if (filters.dataMovimentacaoInicio) {
       const dataMovimentacao = op.ultimaMovimentacao || op.dataMovimentacao || op.movedAt || op.updatedAt;
@@ -1614,7 +2931,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const dataInicio = new Date(filters.dataMovimentacaoInicio).getTime();
       if (isNaN(dataInicio) || dataMov < dataInicio) return false;
     }
-    
+
     // Filter by data de movimentação - fim
     if (filters.dataMovimentacaoFim) {
       const dataMovimentacao = op.ultimaMovimentacao || op.dataMovimentacao || op.movedAt || op.updatedAt;
@@ -1624,7 +2941,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const dataFimCompleta = dataFim + (24 * 60 * 60 * 1000);
       if (dataMov > dataFimCompleta) return false;
     }
-    
+
     // Filter by data de integração - início
     if (filters.dataIntegradoInicio) {
       const dataIntegracao = op.integradoEm || op.dataIntegrado || op.integratedAt;
@@ -1632,7 +2949,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const dataInicio = new Date(filters.dataIntegradoInicio).getTime();
       if (isNaN(dataInicio) || dataInt < dataInicio) return false;
     }
-    
+
     // Filter by data de integração - fim
     if (filters.dataIntegradoFim) {
       const dataIntegracao = op.integradoEm || op.dataIntegrado || op.integratedAt;
@@ -1642,46 +2959,112 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const dataFimCompleta = dataFim + (24 * 60 * 60 * 1000);
       if (dataInt > dataFimCompleta) return false;
     }
-    
+
     return true;
   }), [filteredOportunidadesBase, searchQuery, filters]);
-  
+
+  const dedupedFilteredOportunidades = useMemo(
+    () => dedupeOportunidades(filteredOportunidades),
+    [filteredOportunidades],
+  );
+
   // OTIMIZAÇÃO: Agrupar oportunidades por etapa uma única vez com ordenação
   const oportunidadesPorEtapa = useMemo(() => {
-    const etapas = etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE;
-    const resultado: Record<string, typeof filteredOportunidades> = {};
-    
-    for (const etapa of etapas) {
-      const etapaOpportunities = filteredOportunidades.filter((o) => o.etapa_id === etapa.id);
-      const sortOption = columnSort[etapa.id] || 'data_desc';
-      
-      resultado[etapa.id] = etapaOpportunities.sort((a, b) => {
-        const valorA = Number(a.valor ?? 0);
-        const valorB = Number(b.valor ?? 0);
-        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-        
-        switch (sortOption) {
-          case 'valor_asc':
-            return valorA - valorB;
-          case 'valor_desc':
-            return valorB - valorA;
-          case 'data_asc':
-            return dateA - dateB;
-          case 'data_desc':
-          default:
-            return dateB - dateA;
-        }
+    return buildOpportunitiesByStage(dedupedFilteredOportunidades, etapasAtivas, columnSort);
+  }, [dedupedFilteredOportunidades, columnSort, etapasAtivas]);
+
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    const rawById = new Map(
+      oportunidadesBaseRaw
+        .filter((opportunity: any) => opportunity && typeof opportunity === "object")
+        .map((opportunity: any) => [String(opportunity.id ?? ""), opportunity]),
+    );
+
+    let fallbackCount = 0;
+    let correctedCount = 0;
+
+    for (const opportunity of oportunidadesBase) {
+      if (!opportunity || typeof opportunity !== "object") continue;
+
+      const raw = rawById.get(String(opportunity.id ?? ""));
+      const rawVisualStageId = getOpportunityVisualStageId(raw);
+      const normalizedVisualStageId = getOpportunityVisualStageId(opportunity);
+      const usedFallback = Boolean(
+        normalizedVisualStageId &&
+        normalizedVisualStageId === etapaFallbackId &&
+        rawVisualStageId !== normalizedVisualStageId,
+      );
+
+      if (usedFallback) fallbackCount += 1;
+      if (String(raw?.etapa_id ?? "").trim() !== String(opportunity?.etapa_id ?? "").trim()) {
+        correctedCount += 1;
+      }
+
+      appendKanbanRuntimeObservation("opportunity:normalize", {
+        id: String(opportunity.id ?? ""),
+        rawVisualStageId,
+        normalizedVisualStageId,
+        usedFallback,
       });
     }
-    
-    return resultado;
-  }, [filteredOportunidades, columnSort, etapasAtivas]);
+
+    mutateKanbanRuntimeHealthReport((report) => {
+      report.totalFallbackFirstStage = fallbackCount;
+      report.totalCorrectedAutomatically = Math.max(report.totalCorrectedAutomatically, correctedCount);
+    });
+
+    publishKanbanRuntimeHealthReport("normalize-snapshot", {
+      fallbackCount,
+      correctedCount,
+    });
+  }, [oportunidadesBase, oportunidadesBaseRaw, etapaFallbackId]);
+
+  useEffect(() => {
+    if (!isKanbanRuntimeObservabilityEnabled()) return;
+
+    let groupedByUuid = 0;
+    let groupedByAlias = 0;
+    let groupedByFallback = 0;
+
+    for (const [stageId, ops] of Object.entries(oportunidadesPorEtapa)) {
+      for (const opportunity of ops) {
+        const inspected = inspectKanbanOpportunityRuntime(opportunity, {
+          context: "grouping",
+          groupedStageId: stageId,
+        });
+
+        if (inspected.stageIdentity.source === "stageId" || inspected.stageIdentity.source === "backendStageId") {
+          groupedByUuid += 1;
+        } else if (inspected.stageIdentity.source === "etapa_id" || inspected.stageIdentity.source === "etapa") {
+          groupedByAlias += 1;
+        }
+
+        if (String(opportunity?.etapa_id ?? "").trim() === etapaFallbackId && !String(opportunity?.stageId ?? "").trim()) {
+          groupedByFallback += 1;
+        }
+      }
+    }
+
+    mutateKanbanRuntimeHealthReport((report) => {
+      report.totalGroupedByUuid = groupedByUuid;
+      report.totalGroupedByAlias = groupedByAlias;
+      report.totalGroupedByFallback = groupedByFallback;
+    });
+
+    publishKanbanRuntimeHealthReport("grouping-snapshot", {
+      groupedByUuid,
+      groupedByAlias,
+      groupedByFallback,
+      groupedStages: Object.keys(oportunidadesPorEtapa).length,
+    });
+  }, [oportunidadesPorEtapa, etapaFallbackId]);
 
   // OTIMIZAÇÃO: Calcular totais por etapa uma única vez
   const totaisPorEtapa = useMemo(() => {
     const resultado: Record<string, number> = {};
-    for (const etapa of etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE) {
+    for (const etapa of etapasAtivas) {
       const ops = oportunidadesPorEtapa[etapa.id] || [];
       resultado[etapa.id] = ops.reduce((acc, o) => acc + (o.valor || 0), 0);
     }
@@ -1690,7 +3073,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   // Drag handlers
   const handleDragStart = (e: React.DragEvent, cardId: string) => {
-    if (!can('oportunidades', 'move')) return;
+    if (!can('oportunidades', 'move_stage')) return;
+    const oportunidade = oportunidadesBase.find((o: any) => String(o?.id ?? "") === String(cardId));
+    if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
+      e.preventDefault();
+      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+      return;
+    }
     setDraggedCard(cardId);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", cardId);
@@ -1702,7 +3091,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   };
 
   const handleDragOver = (e: React.DragEvent, columnId: string) => {
-    if (!can('oportunidades', 'move')) return;
+    if (!can('oportunidades', 'move_stage')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDragOverColumn(columnId);
@@ -1712,8 +3101,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setDragOverColumn(null);
   };
 
-  const handleDrop = (e: React.DragEvent, etapaId: string) => {
-    if (!can('oportunidades', 'move')) return;
+  const handleDrop = async (e: React.DragEvent, etapaId: string) => {
+    if (!can('oportunidades', 'move_stage')) return;
 
     e.preventDefault();
 
@@ -1722,9 +3111,24 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     if (!cardId) return;
 
     // VALIDAÇÃO DE AVANÇO: Verifica campos obrigatórios por etapa
-    const oportunidade = safeOportunidadesKanban.find(o => o.id.toString() === cardId);
-    if (oportunidade && etapaId !== 'perdido') {
-      const validacao = validarEtapa(oportunidade, etapaId as EtapaKey);
+    const oportunidade = oportunidadesBase.find(o => o.id.toString() === cardId);
+    if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
+      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+      setDraggedCard(null);
+      setDragOverColumn(null);
+      return;
+    }
+    const pipelineIdForStageLookup = String(
+      getOpportunityVisualPipelineId(oportunidade) ??
+      currentPipelineConfig?.id ??
+      selectedPipelineId ??
+      "",
+    );
+    const targetOfficialStage = resolveOfficialStageById(pipelineIdForStageLookup, etapaId);
+    const targetEtapaKey = normalizeKey(targetOfficialStage?.name ?? etapaId);
+
+    if (oportunidade && targetOfficialStage && !targetOfficialStage.isLost) {
+      const validacao = validarEtapa(oportunidade, targetEtapaKey as EtapaKey);
       if (!validacao.valido) {
         alert(`Não é possível avançar para esta etapa.\n\n${validacao.mensagem}`);
         setDraggedCard(null);
@@ -1733,12 +3137,97 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       }
     }
 
-    moveOportunidade(cardId, {
-      etapa_id: etapaId,
-      status: etapaId === "integrado" ? "ganho" : 
-              etapaId === "perdido" ? "perdido" : 
-              "ativo"
+    const statusDestino = targetOfficialStage?.isWon
+      ? "ganho"
+      : targetOfficialStage?.isLost
+        ? "perdido"
+        : "ativo";
+
+    const origemPipelineSemantico = String(
+      oportunidade?.pipeline_id ?? currentPipelineConfig?.id ?? selectedPipelineId ?? "",
+    );
+    const resolvedBackendPipelineId = String(
+      getOpportunityVisualPipelineId(oportunidade) ||
+      currentPipelineConfig?.id ||
+      selectedPipelineId ||
+      "",
+    );
+
+    const resolvedBackendStageId = String(targetOfficialStage?.id ?? etapaId ?? "");
+
+    if (!resolvedBackendPipelineId || !resolvedBackendStageId) {
+      console.error("[Oportunidades] MoveStage cancelado: stageId UUID não resolvido.", {
+        cardId,
+        etapaId,
+        origemPipelineSemantico,
+        resolvedBackendPipelineId,
+      });
+      alert("Não foi possível mover: estágio de destino não mapeado no backend.");
+      setDraggedCard(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    const canonicalOpportunityId = String(getCanonicalOpportunityId(oportunidade) ?? "");
+    pendingMoveAuditRef.current = {
+      timestamp: new Date().toISOString(),
+      opportunityId: String(oportunidade?.id ?? canonicalOpportunityId),
+      tenantId: oportunidade?.tenantId ? String(oportunidade.tenantId) : null,
+      previousPipelineId: getOpportunityVisualPipelineId(oportunidade),
+      nextPipelineId: resolvedBackendPipelineId,
+      previousStageId: getOpportunityVisualStageId(oportunidade),
+      nextStageId: resolvedBackendStageId,
+      patchStatus: "pending",
+      postGetStatus: "pending",
+    };
+    upsertKanbanRuntimeDragEvent(pendingMoveAuditRef.current.opportunityId, pendingMoveAuditRef.current);
+    appendKanbanRuntimeObservation("drag:patch:start", {
+      opportunityId: pendingMoveAuditRef.current.opportunityId,
+      previousPipelineId: pendingMoveAuditRef.current.previousPipelineId,
+      nextPipelineId: pendingMoveAuditRef.current.nextPipelineId,
+      previousStageId: pendingMoveAuditRef.current.previousStageId,
+      nextStageId: pendingMoveAuditRef.current.nextStageId,
     });
+
+    try {
+      await opportunitiesApi.moveStage(canonicalOpportunityId, {
+        stageId: resolvedBackendStageId,
+        pipelineId: resolvedBackendPipelineId || undefined,
+      });
+      upsertKanbanRuntimeDragEvent(String(oportunidade?.id ?? canonicalOpportunityId), {
+        patchStatus: "success",
+        patchMessage: "PATCH /stage OK",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao mover oportunidade";
+      upsertKanbanRuntimeDragEvent(String(oportunidade?.id ?? canonicalOpportunityId), {
+        patchStatus: "error",
+        patchMessage: message,
+        postGetStatus: "error",
+      });
+      appendKanbanRuntimeObservation("drag:patch:error", {
+        opportunityId: String(oportunidade?.id ?? canonicalOpportunityId),
+        message,
+      });
+      console.error("[Oportunidades] Falha ao mover oportunidade via API oficial:", {
+        cardId,
+        etapaId,
+        resolvedBackendStageId,
+        resolvedBackendPipelineId,
+        message,
+      });
+      alert(`Erro ao mover oportunidade: ${message}`);
+      setDraggedCard(null);
+      setDragOverColumn(null);
+      return;
+    }
+
+    appendKanbanRuntimeObservation("drag:patch:success", {
+      opportunityId: String(oportunidade?.id ?? canonicalOpportunityId),
+      nextStageId: resolvedBackendStageId,
+      nextPipelineId: resolvedBackendPipelineId,
+    });
+    setApiReadReloadKey((prev) => prev + 1);
 
     setDraggedCard(null);
     setDragOverColumn(null);
@@ -1746,85 +3235,55 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   // Create oportunidade
   // Handle Import de dados
-  const handleImport = (data: any[]) => {
-    const novasOportunidades = data.map((item, index) => {
-      // Normalizar tipoPessoa
-      let tipoPessoa: "CPF" | "CNPJ" = "CPF"
-      if (item.tipoPessoa) {
-        const tp = item.tipoPessoa.toUpperCase()
-        if (tp === 'PJ' || tp === 'CNPJ') tipoPessoa = "CNPJ"
+  const handleImport = async (data: any[]) => {
+    const pipelineIdParaImportacao = String(selectedPipelineId || currentPipelineConfig?.id || officialPipelines[0]?.id || "");
+    const stageIdParaImportacao = String(etapasNovaOportunidade[0]?.id || "");
+    let importedCount = 0;
+
+    for (const item of data) {
+      const telefone = String(item?.telefone || "").replace(/\D/g, "");
+      const celular = String(item?.celular || "").replace(/\D/g, "");
+      const cpfCnpj = String(item?.cpfCnpj || "").replace(/\D/g, "");
+      const nome = String(item?.nomeCompleto || item?.nome || "Sem nome");
+
+      try {
+        await opportunitiesApi.createIntake({
+          customer: {
+            id: null,
+            firstName: nome.split(" ").filter(Boolean)[0] || nome,
+            lastName: nome.split(" ").filter(Boolean).slice(1).join(" ") || "Não informado",
+            email: String(item?.email || ""),
+            cpfCnpj,
+            phone: celular || telefone || null,
+            birthDate: null,
+            documentType: String(item?.tipoPessoa || "").toUpperCase() === "CNPJ" || String(item?.tipoPessoa || "").toUpperCase() === "PJ" ? "CNPJ" : "CPF",
+            address: null,
+            bankData: null,
+            profession: null,
+            maritalStatus: null,
+            gender: null,
+          },
+          opportunity: {
+            title: nome,
+            amount: Number(item?.valor) || 0,
+            pipelineId: pipelineIdParaImportacao,
+            stageId: stageIdParaImportacao,
+            ownerId: null,
+            description: String(item?.observacoes || ""),
+          },
+          options: {
+            allowCreateCustomer: true,
+            updateExistingCustomer: true,
+          },
+        });
+        importedCount += 1;
+      } catch (error) {
+        console.error("[Oportunidades] Falha ao importar oportunidade via API oficial:", error);
       }
-      
-      // Normalizar etapa
-      let etapa_id = "novo_lead"
-      if (item.etapa) {
-        const etapaNormalizada = item.etapa.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s/g, '_')
-        const etapaValida = OFICIAL_ETAPAS.find(e => 
-          e.key === etapaNormalizada || 
-          e.label.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s/g, '_') === etapaNormalizada
-        )
-        if (etapaValida) {
-          etapa_id = etapaValida.key
-        }
-      }
-      
-      // Normalizar telefone/celular (só números)
-      const celular = item.celular?.replace(/\D/g, '') || ''
-      const telefone = item.telefone?.replace(/\D/g, '') || ''
-      const cpfCnpj = item.cpfCnpj?.replace(/\D/g, '') || ''
-      
-      // Encontrar responsável pelo nome
-      let responsavel_id: string | null = null
-      let responsavel_nome = ''
-      if (item.responsavel) {
-        const usuario = safeUsuarios.find((u: any) => 
-          u.nome?.toLowerCase().includes(item.responsavel.toLowerCase())
-        )
-        if (usuario) {
-          responsavel_id = usuario.id
-          responsavel_nome = usuario.nome
-        }
-      }
-      
-      // Encontrar produto
-      let produto_id: number | null = null
-      if (item.produto) {
-        const produto = safeProdutos.find(p => 
-          p.nome?.toLowerCase().includes(item.produto.toLowerCase())
-        )
-        if (produto) {
-          produto_id = produto.id
-        }
-      }
-      
-      return {
-        id: generateId("lead"),
-        nome: item.nomeCompleto || item.nome || "Sem nome",
-        tipoPessoa,
-        cpf_cnpj: cpfCnpj,
-        celular,
-        telefone,
-        email: item.email || "",
-        produto: item.produto || "",
-        produto_id,
-        etapa_id,
-        etapa: etapa_id,
-        valor: Number(item.valor) || 0,
-        status: "ativo",
-        cliente_nome: item.nomeCompleto || item.nome || "Sem nome",
-        responsavel_id,
-        responsavel_nome,
-        observacoes: item.observacoes || "",
-        rdStatus: item.rdStatus || "nao_consultado",
-        rdConsultedAt: item.rdConsultedAt || "",
-        rdNotes: item.rdNotes || "",
-        tags: [],
-        createdAt: new Date().toISOString()
-      }
-    })
-    
-    novasOportunidades.forEach(op => addOportunidade(op))
-    alert(`Importadas ${novasOportunidades.length} oportunidades com sucesso!`)
+    }
+
+    setApiReadReloadKey((prev) => prev + 1);
+    alert(`Importadas ${importedCount} oportunidades com sucesso!`);
   }
 
   // Funções de Consulta de Compliance
@@ -1889,7 +3348,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validar pendência
@@ -1899,9 +3358,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     }
 
     // Validar e usar a etapa do pipeline atual
-    const etapaId = formData.etapa_id && etapasAtivas.some(e => e.id === formData.etapa_id) 
-      ? formData.etapa_id 
-      : 'novo_lead';
+    const etapaId = formData.etapa_id && etapasNovaOportunidade.some(e => String(e.id) === String(formData.etapa_id))
+      ? formData.etapa_id
+      : String(etapasNovaOportunidade[0]?.id || "novo_lead");
 
     const newOportunidade = {
       // Gerar ID curto no formato L-0001
@@ -1914,29 +3373,30 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       email: formData.email || "",
       cpf_cnpj: formData.cpf_cnpj || "",
       tipoPessoa: formData.tipoPessoa || "CPF",
-      
+
       // Dados pessoais
       profissao: formData.profissao || "",
       estado_civil: formData.estado_civil || "",
       sexo: formData.sexo || "",
       data_nascimento: formData.data_nascimento || "",
       data_abertura: formData.data_abertura || "",
-      
+
       // Endereço
-      cep: formData.cep || "",
+      cep: formatCepInput(formData.cep || ""),
       rua: formData.rua || "",
       numero: formData.numero || "",
       complemento: formData.complemento || "",
       bairro: formData.bairro || "",
       cidade: formData.cidade || "",
       estado: formData.estado || "",
-      
+
       // Produto selecionado
       produto: formData.produto || "",
       produto_id: selectedProductId || null,
-      
+      modalityId: selectedModality || null,
+
       // Pipeline (novo sistema PIPELINES)
-      pipeline_id: currentPipelineConfig?.id || selectedProductId || "consignado",
+      pipeline_id: String(formData.pipelineId || currentPipelineConfig?.id || "").trim(),
       pipelineNome: currentPipelineConfig?.nome,
       pipelineTipo: currentPipelineConfig?.tipo,
       etapa: etapaId,
@@ -1947,18 +3407,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
       // Valor
       valor: Number(formData.valor || 0),
-      
+
       // Cliente (estrutura preparada para vinculação futura)
       cliente_id: formData.cliente_id || null,
       cliente_nome: formData.nome || "Sem nome",
-      
+
       // Responsável
       responsavel_id: formData.responsavel_id || null,
       responsavel_nome: formData.responsavel_nome || "",
-      
+
       // Observações
       observacoes: formData.observacoes || "",
-      
+
       // Dados Bancários
       banco: formData.banco || "",
       agencia: formData.agencia || "",
@@ -1968,23 +3428,23 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       documentoTitular: formData.documentoTitular || "",
       pixTipo: formData.pixTipo || "",
       pixChave: formData.pixChave || "",
-      
+
       // RD / Consulta Restrição
       rdStatus: formData.rdStatus || "nao_consultado",
       rdConsultedAt: formData.rdConsultedAt || "",
       rdNotes: formData.rdNotes || "",
-      
+
       // Hierarquia Comercial
       racionalCompany_id: formData.racionalCompany_id,
       franquia_id: formData.franquia_id,
       franqueado_id: formData.franqueado_id,
-      
+
       // Motivo de pendência
       pendenciaMotivo: formData.etapa_id === "pendencia" ? formData.pendenciaMotivo : "",
-      
+
       // Tags
       tags: Array.isArray(formData.tags) ? formData.tags : [],
-      
+
       // Dados Onboarding Parceiro Comercial
       parceiroTipo: formData.parceiroTipo || "",
       razaoSocial: formData.razaoSocial || "",
@@ -1995,7 +3455,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       cpfResponsavel: formData.cpfResponsavel || "",
       cargoResponsavel: formData.cargoResponsavel || "",
       documentosEnviados: formData.documentosEnviados || [],
-      
+
       // Dados Onboarding Colaborador FINQZ
       vinculoTipo: formData.vinculoTipo || "",
       cargo: formData.cargo || "",
@@ -2004,138 +3464,265 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       formacao: formData.formacao || "",
       experienciaProfissional: formData.experienciaProfissional || "",
       disponibilidade: formData.disponibilidade || [],
-      
+
       // Timestamps
       createdAt: new Date().toISOString()
     };
 
-    addOportunidade(newOportunidade);
+    const resolvedCustomerId = formData.cliente_id ? String(formData.cliente_id) : undefined;
+    const documentoNormalizado = normalizeDocumentoDigits(formData.cpf_cnpj || "");
+    const nomeNormalizado = String(formData.nome || "").trim();
+    const [firstNameRaw, ...lastNameParts] = nomeNormalizado.split(" ").filter(Boolean);
+    const firstName = firstNameRaw || "";
+    const lastName = lastNameParts.join(" ") || "Não informado";
+
+    const targetEtapaKey = normalizeKey(etapaId);
+    const selectedEtapaOption = etapasNovaOportunidade.find(
+      (etapa) => String(etapa.id) === String(etapaId),
+    );
+    const targetEtapaLabelKey = normalizeKey(selectedEtapaOption?.nome ?? "");
+    const origemPipelineSemantico = String(
+      currentPipelineConfig?.id ?? newOportunidade.pipeline_id ?? selectedPipelineId ?? "",
+    );
+    const matchedOfficialPipeline = selectedOfficialPipeline;
+
+    const resolvedBackendPipelineId = String(matchedOfficialPipeline?.id ?? "");
+
+    const matchedOfficialStage = Array.isArray(matchedOfficialPipeline?.stages)
+      ? matchedOfficialPipeline.stages.find(
+          (stage: any) => {
+            const normalizedStageName = normalizeKey(stage?.name ?? "");
+            return (
+              (UUID_V4_LIKE_REGEX.test(String(etapaId)) && String(stage?.id ?? "") === String(etapaId)) ||
+              normalizedStageName === targetEtapaKey ||
+              (targetEtapaLabelKey.length > 0 && normalizedStageName === targetEtapaLabelKey)
+            );
+          },
+        )
+      : null;
+
+    const resolvedBackendStageId = String(matchedOfficialStage?.id ?? "");
+
+    if (!resolvedBackendPipelineId || !resolvedBackendStageId) {
+      console.error("[Oportunidades] Create cancelado: pipelineId/stageId UUID não resolvidos.", {
+        origemPipelineSemantico,
+        etapaId,
+        targetEtapaLabelKey,
+        officialPipelinesLoaded: officialPipelines.length,
+        matchedOfficialPipelineId: matchedOfficialPipeline?.id ?? null,
+        resolvedBackendPipelineId,
+        resolvedBackendStageId,
+      });
+      alert("Pipeline ou etapa oficial não encontrados. Recarregue a tela e tente novamente.");
+      return;
+    }
+
+    const payloadBackend = {
+      customer: {
+        id: resolvedCustomerId,
+        firstName,
+        lastName,
+        email: formData.email || undefined,
+        cpfCnpj: documentoNormalizado || undefined,
+        phone: String(formData.celular || formData.telefone || "").replace(/\D/g, "") || undefined,
+        birthDate: formData.tipoPessoa === "CPF" ? (formData.data_nascimento || null) : null,
+        documentType: formData.tipoPessoa || "CPF",
+        address: {
+          cep: formData.cep || "",
+          rua: formData.rua || "",
+          numero: formData.numero || "",
+          complemento: formData.complemento || "",
+          bairro: formData.bairro || "",
+          cidade: formData.cidade || "",
+          estado: formData.estado || "",
+        },
+        bankData: {
+          banco: formData.banco || "",
+          agencia: formData.agencia || "",
+          conta: formData.conta || "",
+          tipoConta: formData.tipoConta || "",
+          titular: formData.titular || "",
+          documentoTitular: String(formData.documentoTitular || "").replace(/\D/g, ""),
+          pixTipo: formData.pixTipo || "",
+          pixChave: formData.pixChave || "",
+        },
+        profession: formData.profissao || null,
+        maritalStatus: formData.estado_civil || null,
+        gender: formData.sexo || null,
+      },
+      opportunity: {
+        title: newOportunidade.nome || "",
+        amount: Number(newOportunidade.valor || 0),
+        pipelineId: resolvedBackendPipelineId,
+        stageId: resolvedBackendStageId,
+        productId: selectedProductId || null,
+        subproductId: selectedSubproductId || null,
+        modalityId: selectedModality || null,
+        ownerId: newOportunidade.responsavel_id ? String(newOportunidade.responsavel_id) : undefined,
+        description: newOportunidade.observacoes || undefined,
+      },
+      options: {
+        allowCreateCustomer: true,
+        updateExistingCustomer: false,
+      },
+    };
+
+    const missingRequiredFields: string[] = [];
+    if (!payloadBackend.opportunity.title) missingRequiredFields.push("title");
+    if (!payloadBackend.opportunity.pipelineId) missingRequiredFields.push("pipelineId");
+    if (!payloadBackend.opportunity.stageId) missingRequiredFields.push("stageId");
+
+    if (missingRequiredFields.length > 0) {
+      const message = `Não foi possível criar oportunidade: campos obrigatórios ausentes para API oficial (${missingRequiredFields.join(", ")}).`;
+      console.error("[Oportunidades] Create bloqueado:", {
+        missingRequiredFields,
+        payloadBackend,
+      });
+      alert(message);
+      return;
+    }
+
+    try {
+      const created = await opportunitiesApi.createIntake(payloadBackend);
+      void created;
+      setApiReadReloadKey((prev) => prev + 1);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao criar oportunidade";
+      console.error("[Oportunidades] Falha ao criar oportunidade na API oficial:", message);
+      alert(`Erro ao criar oportunidade: ${message}`);
+      return;
+    }
 
     // Reset form
-    setShowModal(false);
-    setFormData({
-      nome: "", tipoPessoa: "CPF", cpf_cnpj: "", profissao: "", estado_civil: "", sexo: "",
-      data_nascimento: "", data_abertura: "", celular: "", telefone: "", email: "",
-      cep: "", rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "",
-      produto: "", valor: 0, etapa_id: "novo_lead", tags: [], cliente_id: null,
-      responsavel_id: null, responsavel_nome: "", observacoes: "", banco: "", agencia: "",
-      conta: "", tipoConta: "", titular: "", documentoTitular: "", pixTipo: "", pixChave: "",
-      rdStatus: "nao_consultado", rdConsultedAt: "", rdNotes: "",
-      racionalCompany_id: null, franquia_id: null, franqueado_id: null, pendenciaMotivo: "",
-      // Onboarding fields reset
-      parceiroTipo: "", razaoSocial: "", cnpj: "", telefoneComercial: "", emailCorporativo: "",
-      responsavelLegal: "", cpfResponsavel: "", cargoResponsavel: "", documentosEnviados: [],
-      vinculoTipo: "", cargo: "", departamento: "", salario: "", formacao: "",
-      experienciaProfissional: "", disponibilidade: []
-    });
-    setSelectedRacionalCompany(null);
-    setSelectedFranquia(null);
-    setSelectedFranqueado(null);
+    closeNewOpportunityModal();
   };
 
   // Handle para editar oportunidade existente
-  const handleSubmitEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle para editar oportunidade existente
+const handleSubmitEdit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    const lead = editingOportunidade || selectedLead;
-    if (!lead) return;
+  const lead = editingOportunidade || selectedLead;
+  if (!lead) return;
 
-    const etapaId = formData.etapa_id || lead.etapa_id || lead.etapa || 'novo_lead';
-    const novoStatus =
-      etapaId === 'integrado' ? 'ganho' :
-      etapaId === 'perdido' ? 'perdido' :
-      'ativo';
+  if (!isOfficialApiOpportunity(lead) || !hasCanonicalOpportunityId(lead)) {
+    alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+    return;
+  }
 
-    const payload = buildOpportunityWorkspaceUpdatePayload(formData, {
-      etapaId,
-      status: novoStatus,
+  const idToUpdate = getCanonicalOpportunityId(lead);
+  if (!idToUpdate) {
+    console.error("[Oportunidades] Update bloqueado: oportunidade sem ID canônico válido.", {
+      leadId: lead?.id,
+      leadDisplayId: lead?.displayId,
     });
-    const mutationId = resolveOpportunityWorkspaceMutationId(lead);
+    alert("Não foi possível salvar esta oportunidade: identificador interno inválido.");
+    return;
+  }
 
-    const commitLocal = () => {
-      const localId = mutationId ?? lead.id ?? lead.displayId;
-      if (localId !== null && localId !== undefined && localId !== '') {
-        updateOportunidade(String(localId), payload);
-      }
+  const etapaId = formData.etapa_id || lead.etapa_id || lead.etapa || "novo_lead";
 
-      setSelectedLead(normalizeOpportunityWorkspace({
-        ...lead,
-        ...payload,
-      }, {
-        source: 'session',
-        pipelineLabel: currentPipelineConfig?.nome ?? null,
-        stageCatalog: workspaceStageCatalog,
-      }));
-    };
+  const novoStatus =
+    etapaId === "integrado" ? "ganho" :
+    etapaId === "perdido" ? "perdido" :
+    "ativo";
 
-    const source = await persistOpportunityWorkspaceMutation({
-      mutationId,
-      payload,
-      updateRemote: (id, body) => api.updateOportunidade(id, body),
-      onSuccess: commitLocal,
+  const explicitPipelineId = String(formData.pipelineId || lead.pipeline_id || "").trim();
+
+  if (!explicitPipelineId) {
+    console.error("[Oportunidades] Update bloqueado: pipelineId explícito ausente.", {
+      leadId: lead.id,
+      formPipelineId: formData.pipelineId,
+      leadPipelineId: lead.pipeline_id,
     });
+    alert("Não foi possível salvar: pipelineId explícito ausente.");
+    return;
+  }
 
-    if (source === 'backend') {
-      setWorkspaceMutationError(null);
-      setShowOpportunityForm(false);
-      setShowModal(false);
-      setEditingOportunidade(null);
-    } else {
-      setWorkspaceMutationError('Falha ao salvar a oportunidade no backend. A alteração não foi confirmada.');
-    }
+  const payload = {
+    nome: formData.nome || "Sem nome",
+    valor: Number(formData.valor || 0),
+    pipeline_id: explicitPipelineId,
+    etapa_id: etapaId,
+    status: novoStatus,
+    cliente_id: formData.cliente_id || null,
+    responsavel_id: formData.responsavel_id || null,
+    responsavel_nome: formData.responsavel_nome || "",
+    observacoes: formData.observacoes || "",
   };
 
+  const payloadBackend = {
+  title: payload.nome,
+  amount: Number(payload.valor || 0),
+  customerId: payload.cliente_id ?? undefined,
+  ownerId: payload.responsavel_id ?? undefined,
+  productId: selectedProductId || null,
+  subproductId: selectedSubproductId || null,
+  modalityId: selectedModality || null,
+  status: novoStatus,
+  description: String(payload.observacoes || ""),
+};
+
+  const missingRequiredFields: string[] = [];
+
+if (!payloadBackend.title) {
+  missingRequiredFields.push("title");
+}
+
+if (
+  payloadBackend.amount === undefined ||
+  payloadBackend.amount === null ||
+  Number.isNaN(payloadBackend.amount)
+) {
+  missingRequiredFields.push("amount");
+}
+
+  if (missingRequiredFields.length > 0) {
+    console.error("[Oportunidades] Update bloqueado: campos obrigatórios ausentes/inválidos.", {
+      idToUpdate,
+      missingRequiredFields,
+      payloadBackend,
+    });
+    alert(`Não foi possível salvar. Campos obrigatórios inválidos: ${missingRequiredFields.join(", ")}`);
+    return;
+  }
+
+  try {
+    await opportunitiesApi.update(idToUpdate, payloadBackend);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erro ao atualizar oportunidade";
+    console.error("[Oportunidades] Falha ao atualizar oportunidade na API oficial:", {
+      idToUpdate,
+      message,
+    });
+    alert(`Erro ao atualizar oportunidade: ${message}`);
+    return;
+  }
+
+  setApiReadReloadKey((prev) => prev + 1);
+  setShowOpportunityForm(false);
+  closeNewOpportunityModal();
+};
   // Pipeline handlers
   const handleCreatePipeline = (e: React.FormEvent) => {
     e.preventDefault();
-    const newPipeline = {
-      id: `pipeline-${Date.now()}`,
-      nome: pipelineFormData.nome,
-      ativo: true,
-      colunas: [
-        { id: "col-1", nome: "Entrada", ordem: 1, cor: "#3b82f6" },
-        { id: "col-2", nome: "Em Andamento", ordem: 2, cor: "#8b5cf6" },
-        { id: "col-3", nome: "Concluído", ordem: 3, cor: "#22c55e" }
-      ]
-    };
-    addPipeline(newPipeline);
-    setCurrentPipelineId(newPipeline.id);
     setShowPipelineModal(false);
     setPipelineFormData({ nome: "" });
   };
 
   const handleEditPipeline = () => {
     if (!editingPipeline) return;
-    updatePipeline(editingPipeline.id, { nome: editingPipeline.nome });
     setEditingPipeline(null);
     setShowPipelineMenu(false);
   };
 
   const handleDeletePipeline = () => {
-    const safePipelines = Array.isArray(pipelines) ? pipelines : [];
-    if (!safeCurrentPipelineId || safePipelines.length <= 1) return;
-    const pipelineName = currentPipelineConfig?.nome || safeCurrentPipelineId;
-    if (confirm(`Excluir pipeline "${pipelineName}"?`)) {
-      const otherPipeline = safePipelines.find((p: any) => p?.id !== safeCurrentPipelineId);
-      if (otherPipeline?.id) {
-        setCurrentPipelineId(otherPipeline.id);
-      }
-      deletePipeline(safeCurrentPipelineId);
-    }
     setShowPipelineMenu(false);
   };
 
   // Column handlers
   const handleCreateColumn = (e: React.FormEvent) => {
     e.preventDefault();
-    const colunas = currentPipelineConfig?.colunas || [];
-    const newColumn = {
-      id: `col-${Date.now()}`,
-      nome: columnFormData.nome,
-      ordem: colunas.length + 1,
-      cor: columnFormData.cor
-    };
-    addColumn(currentPipelineConfig?.id || safeCurrentPipelineId, newColumn);
     setShowColumnModal(false);
     setColumnFormData({ nome: "", cor: "#3b82f6" });
   };
@@ -2143,263 +3730,199 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const handleEditColumn = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingColumn) return;
-    updateColumn(currentPipelineConfig?.id || safeCurrentPipelineId, editingColumn.id, editingColumn.nome);
     setEditingColumn(null);
   };
 
   const handleDeleteColumn = (columnId: string) => {
-    const oportunidadesNaColuna = oportunidades.filter(o => o.coluna_id === columnId);
-    if (oportunidadesNaColuna.length > 0) {
-      alert("Não é possível excluir coluna com oportunidades. Mova-as primeiro.");
-      return;
-    }
-    if (confirm("Excluir esta coluna?")) {
-      deleteColumn(currentPipelineConfig?.id || safeCurrentPipelineId, columnId);
-    }
+    setShowColumnModal(false);
   };
 
   // Oportunidade handlers
-  const handleEditClick = (card: any) => {
-    if (!canEditOportunidade(card)) return;
+  const openEditOpportunity = (opportunity: any) => {
+    if (!opportunity) return;
+    if (!isOfficialApiOpportunity(opportunity) || !hasCanonicalOpportunityId(opportunity)) {
+      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+      return;
+    }
+    if (!canEditOportunidade(opportunity)) return;
 
     const lead = {
-      ...card,
-      nome: card.cliente_nome ?? card.nome ?? '',
-      etapa_id: card.etapa_id ?? card.etapa ?? 'negociacao',
+      ...opportunity,
+      nome: opportunity.cliente_nome ?? opportunity.nome ?? "",
+      etapa_id: opportunity.etapa_id ?? opportunity.etapa ?? "negociacao",
     };
 
-    setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
-    setEditingOportunidade(lead);
+    const canonicalId = getCanonicalOpportunityId(lead);
+    if (!canonicalId) {
+      console.error("[Oportunidades] Edição bloqueada: oportunidade sem ID canônico válido.", {
+        leadId: lead?.id,
+        leadDisplayId: lead?.displayId,
+      });
+      alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
+      return;
+    }
 
-    // Preencher dados para o formulário principal (modal)
+    const etapaAtual = lead.etapa_id ?? lead.etapa ?? "novo_lead";
+
+    const cleanFormData = buildNewOpportunityFormData();
+    const leadAddress = lead.address && typeof lead.address === "object" ? lead.address : {};
+    const leadBankData = lead.bankData && typeof lead.bankData === "object" ? lead.bankData : {};
+    const leadProductId = String(lead.productId ?? lead.product_id ?? lead.produto_id ?? "");
+    const leadSubproductId = String(lead.subproductId ?? lead.subproduto_id ?? "");
+    const leadModalityId = String(lead.modalityId ?? lead.modality_id ?? lead.modality?.id ?? "");
+    const leadModalityLabel = String(lead.modality?.name ?? lead.modality?.code ?? lead.modality ?? "");
+    const leadTipoPessoa = lead.tipoPessoa === "CNPJ" ? "CNPJ" : "CPF";
+    const leadTipoConta =
+      lead.tipoConta === "corrente" || lead.tipoConta === "poupanca"
+        ? lead.tipoConta
+        : leadBankData.tipoConta === "corrente" || leadBankData.tipoConta === "poupanca"
+          ? leadBankData.tipoConta
+          : cleanFormData.tipoConta;
+    const leadPixTipoCandidate = String(lead.pixTipo ?? leadBankData.pixTipo ?? "");
+    const leadPixTipo =
+      leadPixTipoCandidate === "cpf" ||
+      leadPixTipoCandidate === "cnpj" ||
+      leadPixTipoCandidate === "email" ||
+      leadPixTipoCandidate === "telefone" ||
+      leadPixTipoCandidate === "aleatoria"
+        ? leadPixTipoCandidate
+        : cleanFormData.pixTipo;
+
+    // Preencher dados para o formulário principal (modal) sem reaproveitar estado anterior
     setFormData({
+      ...cleanFormData,
       nome: lead.cliente_nome ?? lead.nome ?? "",
-      tipoPessoa: lead.tipoPessoa ?? "CPF",
-      cpf_cnpj: lead.cpf_cnpj ?? lead.documentos ?? "",
-      profissao: lead.profissao ?? "",
-      estado_civil: lead.estado_civil ?? "",
-      sexo: lead.sexo ?? "",
-      data_nascimento: lead.data_nascimento ?? "",
-      data_abertura: lead.data_abertura ?? "",
-      celular: lead.celular ?? lead.telefone ?? "",
-      telefone: lead.telefone ?? "",
-      email: lead.email ?? "",
-      cep: lead.cep ?? "",
-      rua: lead.rua ?? "",
-      numero: lead.numero ?? "",
-      complemento: lead.complemento ?? "",
-      bairro: lead.bairro ?? "",
-      cidade: lead.cidade ?? "",
-      estado: lead.estado ?? "",
-      produto: lead.produto ?? "",
+      tipoPessoa: leadTipoPessoa,
+      cpf_cnpj: String(lead.cpf_cnpj ?? lead.document ?? ""),
+      profissao: String(lead.profissao ?? ""),
+      estado_civil: String(lead.estado_civil ?? ""),
+      sexo:
+        lead.sexo === "masculino" ||
+        lead.sexo === "feminino" ||
+        lead.sexo === "outro" ||
+        lead.sexo === "nao_informar"
+          ? lead.sexo
+          : cleanFormData.sexo,
+      data_nascimento: normalizeDateInput(
+        lead.birthDate ??
+        lead.data_nascimento ??
+        lead.dataNascimento ??
+        lead.dateOfBirth,
+      ),
+      data_abertura: normalizeDateInput(lead.data_abertura ?? lead.openDate),
+      celular: String(lead.celular ?? lead.phone ?? ""),
+      telefone: String(lead.telefone ?? lead.phone ?? ""),
+      email: String(lead.email ?? ""),
+      cep: formatCepInput(String(lead.cep ?? leadAddress.cep ?? "")),
+      rua: String(lead.rua ?? leadAddress.rua ?? ""),
+      numero: String(lead.numero ?? leadAddress.numero ?? ""),
+      complemento: String(lead.complemento ?? leadAddress.complemento ?? ""),
+      bairro: String(lead.bairro ?? leadAddress.bairro ?? ""),
+      cidade: String(lead.cidade ?? leadAddress.cidade ?? ""),
+      estado: String(lead.estado ?? leadAddress.estado ?? ""),
+      produto: String(lead.produto ?? ""),
+      productId: leadProductId,
+      productCode: String(lead.productCode ?? ""),
+      subproductId: leadSubproductId,
+      subproductCode: String(lead.subproductCode ?? ""),
+      modality: leadModalityLabel,
+      pipelineId: String(cleanFormData.pipelineId || lead.pipeline_id || "").trim(),
+      pipelineCode: String(lead.pipelineCode ?? ""),
+      catalogVersion:
+        typeof lead.catalogVersion === "number" && Number.isFinite(lead.catalogVersion)
+          ? lead.catalogVersion
+          : cleanFormData.catalogVersion,
       valor: Number(lead.valor ?? 0),
-      etapa_id: lead.etapa_id,
-      tags: Array.isArray(lead.tags) ? lead.tags : [],
+      etapa_id: etapaAtual,
+      tags: Array.isArray(lead.tags) ? lead.tags : cleanFormData.tags,
       cliente_id: lead.cliente_id ?? null,
       responsavel_id: lead.responsavel_id ?? null,
-      responsavel_nome: lead.responsavel_nome ?? "",
-      observacoes: lead.observacoes ?? "",
-      banco: lead.banco ?? "",
-      agencia: lead.agencia ?? "",
-      conta: lead.conta ?? "",
-      tipoConta: lead.tipoConta ?? "",
-      titular: lead.titular ?? "",
-      documentoTitular: lead.documentoTitular ?? "",
-      pixTipo: lead.pixTipo ?? "",
-      pixChave: lead.pixChave ?? "",
-      rdStatus: lead.rdStatus ?? "nao_consultado",
-      rdConsultedAt: lead.rdConsultedAt ?? "",
-      rdNotes: lead.rdNotes ?? "",
-      racionalCompany_id: lead.racionalCompany_id ?? null,
-      franquia_id: lead.franquia_id ?? null,
-      franqueado_id: lead.franqueado_id ?? null,
-      pendenciaMotivo: lead.pendenciaMotivo ?? ""
+      responsavel_nome: String(lead.responsavel_nome ?? ""),
+      observacoes: String(lead.observacoes ?? ""),
+      banco: String(lead.banco ?? leadBankData.banco ?? ""),
+      agencia: String(lead.agencia ?? leadBankData.agencia ?? ""),
+      conta: String(lead.conta ?? leadBankData.conta ?? ""),
+      tipoConta: leadTipoConta,
+      titular: String(lead.titular ?? leadBankData.titular ?? ""),
+      documentoTitular: String(lead.documentoTitular ?? leadBankData.documentoTitular ?? ""),
+      pixTipo: leadPixTipo,
+      pixChave: String(lead.pixChave ?? leadBankData.pixChave ?? ""),
+      rdStatus:
+        lead.rdStatus === "sem_restricao" || lead.rdStatus === "restricao"
+          ? lead.rdStatus
+          : cleanFormData.rdStatus,
+      rdConsultedAt: String(lead.rdConsultedAt ?? ""),
+      rdNotes: String(lead.rdNotes ?? ""),
+      doNotCallStatus:
+        lead.doNotCallStatus === "liberado" || lead.doNotCallStatus === "bloqueado"
+          ? lead.doNotCallStatus
+          : cleanFormData.doNotCallStatus,
+      doNotCallConsultedAt: String(lead.doNotCallConsultedAt ?? ""),
+      racionalCompany_id: typeof lead.racionalCompany_id === "number" ? lead.racionalCompany_id : null,
+      franquia_id: typeof lead.franquia_id === "number" ? lead.franquia_id : null,
+      franqueado_id: typeof lead.franqueado_id === "number" ? lead.franqueado_id : null,
+      pendenciaMotivo: String(lead.pendenciaMotivo ?? ""),
+      parceiroTipo: String(lead.parceiroTipo ?? ""),
+      razaoSocial: String(lead.razaoSocial ?? ""),
+      cnpj: String(lead.cnpj ?? ""),
+      telefoneComercial: String(lead.telefoneComercial ?? ""),
+      emailCorporativo: String(lead.emailCorporativo ?? ""),
+      responsavelLegal: String(lead.responsavelLegal ?? ""),
+      cpfResponsavel: String(lead.cpfResponsavel ?? ""),
+      cargoResponsavel: String(lead.cargoResponsavel ?? ""),
+      documentosEnviados: Array.isArray(lead.documentosEnviados) ? lead.documentosEnviados : cleanFormData.documentosEnviados,
+      vinculoTipo: String(lead.vinculoTipo ?? ""),
+      cargo: String(lead.cargo ?? ""),
+      departamento: String(lead.departamento ?? ""),
+      salario: String(lead.salario ?? ""),
+      formacao: String(lead.formacao ?? ""),
+      experienciaProfissional: String(lead.experienciaProfissional ?? ""),
+      disponibilidade: Array.isArray(lead.disponibilidade) ? lead.disponibilidade : cleanFormData.disponibilidade,
     });
+    setSelectedProductId(leadProductId);
+    setSelectedSubproductId(leadSubproductId);
+    setSelectedModality(leadModalityId);
+    setSelectedRacionalCompany(
+      typeof lead.racionalCompany_id === "number" ? lead.racionalCompany_id : null,
+    );
+    setSelectedFranquia(typeof lead.franquia_id === "number" ? lead.franquia_id : null);
+    setSelectedFranqueado(typeof lead.franqueado_id === "number" ? lead.franqueado_id : null);
 
-    // Também preencher editDrawerData para compatibilidade
-    setEditDrawerData({
-      nome: lead.nome ?? "",
-      tipoPessoa: lead.tipoPessoa ?? "CPF",
-      cpf_cnpj: lead.cpf_cnpj ?? "",
-      profissao: lead.profissao ?? "",
-      estado_civil: lead.estado_civil ?? "",
-      sexo: lead.sexo ?? "",
-      data_nascimento: lead.data_nascimento ?? "",
-      data_abertura: lead.data_abertura ?? "",
-      celular: lead.celular ?? "",
-      telefone: lead.telefone ?? "",
-      email: lead.email ?? "",
-      cep: lead.cep ?? "",
-      rua: lead.rua ?? "",
-      numero: lead.numero ?? "",
-      complemento: lead.complemento ?? "",
-      bairro: lead.bairro ?? "",
-      cidade: lead.cidade ?? "",
-      estado: lead.estado ?? "",
-      produto: lead.produto ?? "",
-      valor: lead.valor ?? 0,
-      etapa_id: lead.etapa_id,
-      responsavel_id: lead.responsavel_id ?? null,
-      responsavel_nome: lead.responsavel_nome ?? "",
-      observacoes: lead.observacoes ?? "",
-      tags: Array.isArray(lead.tags) ? lead.tags : [],
-      banco: lead.banco ?? "",
-      agencia: lead.agencia ?? "",
-      conta: lead.conta ?? "",
-      tipoConta: lead.tipoConta ?? "",
-      titular: lead.titular ?? "",
-      documentoTitular: lead.documentoTitular ?? "",
-      pixTipo: lead.pixTipo ?? "",
-      pixChave: lead.pixChave ?? "",
-      rdStatus: lead.rdStatus ?? "nao_consultado",
-      rdConsultedAt: lead.rdConsultedAt ?? "",
-      rdNotes: lead.rdNotes ?? "",
-      racionalCompany_id: lead.racionalCompany_id ?? null,
-      franquia_id: lead.franquia_id ?? null,
-      franqueado_id: lead.franqueado_id ?? null,
-      pendenciaMotivo: lead.pendenciaMotivo ?? ""
-    });
-
-    // O formulário será aberto pelo botão que chamou esta função
-    setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
+    // Edição sempre deve abrir o formulário enxuto de Opportunity
+    setSelectedLead(lead);
     setEditingOportunidade(lead);
-    setShowModal(true);
+    setShowModal(false);
+    setShowOpportunityForm(true);
+  };
+
+  const handleEditClick = (card: any) => {
+    openEditOpportunity(card);
   };
 
   const handleDelete = (id: string) => {
     if (!can('oportunidades', 'delete')) return;
     if (confirm("Tem certeza que deseja excluir esta oportunidade?")) {
-      deleteOportunidade(id);
+      void (async () => {
+        try {
+          const opportunityId = String(id || "").trim();
+          if (!opportunityId) {
+            throw new Error("Oportunidade sem identificador para exclusão.");
+          }
+
+          await opportunitiesApi.delete(opportunityId);
+          setApiReadReloadKey((prev) => prev + 1);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Erro ao excluir oportunidade";
+          console.error("[Oportunidades] Falha ao excluir oportunidade na API oficial:", message);
+          alert(`Erro ao excluir oportunidade: ${message}`);
+        }
+      })();
     }
   };
 
   // Funções para editar a partir do drawer
   const handleOpenEditFromDrawer = () => {
-    const lead = selectedLead || editingOportunidade;
-    if (!lead) return;
-    if (!canEditOportunidade(lead)) return;
-
-    const etapaAtual = lead.etapa_id ?? lead.etapa ?? 'novo_lead';
-
-    setEditingOportunidade(lead);
-
-    setFormData({
-      nome: lead.cliente_nome ?? lead.nome ?? "",
-      tipoPessoa: lead.tipoPessoa ?? "CPF",
-      cpf_cnpj: lead.cpf_cnpj ?? lead.documentos ?? "",
-      profissao: lead.profissao ?? "",
-      estado_civil: lead.estado_civil ?? "",
-      sexo: lead.sexo ?? "",
-      data_nascimento: lead.data_nascimento ?? "",
-      data_abertura: lead.data_abertura ?? "",
-
-      celular: lead.celular ?? lead.telefone ?? "",
-      telefone: lead.telefone ?? "",
-      email: lead.email ?? "",
-
-      cep: lead.cep ?? "",
-      rua: lead.rua ?? "",
-      numero: lead.numero ?? "",
-      complemento: lead.complemento ?? "",
-      bairro: lead.bairro ?? "",
-      cidade: lead.cidade ?? "",
-      estado: lead.estado ?? "",
-
-      produto: lead.produto ?? "",
-      valor: Number(lead.valor ?? 0),
-      etapa_id: etapaAtual,
-      tags: Array.isArray(lead.tags) ? lead.tags : [],
-      cliente_id: lead.cliente_id ?? null,
-      responsavel_id: lead.responsavel_id ?? null,
-      responsavel_nome: lead.responsavel_nome ?? "",
-      observacoes: lead.observacoes ?? "",
-
-      banco: lead.banco ?? "",
-      agencia: lead.agencia ?? "",
-      conta: lead.conta ?? "",
-      tipoConta: lead.tipoConta ?? "",
-      titular: lead.titular ?? "",
-      documentoTitular: lead.documentoTitular ?? "",
-      pixTipo: lead.pixTipo ?? "",
-      pixChave: lead.pixChave ?? "",
-
-      rdStatus: lead.rdStatus ?? "nao_consultado",
-      rdConsultedAt: lead.rdConsultedAt ?? "",
-      rdNotes: lead.rdNotes ?? "",
-
-      racionalCompany_id: lead.racionalCompany_id ?? null,
-      franquia_id: lead.franquia_id ?? null,
-      franqueado_id: lead.franqueado_id ?? null,
-      pendenciaMotivo: lead.pendenciaMotivo ?? ""
-    });
-
-    setShowModal(true);
-  };
-
-  const handleSaveEditFromDrawer = async () => {
-    const leadToEdit = selectedLead || editingOportunidade;
-    if (!leadToEdit) return;
-
-    const mutationId = resolveOpportunityWorkspaceMutationId(leadToEdit);
-
-    // Se a etapa mudou, validar antes de salvar
-    const etapaAnterior = leadToEdit.etapa_id || leadToEdit.etapa;
-    if (etapaAnterior !== editDrawerData.etapa_id && editDrawerData.etapa_id !== 'perdido') {
-      const validacao = validarEtapa(editDrawerData, editDrawerData.etapa_id as EtapaKey);
-      if (!validacao.valido) {
-        alert(`Não é possível avançar para esta etapa.\n\n${validacao.mensagem}`);
-        return;
-      }
-    }
-
-    // Determinar o status com base na nova etapa
-    const novoStatus = editDrawerData.etapa_id === 'integrado' ? 'ganho' : 
-                      editDrawerData.etapa_id === 'perdido' ? 'perdido' : 'ativo';
-
-    const payload = buildOpportunityWorkspaceUpdatePayload(editDrawerData, {
-      etapaId: editDrawerData.etapa_id,
-      status: novoStatus,
-    });
-
-    const normalizedLead = normalizeOpportunityWorkspace({
-      ...leadToEdit,
-      ...payload,
-    }, {
-      source: 'session',
-      pipelineLabel: currentPipelineConfig?.nome ?? null,
-      stageCatalog: workspaceStageCatalog,
-    });
-
-    const commitLocal = () => {
-      const localId = mutationId ?? leadToEdit.id ?? leadToEdit.displayId;
-      if (localId !== null && localId !== undefined && localId !== '') {
-        updateOportunidade(String(localId), payload);
-        if (etapaAnterior !== editDrawerData.etapa_id) {
-          moveOportunidade(String(localId), {
-            etapa_id: editDrawerData.etapa_id,
-            status: novoStatus,
-          });
-        }
-      }
-
-      setSelectedLead(normalizedLead);
-      setEditingOportunidade(normalizedLead);
-    };
-
-    const source = await persistOpportunityWorkspaceMutation({
-      mutationId,
-      payload,
-      updateRemote: (id, body) => api.updateOportunidade(id, body),
-      onSuccess: commitLocal,
-    });
-
-    if (source === 'backend') {
-      setWorkspaceMutationError(null);
-      setShowEditDrawerModal(false);
-      setEditingOportunidade(null);
-    } else {
-      setWorkspaceMutationError('Falha ao salvar a oportunidade no backend. A alteração não foi confirmada.');
-    }
+    openEditOpportunity(selectedLead || editingOportunidade);
   };
 
   const pipelineSelectControl = (
@@ -2411,11 +3934,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       <option value="" disabled>
         Pipeline - Selecionar
       </option>
-      {catalogPipelineOptions.map((pipeline) => (
-        <option key={pipeline.id} value={pipeline.id}>
-          {pipeline.name}
+      {officialPipelines.length === 0 ? (
+        <option value="" disabled>
+          Nenhum pipeline oficial disponivel
         </option>
-      ))}
+      ) : (
+        officialPipelines.map((pipeline: any) => (
+          <option key={String(pipeline?.id ?? "")} value={String(pipeline?.id ?? "")}>
+            {`Pipeline - ${String(pipeline?.name ?? "Pipeline")}`}
+          </option>
+        ))
+      )}
     </select>
   );
 
@@ -2443,7 +3972,17 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   if (!isPipelineValid) {
     return (
       <div className={`p-4 ${isDark ? "text-white" : "text-white"}`}>
-        {selectedProductId 
+        {hasSelectedPipelineWithoutStages ? (
+          <div className="rounded-lg border border-[var(--border-muted)] bg-[var(--bg-surface-soft)] p-6 text-sm text-[var(--text-secondary)]">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Pipeline sem etapas cadastradas</h2>
+            <p className="mt-2">
+              Este pipeline foi criado corretamente, mas ainda não possui etapas operacionais.
+            </p>
+            <p className="mt-2">
+              Cadastre etapas em Administração → Pipelines.
+            </p>
+          </div>
+        ) : selectedProductId
           ? "Pipeline não encontrado para este produto. Selecione outro produto ou configure o pipeline."
           : "Nenhum pipeline encontrado"}
       </div>
@@ -2458,12 +3997,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         icon={<TrendingUp className="w-5 h-5 text-blue-400" />}
         onSearch={setSearchQuery}
         onRefresh={() => {}}
-        onCreate={() => setShowModal(true)}
+        onCreate={openNewOpportunityModal}
         createLabel="Nova Oportunidade"
         onOpenFilters={() => setShowFilterDrawer(true)}
         extraLeft={pipelineSelectControl}
         filters={[
-          { label: 'Etapa', key: 'etapa_id', type: 'select', options: OFICIAL_ETAPAS.map(e => ({ label: e.label, value: e.key })), placeholder: 'Todas as etapas' },
+          { label: 'Etapa', key: 'etapa_id', type: 'select', options: etapasAtivas.map(e => ({ label: e.nome, value: e.id })), placeholder: 'Todas as etapas' },
           { label: 'Status', key: 'status', type: 'select', options: [
             { label: 'Ativo', value: 'ativo' },
             { label: 'Integrado', value: 'ganho' },
@@ -2475,7 +4014,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         ]}
         onFilterChange={updateFilter}
         filterValues={filters}
-        exportData={filteredOportunidades}
+        exportData={dedupedFilteredOportunidades}
         exportColumns={[
           { key: 'nome', label: 'Nome' },
           { key: 'telefone', label: 'Telefone' },
@@ -2548,7 +4087,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
                     <Select value={filters.etapa_id} onChange={(e)=>updateFilter("etapa_id", e.target.value)}>
                       <option value="">Etapa</option>
-                      {(etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map(e => (
+                      {etapasAtivas.map(e => (
                         <option key={e.id} value={e.id}>{e.nome}</option>
                       ))}
                     </Select>
@@ -2571,8 +4110,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
                   <div className="space-y-3">
 
-                    <Select 
-                      value={filters.racionalCompany_id} 
+                    <Select
+                      value={filters.racionalCompany_id}
                       onChange={(e) => {
                         updateFilter("racionalCompany_id", e.target.value);
                         // Limpar Franquia e Franqueado ao trocar Company
@@ -2588,8 +4127,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       ))}
                     </Select>
 
-                    <Select 
-                      value={filters.franquia_id} 
+                    <Select
+                      value={filters.franquia_id}
                       onChange={(e) => {
                         updateFilter("franquia_id", e.target.value);
                         // Limpar Franqueado ao trocar Franquia
@@ -2684,11 +4223,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         <div className="flex gap-3 p-4 min-h-full">
           {/* Kanban dinâmico baseado no pipeline configurado */}
           {/* OTIMIZAÇÃO: Usar dados pré-calculados de oportunidadesPorEtapa */}
-          {(etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map((etapa) => {
+          {etapasAtivas.map((etapa) => {
           const columnOportunidades = oportunidadesPorEtapa[etapa.id] || [];
           const totalValor = totaisPorEtapa[etapa.id] || 0;
           const isDragOver = dragOverColumn === etapa.id;
-          
+
           return (
             <div
               key={etapa.id}
@@ -2701,8 +4240,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
               <div className="p-3 border-b border-[#1f2937] bg-gray-100 rounded-t-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0" 
+                    <div
+                      className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: etapa.cor }}
                     />
                     <h3 className="font-semibold text-white text-sm truncate">
@@ -2751,33 +4290,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                         </button>
                       </div>
                     </div>
-                    {can('oportunidades', 'edit') && (
-                      <div className="relative group">
-                        <button className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
-                          isDark ? "hover:bg-[#1a1a2e]" : "hover:bg-gray-100"
-                        }`}>
-                          <MoreVertical size={14} className={isDark ? "text-slate-400" : "text-slate-600"} />
-                        </button>
-                        <div className={`absolute right-0 top-full mt-1 w-32 rounded-lg shadow-lg border z-10 hidden group-hover:block ${
-                          isDark ? "bg-[#0a0a12] border-[#1a1a2e]" : "bg-[#111827] border-[#1f2937]"
-                        }`}>
-                          <button
-                            onClick={() => setEditingColumn({ id: coluna.id, nome: coluna.nome })}
-                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
-                              isDark ? "text-slate-300 hover:bg-[#1a1a2e]" : "text-slate-300 hover:bg-gray-50"
-                            }`}
-                          >
-                            <Edit2 size={12} /> Editar
-                          </button>
-                          <button
-                            onClick={() => handleDeleteColumn(coluna.id)}
-                            className="w-full px-3 py-2 text-left text-xs flex items-center gap-2 text-red-500 hover:bg-red-900/200/10"
-                          >
-                            <Trash2 size={12} /> Excluir
-                          </button>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 </div>
               </div>
@@ -2785,7 +4298,50 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
               {/* Cards - Versão Estável */}
               <div className="p-2 space-y-2 overflow-y-auto flex-1">
                 {columnOportunidades.map((card) => {
-                  const cardData = card;
+                  // Normalizar dados do card com optional chaining e fallbacks
+                  const visualDisplayId = getVisualOpportunityId(card);
+                  const cardData = {
+                    id: card?.id ?? "",
+                    displayId: visualDisplayId,
+                    title: card?.title || card?.nome || "",
+                    amount: Number(card?.amount ?? card?.valor ?? 0),
+                    description: card?.description || card?.observacoes || "",
+                    nome: card?.cliente_nome || card?.nome || card?.title || "Sem nome",
+                    produto: card?.produto || card?.product?.name || "",
+                    valor: Number(card?.valor ?? card?.amount ?? 0),
+                    telefone: card?.telefone ?? '',
+                    email: card?.email ?? '',
+                    tags: Array.isArray(card?.tags) ? card.tags : [],
+                    etapa: card?.etapa_id ?? card?.etapa ?? 'novo_lead',
+                    status: card?.status ?? 'ativo',
+                    customerId: card?.customerId ?? card?.cliente_id ?? null,
+                    ownerId: card?.ownerId ?? card?.responsavel_id ?? null,
+                    pipelineId: card?.pipelineId ?? "",
+                    stageId: card?.stageId ?? "",
+                    backendPipelineId: card?.backendPipelineId ?? "",
+                    backendPipelineName: card?.backendPipelineName ?? "",
+                    backendStageId: card?.backendStageId ?? "",
+                    backendStageName: card?.backendStageName ?? "",
+                    backendStageOrder: card?.backendStageOrder,
+                    backendStageIsWon: card?.backendStageIsWon,
+                    backendStageIsLost: card?.backendStageIsLost,
+                    cliente_id: card?.cliente_id ?? card?.customerId ?? null,
+                    responsavel_id: card?.responsavel_id ?? card?.ownerId ?? null,
+                    responsavel_nome: card?.responsavel_nome || card?.owner?.name || card?.ownerName || "",
+                    produto_id: card?.produto_id ?? card?.productId ?? card?.product_id ?? null,
+                    productId: card?.productId ?? card?.product_id ?? card?.produto_id ?? null,
+                    product_id: card?.product_id ?? card?.productId ?? card?.produto_id ?? null,
+                    productCode: card?.productCode ?? "",
+                    subproduto: card?.subproduto ?? "",
+                    subproduto_id: card?.subproduto_id ?? card?.subproductId ?? null,
+                    subproductId: card?.subproductId ?? card?.subproduto_id ?? null,
+                    subproductCode: card?.subproductCode ?? "",
+                    modality: card?.modality ?? "",
+                    observacoes: card?.observacoes || card?.description || "",
+                    createdAt: card?.createdAt ?? null,
+                    updatedAt: card?.updatedAt ?? null,
+                    __officialApiSource: card?.__officialApiSource === true
+                  };
 
                   // Função para formatar data
                   const formatDate = (dateStr: string | null | undefined) => {
@@ -2815,11 +4371,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   };
 
                   const telefoneLimpo = String(cardData.telefone).replace(/\D/g, '');
-                  
+                  const cardHasCanonicalId = hasCanonicalOpportunityId(cardData);
+                  const cardIsOfficial = isOfficialApiOpportunity(cardData);
+                  const cardCanUseCriticalActions = cardHasCanonicalId && cardIsOfficial;
+
                   return (
                     <div
-                      key={cardData.id}
-                      draggable={true}
+                      key={cardData.id || cardData.displayId || `${cardData.nome}-${etapa.id}`}
+                      draggable={cardCanUseCriticalActions}
                       onDragStart={(e) => handleDragStart(e, String(cardData.id))}
                       onDragEnd={handleDragEnd}
                       onClick={() => handleOpenLead(cardData)}
@@ -2836,14 +4395,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       {/* ID no topo - usa displayId (L-0001) */}
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] text-slate-400 font-semibold">
-                          #{cardData.displayId}
+                          #{cardData.displayId || "SEM-ID-VISUAL"}
                         </span>
-                        <StatusBadge 
-                          status={cardData.status === 'ganho' ? 'aprovado' : cardData.status === 'perdido' ? 'reprovado' : 'pendente'} 
-                          size="sm" 
+                        <StatusBadge
+                          status={cardData.status === 'ganho' ? 'aprovado' : cardData.status === 'perdido' ? 'reprovado' : 'pendente'}
+                          size="sm"
                         />
                       </div>
-                      
+
                       {/* Nome do cliente com Avatar */}
                       <div className="flex items-center gap-2 mb-1">
                         <EntityAvatar name={cardData.nome} type="cliente" size="sm" />
@@ -2851,26 +4410,26 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                           {cardData.nome}
                         </h4>
                       </div>
-                      
+
                       {/* Produto */}
                       {cardData.produto && (
                         <p className="text-xs text-slate-600 truncate">
                           {cardData.produto}
                         </p>
                       )}
-                      
+
                       {/* Responsável */}
                       <p className="text-xs text-slate-500 truncate">
                         {cardData.responsavel_nome || 'Sem responsável'}
                       </p>
-                      
+
                       {/* Valor */}
                       {cardData.valor > 0 && (
                         <p className="text-base font-bold text-blue-600 mt-1">
                           R$ {cardData.valor.toLocaleString("pt-BR")}
                         </p>
                       )}
-                      
+
                       {/* Data */}
                       <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
                         {formatDate(cardData.createdAt) && (
@@ -2880,7 +4439,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                           </span>
                         )}
                       </div>
-                      
+
                       {/* Dias sem atuação */}
                       {(() => {
                         const dias = getDiasSemAtuacao();
@@ -2895,7 +4454,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                           </div>
                         );
                       })()}
-                      
+
                       {/* Tags - máximo 2 + N */}
                       {cardData.tags?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -2917,58 +4476,115 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       )}
 
                       {/* Ações rápidas com ícones e stopPropagation */}
-                      <div className="flex gap-1 mt-2" onClick={(e) => e.stopPropagation()}>
-                        {canEditOportunidade(cardData) && (
+                      <div
+                        className="flex gap-1 mt-2"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const searchValue = getClienteSearchValue(cardData);
+                            console.log("[CLIENTE] Abrir CRM Clientes", searchValue || cardData.cliente_id);
+                            navigate(
+                              searchValue
+                                ? `/app/crm/clientes?search=${encodeURIComponent(searchValue)}`
+                                : "/app/crm/clientes",
+                            );
+                          }}
+                          className="p-1 rounded bg-slate-900/20 text-slate-700 hover:bg-slate-900/20"
+                          title="Cliente"
+                        >
+                          <User size={12} />
+                        </button>
+                        {telefoneLimpo ? (
+                          <a
+                            href={`tel:${telefoneLimpo}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("[PHONE] Ligar", cardData.telefone);
+                            }}
+                            className="p-1 rounded bg-blue-900/20 text-blue-700 hover:bg-blue-900/20"
+                            title="Ligar"
+                          >
+                            <Phone size={12} />
+                          </a>
+                        ) : (
                           <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-
-                              if (!selectedLead) {
-                                alert("Nenhuma oportunidade selecionada para edição.");
-                                return;
-                              }
-
-                              handleEditClick(cardData);
-                              setShowOpportunityForm(true);
+                              console.log("[PHONE] Ligar", cardData.telefone);
                             }}
                             className="p-1 rounded bg-blue-900/20 text-blue-700 hover:bg-blue-900/20"
-                            title="Editar"
+                            title="Ligar"
                           >
-                            <Edit2 size={12} />
+                            <Phone size={12} />
                           </button>
                         )}
-                        {telefoneLimpo && (
-                          <>
-                            <a
-                              href={`https://wa.me/55${telefoneLimpo}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1 rounded bg-green-900/20 text-green-700 hover:bg-green-900/20"
-                              title="WhatsApp"
-                            >
-                              <MessageCircle size={12} />
-                            </a>
-                            <a
-                              href={`tel:${telefoneLimpo}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1 rounded bg-blue-900/20 text-blue-700 hover:bg-blue-900/20"
-                              title="Ligar"
-                            >
-                              <Phone size={12} />
-                            </a>
-                          </>
+                        {telefoneLimpo ? (
+                          <a
+                            href={`https://wa.me/55${telefoneLimpo}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1 rounded bg-green-900/20 text-green-700 hover:bg-green-900/20"
+                            title="WhatsApp"
+                          >
+                            <MessageCircle size={12} />
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            className="p-1 rounded bg-green-900/20 text-green-700 hover:bg-green-900/20"
+                            title="WhatsApp"
+                          >
+                            <MessageCircle size={12} />
+                          </button>
                         )}
-                        {cardData.email && (
+                        {cardData.email ? (
                           <a
                             href={`mailto:${cardData.email}`}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => e.stopPropagation()}
                             className="p-1 rounded bg-purple-900/20 text-purple-700 hover:bg-purple-900/20"
                             title="E-mail"
                           >
                             <Mail size={12} />
                           </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            className="p-1 rounded bg-purple-900/20 text-purple-700 hover:bg-purple-900/20"
+                            title="E-mail"
+                          >
+                            <Mail size={12} />
+                          </button>
                         )}
                       </div>
                     </div>
@@ -2985,36 +4601,30 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       {showModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => { setShowModal(false); setEditingOportunidade(null); }}
+            onClick={closeNewOpportunityModal}
           />
-          
+
           {/* Modal Content */}
           <div className="relative w-full max-w-md mx-4 rounded-xl shadow-2xl bg-[#111827] border border-[#1f2937]">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[#1f2937]">
-              <h2 className="text-lg font-semibold text-white">
-                {editingOportunidade ? "Editar Oportunidade" : "Nova Oportunidade"}
-              </h2>
+              <h2 className="text-lg font-semibold text-white">Nova Oportunidade</h2>
               <button
-                onClick={() => { setShowModal(false); setEditingOportunidade(null); }}
+                onClick={closeNewOpportunityModal}
                 className="p-1 rounded-lg hover:bg-gray-100 text-slate-500 transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
-            
+
             {/* Form - Completo */}
-            <form onSubmit={editingOportunidade ? handleSubmitEdit : handleSubmit} className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Seção: Dados do Cliente */}
               <div className="border-b pb-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
-                    <input type="text" value={formData.nome ?? ""} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
                     <select value={formData.tipoPessoa ?? "CPF"} onChange={(e) => setFormData({ ...formData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
@@ -3024,15 +4634,31 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
-                    <input type="text" value={formData.tipoPessoa === "CPF" ? formatCPFInput(formData.cpf_cnpj ?? "") : formatCNPJInput(formData.cpf_cnpj ?? "")} onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={formData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    <input type="text" value={formData.tipoPessoa === "CPF" ? formatCPFInput(formData.cpf_cnpj ?? "") : formatCNPJInput(formData.cpf_cnpj ?? "")} onChange={(e) => {
+                      const documento = normalizeDocumentoDigits(e.target.value);
+                      setFormData({ ...formData, cpf_cnpj: documento, cliente_id: null });
+                      resetCustomerLookupState();
+                    }} onBlur={() => { void buscarClientePorDocumento(formData.cpf_cnpj ?? ""); }} placeholder={formData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    {customerLookupLoading && (
+                      <p className="mt-1 text-xs text-slate-500">Buscando cliente...</p>
+                    )}
+                    {!customerLookupLoading && customerLookupMessage && (
+                      <p className={`mt-1 text-xs ${customerLookupFound && customerLookupResult?.id ? "text-emerald-400" : "text-slate-500"}`}>
+                        {customerLookupMessage}
+                      </p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">{formData.tipoPessoa === "CPF" ? "Nome *" : "Razão Social *"}</label>
+                    <input type="text" value={formData.nome ?? ""} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder={formData.tipoPessoa === "CPF" ? "Nome completo" : "Razão social"} required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
-                    <input type="tel" value={formData.celular ?? ""} onChange={(e) => setFormData({ ...formData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    <input type="tel" value={formData.celular ?? ""} onChange={(e) => setFormData({ ...formData, celular: formatPhoneInput(e.target.value) })} placeholder="(00) 00000-0000" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
-                    <input type="tel" value={formData.telefone ?? ""} onChange={(e) => setFormData({ ...formData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    <input type="tel" value={formData.telefone ?? ""} onChange={(e) => setFormData({ ...formData, telefone: formatPhoneInput(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
@@ -3051,12 +4677,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   )}
                 </div>
               </div>
-              
+
               {/* Seção: Endereço */}
               <div className="border-b pb-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: formatCepInput(e.target.value) })} onBlur={() => { void buscarEnderecoPorCEP(formData.cep ?? ""); }} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="0" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                   <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Endereço" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Apto, sala..." className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
@@ -3065,20 +4691,20 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="UF" maxLength={2} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] uppercase" /></div>
                 </div>
               </div>
-              
+
               {/* Seção: Oportunidade */}
               <div className="border-b pb-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Oportunidade</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
-                    <select 
-                      value={formData.productId || formData.produto || ""} 
+                    <select
+                      value={formData.productId || formData.produto || ""}
                       onChange={(e) => {
                         const productId = e.target.value;
                         const product = catalogProductOptions.find(p => p.id === productId);
-                        setFormData({ 
-                          ...formData, 
+                        setFormData({
+                          ...formData,
                           produto: product?.name || "",
                           productId: productId,
                           productCode: product?.code || "",
@@ -3089,25 +4715,23 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                         setSelectedProductId(productId);
                         setSelectedSubproductId("");
                         setSelectedModality("");
-                      }} 
+                      }}
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
                     >
                       <option value="">Selecione</option>
                       {catalogProductOptions.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      {/* Fallback para produtos legados */}
-                      {safeProdutos.filter(sp => !catalogProductOptions.find(cp => cp.name === sp.nome)).map((p) => <option key={`legacy-${p.id}`} value={p.nome}>{p.nome}</option>)}
                     </select>
                   </div>
                   {/* Subproduto */}
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Subproduto</label>
-                    <select 
-                      value={formData.subproductId || ""} 
+                    <select
+                      value={formData.subproductId || ""}
                       onChange={(e) => {
                         const subproductId = e.target.value;
                         const subproduct = catalogSubproducts.find(s => s.id === subproductId);
-                        setFormData({ 
-                          ...formData, 
+                        setFormData({
+                          ...formData,
                           subproductId: subproductId,
                           subproductCode: subproduct?.code || "",
                           modality: ""
@@ -3125,28 +4749,30 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   {/* Modalidade */}
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Modalidade</label>
-                    <select 
-                      value={formData.modality || ""} 
+                    <select
+                      value={selectedModality || ""}
                       onChange={(e) => {
-                        setFormData({ 
-                          ...formData, 
-                          modality: e.target.value
+                        const modalityId = e.target.value;
+                        const modality = catalogModalities.find((m) => m.id === modalityId);
+                        setFormData({
+                          ...formData,
+                          modality: modality?.code || modality?.name || ""
                         });
-                        setSelectedModality(e.target.value);
+                        setSelectedModality(modalityId);
                       }}
                       disabled={!formData.subproductId}
                       className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:opacity-50"
                     >
                       <option value="">Selecione</option>
                       {catalogModalities.map((m) => (
-                        <option key={m} value={m}>{getModalityLabel(m)}</option>
+                        <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
-                    <select value={formData.etapa_id ?? "novo_lead"} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      {OFICIAL_ETAPAS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
+                    <select value={formData.etapa_id ?? String(etapasNovaOportunidade[0]?.id || "")} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
+                      {etapasNovaOportunidade.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
                     </select>
                   </div>
                   <div>
@@ -3166,7 +4792,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </div>
                 </div>
               </div>
-              
+
               {/* Seção: Dados Bancários */}
               <div className="border-b pb-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
@@ -3176,22 +4802,22 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="00000-0" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Corrente</option><option value="poupanca">Poupança</option></select></div>
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Nome do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Doc. Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF/CNPJ" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Doc. Titular</label><input type="text" value={(formData.documentoTitular ?? "").replace(/\D/g, "").length === 11 ? formatCPFInput(formData.documentoTitular ?? "") : (formData.documentoTitular ?? "")} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value.replace(/\D/g, "") })} placeholder="CPF/CNPJ" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                   <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Aleatória</option></select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label><input type="text" value={formData.pixTipo === "cpf" || formData.pixTipo === "CPF" ? formatCPFInput(formData.pixChave ?? "") : (formData.pixChave ?? "")} onChange={(e) => setFormData({ ...formData, pixChave: formData.pixTipo === "cpf" || formData.pixTipo === "CPF" ? e.target.value.replace(/\D/g, "") : e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
                 </div>
               </div>
-              
+
               {/* Seção: Hierarquia */}
               <div className="border-b pb-3">
                 <h3 className="text-sm font-semibold text-slate-200 mb-3">Hierarquia Comercial</h3>
                 <div className="grid grid-cols-3 gap-3">
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Company</label><select value={selectedRacionalCompany ?? ""} onChange={(e) => handleRacionalCompanyChange(e.target.value ? Number(e.target.value) : null)} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option>{racionalCompanies.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franquia</label><select value={selectedFranquia ?? ""} onChange={(e) => handleFranquiaChange(e.target.value ? Number(e.target.value) : null)} disabled={!selectedRacionalCompany} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franquias.filter(f => f.racionalCompany_id === selectedRacionalCompany).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franqueado</label><select value={selectedFranqueado ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setSelectedFranqueado(v); setFormData({ ...formData, franqueado_id: v }); }} disabled={!selectedFranquia} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franqueados.filter(f => f.franquia_id === selectedFranquia).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Company</label><select value={selectedRacionalCompany ?? ""} onChange={(e) => handleRacionalCompanyChange(e.target.value || null)} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option>{racionalCompanies.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franquia</label><select value={selectedFranquia ?? ""} onChange={(e) => handleFranquiaChange(e.target.value || null)} disabled={!selectedRacionalCompany} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franquias.filter(f => f.racionalCompany_id === selectedRacionalCompany).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
+                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Franqueado</label><select value={selectedFranqueado ?? ""} onChange={(e) => { const v = e.target.value || null; setSelectedFranqueado(v); setFormData({ ...formData, franqueado_id: v }); }} disabled={!selectedFranquia} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] disabled:bg-gray-100"><option value="">Selecione</option>{franqueados.filter(f => f.franquia_id === selectedFranquia).map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></div>
                 </div>
               </div>
-              
+
               {/* SEÇÃO ONBOARDING PARCEIROS COMERCIAIS */}
               {isParceiro && (
                 <div className="border-b pb-3 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-lg">
@@ -3201,9 +4827,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-purple-700 mb-1">Tipo de Parceiro *</label>
-                      <select 
-                        value={formData.parceiroTipo ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, parceiroTipo: e.target.value })} 
+                      <select
+                        value={formData.parceiroTipo ?? ""}
+                        onChange={(e) => setFormData({ ...formData, parceiroTipo: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       >
                         <option value="">Selecione o tipo</option>
@@ -3214,89 +4840,89 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-purple-700 mb-1">Razão Social / Nome Fantasia</label>
-                      <input 
-                        type="text" 
-                        value={formData.razaoSocial ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })} 
-                        placeholder="Razão social ou nome fantasia" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.razaoSocial ?? ""}
+                        onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })}
+                        placeholder="Razão social ou nome fantasia"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-purple-700 mb-1">CNPJ</label>
-                      <input 
-                        type="text" 
-                        value={formData.cnpj ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })} 
-                        placeholder="00.000.000/0000-00" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.cnpj ?? ""}
+                        onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                        placeholder="00.000.000/0000-00"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-purple-700 mb-1">Telefone Comercial</label>
-                      <input 
-                        type="tel" 
-                        value={formData.telefoneComercial ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, telefoneComercial: e.target.value })} 
-                        placeholder="(00) 0000-0000" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="tel"
+                        value={formData.telefoneComercial ?? ""}
+                        onChange={(e) => setFormData({ ...formData, telefoneComercial: e.target.value })}
+                        placeholder="(00) 0000-0000"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-purple-700 mb-1">E-mail Corporativo</label>
-                      <input 
-                        type="email" 
-                        value={formData.emailCorporativo ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, emailCorporativo: e.target.value })} 
-                        placeholder="contato@empresa.com.br" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="email"
+                        value={formData.emailCorporativo ?? ""}
+                        onChange={(e) => setFormData({ ...formData, emailCorporativo: e.target.value })}
+                        placeholder="contato@empresa.com.br"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-purple-700 mb-1">Nome do Responsável Legal</label>
-                      <input 
-                        type="text" 
-                        value={formData.responsavelLegal ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, responsavelLegal: e.target.value })} 
-                        placeholder="Nome completo do responsável" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.responsavelLegal ?? ""}
+                        onChange={(e) => setFormData({ ...formData, responsavelLegal: e.target.value })}
+                        placeholder="Nome completo do responsável"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-purple-700 mb-1">CPF Responsável</label>
-                      <input 
-                        type="text" 
-                        value={formData.cpfResponsavel ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, cpfResponsavel: e.target.value })} 
-                        placeholder="000.000.000-00" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.cpfResponsavel ?? ""}
+                        onChange={(e) => setFormData({ ...formData, cpfResponsavel: e.target.value })}
+                        placeholder="000.000.000-00"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-purple-700 mb-1">Cargo no Cliente</label>
-                      <input 
-                        type="text" 
-                        value={formData.cargoResponsavel ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, cargoResponsavel: e.target.value })} 
-                        placeholder="Ex: Diretor, Sócio, Gerente" 
-                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.cargoResponsavel ?? ""}
+                        onChange={(e) => setFormData({ ...formData, cargoResponsavel: e.target.value })}
+                        placeholder="Ex: Diretor, Sócio, Gerente"
+                        className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]"
                       />
                     </div>
                   </div>
-                  
+
                   {/* Documentos Obrigatórios Checklist */}
                   <div className="mt-4 p-3 bg-[#111827] rounded-lg border border-purple-200">
                     <h4 className="text-xs font-semibold text-purple-800 mb-2">Documentos Obrigatórios</h4>
                     <div className="space-y-2">
                       {documentosObrigatorios.map((doc: string) => (
                         <label key={doc} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={formData.documentosEnviados?.includes(doc) || false}
                             onChange={(e) => {
                               const docs = formData.documentosEnviados || [];
-                              const newDocs = e.target.checked 
-                                ? [...docs, doc] 
+                              const newDocs = e.target.checked
+                                ? [...docs, doc]
                                 : docs.filter((d: string) => d !== doc);
                               setFormData({ ...formData, documentosEnviados: newDocs });
                             }}
@@ -3309,7 +4935,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </div>
                 </div>
               )}
-              
+
               {/* SEÇÃO ONBOARDING COLABORADOR FINQZ */}
               {isColaborador && (
                 <div className="border-b pb-3 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
@@ -3319,9 +4945,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-green-700 mb-1">Tipo de Vínculo *</label>
-                      <select 
-                        value={formData.vinculoTipo ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, vinculoTipo: e.target.value })} 
+                      <select
+                        value={formData.vinculoTipo ?? ""}
+                        onChange={(e) => setFormData({ ...formData, vinculoTipo: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"
                       >
                         <option value="">Selecione o tipo</option>
@@ -3333,19 +4959,19 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-green-700 mb-1">Cargo / Função *</label>
-                      <input 
-                        type="text" 
-                        value={formData.cargo ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, cargo: e.target.value })} 
-                        placeholder="Ex: Consultor Financeiro, Analista de Crédito" 
-                        className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.cargo ?? ""}
+                        onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
+                        placeholder="Ex: Consultor Financeiro, Analista de Crédito"
+                        className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-green-700 mb-1">Departamento</label>
-                      <select 
-                        value={formData.departamento ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, departamento: e.target.value })} 
+                      <select
+                        value={formData.departamento ?? ""}
+                        onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"
                       >
                         <option value="">Selecione</option>
@@ -3361,19 +4987,19 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-green-700 mb-1">Salário Proposto</label>
-                      <input 
-                        type="text" 
-                        value={formData.salario ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, salario: e.target.value })} 
-                        placeholder="R$ 0,00" 
-                        className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" 
+                      <input
+                        type="text"
+                        value={formData.salario ?? ""}
+                        onChange={(e) => setFormData({ ...formData, salario: e.target.value })}
+                        placeholder="R$ 0,00"
+                        className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-green-700 mb-1">Formação Acadêmica</label>
-                      <select 
-                        value={formData.formacao ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, formacao: e.target.value })} 
+                      <select
+                        value={formData.formacao ?? ""}
+                        onChange={(e) => setFormData({ ...formData, formacao: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"
                       >
                         <option value="">Selecione</option>
@@ -3388,12 +5014,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                     </div>
                     <div className="col-span-2">
                       <label className="block text-xs font-medium text-green-700 mb-1">Experiência Profissional</label>
-                      <textarea 
-                        value={formData.experienciaProfissional ?? ""} 
-                        onChange={(e) => setFormData({ ...formData, experienciaProfissional: e.target.value })} 
-                        placeholder="Descreva suas experiências profissionais anteriores..." 
+                      <textarea
+                        value={formData.experienciaProfissional ?? ""}
+                        onChange={(e) => setFormData({ ...formData, experienciaProfissional: e.target.value })}
+                        placeholder="Descreva suas experiências profissionais anteriores..."
                         rows={3}
-                        className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" 
+                        className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"
                       />
                     </div>
                     <div className="col-span-2">
@@ -3401,13 +5027,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       <div className="flex flex-wrap gap-2">
                         {['Manhã', 'Tarde', 'Noite', 'Sabado', 'Domingo'].map((disp) => (
                           <label key={disp} className="flex items-center gap-1 text-xs text-slate-300 cursor-pointer">
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               checked={formData.disponibilidade?.includes(disp) || false}
                               onChange={(e) => {
                                 const disps = formData.disponibilidade || [];
-                                const newDisps = e.target.checked 
-                                  ? [...disps, disp] 
+                                const newDisps = e.target.checked
+                                  ? [...disps, disp]
                                   : disps.filter((d: string) => d !== disp);
                                 setFormData({ ...formData, disponibilidade: newDisps });
                               }}
@@ -3419,20 +5045,20 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Documentos Obrigatórios Checklist */}
                   <div className="mt-4 p-3 bg-[#111827] rounded-lg border border-green-200">
                     <h4 className="text-xs font-semibold text-green-800 mb-2">Documentos Obrigatórios</h4>
                     <div className="space-y-2">
                       {documentosObrigatorios.map((doc: string) => (
                         <label key={doc} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             checked={formData.documentosEnviados?.includes(doc) || false}
                             onChange={(e) => {
                               const docs = formData.documentosEnviados || [];
-                              const newDocs = e.target.checked 
-                                ? [...docs, doc] 
+                              const newDocs = e.target.checked
+                                ? [...docs, doc]
                                 : docs.filter((d: string) => d !== doc);
                               setFormData({ ...formData, documentosEnviados: newDocs });
                             }}
@@ -3445,14 +5071,14 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </div>
                 </div>
               )}
-              
+
               {/* SEÇÃO ASSINATURA DIGITAL */}
               {requerAssinaturaDigital && (
                 <div className="border-b pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg">
                   <h3 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
                     <FileCheck size={16} /> Assinatura Digital
                   </h3>
-                  
+
                   {/* Status do envelope */}
                   {envelopeStatus && (
                     <div className="mb-4 p-3 bg-[#111827] rounded-lg border border-blue-200">
@@ -3469,16 +5095,16 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                         </div>
                       </div>
                       {envelopeStatus.urlAssinatura && (
-                        <a 
-                          href={envelopeStatus.urlAssinatura} 
-                          target="_blank" 
+                        <a
+                          href={envelopeStatus.urlAssinatura}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="mt-2 block text-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
                         >
                           📝 Acessar Assinatura
                         </a>
                       )}
-                      
+
                       {/* Botão para confirmar assinatura concluída */}
                       {envelopeStatus.status === 'enviado' && (
                         <button
@@ -3492,7 +5118,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       )}
                     </div>
                   )}
-                  
+
                   {/* Seleção de provedor */}
                   <div className="mb-3">
                     <label className="block text-xs font-medium text-blue-700 mb-2">Selecione o Provedor</label>
@@ -3503,8 +5129,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                           type="button"
                           onClick={() => setSelectedProvider(prov.id as ProvedorAssinatura)}
                           className={`p-2 rounded-lg border text-center transition-all ${
-                            selectedProvider === prov.id 
-                              ? 'border-blue-500 bg-blue-900/20 text-blue-800' 
+                            selectedProvider === prov.id
+                              ? 'border-blue-500 bg-blue-900/20 text-blue-800'
                               : 'border-[#1f2937] bg-[#111827] text-slate-600 hover:bg-gray-50'
                           }`}
                         >
@@ -3514,7 +5140,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Botão de iniciar assinatura */}
                   <button
                     type="button"
@@ -3538,7 +5164,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       </>
                     )}
                   </button>
-                  
+
                   {!formData.email && (
                     <p className="text-xs text-amber-600 mt-2 text-center">
                       Cadastre um e-mail para enviar a solicitação de assinatura
@@ -3546,7 +5172,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   )}
                 </div>
               )}
-              
+
               {/* Motivo Pendência */}
               {formData.etapa_id === "pendencia" && (
                 <div className="bg-red-900/20 p-3 rounded-lg border border-red-200">
@@ -3557,7 +5183,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </select>
                 </div>
               )}
-              
+
               {/* Tags */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags</label>
@@ -3614,10 +5240,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </div>
                 </div>
               </div>
-              
+
               {/* Actions */}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModal(false); setEditingOportunidade(null); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button type="button" onClick={closeNewOpportunityModal} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors">Cancelar</button>
                 <button type="submit" className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors">Salvar</button>
               </div>
             </form>
@@ -3637,9 +5263,9 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
             <div className="p-5 border-b flex items-center justify-between">
               <div>
                 <span className="text-xs font-medium text-slate-500">OPORTUNIDADE</span>
-                <h2 className="text-lg font-semibold">#{selectedWorkspaceLead?.displayId ?? selectedWorkspaceLead?.id ?? '-'}</h2>
+                <h2 className="text-lg font-semibold">#{getVisualOpportunityId(selectedLead)}</h2>
               </div>
-              <button 
+              <button
                 onClick={() => setOpenLeadDrawer(false)}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
@@ -3653,7 +5279,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                 <span className="text-xs text-slate-500">Cliente</span>
                 <p className="font-medium text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem nome'}</p>
               </div>
-              
+
               {/* Produto */}
               {(selectedLead?.produto || selectedLead?.produto_id) && (
                 <div>
@@ -3663,7 +5289,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </p>
                 </div>
               )}
-              
+
               {/* Responsável */}
               <div>
                 <span className="text-xs text-slate-500">Responsável</span>
@@ -3672,7 +5298,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   {selectedLead?.responsavel_nome || 'Sem responsável'}
                 </p>
               </div>
-              
+
               {/* Valor */}
               <div>
                 <span className="text-xs text-slate-500">Valor</span>
@@ -3784,7 +5410,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
               {/* Ações Rápidas */}
               <div className="pt-4 border-t space-y-3">
                 <span className="text-xs text-slate-500">Ações Rápidas</span>
-                
+
                 {/* Botão Editar - apenas para quem tem permissão */}
                 {canEditOportunidade(selectedLead) && (
                   <button
@@ -3795,7 +5421,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                     Editar Oportunidade
                   </button>
                 )}
-                
+
                 <div className="flex gap-2">
                   {selectedLead?.telefone && (
                     <>
@@ -3830,7 +5456,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                     </a>
                   )}
                 </div>
-                
+
                 {/* Botão Abrir Negociação */}
                 <button
                   onClick={(e) => {
@@ -3849,304 +5475,6 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         </div>
       )}
 
-      {/* Modal de Edição a partir do Drawer - Formulário completo igual ao criar */}
-      {showEditDrawerModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowEditDrawerModal(false)}
-          />
-          
-          <div className="relative w-full max-w-2xl mx-4 rounded-xl shadow-2xl bg-[#111827] border border-[#1f2937] max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-[#1f2937] flex-shrink-0">
-              <h2 className="text-lg font-semibold text-white">
-                {editingOportunidade ? 'Editar Oportunidade' : 'Nova Oportunidade'}
-              </h2>
-              <button
-                onClick={() => setShowEditDrawerModal(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 text-slate-500 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-4 space-y-4 overflow-y-auto flex-1">
-              {/* Seção: Dados do Cliente */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
-                    <input type="text" value={editDrawerData.nome ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
-                    <select value={editDrawerData.tipoPessoa ?? "CPF"} onChange={(e) => setEditDrawerData({ ...editDrawerData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="CPF">Pessoa Física</option>
-                      <option value="CNPJ">Pessoa Jurídica</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">{editDrawerData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
-                    <input type="text" value={editDrawerData.tipoPessoa === "CPF" ? formatCPFInput(editDrawerData.cpf_cnpj ?? "") : formatCNPJInput(editDrawerData.cpf_cnpj ?? "")} onChange={(e) => setEditDrawerData({ ...editDrawerData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={editDrawerData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
-                    <input type="tel" value={editDrawerData.celular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
-                    <input type="tel" value={editDrawerData.telefone ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
-                    <input type="email" value={editDrawerData.email ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  {editDrawerData.tipoPessoa === "CPF" ? (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
-                      <input type="date" value={editDrawerData.data_nascimento ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
-                      <input type="date" value={editDrawerData.data_abertura ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Profissão</label>
-                    <input type="text" value={editDrawerData.profissao ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, profissao: e.target.value })} placeholder="Profissão" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Estado Civil</label>
-                    <select value={editDrawerData.estado_civil ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, estado_civil: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione</option>
-                      <option value="solteiro">Solteiro(a)</option>
-                      <option value="casado">Casado(a)</option>
-                      <option value="divorciado">Divorciado(a)</option>
-                      <option value="viuvo">Viúvo(a)</option>
-                      <option value="uniao">União Estável</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Endereço */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">CEP</label>
-                    <input type="text" value={editDrawerData.cep ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
-                    <select value={editDrawerData.estado ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, estado: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione</option>
-                      <option value="AC">Acre</option>
-                      <option value="AL">Alagoas</option>
-                      <option value="AP">Amapá</option>
-                      <option value="AM">Amazonas</option>
-                      <option value="BA">Bahia</option>
-                      <option value="CE">Ceará</option>
-                      <option value="DF">Distrito Federal</option>
-                      <option value="ES">Espírito Santo</option>
-                      <option value="GO">Goiás</option>
-                      <option value="MA">Maranhão</option>
-                      <option value="MT">Mato Grosso</option>
-                      <option value="MS">Mato Grosso do Sul</option>
-                      <option value="MG">Minas Gerais</option>
-                      <option value="PA">Pará</option>
-                      <option value="PB">Paraíba</option>
-                      <option value="PR">Paraná</option>
-                      <option value="PE">Pernambuco</option>
-                      <option value="PI">Piauí</option>
-                      <option value="RJ">Rio de Janeiro</option>
-                      <option value="RN">Rio Grande do Norte</option>
-                      <option value="RS">Rio Grande do Sul</option>
-                      <option value="RO">Rondônia</option>
-                      <option value="RR">Roraima</option>
-                      <option value="SC">Santa Catarina</option>
-                      <option value="SP">São Paulo</option>
-                      <option value="SE">Sergipe</option>
-                      <option value="TO">Tocantins</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label>
-                    <input type="text" value={editDrawerData.cidade ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Endereço</label>
-                    <input type="text" value={editDrawerData.rua ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, rua: e.target.value })} placeholder="Rua, Avenida, etc." className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Número</label>
-                    <input type="text" value={editDrawerData.numero ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, numero: e.target.value })} placeholder="Número" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label>
-                    <input type="text" value={editDrawerData.complemento ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label>
-                    <input type="text" value={editDrawerData.bairro ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Dados da Oportunidade */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados da Oportunidade</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
-                    <select value={editDrawerData.produto ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, produto: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione um produto</option>
-                      {safeProdutos.map((produto) => (
-                        <option key={produto.id} value={produto.nome}>
-                          {produto.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
-                    <select value={editDrawerData.etapa_id && OFICIAL_ETAPAS.some(e => e.key === editDrawerData.etapa_id) ? editDrawerData.etapa_id : "novo_lead"} onChange={(e) => setEditDrawerData({ ...editDrawerData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      {OFICIAL_ETAPAS.map((etapa) => (
-                        <option key={etapa.key} value={etapa.key}>
-                          {etapa.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$)</label>
-                    <input type="number" value={editDrawerData.valor ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, valor: parseFloat(e.target.value) || 0 })} placeholder="0,00" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Responsável</label>
-                    <select value={editDrawerData.responsavel_id ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, responsavel_id: e.target.value ? Number(e.target.value) : null })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione um responsável</option>
-                      {availableResponsibles.map((usuario: any) => (
-                        <option key={usuario.id} value={usuario.id}>
-                          {usuario.nome} {usuario.perfil ? `(${usuario.perfil})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
-                    <textarea value={editDrawerData.observacoes ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, observacoes: e.target.value })} placeholder="Observações..." rows={3} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827] resize-none" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Seção: Dados Bancários */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Banco</label>
-                    <input type="text" value={editDrawerData.banco ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Agência</label>
-                    <input type="text" value={editDrawerData.agencia ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Conta</label>
-                    <input type="text" value={editDrawerData.conta ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Conta</label>
-                    <select value={editDrawerData.tipoConta ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione</option>
-                      <option value="corrente">Conta Corrente</option>
-                      <option value="poupanca">Poupança</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome do Titular</label>
-                    <input type="text" value={editDrawerData.titular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Doc. do Titular</label>
-                    <input type="text" value={editDrawerData.documentoTitular ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo de Chave PIX</label>
-                    <select value={editDrawerData.pixTipo ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione</option>
-                      <option value="cpf">CPF</option>
-                      <option value="cnpj">CNPJ</option>
-                      <option value="email">E-mail</option>
-                      <option value="telefone">Telefone</option>
-                      <option value="aleatoria">Chave Aleatória</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label>
-                    <input type="text" value={editDrawerData.pixChave ?? ""} onChange={(e) => setEditDrawerData({ ...editDrawerData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Tags */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {listarTags().map((tag) => (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => {
-                        const newTags = editDrawerData.tags?.includes(tag.id)
-                          ? editDrawerData.tags.filter((t: string) => t !== tag.id)
-                          : [...(editDrawerData.tags || []), tag.id];
-                        setEditDrawerData({ ...editDrawerData, tags: newTags });
-                      }}
-                      className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                        editDrawerData.tags?.includes(tag.id)
-                          ? "text-white"
-                          : "bg-gray-100 text-slate-600"
-                      }`}
-                      style={editDrawerData.tags?.includes(tag.id) ? { backgroundColor: tag.cor } : {}}
-                    >
-                      {tag.nome}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Botões */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowEditDrawerModal(false)}
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (editingOportunidade) {
-                      handleSaveEditFromDrawer();
-                    } else {
-                      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-                    }
-                  }}
-                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-[#000dff] text-white hover:bg-[#000dff]/90 transition-colors"
-                >
-                  Salvar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal Fullscreen de Detalhes da Negociação */}
       {showFullscreenModal && selectedLead && (
         <OverlayPortal>
@@ -4157,7 +5485,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                 <div className="flex items-center gap-4">
                   <button onClick={handleCloseNegotiation} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
                   <span className="text-slate-300">|</span>
-                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedWorkspaceLead?.displayId ?? selectedWorkspaceLead?.id ?? '---'}</h1></div>
+                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{getVisualOpportunityId(selectedLead)}</h1></div>
                 </div>
               </div>
               <div className="flex items-center gap-6 flex-wrap">
@@ -4206,10 +5534,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       {activeTab === 'anotacoes' && (
                         <div className="space-y-4">
                           <div className="flex justify-between"><h4 className="font-semibold">Anotações</h4><button className="px-3 py-1.5 bg-[#000dff] text-white text-sm rounded-lg"><Plus size={14} />Adicionar</button></div>
-                          <textarea 
-                            placeholder="Digite uma anotação..." 
-                            className="w-full p-2 border rounded-lg text-sm" 
-                            rows={3} 
+                          <textarea
+                            placeholder="Digite uma anotação..."
+                            className="w-full p-2 border rounded-lg text-sm"
+                            rows={3}
                             defaultValue={selectedLead?.observacoes || ''}
                           />
                           <div className="flex justify-end"><button className="px-3 py-1.5 bg-[#000dff] text-white text-sm rounded-lg"><Send size={14} />Salvar</button></div>
@@ -4232,7 +5560,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       {activeTab === 'simulador' && (
                         <div className="space-y-4">
                           <h4 className="font-semibold">Simulador Financeiro</h4>
-                          
+
                           {/* Produto atual */}
                           <div className="p-3 bg-gray-50 rounded-lg border">
                             <span className="text-xs text-slate-500 uppercase font-medium">Produto da Oportunidade</span>
@@ -4241,7 +5569,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
                           {/* Layout em 2 colunas: Entrada e Resultado */}
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            
+
                             {/* Coluna Esquerda - Entrada */}
                             <div className="space-y-4">
                               <div className="flex items-center gap-2 pb-2 border-b">
@@ -4252,7 +5580,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                               {/* Tipo de Simulação */}
                               <div>
                                 <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Simulação</label>
-                                <select 
+                                <select
                                   className="w-full p-2.5 border rounded-lg text-sm bg-[#111827]"
                                   value={tipoSimulacao}
                                   onChange={(e) => { setTipoSimulacao(e.target.value); setSimulacaoCalculada(false); }}
@@ -4289,7 +5617,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         <input type="number" placeholder="0,00" className="w-full pl-9 p-2.5 border rounded-lg text-sm" value={simuladorCampos.valorVeiculo || ''} onChange={(e) => setSimuladorCampos({...simuladorCampos, valorVeiculo: parseFloat(e.target.value) || 0})} />
                                       </div>
                                     </div>
-                                    
+
                                     {/* Veículo quitado - Toggle */}
                                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                                       <span className="text-sm font-medium text-slate-300">Veículo quitado?</span>
@@ -4301,7 +5629,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         <span className={`inline-block h-4 w-4 transform rounded-full bg-[#111827] transition-transform ${simuladorCampos.veiculoQuitado ? 'translate-x-6' : 'translate-x-1'}`} />
                                       </button>
                                     </div>
-                                    
+
                                     {/* Saldo devedor - apenas se não estiver quitado */}
                                     {!simuladorCampos.veiculoQuitado && (
                                       <div>
@@ -4312,7 +5640,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         </div>
                                       </div>
                                     )}
-                                    
+
                                     <div>
                                       <label className="block text-sm font-medium text-slate-300 mb-1">Percentual Financiável (%)</label>
                                       <div className="relative">
@@ -4351,7 +5679,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                       <label className="block text-sm font-medium text-slate-300 mb-1">Subproduto *</label>
                                       <div className="relative">
                                         <Package size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <select 
+                                        <select
                                           className="w-full pl-9 p-2.5 border rounded-lg text-sm bg-[#111827]"
                                           value={subprodutoConsignado}
                                           onChange={(e) => setSubprodutoConsignado(e.target.value)}
@@ -4483,7 +5811,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                               </div>
 
                               {/* Botão Calcular */}
-                              <button 
+                              <button
                                 onClick={() => { setSimulacaoLoading(true); setTimeout(() => { setSimulacaoLoading(false); calcularSimulacao(); }, 800); }}
                                 disabled={!tipoSimulacao}
                                 className="w-full px-4 py-2.5 bg-[#000dff] text-white text-sm rounded-lg font-medium hover:bg-[#000dff]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -4619,13 +5947,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         <Calculator size={18} className="text-indigo-600" />
                                         <span className="font-medium text-slate-300">Margens Consignáveis</span>
                                       </div>
-                                      
+
                                       {/* Subproduto selecionado */}
                                       <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
                                         <span className="text-xs text-indigo-600 uppercase font-medium">Subproduto</span>
                                         <p className="font-semibold text-indigo-900">{SUBPRODUTOS_CONSIGNADO.find(s => s.key === resultadoConsignado.subproduto)?.label || resultadoConsignado.subproduto}</p>
                                       </div>
-                                      
+
                                       {/* Grid de margens */}
                                       <div className="grid grid-cols-2 gap-3">
                                         <div className="p-3 bg-blue-900/20 border border-blue-200 rounded-lg">
@@ -4645,7 +5973,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                           <p className="text-lg font-bold text-emerald-700">R$ {resultadoConsignado.totalMargemConsignavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
                                       </div>
-                                      
+
                                       {/* Detalhes do resultado */}
                                       <div className="grid grid-cols-2 gap-3 mt-2">
                                         <div className="p-3 bg-gray-50 border border-[#1f2937] rounded-lg">
@@ -4679,34 +6007,34 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                   {/* Comprometimento de Renda (dinâmico) - Versão melhorada */}
                                   {tipoSimulacao !== 'fgts' && simuladorResultado?.comprometimento !== undefined && (
                                     <div className={`p-4 rounded-xl border ${
-                                      simuladorResultado.comprometimento <= 30 ? 'bg-gradient-to-br from-green-50 to-green-100/30 border-green-200' : 
-                                      simuladorResultado.comprometimento <= 50 ? 'bg-gradient-to-br from-yellow-50 to-yellow-100/30 border-yellow-200' : 
+                                      simuladorResultado.comprometimento <= 30 ? 'bg-gradient-to-br from-green-50 to-green-100/30 border-green-200' :
+                                      simuladorResultado.comprometimento <= 50 ? 'bg-gradient-to-br from-yellow-50 to-yellow-100/30 border-yellow-200' :
                                       'bg-gradient-to-br from-red-50 to-red-100/30 border-red-200'
                                     }`}>
                                       <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
                                           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            simuladorResultado.comprometimento <= 30 ? 'bg-green-900/20' : 
+                                            simuladorResultado.comprometimento <= 30 ? 'bg-green-900/20' :
                                             simuladorResultado.comprometimento <= 50 ? 'bg-yellow-900/20' : 'bg-red-900/20'
                                           }`}>
                                             <TrendingUp size={16} className={
-                                              simuladorResultado.comprometimento <= 30 ? 'text-green-600' : 
+                                              simuladorResultado.comprometimento <= 30 ? 'text-green-600' :
                                               simuladorResultado.comprometimento <= 50 ? 'text-yellow-600' : 'text-red-600'
                                             } />
                                           </div>
                                           <span className="text-sm font-medium text-slate-300">Comprometimento de Renda</span>
                                         </div>
                                         <span className={`text-2xl font-bold ${
-                                          simuladorResultado.comprometimento <= 30 ? 'text-green-600' : 
+                                          simuladorResultado.comprometimento <= 30 ? 'text-green-600' :
                                           simuladorResultado.comprometimento <= 50 ? 'text-yellow-600' : 'text-red-600'
                                         }`}>
                                           {(simuladorResultado.comprometimento || 0).toFixed(1)}%
                                         </span>
                                       </div>
                                       <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                                        <div 
+                                        <div
                                           className={`h-full rounded-full transition-all duration-500 ${
-                                            simuladorResultado.comprometimento <= 30 ? 'bg-gradient-to-r from-green-400 to-green-500' : 
+                                            simuladorResultado.comprometimento <= 30 ? 'bg-gradient-to-r from-green-400 to-green-500' :
                                             simuladorResultado.comprometimento <= 50 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' : 'bg-gradient-to-r from-red-400 to-red-500'
                                           }`}
                                           style={{ width: `${Math.min(simuladorResultado.comprometimento || 0, 100)}%` }}
@@ -4718,10 +6046,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         <span className="text-red-600 font-medium">50%+</span>
                                       </div>
                                       <p className={`text-xs mt-2 font-medium ${
-                                        simuladorResultado.comprometimento <= 30 ? 'text-green-700' : 
+                                        simuladorResultado.comprometimento <= 30 ? 'text-green-700' :
                                         simuladorResultado.comprometimento <= 50 ? 'text-yellow-700' : 'text-red-700'
                                       }`}>
-                                        {simuladorResultado.comprometimento <= 30 ? '✓ Saúde financeira ok - abaixo de 30%' : 
+                                        {simuladorResultado.comprometimento <= 30 ? '✓ Saúde financeira ok - abaixo de 30%' :
                                          simuladorResultado.comprometimento <= 50 ? '⚠ Atenção necessária - entre 30% e 50%' : '✗ Risco elevado - acima de 50%'}
                                       </p>
                                     </div>
@@ -4782,7 +6110,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                   {/* Botões de Aceite/Recusa */}
                                   {simulacaoCalculada && simuladorResultado && simuladorResultado.status !== 'inviavel' && (
                                     <div className="flex gap-2 pt-2">
-                                      <button 
+                                      <button
                                         onClick={aceitarSimulacao}
                                         disabled={simulationStatus === 'aceita'}
                                         className="flex-1 px-3 py-2.5 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -4790,7 +6118,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         <CheckCircle size={14} className="inline mr-1" />
                                         Aceitar simulação
                                       </button>
-                                      <button 
+                                      <button
                                         onClick={recusarSimulacao}
                                         disabled={simulationStatus === 'recusada'}
                                         className="flex-1 px-3 py-2.5 bg-red-900/20 text-red-700 text-sm rounded-lg font-medium hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -4808,25 +6136,23 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                         <CheckCircle size={18} />
                                         Simulação aceita! Escolha a próxima fase:
                                       </div>
-                                      <select 
+                                      <select
                                         value={novaFaseAposAceite}
                                         onChange={(e) => setNovaFaseAposAceite(e.target.value)}
                                         className="w-full p-2.5 border border-green-300 rounded-lg text-sm bg-[#111827]"
                                       >
-                                        <option value="novo_lead">Novo Lead</option>
-                                        <option value="negociacao">Negociação</option>
-                                        <option value="aguardando_assinatura">Aguardando Assinatura</option>
-                                        <option value="pendencia">Pendência</option>
-                                        <option value="formalizacao">Formalização</option>
-                                        <option value="integrado">Integrado</option>
-                                        <option value="perdido">Perdido</option>
+                                        {etapasPosSimulacao.map((etapa) => (
+                                          <option key={etapa.id} value={etapa.id}>
+                                            {etapa.nome}
+                                          </option>
+                                        ))}
                                       </select>
-                                      <button 
+                                      <button
                                         onClick={confirmarMudancaFase}
                                         className="w-full px-3 py-2.5 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700 flex items-center justify-center gap-2"
                                       >
                                         <ArrowRight size={14} className="inline mr-1" />
-                                        Confirmar e mover para {OFICIAL_ETAPAS.find(e => e.key === novaFaseAposAceite)?.label}
+                                        Confirmar e mover para {fasePosAceiteSelecionada?.nome ?? "Etapa"}
                                       </button>
                                     </div>
                                   )}
@@ -4838,7 +6164,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                                     </button>
                                   </div>
                                   <div className="flex gap-2">
-                                    <button className="flex-1 px-3 py-2 bg-gray-100 text-slate-300 text-sm rounded-lg font-medium hover:bg-gray-200">
+                                    <button
+                                      type="button"
+                                      disabled
+                                      onClick={() =>
+                                        alert("Persistência oficial de simulação será implementada na fase OpportunitySimulation.")
+                                      }
+                                      className="flex-1 px-3 py-2 bg-gray-100 text-slate-300 text-sm rounded-lg font-medium cursor-not-allowed opacity-80"
+                                      title="Persistência oficial de simulação será implementada na fase OpportunitySimulation."
+                                    >
                                       <Save size={14} className="inline mr-1" />Salvar simulação
                                     </button>
                                     <button className="flex-1 px-3 py-2 bg-green-600 text-white text-sm rounded-lg font-medium hover:bg-green-700">
@@ -4877,7 +6211,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                       {activeTab === 'anexos' && (
                         <div className="space-y-4">
                           <h4 className="font-semibold">Anexos</h4>
-                          
+
                           <input
                             type="file"
                             multiple
@@ -4885,7 +6219,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                             className="hidden"
                             id="upload-anexo"
                           />
-                          
+
                           <label
                             htmlFor="upload-anexo"
                             className="inline-flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl cursor-pointer hover:bg-blue-700"
@@ -4940,7 +6274,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                   </div>
                 </div>
                 <div className="lg:col-span-1 space-y-4">
-                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><User size={16} className="text-[#000dff]" />Ações rápidas</h4><div className="space-y-2">{selectedLead?.telefone && (<><a href={`https://wa.me/55${String(selectedLead.telefone).replace(/\D/g, "")}`} target="_blank" className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-green-900/20 text-green-700 text-sm rounded-lg"><MessageCircle size={16} />WhatsApp</a><a href={`tel:${String(selectedLead.telefone).replace(/\D/g, "")}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-blue-900/20 text-blue-700 text-sm rounded-lg"><Phone size={16} />Ligar</a></>)}{selectedLead?.email && (<a href={`mailto:${selectedLead.email}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-purple-900/20 text-purple-700 text-sm rounded-lg"><Mail size={16} />E-mail</a>)}{canEditOportunidade(selectedLead) && (<button onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (!selectedLead) { alert("Nenhuma oportunidade selecionada para edição."); return; } handleEditClick(selectedLead); }} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-[#000dff] text-white text-sm rounded-lg"><Edit2 size={16} />Editar</button>)}</div></div>
+                  <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><User size={16} className="text-[#000dff]" />Ações rápidas</h4><div className="space-y-2">{selectedLead?.telefone && (<><a href={`https://wa.me/55${String(selectedLead.telefone).replace(/\D/g, "")}`} target="_blank" className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-green-900/20 text-green-700 text-sm rounded-lg"><MessageCircle size={16} />WhatsApp</a><a href={`tel:${String(selectedLead.telefone).replace(/\D/g, "")}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-blue-900/20 text-blue-700 text-sm rounded-lg"><Phone size={16} />Ligar</a></>)}{selectedLead?.email && (<a href={`mailto:${selectedLead.email}`} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-purple-900/20 text-purple-700 text-sm rounded-lg"><Mail size={16} />E-mail</a>)}{canEditOportunidade(selectedLead || editingOportunidade) && (<button onClick={(e) => { e.preventDefault(); e.stopPropagation(); const currentDetailOpportunity = selectedLead || editingOportunidade; if (!currentDetailOpportunity) { alert("Nenhuma oportunidade carregada para edição."); return; } openEditOpportunity(currentDetailOpportunity); }} className="flex items-center justify-center gap-2 px-3 py-2 w-full bg-[#000dff] text-white text-sm rounded-lg"><Edit2 size={16} />Editar</button>)}</div></div>
                   <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><FileText size={16} className="text-[#000dff]" />Resumo</h4><div className="space-y-3"><div><span className="text-xs text-slate-500">Valor</span><p className="font-bold text-lg text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>{selectedLead?.telefone && (<div><span className="text-xs text-slate-500">Telefone</span><p className="text-sm">{selectedLead.telefone}</p></div>)}{selectedLead?.email && (<div><span className="text-xs text-slate-500">E-mail</span><p className="text-sm">{selectedLead.email}</p></div>)}<div><span className="text-xs text-slate-500">Criação</span><p className="text-sm">{selectedLead?.createdAt ? new Date(selectedLead.createdAt).toLocaleDateString('pt-BR') : '-'}</p></div><div><span className="text-xs text-slate-500">Última</span><p className="text-sm">{selectedLead?.updatedAt ? new Date(selectedLead.updatedAt).toLocaleDateString('pt-BR') : '-'}</p></div></div></div>
                   <div className="bg-[#111827] rounded-xl border p-4"><h4 className="font-semibold mb-3 flex items-center gap-2"><Timer size={16} className="text-[#000dff]" />SLA</h4>{(() => { const d = selectedLead?.updatedAt || selectedLead?.createdAt; const dias = d ? Math.floor((new Date().getTime() - new Date(d).getTime()) / 86400000) : 0; const s = dias <= 4 ? 'Saudável' : dias <= 9 ? 'Atenção' : 'Crítico'; const c = dias <= 4 ? '#22c55e' : dias <= 9 ? '#f59e0b' : '#ef4444'; return (<div className="text-center"><p className="text-3xl font-bold" style={{color:c}}>{dias}</p><p className="text-sm text-slate-600">{dias === 0 ? 'dia' : 'dias'} sem atuação</p><div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs" style={{backgroundColor:c+'20',color:c}}><Circle size={8} fill={c} />{s}</div></div>); })()}</div>
                 </div>
@@ -4955,7 +6289,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       {showFullscreenModal && !selectedLead && (
         <OverlayPortal>
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
+          <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={handleCloseNegotiation}
           />
@@ -4979,7 +6313,37 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       )}
 
       {/* Formulário Lateral de Edição de Oportunidade */}
-      {showOpportunityForm && (
+      {showOpportunityForm && !editingOportunidade && (
+        <div className="fixed inset-0 z-[99999] bg-black/50 flex justify-end">
+          <div className="w-full max-w-2xl h-full bg-[#111827] shadow-2xl overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold">Editar Oportunidade</h2>
+              <button
+                type="button"
+                onClick={() => setShowOpportunityForm(false)}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X size={22} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                Não foi possível abrir a edição desta oportunidade com segurança.
+              </div>
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowOpportunityForm(false)}
+                  className="w-full px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showOpportunityForm && editingOportunidade && (
         <div className="fixed inset-0 z-[99999] bg-black/50 flex justify-end">
           <div className="w-full max-w-2xl h-full bg-[#111827] shadow-2xl overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b">
@@ -4998,204 +6362,117 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
 
             {/* Formulário completo - mesmo usado em Nova Oportunidade */}
             <form onSubmit={handleSubmitEdit} className="p-6 space-y-4">
-              {/* Seção: Dados do Cliente */}
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+                Dados do cliente devem ser alterados no CRM Cliente.
+              </div>
+
               <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Cliente</h3>
+                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados da Oportunidade</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Nome *</label>
-                    <input type="text" value={formData.nome ?? ""} onChange={(e) => setFormData({ ...formData, nome: e.target.value })} placeholder="Nome completo" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Título da oportunidade *</label>
+                    <input
+                      type="text"
+                      value={formData.nome ?? ""}
+                      onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                      placeholder="Título"
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Tipo</label>
-                    <select value={formData.tipoPessoa ?? "CPF"} onChange={(e) => setFormData({ ...formData, tipoPessoa: e.target.value as "CPF" | "CNPJ" })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="CPF">Pessoa Física</option>
-                      <option value="CNPJ">Pessoa Jurídica</option>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Pipeline *</label>
+                    <select
+                      value={formData.pipelineId || selectedPipelineId || ""}
+                      onChange={(e) => setFormData({ ...formData, pipelineId: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
+                      required
+                    >
+                      <option value="" disabled>Selecione um pipeline</option>
+                      {officialPipelines.map((pipeline: any) => (
+                        <option key={pipeline.id} value={pipeline.id}>
+                          {`Pipeline - ${String(pipeline?.name ?? "Pipeline")}`}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">{formData.tipoPessoa === "CPF" ? "CPF" : "CNPJ"}</label>
-                    <input type="text" value={formData.tipoPessoa === "CPF" ? formatCPFInput(formData.cpf_cnpj ?? "") : formatCNPJInput(formData.cpf_cnpj ?? "")} onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value.replace(/\D/g, "") })} placeholder={formData.tipoPessoa === "CPF" ? "000.000.000-00" : "00.000.000/0000-00"} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Celular *</label>
-                    <input type="tel" value={formData.celular ?? ""} onChange={(e) => setFormData({ ...formData, celular: formatCell(e.target.value) })} placeholder="(00) 00000-0000" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Telefone</label>
-                    <input type="tel" value={formData.telefone ?? ""} onChange={(e) => setFormData({ ...formData, telefone: formatCell(e.target.value) })} placeholder="(00) 0000-0000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
+
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">E-mail</label>
-                    <input type="email" value={formData.email ?? ""} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                  </div>
-                  {formData.tipoPessoa === "CPF" ? (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Nascimento</label>
-                      <input type="date" value={formData.data_nascimento ?? ""} onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Data Abertura</label>
-                      <input type="date" value={formData.data_abertura ?? ""} onChange={(e) => setFormData({ ...formData, data_abertura: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Seção: Endereço */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Endereço</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">CEP</label><input type="text" value={formData.cep ?? ""} onChange={(e) => setFormData({ ...formData, cep: e.target.value })} placeholder="00000-000" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Rua</label><input type="text" value={formData.rua ?? ""} onChange={(e) => setFormData({ ...formData, rua: e.target.value })} placeholder="Rua" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Número</label><input type="text" value={formData.numero ?? ""} onChange={(e) => setFormData({ ...formData, numero: e.target.value })} placeholder="Nº" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Complemento</label><input type="text" value={formData.complemento ?? ""} onChange={(e) => setFormData({ ...formData, complemento: e.target.value })} placeholder="Complemento" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Bairro</label><input type="text" value={formData.bairro ?? ""} onChange={(e) => setFormData({ ...formData, bairro: e.target.value })} placeholder="Bairro" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Cidade</label><input type="text" value={formData.cidade ?? ""} onChange={(e) => setFormData({ ...formData, cidade: e.target.value })} placeholder="Cidade" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div className="col-span-2"><label className="block text-xs font-medium text-slate-600 mb-1">Estado</label><input type="text" value={formData.estado ?? ""} onChange={(e) => setFormData({ ...formData, estado: e.target.value })} placeholder="Estado" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                </div>
-              </div>
-              
-              {/* Seção: Dados do Negócio */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados do Negócio</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Produto *</label>
-                    <select value={formData.produto ?? ""} onChange={(e) => setFormData({ ...formData, produto: e.target.value })} required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      <option value="">Selecione um produto</option>
-                      <option value="consignado">Consignado</option>
-                      <option value="personalite">Personalité</option>
-                      <option value="cartão_beneficio">Cartão Benefício</option>
-                      <option value="cartão_consignado">Cartão Consignado</option>
-                      <option value="emprestimo_pessoal">Empréstimo Pessoal</option>
-                      <option value="seguros">Seguros</option>
-                      <option value="outros">Outros</option>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa *</label>
+                    <select
+                      value={formData.etapa_id ?? "novo_lead"}
+                      onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
+                      required
+                    >
+                      {etapasNovaOportunidade.map((etapa) => (
+                        <option key={etapa.id} value={etapa.id}>
+                          {etapa.nome}
+                        </option>
+                      ))}
                     </select>
                   </div>
+
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-slate-600 mb-1">Valor (R$) *</label>
-                    <input type="number" value={formData.valor ?? 0} onChange={(e) => setFormData({ ...formData, valor: Number(e.target.value) })} placeholder="0,00" required className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    <input
+                      type="number"
+                      value={formData.valor ?? 0}
+                      onChange={(e) => setFormData({ ...formData, valor: Number(e.target.value) })}
+                      placeholder="0,00"
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
+                    />
                   </div>
+
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Etapa</label>
-                    <select value={formData.etapa_id ?? "novo_lead"} onChange={(e) => setFormData({ ...formData, etapa_id: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]">
-                      {OFICIAL_ETAPAS.map((etapa) => (
-                        <option key={etapa.key} value={etapa.key}>{etapa.label}</option>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Responsável</label>
+                    <select
+                      value={formData.responsavel_id ?? ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, responsavel_id: e.target.value ? String(e.target.value) : null })
+                      }
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
+                    >
+                      <option value="">Sem responsável</option>
+                      {safeUsuarios.map((usuario: any) => (
+                        <option key={usuario.id} value={usuario.id}>
+                          {usuario.nome}
+                        </option>
                       ))}
                     </select>
                   </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Status</label>
+                    <input
+                      type="text"
+                      value={
+                        formData.etapa_id === "integrado"
+                          ? "ganho"
+                          : formData.etapa_id === "perdido"
+                            ? "perdido"
+                            : "ativo"
+                      }
+                      disabled
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-gray-100 text-slate-500"
+                    />
+                  </div>
+
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-slate-600 mb-1">Observações</label>
-                    <textarea value={formData.observacoes ?? ""} onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })} placeholder="Observações..." rows={3} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" />
+                    <textarea
+                      value={formData.observacoes ?? ""}
+                      onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                      placeholder="Observações..."
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"
+                    />
                   </div>
                 </div>
               </div>
-              
-              {/* Seção: Dados Bancários */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">Dados Bancários</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Banco</label><input type="text" value={formData.banco ?? ""} onChange={(e) => setFormData({ ...formData, banco: e.target.value })} placeholder="Banco" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Agência</label><input type="text" value={formData.agencia ?? ""} onChange={(e) => setFormData({ ...formData, agencia: e.target.value })} placeholder="Agência" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Conta</label><input type="text" value={formData.conta ?? ""} onChange={(e) => setFormData({ ...formData, conta: e.target.value })} placeholder="Conta" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo Conta</label><select value={formData.tipoConta ?? ""} onChange={(e) => setFormData({ ...formData, tipoConta: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="corrente">Conta Corrente</option><option value="poupança">Poupança</option></select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Titular</label><input type="text" value={formData.titular ?? ""} onChange={(e) => setFormData({ ...formData, titular: e.target.value })} placeholder="Titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Doc Titular</label><input type="text" value={formData.documentoTitular ?? ""} onChange={(e) => setFormData({ ...formData, documentoTitular: e.target.value })} placeholder="CPF do titular" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                </div>
-              </div>
-              
-              {/* Seção: PIX */}
-              <div className="border-b pb-3">
-                <h3 className="text-sm font-semibold text-slate-200 mb-3">PIX</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Tipo PIX</label><select value={formData.pixTipo ?? ""} onChange={(e) => setFormData({ ...formData, pixTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]"><option value="">Selecione</option><option value="cpf">CPF</option><option value="cnpj">CNPJ</option><option value="email">E-mail</option><option value="telefone">Telefone</option><option value="aleatoria">Chave Aleatória</option></select></div>
-                  <div><label className="block text-xs font-medium text-slate-600 mb-1">Chave PIX</label><input type="text" value={formData.pixChave ?? ""} onChange={(e) => setFormData({ ...formData, pixChave: e.target.value })} placeholder="Chave PIX" className="w-full px-3 py-2 rounded-lg border border-[#1f2937] text-sm bg-[#111827]" /></div>
-                </div>
-              </div>
-              
-              {/* SEÇÃO ONBOARDING PARCEIROS COMERCIAIS (Edit Form) */}
-              {isParceiro && (
-                <div className="border-b pb-3 bg-gradient-to-r from-purple-50 to-indigo-50 p-3 rounded-lg">
-                  <h3 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
-                    <Package size={16} /> Dados do Parceiro Comercial
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-purple-700 mb-1">Tipo de Parceiro</label>
-                      <select value={formData.parceiroTipo ?? ""} onChange={(e) => setFormData({ ...formData, parceiroTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]">
-                        <option value="">Selecione</option>
-                        <option value="COMPANY">Company</option>
-                        <option value="FRANQUIA">Franquia</option>
-                        <option value="FRANQUEADO">Franqueado</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-purple-700 mb-1">Razão Social</label>
-                      <input type="text" value={formData.razaoSocial ?? ""} onChange={(e) => setFormData({ ...formData, razaoSocial: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" />
-                    </div>
-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">CNPJ</label><input type="text" value={formData.cnpj ?? ""} onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">Tel. Comercial</label><input type="text" value={formData.telefoneComercial ?? ""} onChange={(e) => setFormData({ ...formData, telefoneComercial: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
-                    <div className="col-span-2"><label className="block text-xs font-medium text-purple-700 mb-1">E-mail Corporativo</label><input type="email" value={formData.emailCorporativo ?? ""} onChange={(e) => setFormData({ ...formData, emailCorporativo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
-                    <div className="col-span-2"><label className="block text-xs font-medium text-purple-700 mb-1">Responsável Legal</label><input type="text" value={formData.responsavelLegal ?? ""} onChange={(e) => setFormData({ ...formData, responsavelLegal: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">CPF Resp.</label><input type="text" value={formData.cpfResponsavel ?? ""} onChange={(e) => setFormData({ ...formData, cpfResponsavel: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
-                    <div><label className="block text-xs font-medium text-purple-700 mb-1">Cargo</label><input type="text" value={formData.cargoResponsavel ?? ""} onChange={(e) => setFormData({ ...formData, cargoResponsavel: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-purple-300 text-sm bg-[#111827]" /></div>
-                  </div>
-                  <div className="mt-3 p-2 bg-[#111827] rounded border border-purple-200">
-                    <span className="text-xs font-semibold text-purple-800">Docs:</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {documentosObrigatorios.map((doc: string) => (
-                        <label key={doc} className="flex items-center gap-1 text-xs">
-                          <input type="checkbox" checked={formData.documentosEnviados?.includes(doc) || false} onChange={(e) => { const d = formData.documentosEnviados || []; setFormData({ ...formData, documentosEnviados: e.target.checked ? [...d, doc] : d.filter((x: string) => x !== doc) }); }} className="rounded" />
-                          <span>{doc.replace(/_/g, ' ')}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* SEÇÃO ONBOARDING COLABORADOR FINQZ (Edit Form) */}
-              {isColaborador && (
-                <div className="border-b pb-3 bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg">
-                  <h3 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
-                    <User size={16} /> Dados do Colaborador
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-green-700 mb-1">Tipo de Vínculo</label>
-                      <select value={formData.vinculoTipo ?? ""} onChange={(e) => setFormData({ ...formData, vinculoTipo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]">
-                        <option value="">Selecione</option>
-                        <option value="CLT">CLT</option>
-                        <option value="PJ">Pessoa Jurídica</option>
-                        <option value="ESTAGIO">Estágio</option>
-                      </select>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-xs font-medium text-green-700 mb-1">Cargo</label>
-                      <input type="text" value={formData.cargo ?? ""} onChange={(e) => setFormData({ ...formData, cargo: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" />
-                    </div>
-                    <div><label className="block text-xs font-medium text-green-700 mb-1">Departamento</label><select value={formData.departamento ?? ""} onChange={(e) => setFormData({ ...formData, departamento: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"><option value="">Selecione</option><option value="comercial">Comercial</option><option value="operacional">Operacional</option><option value="financeiro">Financeiro</option></select></div>
-                    <div><label className="block text-xs font-medium text-green-700 mb-1">Salário</label><input type="text" value={formData.salario ?? ""} onChange={(e) => setFormData({ ...formData, salario: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" /></div>
-                    <div className="col-span-2"><label className="block text-xs font-medium text-green-700 mb-1">Formação</label><select value={formData.formacao ?? ""} onChange={(e) => setFormData({ ...formData, formacao: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]"><option value="">Selecione</option><option value="superior">Superior</option><option value="tecnico">Técnico</option></select></div>
-                    <div className="col-span-2"><label className="block text-xs font-medium text-green-700 mb-1">Experiência</label><textarea value={formData.experienciaProfissional ?? ""} onChange={(e) => setFormData({ ...formData, experienciaProfissional: e.target.value })} rows={2} className="w-full px-3 py-2 rounded-lg border border-green-300 text-sm bg-[#111827]" /></div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Tags */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags</label>
-                <div className="flex flex-wrap gap-2">
-                  {listarTags().map((tag) => (
-                    <button key={tag.id} type="button" onClick={() => { const newTags = formData.tags?.includes(tag.id) ? formData.tags.filter((t: string) => t !== tag.id) : [...(formData.tags || []), tag.id]; setFormData({ ...formData, tags: newTags }); }} className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${formData.tags?.includes(tag.id) ? 'text-white ring-2 ring-offset-1' : 'bg-gray-100 text-slate-600 hover:bg-gray-200'}`} style={formData.tags?.includes(tag.id) ? { backgroundColor: tag.cor, ringColor: tag.cor } : {}}>
-                      {tag.nome}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
+
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => { setShowOpportunityForm(false); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-slate-300 hover:bg-gray-200 transition-colors">Cancelar</button>

@@ -18,6 +18,7 @@ export * from "../../design-system/components/EntityAvatar";
 export * from "../../design-system/components/EmptyState";
 export * from "../../design-system/components/LoadingState";
 export * from "../../design-system/components/ErrorState";
+export * from "./SegmentedControl";
 
 // Novos componentes para importação/exportação
 export * from "../../design-system/components/Dropzone";

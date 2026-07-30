@@ -18,8 +18,7 @@ import {
   Zap
 } from "lucide-react";
 import { Button } from "../../design-system/components/Button";
-import api from "../../api/client";
-import { USE_MOCKS } from "../../config/environment";
+import { apiFetch } from "../../api/http";
 
 interface SdrDecision {
   id: number;
@@ -98,14 +97,17 @@ export function SdrPanel({
         content: msg.content,
       }));
 
-      const response = await api.post("/api/sdr/analyze", {
-        message: lastMessage,
-        conversationId,
-        leadId,
-        leadNome,
-        leadCelular,
-        campaignName,
-        history: conversationHistory,
+      const response = await apiFetch("/api/sdr/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+          message: lastMessage,
+          conversationId,
+          leadId,
+          leadNome,
+          leadCelular,
+          campaignName,
+          history: conversationHistory,
+        }),
       });
 
       if (response.data.success) {
@@ -130,9 +132,12 @@ export function SdrPanel({
   // Escalar para humano
   const handleEscalate = async () => {
     try {
-      await api.post("/api/sdr/escalate", {
-        conversationId,
-        reason: decision?.intent || "Escalado pelo usuário",
+      await apiFetch("/api/sdr/escalate", {
+        method: "POST",
+        body: JSON.stringify({
+          conversationId,
+          reason: decision?.intent || "Escalado pelo usuário",
+        }),
       });
       onEscalate?.();
     } catch {
@@ -143,12 +148,15 @@ export function SdrPanel({
   // Criar oportunidade
   const handleCreateOpportunity = async () => {
     try {
-      const response = await api.post("/api/sdr/opportunity", {
-        conversationId,
-        leadId,
-        leadNome,
-        leadCelular,
-        observation: `Oportunidade criada via SDR IA - Intent: ${decision?.intent}`,
+      const response = await apiFetch("/api/sdr/opportunity", {
+        method: "POST",
+        body: JSON.stringify({
+          conversationId,
+          leadId,
+          leadNome,
+          leadCelular,
+          observation: `Oportunidade criada via SDR IA - Intent: ${decision?.intent}`,
+        }),
       });
 
       if (response.data.success) {

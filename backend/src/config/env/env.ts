@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 
 import { rawEnvSchema } from './env.schema.js';
@@ -6,6 +8,7 @@ import { transformEnv } from './env.transform.js';
 import {
   validateCors,
   validateNumbers,
+  validateExternalEffectsGovernance,
   validateProductionSecrets,
   validateRequiredEnv,
   validateBluepayConditionalConfig,
@@ -14,24 +17,27 @@ import {
   validateUrls,
 } from './env.validation.js';
 
-const shouldLoadLocalEnv = () => {
-  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'production') {
-    return false;
-  }
+const backendEnvPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../.env',
+);
 
-  if (process.env.NODE_ENV === 'development') {
-    return true;
-  }
+const isDevelopmentRuntime =
+  process.env.NODE_ENV === 'development' ||
+  (process.env.NODE_ENV === undefined &&
+    process.env.npm_lifecycle_event === 'dev');
 
-  if (/(?:^|[\\/])server\.fastify\.(?:ts|tsx|js|mjs|cjs)$/.test(process.argv[1] ?? '')) {
-    return true;
-  }
-
-  return process.env.npm_lifecycle_event === 'dev';
-};
-
-if (shouldLoadLocalEnv()) {
-  dotenv.config();
+if (
+  isDevelopmentRuntime &&
+  process.env.NODE_ENV !== 'test' &&
+  process.env.NODE_ENV !== 'production' &&
+  process.env.APP_ENV !== 'production' &&
+  process.env.APP_ENV !== 'homologation'
+) {
+  dotenv.config({
+    path: backendEnvPath,
+    override: false,
+  });
 }
 
 export const envSchema = rawEnvSchema
@@ -41,6 +47,7 @@ export const envSchema = rawEnvSchema
     validateCors(input, context);
     validateProductionSecrets(input, context);
     validateNumbers(input, context);
+    validateExternalEffectsGovernance(input, context);
     validateSwaggerPath(input, context);
     validateSosBolsoConditionalConfig(input, context);
     validateBluepayConditionalConfig(input, context);

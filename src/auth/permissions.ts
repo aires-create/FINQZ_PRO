@@ -4,6 +4,7 @@
 // Nota: Validação final deve ocorrer no backend
 
 import { ROLE_PERMISSIONS, ROLE_SCOPES, Role, Permission, Scope } from '../types';
+import { hasPermissionMatch } from './permissionMatcher';
 
 // ============================================
 // TYPES
@@ -47,7 +48,7 @@ export type Action =
   | 'view_reports'
   | 'change_settings'
   | 'reset_password'
-  | 'move_opportunity';
+  | 'move_stage';
 
 // ============================================
 // MODULE PERMISSIONS MAP
@@ -57,7 +58,7 @@ export type Action =
 export const MODULE_PERMISSIONS: Record<Module, Action[]> = {
   dashboard: ['view'],
   clientes: ['view', 'create', 'edit', 'delete', 'export'],
-  oportunidades: ['view', 'create', 'edit', 'delete', 'move_opportunity', 'export'],
+  oportunidades: ['view', 'create', 'edit', 'delete', 'move_stage', 'export'],
   parceiros: ['view', 'create', 'edit', 'delete', 'reset_password', 'export'],
   usuarios: ['view', 'create', 'edit', 'delete', 'reset_password'],
   produtos: ['view', 'create', 'edit', 'delete', 'export'],
@@ -251,11 +252,23 @@ export const canAccess = (
     return true;
   }
   
-  // 7. Verifica permissão específica para módulo/ação
-  const requiredPermission = `${module}_${action}`.toUpperCase() as Permission;
+  const normalizedModule = String(module).toLowerCase();
+  const normalizedAction = String(action).toLowerCase();
+
+  // 7. Prioriza padrão canônico resource:action e mantém fallback legado MODULE_ACTION.
   const userPermissions = user.permissions;
-  
-  return userPermissions.includes(requiredPermission as Permission);
+  const canonicalPermission = `${normalizedModule}:${normalizedAction}`;
+  if (hasPermissionMatch(userPermissions, canonicalPermission)) {
+    return true;
+  }
+
+  // Fallback legado (mantido por compatibilidade)
+  const requiredPermission = `${normalizedModule}_${normalizedAction}`.toUpperCase() as Permission;
+  if (hasPermissionMatch(userPermissions, requiredPermission)) {
+    return true;
+  }
+
+  return false;
 };
 
 /**

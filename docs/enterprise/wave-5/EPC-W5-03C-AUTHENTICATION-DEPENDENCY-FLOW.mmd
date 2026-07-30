@@ -1,0 +1,70 @@
+flowchart LR
+  subgraph FE[Frontend]
+    A[AuthProvider]
+    B[finqzAuth]
+    C[src/auth/session.ts]
+    D[src/auth/logout.ts]
+    E[src/api/http.ts]
+    F[useApiErrorHandler]
+    G[ProtectedRoute]
+    H[MainLayout logout button]
+    I[store.user + userPermissions]
+    J[useTenantFilter]
+  end
+
+  subgraph BE[Backend Auth Contract]
+    K[/api/v1/auth/login/]
+    L[/api/v1/auth/refresh/]
+    M[/api/v1/auth/profile/]
+    N[/api/v1/auth/logout/]
+    O[/api/v1/auth/logout-all/]
+  end
+
+  subgraph STATE[Local State]
+    P[(accessToken)]
+    Q[(refreshToken)]
+    R[(user with tenant_id)]
+  end
+
+  H --> B
+  B --> K
+  B --> L
+  B --> M
+  B --> N
+  B --> D
+
+  B --> C
+  C --> P
+  C --> Q
+  C --> R
+
+  D --> C
+  D --> I
+  D -->|"auth:logout"| A
+
+  A -->|"setUser(null) + navigate('/login', replace)"| G
+  G -->|"!user"| F
+
+  E -->|"Authorization: Bearer <accessToken>"| K
+  E -->|"Authorization: Bearer <accessToken>"| M
+  E -->|"refresh 400/401/403 -> clearLocalAuthState"| D
+  E -->|"auth:error"| F
+
+  F --> B
+  J --> I
+  I --> R
+
+  K --> P
+  K --> Q
+  L --> P
+  L --> Q
+  M --> R
+  N --> Q
+  O --> Q
+
+  classDef frontend fill:#102030,color:#ffffff,stroke:#4ea1ff,stroke-width:1px;
+  classDef backend fill:#1f2d1f,color:#ffffff,stroke:#74c476,stroke-width:1px;
+  classDef state fill:#2a1d1d,color:#ffffff,stroke:#ff9f43,stroke-width:1px;
+  class A,B,C,D,E,F,G,H,I,J frontend;
+  class K,L,M,N,O backend;
+  class P,Q,R state;

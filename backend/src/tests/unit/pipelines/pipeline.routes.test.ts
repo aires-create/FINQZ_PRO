@@ -1,0 +1,700 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import Fastify from 'fastify';
+import { ZodError } from 'zod';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ConflictError } from '../../../shared/errors/AppError.js';
+
+const serviceMock = vi.hoisted(() => ({
+  listActivePipelines: vi.fn(),
+  listActiveByTenant: vi.fn(),
+  createPipeline: vi.fn(),
+  updatePipeline: vi.fn(),
+  deactivatePipeline: vi.fn(),
+  createStage: vi.fn(),
+  updateStage: vi.fn(),
+  deactivateStage: vi.fn(),
+  reorderStages: vi.fn(),
+}));
+
+const serviceErrorsMock = vi.hoisted(() => ({
+  PipelineNotFoundError: class PipelineNotFoundError extends Error {
+    constructor(message = 'Pipeline not found') {
+      super(message);
+      this.name = 'PipelineNotFoundError';
+    }
+  },
+  StageNotFoundError: class StageNotFoundError extends Error {
+    constructor(message = 'Stage not found') {
+      super(message);
+      this.name = 'StageNotFoundError';
+    }
+  },
+}));
+
+vi.mock('../../../core/http/middleware.js', () => ({
+  authenticate: async (request: any) => {
+    if (!request.headers.authorization) {
+      const error: any = new Error('Unauthorized');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const permissionsHeader = request.headers['x-user-permissions'];
+    const permissions =
+      typeof permissionsHeader === 'string' && permissionsHeader.length > 0
+        ? permissionsHeader.split(',').map((item) => item.trim())
+        : [];
+    const missingActor = request.headers['x-missing-actor'] === '1';
+
+    request.currentUser = {
+      userId: missingActor ? undefined : 'user-1',
+      tenantId: 'tenant-1',
+      permissions,
+    };
+  },
+  tenantContextMiddleware: async (request: any) => {
+    const missingActor = request.headers['x-missing-actor'] === '1';
+
+    request.currentTenant = {
+      tenantId: 'tenant-1',
+      userId: missingActor ? undefined : 'user-1',
+    };
+  },
+}));
+
+vi.mock('../../../modules/rbac/rbac.guard.js', () => ({
+  requirePermissions: (permission: string | string[]) => {
+    const required = Array.isArray(permission) ? permission : [permission];
+
+    return async (request: any) => {
+      const header = request.headers['x-user-permissions'];
+      const userPermissions =
+        typeof header === 'string' && header.length > 0
+          ? header.split(',').map((item) => item.trim())
+          : [];
+
+      const allowed = required.every((item) => userPermissions.includes(item));
+      if (!allowed) {
+        const error: any = new Error('Insufficient permissions');
+        error.statusCode = 403;
+        throw error;
+      }
+    };
+  },
+}));
+
+const opportunitiesServiceMock = vi.hoisted(() => ({
+  TenantScopeViolationError: class TenantScopeViolationError extends Error {},
+}));
+
+vi.mock('../../../modules/opportunities/services/opportunities.service.js', () => opportunitiesServiceMock);
+
+vi.mock('../../../modules/pipelines/service.js', () => ({
+  pipelinesService: serviceMock,
+  PipelineNotFoundError: serviceErrorsMock.PipelineNotFoundError,
+  StageNotFoundError: serviceErrorsMock.StageNotFoundError,
+}));
+
+import { pipelinesRoutes } from '../../../modules/pipelines/routes.js';
+
+const routesSource = readFileSync(
+  resolve(process.cwd(), 'src/modules/pipelines/routes.ts'),
+  'utf8',
+);
+
+describe('pipelines routes', () => {
+  let app: ReturnType<typeof Fastify>;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    app = Fastify({ logger: false });
+    await app.register(pipelinesRoutes, { prefix: '/api/v1/pipelines' });
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('GET / returns success/data', async () => {
+    serviceMock.listActivePipelines.mockResolvedValueOnce([{ id: 'pipeline-1' }]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      data: [{ id: 'pipeline-1' }],
+    });
+    expect(serviceMock.listActivePipelines).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+    });
+  });
+
+  it('GET /?includeInactive=true returns success/data with includeInactive flag', async () => {
+    serviceMock.listActivePipelines.mockResolvedValueOnce([{ id: 'pipeline-1' }]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/pipelines?includeInactive=true',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      data: [{ id: 'pipeline-1' }],
+    });
+    expect(serviceMock.listActivePipelines).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      includeInactive: true,
+    });
+  });
+
+  it('TenantScopeViolationError returns 403', async () => {
+    serviceMock.listActivePipelines.mockRejectedValueOnce(
+      new opportunitiesServiceMock.TenantScopeViolationError('tenant missing'),
+    );
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'FORBIDDEN',
+        message: 'tenant missing',
+      },
+    });
+  });
+
+  it('ZodError returns 400 if handled by route error handler', async () => {
+    serviceMock.listActivePipelines.mockRejectedValueOnce(
+      new ZodError([
+        {
+          code: 'custom',
+          message: 'Validation failed',
+          path: ['name'],
+        },
+      ]),
+    );
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation error',
+        details: expect.any(Object),
+      },
+    });
+  });
+
+  it('unexpected error returns 500', async () => {
+    serviceMock.listActivePipelines.mockRejectedValueOnce(new Error('boom'));
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(500);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Internal server error',
+      },
+    });
+  });
+
+  it('PipelineNotFoundError returns 404', async () => {
+    serviceMock.updatePipeline.mockRejectedValueOnce(
+      new serviceErrorsMock.PipelineNotFoundError('Pipeline missing'),
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        name: 'Pipeline B',
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Pipeline missing',
+      },
+    });
+  });
+
+  it('StageNotFoundError returns 404', async () => {
+    serviceMock.updateStage.mockRejectedValueOnce(
+      new serviceErrorsMock.StageNotFoundError('Stage missing'),
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:update',
+      },
+      payload: {
+        name: 'Stage B',
+      },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Stage missing',
+      },
+    });
+  });
+
+  it('ConflictError returns 409', async () => {
+    serviceMock.updatePipeline.mockRejectedValueOnce(
+      new ConflictError('Tenant must keep one active default pipeline'),
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        isDefault: false,
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'CONFLICT',
+        message: 'Tenant must keep one active default pipeline',
+      },
+    });
+  });
+
+  it.each([
+    ['POST', '/api/v1/pipelines', 'pipeline:create'],
+    ['PUT', '/api/v1/pipelines/11111111-1111-1111-1111-111111111111', 'pipeline:update'],
+    ['DELETE', '/api/v1/pipelines/11111111-1111-1111-1111-111111111111', 'pipeline:delete'],
+    ['POST', '/api/v1/pipelines/11111111-1111-1111-1111-111111111111/stages', 'stage:create'],
+    ['PUT', '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111', 'stage:update'],
+    ['DELETE', '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111', 'stage:delete'],
+    ['PATCH', '/api/v1/pipelines/11111111-1111-1111-1111-111111111111/stages/reorder', 'stage:update'],
+  ])('%s %s requires %s', async (method, url, permission) => {
+    const response = await app.inject({
+      method,
+      url,
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:read',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(serviceMock.listActivePipelines).not.toHaveBeenCalled();
+    expect(permission).toBeTruthy();
+  });
+
+  it('POST / requires pipeline:create and calls service with tenantId/actorUserId', async () => {
+    serviceMock.createPipeline.mockResolvedValueOnce({
+      id: 'pipeline-1',
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:create',
+      },
+      payload: {
+        name: 'Pipeline A',
+        description: 'First pipeline',
+        isDefault: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Pipeline created successfully',
+      data: { id: 'pipeline-1' },
+    });
+    expect(serviceMock.createPipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      name: 'Pipeline A',
+      description: 'First pipeline',
+      isDefault: true,
+    });
+  });
+
+  it('PUT /:pipelineId requires pipeline:update and validates params/body', async () => {
+    serviceMock.updatePipeline.mockResolvedValueOnce({
+      id: 'pipeline-1',
+    });
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        name: 'Pipeline B',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Pipeline updated successfully',
+      data: { id: 'pipeline-1' },
+    });
+    expect(serviceMock.updatePipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Pipeline B',
+    });
+  });
+
+  it.each([
+    [false, false],
+    [true, true],
+  ])('PUT /:pipelineId repasses isActive=%s to service', async (isActive, expected) => {
+    serviceMock.updatePipeline.mockResolvedValueOnce({
+      id: 'pipeline-1',
+    });
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:update',
+      },
+      payload: {
+        isActive,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Pipeline updated successfully',
+      data: { id: 'pipeline-1' },
+    });
+    expect(serviceMock.updatePipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      id: '11111111-1111-1111-1111-111111111111',
+      isActive: expected,
+    });
+  });
+
+  it('DELETE /:pipelineId requires pipeline:delete and returns deleted id envelope', async () => {
+    serviceMock.deactivatePipeline.mockResolvedValueOnce(undefined);
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:delete',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Pipeline deleted successfully',
+      data: {
+        id: '11111111-1111-1111-1111-111111111111',
+      },
+    });
+    expect(serviceMock.deactivatePipeline).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      pipelineId: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
+  it('POST /:pipelineId/stages requires stage:create and validates body', async () => {
+    serviceMock.createStage.mockResolvedValueOnce({
+      id: 'stage-1',
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111/stages',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:create',
+      },
+      payload: {
+        name: 'Stage A',
+        order: 1,
+        isWon: false,
+        isLost: false,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Stage created successfully',
+      data: { id: 'stage-1' },
+    });
+    expect(serviceMock.createStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      pipelineId: '11111111-1111-1111-1111-111111111111',
+      name: 'Stage A',
+      order: 1,
+      isWon: false,
+      isLost: false,
+    });
+  });
+
+  it('PUT /stages/:stageId requires stage:update and validates body', async () => {
+    serviceMock.updateStage.mockResolvedValueOnce({
+      id: 'stage-1',
+    });
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:update',
+      },
+      payload: {
+        name: 'Stage B',
+        isWon: true,
+        isActive: false,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Stage updated successfully',
+      data: { id: 'stage-1' },
+    });
+    expect(serviceMock.updateStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      id: '11111111-1111-1111-1111-111111111111',
+      name: 'Stage B',
+      isWon: true,
+      isActive: false,
+    });
+  });
+
+  it.each([
+    [false, false],
+    [true, true],
+  ])('PUT /stages/:stageId repasses isActive=%s to service', async (isActive, expected) => {
+    serviceMock.updateStage.mockResolvedValueOnce({
+      id: 'stage-1',
+    });
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:update',
+      },
+      payload: {
+        isActive,
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(serviceMock.updateStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      id: '11111111-1111-1111-1111-111111111111',
+      isActive: expected,
+    });
+  });
+
+  it('DELETE /stages/:stageId requires stage:delete and returns deleted id envelope', async () => {
+    serviceMock.deactivateStage.mockResolvedValueOnce(undefined);
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/pipelines/stages/11111111-1111-1111-1111-111111111111',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:delete',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Stage deleted successfully',
+      data: {
+        id: '11111111-1111-1111-1111-111111111111',
+      },
+    });
+    expect(serviceMock.deactivateStage).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      stageId: '11111111-1111-1111-1111-111111111111',
+    });
+  });
+
+  it('PATCH /:pipelineId/stages/reorder requires stage:update and validates array body', async () => {
+    serviceMock.reorderStages.mockResolvedValueOnce([{ id: 'stage-1' }]);
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/api/v1/pipelines/11111111-1111-1111-1111-111111111111/stages/reorder',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'stage:update',
+      },
+      payload: {
+        stages: [
+          {
+            stageId: '22222222-2222-2222-2222-222222222222',
+            order: 1,
+          },
+        ],
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      success: true,
+      message: 'Stages reordered successfully',
+      data: [{ id: 'stage-1' }],
+    });
+    expect(serviceMock.reorderStages).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      actorUserId: 'user-1',
+      pipelineId: '11111111-1111-1111-1111-111111111111',
+      stages: [
+        {
+          id: '22222222-2222-2222-2222-222222222222',
+          order: 1,
+        },
+      ],
+    });
+  });
+
+  it('Swagger stage docs expose isActive only on update stage', () => {
+    const createStageDoc = routesSource
+      .split('* /api/v1/pipelines/{pipelineId}/stages:')[1]
+      ?.split('  app.put(')[0] ?? '';
+    const updateStageDoc = routesSource
+      .split('* /api/v1/pipelines/stages/{stageId}:')[1]
+      ?.split('  async (request, reply) => {')[0] ?? '';
+
+    expect(createStageDoc).not.toContain('*               isActive:');
+    expect(updateStageDoc).toContain('*               isActive:');
+  });
+
+  it('validation errors return 400', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:create',
+      },
+      payload: {
+        name: '',
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation error',
+        details: expect.any(Object),
+      },
+    });
+    expect(serviceMock.createPipeline).not.toHaveBeenCalled();
+  });
+
+  it('write routes return 403 when actor is missing', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/pipelines',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'pipeline:create',
+        'x-missing-actor': '1',
+      },
+      payload: {
+        name: 'Pipeline C',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      success: false,
+      error: {
+        code: 'FORBIDDEN',
+        message: 'user',
+      },
+    });
+    expect(serviceMock.createPipeline).not.toHaveBeenCalled();
+  });
+});

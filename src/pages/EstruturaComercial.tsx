@@ -5,7 +5,7 @@
 // - Estrutura completa (API/Integrações/Automações/Financeiro)
 // - Importação e Exportação CSV/JSON
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import {
   Plus,
   Search,
@@ -55,7 +55,7 @@ import {
 } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 import { FilterDrawer, FilterField } from "../components/layout/FilterDrawer";
-import { creditPfCatalog, getActiveProducts } from "../data/catalogRepository";
+import { loadEstruturaComercialFromMasterCatalog } from "../features/master-catalog/loadEstruturaComercialFromMasterCatalog";
 
 // Tipos de fornecedor para select
 const fornecedorTipos: { value: FornecedorTipo; label: string }[] = [
@@ -151,7 +151,7 @@ const getCodigoHelpText = (nivel?: EstruturaComercialNivel): string => {
 // Gerar código automático se não informado
 const generateAutoCode = (nivel?: EstruturaComercialNivel, nome?: string): string => {
   if (!nivel || !nome) return "";
-  
+
   const timestamp = Date.now().toString().slice(-3);
   const nomeFormatado = nome
     .toUpperCase()
@@ -161,7 +161,7 @@ const generateAutoCode = (nivel?: EstruturaComercialNivel, nome?: string): strin
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .substring(0, 20);
-  
+
   const nivelPrefix = {
     vertical: "VERT",
     produto: "PROD",
@@ -170,7 +170,7 @@ const generateAutoCode = (nivel?: EstruturaComercialNivel, nome?: string): strin
     tabela_plano_campanha: "TABELA",
     condicao_comercial: "COND",
   }[nivel] || "ITEM";
-  
+
   return `${nivelPrefix}-${nomeFormatado}-${timestamp}`;
 };
 
@@ -260,9 +260,9 @@ const formatDate = (timestamp: number | string | undefined) => {
 const formatDateTime = (timestamp: number | undefined) => {
   if (!timestamp) return "—";
   const date = new Date(timestamp);
-  return date.toLocaleDateString("pt-BR", { 
-    day: "2-digit", 
-    month: "2-digit", 
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit"
@@ -286,89 +286,6 @@ const formatModalityLabel = (modality: string): string => {
     TRANSFERENCIA_COTA: "Transferência de Cota"
   };
   return labels[modality] || modality || "Não informado";
-};
-
-/**
- * Converte o creditPfCatalog para o formato EstruturaComercial
- * Usado para sincronizar a estrutura comercial com o catálogo de produtos
- */
-const buildEstruturaFromCatalog = (): EstruturaComercial[] => {
-  const now = Date.now();
-  const items: EstruturaComercial[] = [];
-  let id = 1;
-
-  // Verificar se o catálogo existe e é um array
-  const safeCatalog = Array.isArray(creditPfCatalog) ? creditPfCatalog : [];
-
-  // Nível 1: Vertical de Negócio (Crédito PF)
-  const verticalId = id++;
-  items.push({
-    id: verticalId,
-    nivel: "vertical",
-    nome: "Crédito PF",
-    descricao: "Produtos de crédito para pessoa física",
-    ativo: 1,
-    created_at: now,
-    updated_at: now
-  });
-
-  // Para cada produto no catálogo
-  safeCatalog.filter(p => p?.active).forEach((product) => {
-    if (!product?.id || !product?.name) return;
-
-    // Nível 2: Produto
-    const produtoId = id++;
-    items.push({
-      id: produtoId,
-      parent_id: verticalId,
-      nivel: "produto",
-      nome: product.name,
-      codigo: product.code,
-      descricao: product.name,
-      ativo: product.active ? 1 : 0,
-      created_at: now,
-      updated_at: now
-    });
-
-    // Nível 3: Subprodutos
-    const safeSubproducts = Array.isArray(product.subproducts) ? product.subproducts : [];
-    safeSubproducts.filter(sp => sp?.active).forEach((subproduct) => {
-      if (!subproduct?.id || !subproduct?.name) return;
-
-      const subprodutoId = id++;
-      const modalityLabels = (subproduct.modalities || []).map(formatModalityLabel).join(", ");
-      
-      items.push({
-        id: subprodutoId,
-        parent_id: produtoId,
-        nivel: "subproduto",
-        nome: subproduct.name,
-        codigo: subproduct.code,
-        descricao: `Modalidades: ${modalityLabels}`,
-        ativo: subproduct.active ? 1 : 0,
-        created_at: now,
-        updated_at: now
-      });
-
-      // Nível 4: Modalidades (usando labels amigáveis)
-      const safeModalities = Array.isArray(subproduct.modalities) ? subproduct.modalities : [];
-      safeModalities.forEach((modality) => {
-        items.push({
-          id: id++,
-          parent_id: subprodutoId,
-          nivel: "tabela_plano_campanha",
-          nome: formatModalityLabel(modality),
-          codigo: modality,
-          descricao: "Modalidade permitida",
-          ativo: 1,
-          created_at: now,
-          updated_at: now
-        });
-      });
-    });
-  });
-
-  return items;
 };
 
 const EstruturaComercialPage: React.FC = () => {
@@ -403,13 +320,66 @@ const EstruturaComercialPage: React.FC = () => {
 
   // Estado do FilterDrawer
   const [openFilterDrawer, setOpenFilterDrawer] = useState(false);
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
+  const [isBootstrappingCatalog, setIsBootstrappingCatalog] = useState(false);
+  const hasBootstrappedCatalogRef = useRef(false);
+
+  useEffect(() => {
+    if (hasBootstrappedCatalogRef.current) return;
+    hasBootstrappedCatalogRef.current = true;
+
+    let cancelled = false;
+
+    const bootstrapCatalog = async () => {
+      setIsBootstrappingCatalog(true);
+
+      try {
+        const newEstrutura = await loadEstruturaComercialFromMasterCatalog();
+
+        if (!cancelled && Array.isArray(newEstrutura) && newEstrutura.length > 0) {
+          setEstruturaComercial(newEstrutura);
+        }
+      } catch (error) {
+        console.error("[EstruturaComercial] Bootstrap do Master Catalog falhou:", error);
+      } finally {
+        if (!cancelled) {
+          setIsBootstrappingCatalog(false);
+        }
+      }
+    };
+
+    void bootstrapCatalog();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [setEstruturaComercial]);
 
   // Handler: Sincronizar com Catálogo PF Credit
-  const handleSyncWithCatalog = () => {
-    if (confirm("Isso irá substituir a estrutura atual pelos produtos do catálogo PF Credit. Deseja continuar?")) {
-      const newEstrutura = buildEstruturaFromCatalog();
+  const handleSyncWithCatalog = async () => {
+    if (isSyncingCatalog || isBootstrappingCatalog) return;
+
+    if (!confirm("Isso irá substituir a estrutura atual pelos dados do Master Catalog. Deseja continuar?")) {
+      return;
+    }
+
+    setIsSyncingCatalog(true);
+
+    try {
+      const newEstrutura = await loadEstruturaComercialFromMasterCatalog();
+
+      if (!newEstrutura.length) {
+        alert("O Master Catalog retornou vazio. A estrutura atual foi mantida.");
+        return;
+      }
+
       setEstruturaComercial(newEstrutura);
-      alert(`Sincronizado! ${newEstrutura.length} itens foram importados do catálogo.`);
+      alert(`Sincronizado com Master Catalog! ${newEstrutura.length} itens foram importados.`);
+    } catch (error) {
+      console.error("[EstruturaComercial] Falha ao sincronizar com Master Catalog:", error);
+      alert("Não foi possível sincronizar com o Master Catalog. A estrutura atual foi mantida.");
+    } finally {
+      setIsSyncingCatalog(false);
     }
   };
 
@@ -471,23 +441,23 @@ const EstruturaComercialPage: React.FC = () => {
   ];
 
   // Buscar itens pais para select
-  const verticais = useMemo(() => 
-    estruturaComercial.filter((item) => item.nivel === "vertical"), 
+  const verticais = useMemo(() =>
+    estruturaComercial.filter((item) => item.nivel === "vertical"),
     [estruturaComercial]
   );
 
-  const produtos = useMemo(() => 
-    estruturaComercial.filter((item) => item.nivel === "produto"), 
+  const produtos = useMemo(() =>
+    estruturaComercial.filter((item) => item.nivel === "produto"),
     [estruturaComercial]
   );
 
-  const subprodutos = useMemo(() => 
-    estruturaComercial.filter((item) => item.nivel === "subproduto"), 
+  const subprodutos = useMemo(() =>
+    estruturaComercial.filter((item) => item.nivel === "subproduto"),
     [estruturaComercial]
   );
 
-  const fornecedores = useMemo(() => 
-    estruturaComercial.filter((item) => item.nivel === "fornecedor_originador"), 
+  const fornecedores = useMemo(() =>
+    estruturaComercial.filter((item) => item.nivel === "fornecedor_originador"),
     [estruturaComercial]
   );
 
@@ -519,7 +489,7 @@ const EstruturaComercialPage: React.FC = () => {
       filtered = filtered.filter((item) => item.nivel === filtroNivel);
     }
     if (filtroStatus) {
-      filtered = filtered.filter((item) => 
+      filtered = filtered.filter((item) =>
         filtroStatus === "ativo" ? item.ativo === 1 : item.ativo === 0
       );
     }
@@ -533,7 +503,7 @@ const EstruturaComercialPage: React.FC = () => {
       filtered = filtered.filter((item) => {
         const validadeInicio = item.validade_inicio ? new Date(item.validade_inicio) : null;
         const validadeFim = item.validade_fim ? new Date(item.validade_fim) : null;
-        
+
         switch (filtroVigencia) {
           case "vigente":
             // Vigente: iniciou e ainda não venceu (ou não tem data de fim)
@@ -595,7 +565,7 @@ const EstruturaComercialPage: React.FC = () => {
   // Não inclui fornecedores, tabelas comerciais ou condições comerciais (serão módulos separados)
   const stats = useMemo(() => {
     // Contar apenas itens do catálogo: vertical + produto + subproduto + modalidade
-    const total = estruturaComercial.filter((i) => 
+    const total = estruturaComercial.filter((i) =>
       i.nivel === "vertical" || i.nivel === "produto" || i.nivel === "subproduto" || i.nivel === "tabela_plano_campanha"
     ).length;
     const verticaisAtivas = estruturaComercial.filter((i) => i.nivel === "vertical" && i.ativo === 1).length;
@@ -689,7 +659,7 @@ const EstruturaComercialPage: React.FC = () => {
 
     // Validar código - remover espaços extras e validar caracteres
     const codigoTrimmed = formData.codigo?.trim() || "";
-    
+
     // Validar duplicidade de código dentro do mesmo nível e parent_id
     if (codigoTrimmed) {
       const existingItem = estruturaComercial.find(
@@ -706,9 +676,9 @@ const EstruturaComercialPage: React.FC = () => {
     }
 
     // Calcular comissão total automaticamente
-    const comissaoTotal = 
-      (formData.comissao_flat || 0) + 
-      (formData.comissao_bonus || 0) + 
+    const comissaoTotal =
+      (formData.comissao_flat || 0) +
+      (formData.comissao_bonus || 0) +
       (formData.comissao_adiantamento || 0);
 
     // Auto-gerar código se não informado
@@ -726,7 +696,7 @@ const EstruturaComercialPage: React.FC = () => {
       id: Date.now(),
       data: Date.now(),
       tipo: isEditing ? "edicao" : "criacao",
-      descricao: isEditing 
+      descricao: isEditing
         ? `Edição do registro "${formData.nome}"`
         : `Criação do registro "${formData.nome}"`,
     };
@@ -1006,6 +976,8 @@ const EstruturaComercialPage: React.FC = () => {
 
   // Itens raiz (sem pai)
   const rootItems = filteredEstrutura.filter((item) => !item.parent_id || item.parent_id === null);
+  const rootSegments = rootItems.filter((item) => item.nivel === "vertical");
+  const rootProducts = rootItems.filter((item) => item.nivel === "produto");
 
   return (
     <div className="app-page">
@@ -1042,10 +1014,15 @@ const EstruturaComercialPage: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleSyncWithCatalog}
+              disabled={isSyncingCatalog}
               className="flex items-center gap-1"
             >
               <RefreshCw size={14} />
-              Sincronizar Catálogo
+              {isBootstrappingCatalog
+                ? "Carregando catálogo..."
+                : isSyncingCatalog
+                  ? "Sincronizando..."
+                  : "Sincronizar Catálogo"}
             </Button>
           </div>
         }
@@ -1112,7 +1089,41 @@ const EstruturaComercialPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              rootItems.map((item) => renderItem(item))
+              <div className="space-y-6">
+                <section className="space-y-3">
+                  <div className="px-4 pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+                      Segmentos Comerciais
+                    </h3>
+                  </div>
+                  <div className="border-t border-[var(--border-muted)]">
+                    {rootSegments.length > 0 ? (
+                      rootSegments.map((item) => renderItem(item))
+                    ) : (
+                      <div className="px-4 py-6 text-sm text-slate-500">
+                        Nenhum segmento comercial encontrado
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                <section className="space-y-3">
+                  <div className="px-4 pt-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
+                      Produtos Comerciais
+                    </h3>
+                  </div>
+                  <div className="border-t border-[var(--border-muted)]">
+                    {rootProducts.length > 0 ? (
+                      rootProducts.map((item) => renderItem(item))
+                    ) : (
+                      <div className="px-4 py-6 text-sm text-slate-500">
+                        Nenhum produto comercial encontrado
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </div>
             )}
           </div>
         </Card>
@@ -1355,7 +1366,7 @@ const EstruturaComercialPage: React.FC = () => {
                   {getVigenciaStatusLabel(getVigenciaStatus(formData.validade_inicio, formData.validade_fim))}
                 </span>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1">Data de Início</label>
@@ -1395,7 +1406,7 @@ const EstruturaComercialPage: React.FC = () => {
                   <div>
                     <span className="text-slate-500">Duração:</span>
                     <span className="ml-2 font-medium">
-                      {formData.validade_inicio && formData.validade_fim 
+                      {formData.validade_inicio && formData.validade_fim
                         ? `${Math.ceil((new Date(formData.validade_fim).getTime() - new Date(formData.validade_inicio).getTime()) / (1000 * 60 * 60 * 24))} dias`
                         : "—"}
                     </span>
@@ -1426,7 +1437,7 @@ const EstruturaComercialPage: React.FC = () => {
                   {selectedItem?.historico?.length || 0} registros
                 </Badge>
               </div>
-              
+
               {selectedItem?.historico && selectedItem.historico.length > 0 ? (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
                   {selectedItem.historico.map((item) => (

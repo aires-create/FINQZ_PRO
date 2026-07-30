@@ -35,14 +35,7 @@ export interface AppConfig {
     path: string;
   };
   integrations: {
-    novaPromotora: {
-      baseUrl?: string;
-      apiKey?: string;
-      healthPath?: string;
-      proposalsPath?: string;
-      timeoutMs?: number;
-    };
-    sosBolso: {
+ sosBolso: {
       enabled: boolean;
       baseUrl?: string;
       tokenPath?: string;
@@ -64,6 +57,8 @@ export interface AppConfig {
       apiKey?: string;
       timeoutMs?: number;
       environment?: string;
+      login?: string;
+      password?: string;
     };
   };
 }
@@ -103,14 +98,7 @@ export const config: AppConfig = {
     path: env.swaggerPath,
   },
   integrations: {
-    novaPromotora: {
-      ...(env.novaPromotoraBaseUrl ? { baseUrl: env.novaPromotoraBaseUrl } : {}),
-      ...(env.novaPromotoraApiKey ? { apiKey: env.novaPromotoraApiKey } : {}),
-      ...(env.novaPromotoraHealthPath ? { healthPath: env.novaPromotoraHealthPath } : {}),
-      ...(env.novaPromotoraProposalsPath ? { proposalsPath: env.novaPromotoraProposalsPath } : {}),
-      ...(env.novaPromotoraTimeoutMs ? { timeoutMs: env.novaPromotoraTimeoutMs } : {}),
-    },
-    sosBolso: {
+      sosBolso: {
       enabled: env.sosBolsoEnabled,
       ...(env.sosBolsoBaseUrl ? { baseUrl: env.sosBolsoBaseUrl } : {}),
       ...(env.sosBolsoTokenPath ? { tokenPath: env.sosBolsoTokenPath } : {}),
@@ -132,6 +120,8 @@ export const config: AppConfig = {
       ...(env.handmaisApiKey ? { apiKey: env.handmaisApiKey } : {}),
       ...(env.handmaisTimeoutMs ? { timeoutMs: env.handmaisTimeoutMs } : {}),
       ...(env.handmaisEnv ? { environment: env.handmaisEnv } : {}),
+      ...(env.handmaisLogin ? { login: env.handmaisLogin } : {}),
+      ...(env.handmaisPassword ? { password: env.handmaisPassword } : {}),
     },
   },
 };

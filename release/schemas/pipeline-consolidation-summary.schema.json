@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finqz-pro.local/schemas/pipeline-consolidation-summary.schema.json",
+  "title": "FINQZ PRO Enterprise Pipeline Consolidation Summary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "consolidationVersion",
+    "correlationId",
+    "status",
+    "environment",
+    "dryRun",
+    "strict",
+    "skipHttp",
+    "startedAt",
+    "finishedAt",
+    "durationMs",
+    "git",
+    "artifact",
+    "stages",
+    "contracts",
+    "evidence",
+    "portability",
+    "warnings",
+    "errors",
+    "decisionReasons",
+    "nextAction"
+  ],
+  "properties": {
+    "consolidationVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "correlationId": {
+      "type": "string",
+      "pattern": "^consolidation-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7,12}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "PASS_WITH_WARNINGS",
+        "FAIL",
+        "BLOCKED"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "local",
+        "hml",
+        "production"
+      ]
+    },
+    "dryRun": {
+      "type": "boolean"
+    },
+    "strict": {
+      "type": "boolean"
+    },
+    "skipHttp": {
+      "type": "boolean"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "commit",
+        "treeDirty"
+      ],
+      "properties": {
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "treeDirty": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "version"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactBuild",
+        "releasePackage",
+        "releaseVerification",
+        "deployDryRun",
+        "runtimeValidation",
+        "releaseGate",
+        "contractValidation",
+        "evidenceValidation",
+        "portabilityValidation"
+      ],
+      "properties": {
+        "artifactBuild": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "releasePackage": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "releaseVerification": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "deployDryRun": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "runtimeValidation": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "releaseGate": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "contractValidation": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "evidenceValidation": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        },
+        "portabilityValidation": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED",
+            "SKIPPED"
+          ]
+        }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "violations"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "missing",
+        "invalid"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "missing": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "invalid": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "portability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "warnings"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "PASS_WITH_WARNINGS",
+            "FAIL",
+            "BLOCKED"
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decisionReasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nextAction": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

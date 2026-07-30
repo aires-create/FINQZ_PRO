@@ -1,7 +1,21 @@
 import type { FastifyInstance } from 'fastify';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createApp } from '../../app.js';
+import { connectRedis } from '../../core/redis/index.js';
+import { testDatabaseConnection } from '../../database/prisma.js';
+
+vi.mock('../../database/prisma.js', () => ({
+  testDatabaseConnection: vi.fn(),
+  disconnectDatabase: vi.fn(),
+}));
+
+vi.mock('../../core/redis/index.js', () => ({
+  connectRedis: vi.fn(),
+  disconnectRedis: vi.fn(),
+  getRedisClient: vi.fn(),
+  getRedisStatus: vi.fn(),
+}));
 
 let app: FastifyInstance | undefined;
 
@@ -17,6 +31,8 @@ afterEach(async () => {
     await app.close();
     app = undefined;
   }
+
+  vi.clearAllMocks();
 });
 
 describe('GET /health', () => {
@@ -72,5 +88,32 @@ describe('GET /health', () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers['x-request-id']).toBeDefined();
     expect(response.headers['x-request-id']).not.toBe(unsafeRequestId);
+  });
+});
+
+describe('GET /live', () => {
+  it('returns the liveness contract without touching database or redis', async () => {
+    const server = await getApp();
+    const response = await server.inject({
+      method: 'GET',
+      url: '/live',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      success: true,
+      status: 'live',
+      service: 'FINQZ PRO API',
+      environment: 'test',
+    });
+
+    expect(response.json()).toEqual(
+      expect.objectContaining({
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+      }),
+    );
+    expect(vi.mocked(testDatabaseConnection)).not.toHaveBeenCalled();
+    expect(vi.mocked(connectRedis)).not.toHaveBeenCalled();
   });
 });

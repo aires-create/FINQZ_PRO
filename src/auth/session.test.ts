@@ -3,6 +3,7 @@ import { AUTH_LOGOUT_EVENT, finalizeLocalLogout } from "./logout";
 import {
   canRefreshSession,
   clearSession,
+  getCurrentUser,
   getSessionSnapshot,
   getSessionVersion,
   isSessionActive,
@@ -22,6 +23,7 @@ describe("session", () => {
     setSessionUser({ id: "1", email: "user@finqz.com" });
     expect(isSessionActive()).toBe(true);
     expect(getSessionSnapshot().isAuthenticated).toBe(true);
+    expect(getCurrentUser()).toMatchObject({ id: "1", email: "user@finqz.com" });
     expect(canRefreshSession()).toBe(false);
 
     storeSessionTokens({
@@ -36,6 +38,7 @@ describe("session", () => {
     clearSession();
 
     expect(isSessionActive()).toBe(false);
+    expect(getCurrentUser()).toBeNull();
     expect(canRefreshSession()).toBe(false);
     expect(getSessionSnapshot().isAuthenticated).toBe(false);
     expect(getSessionVersion()).toBe(versionBefore + 1);
@@ -68,6 +71,7 @@ describe("session", () => {
     expect(() => finalizeLocalLogout()).not.toThrow();
 
     expect(isSessionActive()).toBe(false);
+    expect(getCurrentUser()).toBeNull();
     expect(canRefreshSession()).toBe(false);
     expect(getSessionSnapshot().isAuthenticated).toBe(false);
     expect(logoutEvents).toHaveLength(2);

@@ -1,5 +1,5 @@
 // FINQZ PRO - Frontend session utilities
-// Centralizes local session storage without exposing sensitive values.
+// Centralizes the canonical local session snapshot used by auth, HTTP and App bootstrap.
 
 import { STORAGE_KEYS } from "../config/environment";
 
@@ -65,24 +65,26 @@ const safeLocalStorageRemove = (key: string): void => {
   }
 };
 
+const syncRuntimeStateFromStorage = (): void => {
+  const hasStoredState = Boolean(
+    safeLocalStorageGet(STORAGE_KEYS.USER) ||
+      safeLocalStorageGet(STORAGE_KEYS.TOKEN) ||
+      safeLocalStorageGet(STORAGE_KEYS.REFRESH_TOKEN),
+  );
+
+  sessionRuntime.isActive = hasStoredState;
+};
+
 const setTokenValue = (key: string, token: string | null | undefined): void => {
   const normalizedToken = token?.trim();
   if (!normalizedToken) {
     safeLocalStorageRemove(key);
+    syncRuntimeStateFromStorage();
     return;
   }
 
   safeLocalStorageSet(key, normalizedToken);
-};
-
-const syncRuntimeStateFromStorage = (): void => {
-  if (sessionRuntime.isActive) {
-    return;
-  }
-
-  if (safeLocalStorageGet(STORAGE_KEYS.USER) || safeLocalStorageGet(STORAGE_KEYS.TOKEN) || safeLocalStorageGet(STORAGE_KEYS.REFRESH_TOKEN)) {
-    sessionRuntime.isActive = true;
-  }
+  sessionRuntime.isActive = true;
 };
 
 export const getAccessToken = (): string | null => {
@@ -117,6 +119,7 @@ export const getCurrentUser = <T extends FinqzSessionUser = FinqzSessionUser>():
 export const setSessionUser = (user: FinqzSessionUser | null | undefined): void => {
   if (!user) {
     safeLocalStorageRemove(STORAGE_KEYS.USER);
+    syncRuntimeStateFromStorage();
     return;
   }
 
@@ -146,9 +149,7 @@ export const isAuthenticated = (): boolean => {
   return getSessionSnapshot().isAuthenticated;
 };
 
-export const getSessionVersion = (): number => {
-  return sessionRuntime.version;
-};
+export const getSessionVersion = (): number => sessionRuntime.version;
 
 export const isSessionActive = (): boolean => {
   syncRuntimeStateFromStorage();
@@ -163,10 +164,6 @@ export const storeSessionTokens = (tokens: {
   accessToken?: string | null;
   refreshToken?: string | null;
 }): void => {
-  if (tokens.accessToken || tokens.refreshToken) {
-    sessionRuntime.isActive = true;
-  }
-
   if ("accessToken" in tokens) {
     setAccessToken(tokens.accessToken);
   }

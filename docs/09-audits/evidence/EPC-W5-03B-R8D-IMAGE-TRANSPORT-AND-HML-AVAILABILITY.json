@@ -1,0 +1,70 @@
+{
+  "id": "EPC-W5-03B-R8D",
+  "title": "Image Transport and HML Availability",
+  "phase": "EPC-W5-03B-R8D - Image Transport and HML Availability",
+  "verdict": "DEFERRED_PENDING_SECURE_TRANSFER",
+  "evidenceClassification": "PARTIAL_LOCAL_EVIDENCE_ONLY",
+  "baselineLocal": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "feb93ba696d8362030c7a57b18a0a0ea7a6d997b",
+    "shortSha": "feb93ba",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "workingTreeDirty": true,
+    "preexistingArtifactsPreserved": [
+      ".env.example",
+      "_worktrees/",
+      "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "docs/09-audits/* preexisting W5-03B artifacts",
+      "scripts/sdc-3.4h-f-local-readiness.mjs"
+    ]
+  },
+  "r8cFrozenReference": {
+    "imageTag": "finqz-pro-backend:hml-feb93ba-r8c",
+    "imageId": "sha256:b887f858a5a9a952754188cca9b3eaa3c1a7807d0e744071d2c8e9c043980060",
+    "repoDigest": "finqz-pro-backend@sha256:b887f858a5a9a952754188cca9b3eaa3c1a7807d0e744071d2c8e9c043980060",
+    "platform": "linux/amd64",
+    "tarPath": "C:\\Projects\\FINQZ_PRO_RELEASE_ARTIFACTS\\feb93ba-r8c\\finqz-pro-backend-hml-feb93ba-r8c.tar",
+    "tarSha256": "3c563926c9df552c92cc4c973baf8af96d734464ddefb595007b8bcd877521b2",
+    "tarSizeBytes": 219811328,
+    "tarCreationTimeUtc": "2026-07-16T19:43:35Z",
+    "tarLastWriteTimeUtc": "2026-07-16T19:43:46Z",
+    "manifestPath": "C:\\Projects\\FINQZ_PRO_RELEASE_ARTIFACTS\\feb93ba-r8c\\finqz-pro-backend-hml-feb93ba-r8c.manifest.json",
+    "manifestGitSha": "feb93ba696d8362030c7a57b18a0a0ea7a6d997b"
+  },
+  "localValidation": {
+    "tarSha256": "3c563926c9df552c92cc4c973baf8af96d734464ddefb595007b8bcd877521b2",
+    "tarSizeBytes": 219811328,
+    "manifestParse": "pass",
+    "dockerDaemon": "unavailable",
+    "secureTransfer": "not_executed",
+    "remoteHash": "not_collected",
+    "dockerLoad": "not_executed",
+    "remoteInspect": "not_collected",
+    "composeValidation": "not_executed",
+    "runtimeUnchanged": "not_collected",
+    "frontendFingerprint": "not_collected"
+  },
+  "constraintsObserved": {
+    "noDeploy": true,
+    "noMigrationHML": true,
+    "noRestart": true,
+    "noReload": true,
+    "noContainerRemoval": true,
+    "noFrontendChange": true,
+    "noComposeChange": true,
+    "noProductionChange": true,
+    "noSecretExposure": true
+  },
+  "risks": [
+    "Secure transfer to HML is pending because SSH/SCP access could not be exercised in this environment",
+    "Remote hash and docker load validation remain pending",
+    "Remote compose immutability and runtime preservation were not revalidated here",
+    "Local Docker daemon was unavailable in this session"
+  ],
+  "documents": {
+    "markdown": "docs/09-audits/EPC-W5-03B-R8D-IMAGE-TRANSPORT-AND-HML-AVAILABILITY.md",
+    "json": "docs/09-audits/evidence/EPC-W5-03B-R8D-IMAGE-TRANSPORT-AND-HML-AVAILABILITY.json",
+    "mermaid": "docs/09-audits/evidence/EPC-W5-03B-R8D-TRANSFER-HASH-LOAD-VERIFY.mmd"
+  },
+  "nextStep": "Resume from secure transfer and remote HML validation in an environment with SSH/SCP and Docker daemon access."
+}

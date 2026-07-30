@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://finqz-pro.local/schemas/pipeline-stage-contract.schema.json",
+  "title": "FINQZ PRO Enterprise Pipeline Stage Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contractVersion",
+    "correlationId",
+    "parentCorrelationId",
+    "sourceCorrelationId",
+    "stage",
+    "component",
+    "status",
+    "exitCode",
+    "startedAt",
+    "finishedAt",
+    "durationMs",
+    "required",
+    "skipped",
+    "justification",
+    "warnings",
+    "errors",
+    "evidence",
+    "outputDir",
+    "logFile",
+    "notes",
+    "stdout",
+    "stderr",
+    "command"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "correlationId": {
+      "type": "string",
+      "pattern": "^consolidation-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7,12}$"
+    },
+    "parentCorrelationId": {
+      "type": "string",
+      "pattern": "^consolidation-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7,12}$"
+    },
+    "sourceCorrelationId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "artifactBuild",
+        "releasePackage",
+        "releaseVerification",
+        "deployDryRun",
+        "runtimeValidation",
+        "releaseGate",
+        "contractValidation",
+        "evidenceValidation",
+        "portabilityValidation"
+      ]
+    },
+    "component": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "PASS_WITH_WARNINGS",
+        "FAIL",
+        "BLOCKED",
+        "SKIPPED"
+      ]
+    },
+    "exitCode": {
+      "type": "integer"
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "finishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "required": {
+      "type": "boolean"
+    },
+    "skipped": {
+      "type": "boolean"
+    },
+    "justification": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outputDir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "logFile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stdout": {
+      "type": "string"
+    },
+    "stderr": {
+      "type": "string"
+    },
+    "command": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

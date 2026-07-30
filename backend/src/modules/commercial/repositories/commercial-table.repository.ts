@@ -1,9 +1,11 @@
-import type { CommercialTable, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { CommercialTable } from '@prisma/client';
 
 import { prisma } from '../../../core/prisma/client.js';
 import type { CommercialTableFiltersDto } from '../dto/commercial-table.dto.js';
 
 type CommercialPrismaClient = typeof prisma | Prisma.TransactionClient;
+export type CommercialTransactionClient = Prisma.TransactionClient;
 
 const normalizeTextFilter = (value?: string) => {
   const normalized = value?.trim();
@@ -46,6 +48,14 @@ const conditionOrderBy = [
   { term: 'asc' },
   { createdAt: 'asc' },
 ] satisfies Prisma.CommercialConditionOrderByWithRelationInput[];
+
+export const runCommercialSerializableTransaction = async <T>(
+  action: (transaction: CommercialTransactionClient) => Promise<T>,
+) => {
+  return prisma.$transaction(action, {
+    isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  });
+};
 
 export const commercialTableRepository = {
   findAll(

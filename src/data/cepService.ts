@@ -13,6 +13,13 @@ export interface CEPAddress {
   distributor: string; // Added for energy distributor mapping
 }
 
+export type CEPLookupStatus = "found" | "not_found" | "error";
+
+export interface CEPLookupResult {
+  status: CEPLookupStatus;
+  address: CEPAddress | null;
+}
+
 // Mapeamento de estados para distribuidoras padrão
 // Used when CEP lookup doesn't provide distributor info
 const stateDistributorMap: Record<string, string> = {
@@ -85,6 +92,47 @@ export const fetchAddressByCEP = async (cep: string): Promise<CEPAddress | null>
   } catch (error) {
     console.error('Error fetching CEP:', error);
     return null;
+  }
+};
+
+// Versão com status explícito para UX
+export const fetchAddressByCEPWithStatus = async (cep: string): Promise<CEPLookupResult> => {
+  const cleanCEP = cep.replace(/\D/g, '');
+
+  if (cleanCEP.length !== 8) {
+    return { status: "not_found", address: null };
+  }
+
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+
+    if (!response.ok) {
+      return { status: "error", address: null };
+    }
+
+    const data = await response.json();
+
+    if (data?.erro) {
+      return { status: "not_found", address: null };
+    }
+
+    const distributor = stateDistributorMap[data.uf] || '';
+
+    return {
+      status: "found",
+      address: {
+        cep: data.cep,
+        street: data.logradouro || '',
+        complement: data.complemento || '',
+        neighborhood: data.bairro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
+        distributor,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching CEP with status:', error);
+    return { status: "error", address: null };
   }
 };
 

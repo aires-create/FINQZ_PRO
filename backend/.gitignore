@@ -42,3 +42,7 @@ test-results/
 
 # prisma
 prisma/dev.db
+
+# local backups
+backups/
+*.dump

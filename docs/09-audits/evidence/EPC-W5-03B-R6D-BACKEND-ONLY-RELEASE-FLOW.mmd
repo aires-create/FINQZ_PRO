@@ -1,0 +1,11 @@
+flowchart TD
+  A[Git SHA 8daa4610c9b42f28697e15297569325beefcf8a3] --> B[Build reproducible candidate]
+  B --> C[Linux Node 20 validation]
+  C --> D[Unavailable in this session]
+  D --> E[DEFERRED_PENDING_HML_RECONCILIATION]
+  E --> F[HML inventory]
+  F --> G[Backup plan]
+  G --> H[Migration future]
+  H --> I[Backend-only deploy future]
+  I --> J[Smoke validation]
+  J --> K{GO or rollback}

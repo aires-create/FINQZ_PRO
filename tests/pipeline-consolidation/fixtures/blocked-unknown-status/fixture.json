@@ -1,0 +1,13 @@
+{
+  "id": "blocked-unknown-status",
+  "description": "Unknown stage status is rejected by the contract validator",
+  "environment": "local",
+  "strict": false,
+  "skipHttp": false,
+  "expected": {
+    "summaryStatus": "BLOCKED",
+    "contractStatus": "BLOCKED",
+    "evidenceStatus": "PASS",
+    "portabilityStatus": "PASS"
+  }
+}

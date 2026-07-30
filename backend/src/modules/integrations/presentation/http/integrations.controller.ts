@@ -8,9 +8,11 @@ import type { GetProviderPayloadDiagnosticsUseCase } from '../../application/get
 import type { GetProviderRuntimeDiagnosticsUseCase } from '../../application/get-provider-runtime-diagnostics.use-case.js';
 import type { GetProviderRuntimeIssuesUseCase } from '../../application/get-provider-runtime-issues.use-case.js';
 import type { GetProviderRuntimeSummaryUseCase } from '../../application/get-provider-runtime-summary.use-case.js';
+import type { GetProviderOperationsConsoleUseCase } from '../../application/get-provider-operations-console.use-case.js';
 import type { TestIntegrationProviderConnectionUseCase } from '../../application/test-integration-provider-connection.use-case.js';
 import type { TestIntegrationProviderMarginInquiryUseCase } from '../../application/test-integration-provider-margin-inquiry.use-case.js';
 import type { TestIntegrationProviderInitialSimulationUseCase } from '../../application/test-integration-provider-initial-simulation.use-case.js';
+import type { ProviderCatalogScope } from '../../application/list-provider-capabilities.use-case.js';
 import { IntegrationError } from '../../domain/errors/integration.error.js';
 import { ProviderCapabilityNotSupportedError } from '../../domain/errors/provider-capability-not-supported.error.js';
 import { ProviderAuthenticationError } from '../../domain/errors/provider-authentication.error.js';
@@ -102,13 +104,20 @@ export class IntegrationsController {
     private readonly getProviderRuntimeSummaryUseCase: GetProviderRuntimeSummaryUseCase,
     private readonly getProviderRuntimeIssuesUseCase: GetProviderRuntimeIssuesUseCase,
     private readonly getProviderRuntimeDiagnosticsUseCase: GetProviderRuntimeDiagnosticsUseCase,
+    private readonly getProviderOperationsConsoleUseCase: GetProviderOperationsConsoleUseCase,
   ) {}
 
   listProviderCapabilities = async (
-    _request: FastifyRequest,
+    request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
-    const result = this.listProviderCapabilitiesUseCase.execute();
+    const query = request.query as { scope?: string };
+    const requestedScope = query.scope;
+    const scope: ProviderCatalogScope =
+      requestedScope === 'runtime' || requestedScope === 'planned'
+        ? requestedScope
+        : 'all';
+    const result = this.listProviderCapabilitiesUseCase.execute(scope);
     reply.send(result);
   };
 
@@ -328,6 +337,21 @@ export class IntegrationsController {
         params.providerKey,
       );
       reply.send(result);
+    } catch {
+      sendUnexpectedIntegrationError(reply);
+    }
+  };
+
+  getProviderOperationsConsole = async (
+    _request: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> => {
+    try {
+      const result = this.getProviderOperationsConsoleUseCase.execute();
+      reply.send({
+        success: true,
+        data: result,
+      });
     } catch {
       sendUnexpectedIntegrationError(reply);
     }

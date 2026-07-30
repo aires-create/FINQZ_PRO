@@ -1,0 +1,990 @@
+{
+  "auditId": "EPC-W5-02",
+  "title": "Master Catalog Dependency Graph",
+  "generatedAt": "2026-07-12T12:32:03.9591216-03:00",
+  "branch": "homologation/bootstrap-vps",
+  "head": "5b0d1186aeaccc9d3290c8b2f75b30243bfbdfed",
+  "upstream": "origin/homologation/bootstrap-vps",
+  "status": "COMPLETE",
+  "verdict": "GO WITH RESTRICTIONS",
+  "scope": "Dependency graph and migration analysis for the Master Catalog only. No production changes were made.",
+  "documentsReviewed": [
+    "docs/09-audits/EPC-W5-01-MASTER-CATALOG-INVENTORY.md",
+    "docs/09-audits/evidence/EPC-W5-01-MASTER-CATALOG-INVENTORY.json",
+    "docs/00-master/DCA-FINQZ-PRO-ENTERPRISE-v2.md",
+    "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md",
+    "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md",
+    "docs/05-adr/ADR-004-commercial-master-catalog.md",
+    "docs/05-adr/ADR-010-loan-with-collateral-canonical-taxonomy.md",
+    "docs/02-architecture/ARCH-046-master-catalog-persistence-blueprint.md",
+    "docs/02-architecture/ARCH-047-master-catalog-repository-contract-design.md",
+    "docs/02-architecture/ARCH-048-master-catalog-api-read-contract-blueprint.md",
+    "docs/02-architecture/ARCH-049-master-catalog-application-service-blueprint.md",
+    "docs/02-architecture/ARCH-050-master-catalog-end-to-end-read-flow-blueprint.md",
+    "docs/02-architecture/ARCH-051-master-catalog-runtime-readiness-checklist.md",
+    "docs/02-architecture/ARCH-052-master-catalog-architecture-consolidation-review.md",
+    "docs/02-architecture/ARCH-053-master-catalog-runtime-gap-assessment.md",
+    "docs/02-architecture/ARCH-054-master-catalog-runtime-entry-review.md",
+    "docs/02-architecture/ARCH-055-catalog-consumption-architecture.md"
+  ],
+  "revalidatedW501": {
+    "auditId": "EPC-W5-01",
+    "doc": "docs/09-audits/EPC-W5-01-MASTER-CATALOG-INVENTORY.md",
+    "evidence": "docs/09-audits/evidence/EPC-W5-01-MASTER-CATALOG-INVENTORY.json",
+    "finding": "The canonical backend Master Catalog, its HTTP surface, the Prisma-backed repository, the canonical seed and the compatibility consumers remain aligned with the prior inventory.",
+    "noRegressionObserved": [
+      "backend/src/modules/master-catalog remains the canonical owner",
+      "backend/src/core/http/fastify.ts still registers masterCatalogRoutes",
+      "backend/prisma/seed.ts still seeds MASTER_CATALOG_INITIAL_TREE",
+      "creditPfCatalog, catalogRepository, commercialRepository, simulatorRepository and store/index.ts remain compatibility or legacy paths"
+    ]
+  },
+  "graph": {
+    "nodeCount": 36,
+    "edgeCount": 45,
+    "dependencyClasses": [
+      "bootstrap",
+      "canonical-core",
+      "canonical-contract",
+      "persistence",
+      "consumer",
+      "adapter",
+      "shadow-read",
+      "compatibility",
+      "legacy"
+    ],
+    "nodes": [
+      {
+        "id": "http_bootstrap",
+        "label": "HTTP bootstrap",
+        "file": "backend/src/core/http/fastify.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "registers Master Catalog routes"
+      },
+      {
+        "id": "master_catalog_routes",
+        "label": "master-catalog routes",
+        "file": "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "defines read-only HTTP surface"
+      },
+      {
+        "id": "master_catalog_controller",
+        "label": "master-catalog controller",
+        "file": "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "validates input and invokes runtime"
+      },
+      {
+        "id": "master_catalog_runtime",
+        "label": "master-catalog runtime",
+        "file": "backend/src/modules/master-catalog/application/master-catalog.runtime.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "maps service reads to DTOs"
+      },
+      {
+        "id": "master_catalog_service",
+        "label": "master-catalog service",
+        "file": "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "enforces tenant context and delegates to repository"
+      },
+      {
+        "id": "master_catalog_prisma_repository",
+        "label": "master-catalog Prisma repository",
+        "file": "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+        "scope": "backend",
+        "class": "persistence",
+        "role": "queries Prisma models for canonical reads"
+      },
+      {
+        "id": "master_catalog_repository_contract",
+        "label": "repository contract",
+        "file": "backend/src/modules/master-catalog/domain/master-catalog-repository.contract.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "declares repository port"
+      },
+      {
+        "id": "master_catalog_service_contract",
+        "label": "service contract",
+        "file": "backend/src/modules/master-catalog/services/master-catalog.service.contract.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "declares service port"
+      },
+      {
+        "id": "master_catalog_dto",
+        "label": "DTO layer",
+        "file": "backend/src/modules/master-catalog/dto/master-catalog.dto.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "projects read models into transport DTOs"
+      },
+      {
+        "id": "master_catalog_http_contract",
+        "label": "HTTP contract",
+        "file": "backend/src/modules/master-catalog/presentation/http/master-catalog.http.contract.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "declares HTTP route inventory and permissions"
+      },
+      {
+        "id": "master_catalog_http_schema",
+        "label": "HTTP schema",
+        "file": "backend/src/modules/master-catalog/validators/master-catalog.http.schema.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "declares query and params validation"
+      },
+      {
+        "id": "master_catalog_domain_contract",
+        "label": "domain contract",
+        "file": "backend/src/modules/master-catalog/domain/master-catalog.contract.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "owns catalog statuses and segment codes"
+      },
+      {
+        "id": "master_catalog_read_model",
+        "label": "read model",
+        "file": "backend/src/modules/master-catalog/domain/master-catalog.read-model.ts",
+        "scope": "backend",
+        "class": "canonical-contract",
+        "role": "canonical tree shape used across backend and frontend"
+      },
+      {
+        "id": "master_catalog_mapper",
+        "label": "domain mapper",
+        "file": "backend/src/modules/master-catalog/domain/master-catalog.mapper.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "normalizes persisted models into the canonical tree"
+      },
+      {
+        "id": "master_catalog_seed",
+        "label": "master-catalog seed",
+        "file": "backend/src/modules/master-catalog/domain/master-catalog.seed.ts",
+        "scope": "backend",
+        "class": "canonical-core",
+        "role": "defines initial canonical tree"
+      },
+      {
+        "id": "backend_prisma_seed",
+        "label": "Prisma seed runner",
+        "file": "backend/prisma/seed.ts",
+        "scope": "backend",
+        "class": "persistence",
+        "role": "persists the canonical tree idempotently"
+      },
+      {
+        "id": "backend_prisma_schema",
+        "label": "Prisma schema",
+        "file": "backend/prisma/schema.prisma",
+        "scope": "backend",
+        "class": "persistence",
+        "role": "defines Master Catalog tables and indexes"
+      },
+      {
+        "id": "master_catalog_api_client",
+        "label": "Master Catalog API client",
+        "file": "src/api/modules/master-catalog.api.ts",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "read-only HTTP client for the canonical surface"
+      },
+      {
+        "id": "oportunidades_page",
+        "label": "Oportunidades page",
+        "file": "src/pages/Oportunidades.tsx",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "loads the canonical tree for selection and normalization"
+      },
+      {
+        "id": "load_estrutura_comercial_from_master_catalog",
+        "label": "load Estrutura Comercial",
+        "file": "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "fetches the canonical tree and maps it to EstruturaComercial"
+      },
+      {
+        "id": "master_catalog_to_estrutura_comercial_mapper",
+        "label": "masterCatalog -> EstruturaComercial mapper",
+        "file": "src/features/master-catalog/masterCatalogToEstruturaComercial.mapper.ts",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "maps canonical catalog DTOs into EstruturaComercial"
+      },
+      {
+        "id": "estrutura_comercial_page",
+        "label": "Estrutura Comercial page",
+        "file": "src/pages/EstruturaComercial.tsx",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "boots and syncs from the canonical tree"
+      },
+      {
+        "id": "commercial_structure_backend_mapper",
+        "label": "commercial-structure backend mapper",
+        "file": "backend/src/modules/commercial-structure/domain/commercial-structure.mapper.ts",
+        "scope": "backend",
+        "class": "adapter",
+        "role": "consumes MasterCatalogTreeReadModel for coverage derivation"
+      },
+      {
+        "id": "load_commercial_structure_coverage_tree",
+        "label": "load Commercial Coverage",
+        "file": "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+        "scope": "frontend",
+        "class": "shadow-read",
+        "role": "loads canonical tree and compares it to compatibility data"
+      },
+      {
+        "id": "commercial_structure_coverage_mapper",
+        "label": "commercial coverage mapper",
+        "file": "src/features/commercial-structure/commercialStructureCoverage.mapper.ts",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "maps canonical DTOs to coverage views"
+      },
+      {
+        "id": "commercial_coverage_page",
+        "label": "Commercial Coverage page",
+        "file": "src/pages/CommercialCoverage.tsx",
+        "scope": "frontend",
+        "class": "consumer",
+        "role": "triggers the shadow coverage read"
+      },
+      {
+        "id": "commercial_coverage_shadow_comparator",
+        "label": "shadow comparator",
+        "file": "src/features/commercial-structure/commercialCoverageShadowComparator.ts",
+        "scope": "frontend",
+        "class": "shadow-read",
+        "role": "compares the canonical tree against creditPfCatalog"
+      },
+      {
+        "id": "credit_pf_catalog",
+        "label": "creditPfCatalog",
+        "file": "src/data/creditPfCatalog.ts",
+        "scope": "frontend",
+        "class": "legacy",
+        "role": "local parallel taxonomy source"
+      },
+      {
+        "id": "loan_with_collateral_metadata",
+        "label": "loan-with-collateral metadata",
+        "file": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts",
+        "scope": "backend",
+        "class": "adapter",
+        "role": "declares canonical product code, aliases and feature flag"
+      },
+      {
+        "id": "loan_with_collateral_adapter",
+        "label": "loan-with-collateral adapter",
+        "file": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+        "scope": "backend",
+        "class": "adapter",
+        "role": "normalizes product/subproduct via runtime and still keeps compatibility fallback"
+      },
+      {
+        "id": "catalog_repository",
+        "label": "catalogRepository",
+        "file": "src/data/catalogRepository.ts",
+        "scope": "frontend",
+        "class": "compatibility",
+        "role": "returns local catalog data"
+      },
+      {
+        "id": "commercial_repository",
+        "label": "commercialRepository",
+        "file": "src/data/commercialRepository.ts",
+        "scope": "frontend",
+        "class": "compatibility",
+        "role": "supports commercial UI and simulator with local state"
+      },
+      {
+        "id": "simulator_repository",
+        "label": "simulatorRepository",
+        "file": "src/data/simulatorRepository.ts",
+        "scope": "frontend",
+        "class": "compatibility",
+        "role": "depends on commercialRepository and in-memory state"
+      },
+      {
+        "id": "store_index",
+        "label": "store/index.ts",
+        "file": "src/store/index.ts",
+        "scope": "frontend",
+        "class": "legacy",
+        "role": "derives EstruturaComercial from creditPfCatalog"
+      },
+      {
+        "id": "tabelas_comerciais_page",
+        "label": "Tabelas Comerciais page",
+        "file": "src/pages/TabelasComerciais.tsx",
+        "scope": "frontend",
+        "class": "compatibility",
+        "role": "still relies on commercialRepository helpers"
+      },
+      {
+        "id": "simulador_page",
+        "label": "Simulador page",
+        "file": "src/pages/Simulador.tsx",
+        "scope": "frontend",
+        "class": "compatibility",
+        "role": "still bound to simulatorRepository"
+      }
+    ],
+    "edges": [
+      {
+        "from": "http_bootstrap",
+        "to": "master_catalog_routes",
+        "kind": "bootstrap",
+        "evidence": [
+          "backend/src/core/http/fastify.ts:627"
+        ]
+      },
+      {
+        "from": "master_catalog_routes",
+        "to": "master_catalog_controller",
+        "kind": "canonical-core",
+        "evidence": [
+          "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_routes",
+        "to": "master_catalog_http_schema",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_controller",
+        "to": "master_catalog_runtime",
+        "kind": "canonical-core",
+        "evidence": [
+          "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_controller",
+        "to": "master_catalog_http_schema",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_runtime",
+        "to": "master_catalog_service",
+        "kind": "canonical-core",
+        "evidence": [
+          "backend/src/modules/master-catalog/application/master-catalog.runtime.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_runtime",
+        "to": "master_catalog_service_contract",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/application/master-catalog.runtime.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_runtime",
+        "to": "master_catalog_dto",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/application/master-catalog.runtime.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_service",
+        "to": "master_catalog_prisma_repository",
+        "kind": "persistence",
+        "evidence": [
+          "backend/src/modules/master-catalog/services/master-catalog.service.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_service",
+        "to": "master_catalog_service_contract",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/services/master-catalog.service.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_prisma_repository",
+        "to": "master_catalog_repository_contract",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_prisma_repository",
+        "to": "master_catalog_domain_contract",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_prisma_repository",
+        "to": "master_catalog_read_model",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_prisma_repository",
+        "to": "master_catalog_mapper",
+        "kind": "canonical-core",
+        "evidence": [
+          "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_dto",
+        "to": "master_catalog_read_model",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/dto/master-catalog.dto.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_http_contract",
+        "to": "master_catalog_dto",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/presentation/http/master-catalog.http.contract.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_http_contract",
+        "to": "master_catalog_http_schema",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/presentation/http/master-catalog.http.contract.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_http_schema",
+        "to": "master_catalog_domain_contract",
+        "kind": "canonical-contract",
+        "evidence": [
+          "backend/src/modules/master-catalog/validators/master-catalog.http.schema.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_mapper",
+        "to": "master_catalog_read_model",
+        "kind": "canonical-core",
+        "evidence": [
+          "backend/src/modules/master-catalog/domain/master-catalog.mapper.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_seed",
+        "to": "master_catalog_read_model",
+        "kind": "canonical-core",
+        "evidence": [
+          "backend/src/modules/master-catalog/domain/master-catalog.seed.ts"
+        ]
+      },
+      {
+        "from": "backend_prisma_seed",
+        "to": "master_catalog_seed",
+        "kind": "persistence",
+        "evidence": [
+          "backend/prisma/seed.ts:2",
+          "backend/prisma/seed.ts:177"
+        ]
+      },
+      {
+        "from": "backend_prisma_seed",
+        "to": "backend_prisma_schema",
+        "kind": "persistence",
+        "evidence": [
+          "backend/prisma/seed.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_api_client",
+        "to": "master_catalog_routes",
+        "kind": "consumer",
+        "evidence": [
+          "src/api/modules/master-catalog.api.ts"
+        ]
+      },
+      {
+        "from": "oportunidades_page",
+        "to": "master_catalog_api_client",
+        "kind": "consumer",
+        "evidence": [
+          "src/pages/Oportunidades.tsx:7",
+          "src/pages/Oportunidades.tsx:1068"
+        ]
+      },
+      {
+        "from": "load_estrutura_comercial_from_master_catalog",
+        "to": "master_catalog_api_client",
+        "kind": "consumer",
+        "evidence": [
+          "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts:1-5"
+        ]
+      },
+      {
+        "from": "load_estrutura_comercial_from_master_catalog",
+        "to": "master_catalog_to_estrutura_comercial_mapper",
+        "kind": "consumer",
+        "evidence": [
+          "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts"
+        ]
+      },
+      {
+        "from": "master_catalog_to_estrutura_comercial_mapper",
+        "to": "master_catalog_api_client",
+        "kind": "consumer",
+        "evidence": [
+          "src/features/master-catalog/masterCatalogToEstruturaComercial.mapper.ts"
+        ]
+      },
+      {
+        "from": "estrutura_comercial_page",
+        "to": "load_estrutura_comercial_from_master_catalog",
+        "kind": "consumer",
+        "evidence": [
+          "src/pages/EstruturaComercial.tsx"
+        ]
+      },
+      {
+        "from": "commercial_structure_backend_mapper",
+        "to": "master_catalog_read_model",
+        "kind": "adapter",
+        "evidence": [
+          "backend/src/modules/commercial-structure/domain/commercial-structure.mapper.ts"
+        ]
+      },
+      {
+        "from": "load_commercial_structure_coverage_tree",
+        "to": "master_catalog_api_client",
+        "kind": "shadow-read",
+        "evidence": [
+          "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts:1",
+          "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts:46"
+        ]
+      },
+      {
+        "from": "load_commercial_structure_coverage_tree",
+        "to": "commercial_structure_coverage_mapper",
+        "kind": "consumer",
+        "evidence": [
+          "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts"
+        ]
+      },
+      {
+        "from": "load_commercial_structure_coverage_tree",
+        "to": "commercial_coverage_shadow_comparator",
+        "kind": "shadow-read",
+        "evidence": [
+          "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts"
+        ]
+      },
+      {
+        "from": "load_commercial_structure_coverage_tree",
+        "to": "credit_pf_catalog",
+        "kind": "shadow-read",
+        "evidence": [
+          "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts:2"
+        ]
+      },
+      {
+        "from": "commercial_structure_coverage_mapper",
+        "to": "master_catalog_api_client",
+        "kind": "consumer",
+        "evidence": [
+          "src/features/commercial-structure/commercialStructureCoverage.mapper.ts"
+        ]
+      },
+      {
+        "from": "commercial_coverage_page",
+        "to": "load_commercial_structure_coverage_tree",
+        "kind": "consumer",
+        "evidence": [
+          "src/pages/CommercialCoverage.tsx"
+        ]
+      },
+      {
+        "from": "commercial_coverage_shadow_comparator",
+        "to": "master_catalog_api_client",
+        "kind": "shadow-read",
+        "evidence": [
+          "src/features/commercial-structure/commercialCoverageShadowComparator.ts"
+        ]
+      },
+      {
+        "from": "commercial_coverage_shadow_comparator",
+        "to": "credit_pf_catalog",
+        "kind": "shadow-read",
+        "evidence": [
+          "src/features/commercial-structure/commercialCoverageShadowComparator.ts:76"
+        ]
+      },
+      {
+        "from": "loan_with_collateral_metadata",
+        "to": "master_catalog_runtime",
+        "kind": "adapter",
+        "evidence": [
+          "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts:172",
+          "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts:176"
+        ]
+      },
+      {
+        "from": "loan_with_collateral_adapter",
+        "to": "loan_with_collateral_metadata",
+        "kind": "adapter",
+        "evidence": [
+          "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts"
+        ]
+      },
+      {
+        "from": "catalog_repository",
+        "to": "credit_pf_catalog",
+        "kind": "compatibility",
+        "evidence": [
+          "src/data/catalogRepository.ts:5",
+          "src/data/catalogRepository.ts:10"
+        ]
+      },
+      {
+        "from": "commercial_repository",
+        "to": "credit_pf_catalog",
+        "kind": "compatibility",
+        "evidence": [
+          "src/data/commercialRepository.ts:7",
+          "src/data/commercialRepository.ts:185"
+        ]
+      },
+      {
+        "from": "simulator_repository",
+        "to": "commercial_repository",
+        "kind": "compatibility",
+        "evidence": [
+          "src/data/simulatorRepository.ts:7"
+        ]
+      },
+      {
+        "from": "store_index",
+        "to": "credit_pf_catalog",
+        "kind": "legacy",
+        "evidence": [
+          "src/store/index.ts:6",
+          "src/store/index.ts:54",
+          "src/store/index.ts:174"
+        ]
+      },
+      {
+        "from": "tabelas_comerciais_page",
+        "to": "commercial_repository",
+        "kind": "compatibility",
+        "evidence": [
+          "src/pages/TabelasComerciais.tsx"
+        ]
+      },
+      {
+        "from": "simulador_page",
+        "to": "simulator_repository",
+        "kind": "compatibility",
+        "evidence": [
+          "src/pages/Simulador.tsx"
+        ]
+      }
+    ]
+  },
+  "directPrismaAccesses": [
+    {
+      "file": "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+      "kind": "canonical-read",
+      "notes": [
+        "tenant-scoped",
+        "deletedAt = null",
+        "order by displayOrder then name"
+      ]
+    },
+    {
+      "file": "backend/prisma/seed.ts",
+      "kind": "canonical-seed-write",
+      "notes": [
+        "upsert idempotent",
+        "persists MASTER_CATALOG_INITIAL_TREE"
+      ]
+    }
+  ],
+  "bypasses": [
+    {
+      "file": "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+      "kind": "shadow-read",
+      "target": "creditPfCatalog",
+      "notes": [
+        "canonical tree is compared against compatibility source"
+      ]
+    },
+    {
+      "file": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+      "kind": "compatibility-fallback",
+      "target": "request fields and aliases",
+      "notes": [
+        "lookup through masterCatalogRuntime happens first",
+        "fallback path still exists"
+      ]
+    },
+    {
+      "file": "src/data/catalogRepository.ts",
+      "kind": "legacy-local-source",
+      "target": "creditPfCatalog"
+    },
+    {
+      "file": "src/data/commercialRepository.ts",
+      "kind": "legacy-local-source",
+      "target": "creditPfCatalog + in-memory state"
+    },
+    {
+      "file": "src/data/simulatorRepository.ts",
+      "kind": "legacy-local-source",
+      "target": "commercialRepository"
+    }
+  ],
+  "violations": [
+    {
+      "id": "V-01",
+      "severity": "medium",
+      "file": "src/data/creditPfCatalog.ts",
+      "issue": "Parallel taxonomy source remains in the repository.",
+      "impact": "Keeps a second source of truth alive for commercial product data."
+    },
+    {
+      "id": "V-02",
+      "severity": "medium",
+      "file": "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+      "issue": "Compatibility fallback still accepts aliases and request fields after canonical lookup.",
+      "impact": "Leaves the adapter partially migrated."
+    },
+    {
+      "id": "V-03",
+      "severity": "medium",
+      "file": "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+      "issue": "Shadow comparison still depends on local taxonomy to observe parity.",
+      "impact": "Necessary for audit now, but must be retired after parity is proven."
+    },
+    {
+      "id": "V-04",
+      "severity": "low",
+      "file": "src/data/catalogRepository.ts",
+      "issue": "Legacy compatibility repository still exposes local catalog data.",
+      "impact": "Increases maintenance burden and migration surface."
+    }
+  ],
+  "cycles": [
+    {
+      "description": "No true dependency cycle was identified inside the canonical Master Catalog chain.",
+      "evidence": [
+        "http_bootstrap -> routes -> controller -> runtime -> service -> repository -> Prisma"
+      ]
+    }
+  ],
+  "couplings": [
+    {
+      "kind": "tenant-scope",
+      "description": "tenantId is required across controller, service and repository.",
+      "files": [
+        "backend/src/modules/master-catalog/presentation/http/master-catalog.controller.ts",
+        "backend/src/modules/master-catalog/services/master-catalog.service.ts",
+        "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts"
+      ]
+    },
+    {
+      "kind": "rbac",
+      "description": "Public surface requires master-catalog:read.",
+      "files": [
+        "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts"
+      ]
+    },
+    {
+      "kind": "ordering",
+      "description": "displayOrder then name is the canonical sort contract.",
+      "files": [
+        "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+        "backend/prisma/seed.ts",
+        "src/features/master-catalog/masterCatalogToEstruturaComercial.mapper.ts"
+      ]
+    },
+    {
+      "kind": "shadow-pair",
+      "description": "Commercial Coverage keeps a live parity check against creditPfCatalog.",
+      "files": [
+        "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+        "src/features/commercial-structure/commercialCoverageShadowComparator.ts"
+      ]
+    },
+    {
+      "kind": "compatibility-alias",
+      "description": "loan-with-collateral still accepts aliases for subproducts.",
+      "files": [
+        "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts",
+        "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts"
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "risk": "Divergence between creditPfCatalog and the canonical backend tree can continue to accumulate while shadow read remains active.",
+      "severity": "medium"
+    },
+    {
+      "risk": "The loan-with-collateral adapter can still resolve through compatibility paths if canonical names drift.",
+      "severity": "medium"
+    },
+    {
+      "risk": "Compatibility repositories keep local state and can hide regressions if they are treated as production sources.",
+      "severity": "medium"
+    },
+    {
+      "risk": "Missing tenant context causes hard failure in the canonical Master Catalog service path.",
+      "severity": "low"
+    }
+  ],
+  "singlePointsOfFailure": [
+    {
+      "file": "backend/src/modules/master-catalog/repositories/master-catalog.prisma.repository.ts",
+      "reason": "Only official persistence reader for the canonical catalog."
+    },
+    {
+      "file": "backend/prisma/seed.ts",
+      "reason": "Only bootstrap writer for the canonical tree."
+    },
+    {
+      "file": "backend/src/modules/master-catalog/domain/master-catalog.seed.ts",
+      "reason": "Only canonical source for the initial tree content."
+    },
+    {
+      "file": "backend/src/modules/master-catalog/presentation/http/master-catalog.routes.ts",
+      "reason": "Only public HTTP surface for canonical reads."
+    },
+    {
+      "file": "src/data/creditPfCatalog.ts",
+      "reason": "Only shadow/legacy source still feeding multiple local compatibility paths."
+    }
+  ],
+  "migrationOrder": [
+    {
+      "step": 1,
+      "focus": "Keep the canonical backend path as the sole read owner.",
+      "targetFiles": [
+        "backend/src/modules/master-catalog/**"
+      ]
+    },
+    {
+      "step": 2,
+      "focus": "Finish consumer parity for Oportunidades and Estrutura Comercial.",
+      "targetFiles": [
+        "src/pages/Oportunidades.tsx",
+        "src/features/master-catalog/loadEstruturaComercialFromMasterCatalog.ts",
+        "src/pages/EstruturaComercial.tsx"
+      ]
+    },
+    {
+      "step": 3,
+      "focus": "Keep Commercial Coverage in shadow mode only until parity is measurable.",
+      "targetFiles": [
+        "src/features/commercial-structure/loadCommercialStructureCoverageTree.ts",
+        "src/features/commercial-structure/commercialCoverageShadowComparator.ts"
+      ]
+    },
+    {
+      "step": 4,
+      "focus": "Reduce loan-with-collateral fallback paths.",
+      "targetFiles": [
+        "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.adapter.ts",
+        "backend/src/modules/simulation/products/loan-with-collateral/loan-with-collateral.metadata.ts"
+      ]
+    },
+    {
+      "step": 5,
+      "focus": "Retire compatibility repositories and the derived local store.",
+      "targetFiles": [
+        "src/data/catalogRepository.ts",
+        "src/data/commercialRepository.ts",
+        "src/data/simulatorRepository.ts",
+        "src/store/index.ts"
+      ]
+    },
+    {
+      "step": 6,
+      "focus": "Freeze or remove creditPfCatalog after parity and evidence gates are complete.",
+      "targetFiles": [
+        "src/data/creditPfCatalog.ts"
+      ]
+    }
+  ],
+  "adrDecisions": [
+    {
+      "adr": "ADR-004",
+      "decision": "Master Catalog is the SSOT for the commercial taxonomy."
+    },
+    {
+      "adr": "ADR-010",
+      "decision": "loan-with-collateral uses canonical taxonomy, with compatibility only as a transitional measure."
+    }
+  ],
+  "gaps": [
+    {
+      "gap": "No docs/00-master/FINQZ-PRO-ENTERPRISE-CONTEXT-SSOT.md was found.",
+      "severity": "medium"
+    },
+    {
+      "gap": "No dedicated Master Catalog feature flag was found.",
+      "severity": "low"
+    },
+    {
+      "gap": "No master-catalog-specific divergence metric or retirement gate was found.",
+      "severity": "medium"
+    },
+    {
+      "gap": "No evidence of full retirement of creditPfCatalog or the compatibility repositories was found.",
+      "severity": "medium"
+    }
+  ],
+  "recommendationForW503": [
+    "Build a consumer-by-consumer cutover plan with explicit parity gates.",
+    "Use the shadow comparator only as a temporary verification tool.",
+    "Add retirement criteria for creditPfCatalog, catalogRepository, commercialRepository, simulatorRepository and store/index.ts.",
+    "Document the cutover order and the rollback condition for each consumer."
+  ],
+  "validations": [
+    {
+      "check": "JSON.parse",
+      "result": "ok"
+    },
+    {
+      "check": "git diff --check",
+      "result": "ok for this audit; the only warning remains the pre-existing .env.example line-ending normalization note"
+    },
+    {
+      "check": "scope",
+      "result": "only docs/09-audits artifacts were created by this task"
+    }
+  ]
+}

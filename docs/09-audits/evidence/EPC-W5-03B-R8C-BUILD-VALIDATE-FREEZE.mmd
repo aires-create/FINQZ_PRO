@@ -1,0 +1,10 @@
+flowchart TD
+  A[Git SHA feb93ba696d8362030c7a57b18a0a0ea7a6d997b] --> B[Build one candidate image]
+  B --> C[Validate the same image]
+  C --> D[Run smoke and migration checks]
+  D --> E[docker save]
+  E --> F[Capture TAR SHA-256]
+  F --> G[Write local manifest]
+  G --> H[Freeze candidate image]
+  H --> I[Hold transport for next phase]
+  I --> J[No VPS deploy]

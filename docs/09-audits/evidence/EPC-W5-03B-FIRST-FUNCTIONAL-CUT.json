@@ -1,0 +1,42 @@
+{
+  "artifact": "EPC-W5-03B-FIRST-FUNCTIONAL-CUT",
+  "status": "FAIL",
+  "module": "opportunities",
+  "environment": {
+    "backendBaseUrl": "http://127.0.0.1:3001",
+    "frontendDevServer": "vite"
+  },
+  "validationResults": {
+    "backendAuthLogin": "PASS",
+    "opportunitiesListApi": {
+      "status": 200,
+      "result": "PASS"
+    },
+    "pipelinesApi": {
+      "status": 200,
+      "result": "PASS"
+    },
+    "masterCatalogApi": {
+      "status": 200,
+      "result": "PASS"
+    },
+    "frontendBuild": "PASS",
+    "frontendDevStartup": "FAIL"
+  },
+  "defects": [
+    {
+      "id": "FRONTEND_VITE_EPERM",
+      "severity": "high",
+      "summary": "Vite dev server failed to start while loading vite.config.ts.",
+      "evidence": [
+        "failed to load config from C:\\Projects\\FINQZ_PRO\\vite.config.ts",
+        "Error: spawn EPERM"
+      ],
+      "impact": "Blocked browser-based validation of the Opportunities module."
+    }
+  ],
+  "notes": [
+    "No source code was modified for this validation step.",
+    "No secrets are stored in this artifact."
+  ]
+}

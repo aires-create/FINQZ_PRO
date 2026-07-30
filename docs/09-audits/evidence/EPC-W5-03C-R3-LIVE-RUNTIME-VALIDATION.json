@@ -1,0 +1,146 @@
+{
+  "auditId": "EPC-W5-03C-R3",
+  "title": "Live Runtime Validation",
+  "repository": "FINQZ_PRO",
+  "branch": "homologation/bootstrap-vps",
+  "runtimeStatus": {
+    "backendStarted": true,
+    "postgresConnected": true,
+    "redisConnected": true,
+    "health": 200,
+    "live": 200,
+    "ready": 200
+  },
+  "authentication": {
+    "loginEndpoint": "/api/v1/auth/login",
+    "loginStatus": 200,
+    "seedUser": "admin@finqz-pro.com",
+    "tenantId": "cdf2a4e0-acb8-46d7-b3ac-79abb7dc3f42",
+    "role": "super-admin"
+  },
+  "requestCorrelation": {
+    "xRequestIdEchoed": true,
+    "correlationIdPreserved": true,
+    "requestIdPreserved": true
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "url": "/api/v1/master-catalog/tree",
+      "status": 200,
+      "elapsedMs": 779,
+      "xRequestIdEchoed": true,
+      "payloadShape": "tree",
+      "primaryProviderUsed": true,
+      "secondaryProviderUsed": false,
+      "fallbackUsed": false,
+      "requestFailedEvent": false,
+      "events": [
+        "MASTER_CATALOG_REQUEST_STARTED",
+        "MASTER_CATALOG_PRIMARY_USED",
+        "MASTER_CATALOG_REQUEST_FINISHED"
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/master-catalog/segments",
+      "status": 200,
+      "elapsedMs": 253,
+      "xRequestIdEchoed": true,
+      "payloadShape": "array",
+      "primaryProviderUsed": true,
+      "secondaryProviderUsed": false,
+      "fallbackUsed": false,
+      "requestFailedEvent": false,
+      "events": [
+        "MASTER_CATALOG_REQUEST_STARTED",
+        "MASTER_CATALOG_PRIMARY_USED",
+        "MASTER_CATALOG_REQUEST_FINISHED"
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/master-catalog/products",
+      "status": 200,
+      "elapsedMs": 291,
+      "xRequestIdEchoed": true,
+      "payloadShape": "array",
+      "primaryProviderUsed": true,
+      "secondaryProviderUsed": false,
+      "fallbackUsed": false,
+      "requestFailedEvent": false,
+      "events": [
+        "MASTER_CATALOG_REQUEST_STARTED",
+        "MASTER_CATALOG_PRIMARY_USED",
+        "MASTER_CATALOG_REQUEST_FINISHED"
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/master-catalog/products/00000000-0000-0000-0000-000000000000/subproducts",
+      "status": 200,
+      "elapsedMs": 219,
+      "xRequestIdEchoed": true,
+      "payloadShape": "empty_array",
+      "primaryProviderUsed": true,
+      "secondaryProviderUsed": false,
+      "fallbackUsed": false,
+      "requestFailedEvent": false,
+      "events": [
+        "MASTER_CATALOG_REQUEST_STARTED",
+        "MASTER_CATALOG_PRIMARY_USED",
+        "MASTER_CATALOG_REQUEST_FINISHED"
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "/api/v1/master-catalog/subproducts/00000000-0000-0000-0000-000000000000/modalities",
+      "status": 200,
+      "elapsedMs": 222,
+      "xRequestIdEchoed": true,
+      "payloadShape": "empty_array",
+      "primaryProviderUsed": true,
+      "secondaryProviderUsed": false,
+      "fallbackUsed": false,
+      "requestFailedEvent": false,
+      "events": [
+        "MASTER_CATALOG_REQUEST_STARTED",
+        "MASTER_CATALOG_PRIMARY_USED",
+        "MASTER_CATALOG_REQUEST_FINISHED"
+      ]
+    }
+  ],
+  "logs": {
+    "structuredEventsObserved": [
+      "MASTER_CATALOG_REQUEST_STARTED",
+      "MASTER_CATALOG_PRIMARY_USED",
+      "MASTER_CATALOG_REQUEST_FINISHED"
+    ],
+    "requestFailedObserved": false,
+    "correlationIdsObserved": true,
+    "requestIdsObserved": true
+  },
+  "latency": {
+    "loginMs": 1990,
+    "treeMs": 779,
+    "segmentsMs": 253,
+    "productsMs": 291,
+    "subproductsMs": 219,
+    "modalitiesMs": 222
+  },
+  "fallback": {
+    "providerSecondaryUsed": false,
+    "timeoutObserved": false,
+    "retryObserved": false
+  },
+  "functionalHealth": {
+    "masterCatalogFunctional": true,
+    "crmOperational": true,
+    "runtimeErrorsObserved": false
+  },
+  "artifacts": [
+    "docs/09-audits/EPC-W5-03C-R3-LIVE-RUNTIME-VALIDATION.md",
+    "docs/09-audits/evidence/EPC-W5-03C-R3-LIVE-RUNTIME-VALIDATION.json",
+    "docs/09-audits/evidence/EPC-W5-03C-R3-RUNTIME-SEQUENCE.mmd"
+  ]
+}

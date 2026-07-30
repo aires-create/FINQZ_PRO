@@ -1,8 +1,11 @@
 // FINQZ PRO - API Client
 // Client HTTP com interceptors e tratamento de erros
-// Nota: Substituir por chamada real ao backend quando disponível
-
 import { finqzClient } from "./finqzClient";
+import { clientesApi } from "./modules/clientes.api";
+import { opportunitiesApi } from "./modules/opportunities.api";
+import { partnersApi } from "./modules/partners.api";
+import { automacoesApi } from "./modules/automacoes.api";
+import { dashboardApi } from "./modules/dashboard.api";
 import {
   apiFetch,
   buildQueryString,
@@ -28,147 +31,53 @@ export const client = finqzClient;
 // ============================================
 // API ENDPOINTS (mantido para compatibilidade)
 // ============================================
-// TODO(legacy-cleanup): migrar telas restantes para src/api/modules/* com contratos oficiais /api/v1.
-
-export interface DashboardFilters {
-  periodo?: string;
-  parceiro?: string;
-  tipoParceiro?: string;
-  tipoProduto?: string;
-  statusOportunidade?: string;
-  canal?: string;
-  dataRangeStart?: string;
-  dataRangeEnd?: string;
-}
-
-const buildFilterParams = (filters: DashboardFilters): string => {
-  const params = new URLSearchParams();
-  
-  if (filters.periodo) params.append('periodo', filters.periodo);
-  if (filters.parceiro) params.append('parceiro', filters.parceiro);
-  if (filters.tipoParceiro) params.append('tipoParceiro', filters.tipoParceiro);
-  if (filters.tipoProduto) params.append('tipoProduto', filters.tipoProduto);
-  if (filters.statusOportunidade) params.append('statusOportunidade', filters.statusOportunidade);
-  if (filters.canal) params.append('canal', filters.canal);
-  if (filters.dataRangeStart) params.append('dataRangeStart', filters.dataRangeStart);
-  if (filters.dataRangeEnd) params.append('dataRangeEnd', filters.dataRangeEnd);
-  
-  return params.toString();
-};
+const shouldPreserveOfficialApiPrefix = (endpoint: string): boolean =>
+  /^\/api\/v\d+(?:\/|$)/i.test(endpoint);
 
 export const api = {
   // Dashboard
-  getDashboardKPIs: (filters?: DashboardFilters) => {
-    const params = buildFilterParams(filters || {});
-    return apiFetch<any>(`/api/dashboard/kpis${params ? `?${params}` : ''}`);
-  },
-  getDashboardProducao: (filters?: DashboardFilters) => {
-    const params = buildFilterParams(filters || {});
-    return apiFetch<any>(`/api/dashboard/producao${params ? `?${params}` : ''}`);
-  },
-  getDashboardFunil: (filters?: DashboardFilters) => {
-    const params = buildFilterParams(filters || {});
-    return apiFetch<any>(`/api/dashboard/funil${params ? `?${params}` : ''}`);
-  },
+  getDashboardKPIs: () => dashboardApi.getKPIs(),
+  getDashboardProducao: (periodo?: string) => dashboardApi.getProducao(periodo),
+  getDashboardFunil: () => dashboardApi.getFunil(),
 
   // Clientes
-  getClientes: (search?: string) =>
-    apiFetch<any>(`/crm/clientes${search ? `?search=${search}` : ""}`),
-  getCliente: (id: number) => apiFetch<any>(`/crm/clientes/${id}`),
-  createCliente: (data: any) =>
-    apiFetch<any>("/crm/clientes", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  updateCliente: (id: number, data: any) =>
-    apiFetch<any>(`/crm/clientes/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteCliente: (id: number) =>
-    apiFetch<any>(`/crm/clientes/${id}`, { method: "DELETE" }),
+  getClientes: (search?: string) => clientesApi.getAll(search ? { search } : undefined),
+  getCliente: (id: number) => clientesApi.getById(id),
+  createCliente: (data: any) => clientesApi.create(data),
+  updateCliente: (id: number, data: any) => clientesApi.update(id, data),
+  deleteCliente: (id: number) => clientesApi.delete(id),
   getAuditLogs: (params: { entity: string; entityId: string; limit?: number }) => {
     const query = new URLSearchParams();
     query.set("entity", params.entity);
     query.set("entityId", params.entityId);
     query.set("limit", String(params.limit ?? 20));
-    return apiFetch<any>(`/audit/logs?${query.toString()}`);
+    return apiFetch<any>(`/api/v1/audit/logs?${query.toString()}`, {
+      preserveApiPrefix: true,
+    });
   },
-
-  // Produtos
-  getProdutos: () => apiFetch<any>("/api/produtos"),
-  getProduto: (id: number) => apiFetch<any>(`/api/produtos/${id}`),
-  createProduto: (data: any) =>
-    apiFetch<any>("/api/produtos", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  updateProduto: (id: number, data: any) =>
-    apiFetch<any>(`/api/produtos/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteProduto: (id: number) =>
-    apiFetch<any>(`/api/produtos/${id}`, { method: "DELETE" }),
 
   // Parceiros
   getParceiros: (tipo?: string, status?: string) =>
-    apiFetch<any>(
-      `/api/parceiros${tipo || status ? "?" : ""}${tipo ? `tipo=${tipo}` : ""}${status ? `&status=${status}` : ""}`
-    ),
-  getParceiro: (id: number) => apiFetch<any>(`/api/parceiros/${id}`),
-  createParceiro: (data: any) =>
-    apiFetch<any>("/api/parceiros", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  updateParceiro: (id: number, data: any) =>
-    apiFetch<any>(`/api/parceiros/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteParceiro: (id: number) =>
-    apiFetch<any>(`/api/parceiros/${id}`, { method: "DELETE" }),
+    partnersApi.getAll({ status: status as any, search: tipo } as any),
+  getParceiro: (id: number) => partnersApi.getById(String(id)),
+  createParceiro: (data: any) => partnersApi.create(data),
+  updateParceiro: (id: number, data: any) => partnersApi.update(String(id), data),
+  deleteParceiro: (id: number) => partnersApi.delete(String(id)),
 
   // Oportunidades
   getOportunidades: (params?: { status?: string; produto_id?: string; parceiro_id?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.status) query.set("status", params.status);
-    if (params?.produto_id) query.set("produto_id", params.produto_id);
-    if (params?.parceiro_id) query.set("parceiro_id", params.parceiro_id);
-    return apiFetch<any>(`/api/oportunidades${query.toString() ? "?" + query.toString() : ""}`);
+    return opportunitiesApi.getAll(params as any);
   },
-  getOportunidadesPipeline: (produtoId?: string) =>
-    apiFetch<any>(`/api/oportunidades/pipeline${produtoId ? `?produto_id=${produtoId}` : ""}`),
-  getOportunidade: (id: number) => apiFetch<any>(`/api/oportunidades/${id}`),
-  createOportunidade: (data: any) =>
-    apiFetch<any>("/api/oportunidades", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  updateOportunidade: (id: number, data: any) =>
-    apiFetch<any>(`/api/oportunidades/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteOportunidade: (id: number) =>
-    // TODO(legacy-cleanup): endpoint legado mantido no client de compatibilidade.
-    apiFetch<any>(`/api/oportunidades/${id}`, { method: "DELETE" }),
+  getOportunidade: (id: number) => opportunitiesApi.getById(String(id)),
+  createOportunidade: (data: any) => opportunitiesApi.create(data),
+  updateOportunidade: (id: number, data: any) => opportunitiesApi.update(String(id), data),
+  deleteOportunidade: (id: number) => opportunitiesApi.delete(String(id)),
 
   // Automações
-  getAutomacoes: () => apiFetch<any>("/api/automacoes"),
-  createAutomacao: (data: any) =>
-    apiFetch<any>("/api/automacoes", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  updateAutomacao: (id: number, data: any) =>
-    apiFetch<any>(`/api/automacoes/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }),
-  deleteAutomacao: (id: number) =>
-    apiFetch<any>(`/api/automacoes/${id}`, { method: "DELETE" }),
+  getAutomacoes: () => automacoesApi.getAll(),
+  createAutomacao: (data: any) => automacoesApi.create(data),
+  updateAutomacao: (id: number, data: any) => automacoesApi.update(id, data),
+  deleteAutomacao: (id: number) => automacoesApi.delete(id),
 
   // Eventos
   getEventos: (params?: { page?: number; limit?: number; type?: string; source?: string; startDate?: number; endDate?: number }) => {
@@ -191,20 +100,28 @@ export const api = {
   },
   get: <T = any>(endpoint: string, params?: Record<string, unknown>) => {
     const query = buildQueryString(params || {});
-    return apiFetch<T>(`${endpoint}${query}`);
+    return apiFetch<T>(`${endpoint}${query}`, {
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
+    });
   },
   post: <T = any>(endpoint: string, data?: any) =>
     apiFetch<T>(endpoint, {
       method: "POST",
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
       body: JSON.stringify(data),
     }),
   put: <T = any>(endpoint: string, data?: any) =>
     apiFetch<T>(endpoint, {
       method: "PUT",
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
       body: JSON.stringify(data),
     }),
   delete: <T = any>(endpoint: string) =>
-    apiFetch<T>(endpoint, { method: "DELETE" }),};
+    apiFetch<T>(endpoint, {
+      method: "DELETE",
+      preserveApiPrefix: shouldPreserveOfficialApiPrefix(endpoint),
+    }),
+};
 
 // ============================================
 // EXPORTS

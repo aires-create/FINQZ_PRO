@@ -130,17 +130,6 @@ export const validateUrls = (
   }
 
   if (
-    input.NOVA_PROMOTORA_BASE_URL &&
-    !isValidUrlWithProtocol(input.NOVA_PROMOTORA_BASE_URL, ['http:', 'https:'])
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_BASE_URL',
-      'NOVA_PROMOTORA_BASE_URL must be a valid http(s) URL.',
-    );
-  }
-
-  if (
     input.SOS_BOLSO_BASE_URL &&
     !isValidUrlWithProtocol(input.SOS_BOLSO_BASE_URL, ['http:', 'https:'])
   ) {
@@ -249,6 +238,17 @@ export const validateNumbers = (
   input: z.infer<typeof rawEnvSchema>,
   context: z.RefinementCtx,
 ) => {
+  if (
+    input.EXTERNAL_EFFECTS_ENABLED !== undefined &&
+    parseOptionalBoolean(input.EXTERNAL_EFFECTS_ENABLED) === undefined
+  ) {
+    addEnvIssue(
+      context,
+      'EXTERNAL_EFFECTS_ENABLED',
+      'EXTERNAL_EFFECTS_ENABLED must be a boolean (true/false).',
+    );
+  }
+
   if (input.PORT !== undefined && parsePort(input.PORT) === undefined) {
     addEnvIssue(
       context,
@@ -288,17 +288,6 @@ export const validateNumbers = (
   }
 
   if (
-    input.NOVA_PROMOTORA_TIMEOUT_MS !== undefined &&
-    parsePositiveInteger(input.NOVA_PROMOTORA_TIMEOUT_MS) === undefined
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_TIMEOUT_MS',
-      'NOVA_PROMOTORA_TIMEOUT_MS must be a positive integer.',
-    );
-  }
-
-  if (
     input.SOS_BOLSO_TIMEOUT_MS !== undefined &&
     parsePositiveInteger(input.SOS_BOLSO_TIMEOUT_MS) === undefined
   ) {
@@ -332,6 +321,30 @@ export const validateNumbers = (
   }
 };
 
+export const validateExternalEffectsGovernance = (
+  input: z.infer<typeof rawEnvSchema>,
+  context: z.RefinementCtx,
+) => {
+  const externalEffectsEnabled =
+    parseOptionalBoolean(input.EXTERNAL_EFFECTS_ENABLED) ?? false;
+
+  if (input.APP_ENV === 'local' && externalEffectsEnabled) {
+    addEnvIssue(
+      context,
+      'EXTERNAL_EFFECTS_ENABLED',
+      'EXTERNAL_EFFECTS_ENABLED must be false when APP_ENV=local.',
+    );
+  }
+
+  if (input.APP_ENV === 'homologation' && externalEffectsEnabled) {
+    addEnvIssue(
+      context,
+      'EXTERNAL_EFFECTS_ENABLED',
+      'EXTERNAL_EFFECTS_ENABLED must be false when APP_ENV=homologation.',
+    );
+  }
+};
+
 export const validateSwaggerPath = (
   input: z.infer<typeof rawEnvSchema>,
   context: z.RefinementCtx,
@@ -341,28 +354,6 @@ export const validateSwaggerPath = (
       context,
       'SWAGGER_PATH',
       'SWAGGER_PATH must start with "/".',
-    );
-  }
-
-  if (
-    input.NOVA_PROMOTORA_HEALTH_PATH &&
-    !input.NOVA_PROMOTORA_HEALTH_PATH.startsWith('/')
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_HEALTH_PATH',
-      'NOVA_PROMOTORA_HEALTH_PATH must start with "/".',
-    );
-  }
-
-  if (
-    input.NOVA_PROMOTORA_PROPOSALS_PATH &&
-    !input.NOVA_PROMOTORA_PROPOSALS_PATH.startsWith('/')
-  ) {
-    addEnvIssue(
-      context,
-      'NOVA_PROMOTORA_PROPOSALS_PATH',
-      'NOVA_PROMOTORA_PROPOSALS_PATH must start with "/".',
     );
   }
 

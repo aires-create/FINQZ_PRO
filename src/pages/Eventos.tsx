@@ -11,7 +11,7 @@ import {
   Activity,
   X,
 } from "lucide-react";
-import api from "../api/client";
+import { apiFetch } from "../api/http";
 import { Button, Card as DSCard, Select, Badge, Input } from "../components/ui";
 import { PageHeader } from "../components/layout/PageHeader";
 
@@ -198,23 +198,17 @@ export default function Eventos() {
     setError(null);
     try {
       const dateRange = getDateRange();
-      
-      // Verificar se o método existe
-      if (typeof (api as Record<string, unknown>).getEventos !== "function") {
-        console.warn("[EVENTOS] API getEventos não disponível, usando mock");
-        setEvents([]);
-        setTotal(0);
-        return;
-      }
+      const query = new URLSearchParams();
+      query.set("page", String(page));
+      query.set("limit", String(limit));
+      if (tipoFilter) query.set("type", tipoFilter);
+      if (sourceFilter) query.set("source", sourceFilter);
+      if (dateRange.startDate) query.set("startDate", String(dateRange.startDate));
+      if (dateRange.endDate) query.set("endDate", String(dateRange.endDate));
 
-      const response = await (api as Record<string, unknown>).getEventos({
-        page,
-        limit,
-        type: tipoFilter || undefined,
-        source: sourceFilter || undefined,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-      }) as unknown as EventsResponse | undefined;
+      const response = await apiFetch<EventsResponse>(`/api/eventos?${query.toString()}`, {
+        preserveApiPrefix: true,
+      });
       
       // Normalizar resposta
       setEvents(Array.isArray(response?.events) ? response.events : []);
@@ -233,18 +227,13 @@ export default function Eventos() {
   const fetchStats = useCallback(async () => {
     try {
       const dateRange = getDateRange();
-      
-      // Verificar se o método existe
-      if (typeof (api as Record<string, unknown>).getEventosStats !== "function") {
-        console.warn("[EVENTOS] API getEventosStats não disponível, usando mock");
-        setStats({ total: 0, byType: {}, bySource: {} });
-        return;
-      }
+      const query = new URLSearchParams();
+      if (dateRange.startDate) query.set("startDate", String(dateRange.startDate));
+      if (dateRange.endDate) query.set("endDate", String(dateRange.endDate));
 
-      const response = await (api as Record<string, unknown>).getEventosStats({
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
-      }) as unknown as EventStats | undefined;
+      const response = await apiFetch<EventStats>(`/api/eventos/stats?${query.toString()}`, {
+        preserveApiPrefix: true,
+      });
       
       // Normalizar resposta
       setStats({

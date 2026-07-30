@@ -5,6 +5,10 @@ import { mapProviderError } from './provider-error-mapper.js';
 import { ProviderHealthTracker } from './provider-health-tracker.js';
 import { ProviderRetryPolicy } from './provider-retry-policy.js';
 import { sanitizeProviderError } from './provider-sanitizer.js';
+import {
+  recordProviderHealthStatusMetric,
+  recordProviderRequestMetrics,
+} from '../../../infra/observability/index.js';
 
 export type RetryPolicy = {
   maxAttempts: number;
@@ -216,15 +220,29 @@ export class ProviderHttpClient {
     capability: string | undefined;
     startedAt: number;
   }): void {
-    if (!this.healthTracker || !params.providerKey || !params.capability) {
-      return;
-    }
+    const providerKey = params.providerKey ?? 'unknown';
+    const capability = params.capability ?? 'unknown';
+    const latencyMs = Date.now() - params.startedAt;
 
-    this.healthTracker.set(params.providerKey, params.capability, {
-      status: 'ok',
-      latencyMs: Date.now() - params.startedAt,
-      lastSuccessAt: new Date(),
+    recordProviderRequestMetrics({
+      provider: providerKey,
+      capability,
+      status: 'success',
+      durationMs: latencyMs,
     });
+    recordProviderHealthStatusMetric({
+      provider: providerKey,
+      capability,
+      status: 'ok',
+    });
+
+    if (this.healthTracker && params.providerKey && params.capability) {
+      this.healthTracker.set(params.providerKey, params.capability, {
+        status: 'ok',
+        latencyMs,
+        lastSuccessAt: new Date(),
+      });
+    }
   }
 
   private trackHealthFailure(params: {
@@ -234,19 +252,33 @@ export class ProviderHttpClient {
     finalStatus: 'degraded' | 'down';
     error: unknown;
   }): void {
-    if (!this.healthTracker || !params.providerKey || !params.capability) {
-      return;
-    }
+    const providerKey = params.providerKey ?? 'unknown';
+    const capability = params.capability ?? 'unknown';
+    const latencyMs = Date.now() - params.startedAt;
 
     const mappedCode = mapProviderError(params.error);
     const sanitized = sanitizeProviderError(params.error);
     const sanitizedErrorCode = sanitized.code ?? mappedCode;
-
-    this.healthTracker.set(params.providerKey, params.capability, {
-      status: params.finalStatus,
-      latencyMs: Date.now() - params.startedAt,
-      lastFailureAt: new Date(),
-      sanitizedErrorCode,
+    recordProviderRequestMetrics({
+      provider: providerKey,
+      capability,
+      status: 'failure',
+      durationMs: latencyMs,
+      errorCode: sanitizedErrorCode,
     });
+    recordProviderHealthStatusMetric({
+      provider: providerKey,
+      capability,
+      status: params.finalStatus,
+    });
+
+    if (this.healthTracker && params.providerKey && params.capability) {
+      this.healthTracker.set(params.providerKey, params.capability, {
+        status: params.finalStatus,
+        latencyMs,
+        lastFailureAt: new Date(),
+        sanitizedErrorCode,
+      });
+    }
   }
 }

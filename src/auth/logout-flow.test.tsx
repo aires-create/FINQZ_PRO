@@ -1,254 +1,182 @@
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { useApiErrorHandler } from "../hooks/useApiErrorHandler";
-import { clearSession, setSessionUser, storeSessionTokens } from "./session";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../App", async () => {
-  const ReactModule = await import("react");
-
-  return {
-    AuthContext: ReactModule.createContext({
-      user: null,
-      loading: false,
-      isAuthenticated: false,
-      login: async () => ({ success: false }),
-      requestPasswordReset: async () => ({ success: false }),
-    }),
-  };
-});
-
-vi.mock("../store", () => ({
-  default: vi.fn(() => ({
-    sidebarOpen: true,
-    setSidebarOpen: vi.fn(),
-    user: {
-      nome: "Admin",
-      perfil: "Admin Sistema",
-      permissions: ["*"],
-    },
-    userPermissions: {},
-    theme: "light",
-    toggleTheme: vi.fn(),
-    setAuth: vi.fn(),
-  })),
-}));
-
-vi.mock("../auth/finqzAuth", () => ({
-  finqzAuth: {
-    signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
-  },
-}));
-
+import { AuthProvider, useAuth } from "./AuthProvider";
+import { clearLocalAuthState } from "./logout";
 import { ProtectedRoute } from "./guards";
-import { Layout } from "../layouts/MainLayout";
-import { finqzAuth } from "../auth/finqzAuth";
-import { AuthContext } from "../App";
+import { getAccessToken, getRefreshToken, storeSessionTokens } from "./session";
+import { useApiErrorHandler } from "../hooks/useApiErrorHandler";
+import useAppStore from "../store";
 
-const LocationProbe = () => {
+const finqzClientMock = vi.hoisted(() => ({
+  post: vi.fn(),
+  get: vi.fn(),
+  auth: {
+    getSession: vi.fn(),
+    signOut: vi.fn(),
+  },
+  api: {
+    fetch: vi.fn(),
+  },
+  destroy: vi.fn(),
+}));
+
+vi.mock("../api/finqzClient", () => ({
+  finqzClient: finqzClientMock,
+}));
+
+const LoginScreen = () => <div>Login screen</div>;
+
+const ProtectedScreen = () => {
+  const { logout } = useAuth();
   const location = useLocation();
-  return <span data-testid="location">{location.pathname}</span>;
+
+  return (
+    <div>
+      <div>Protected screen</div>
+      <div data-testid="path">{location.pathname}</div>
+      <button type="button" onClick={() => void logout()}>
+        Logout
+      </button>
+    </div>
+  );
 };
 
-describe("logout flow", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    clearSession();
-  });
+const ErrorListener = () => {
+  useApiErrorHandler();
+  return null;
+};
 
-  it("redireciona uma rota protegida para /login quando o usuario nao existe", async () => {
-    render(
-      <MemoryRouter initialEntries={["/app/dashboard"]}>
-        <AuthContext.Provider
-          value={{
-            user: null,
-            loading: false,
-            isAuthenticated: false,
-            login: async () => ({ success: false }),
-            requestPasswordReset: async () => ({ success: false }),
-          }}
-        >
-          <Routes>
-            <Route
-              path="/app/dashboard"
-              element={
-                <ProtectedRoute>
-                  <div>Conteudo protegido</div>
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/login" element={<div>Login Screen</div>} />
-          </Routes>
-        </AuthContext.Provider>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByText("Login Screen")).toBeInTheDocument();
-  });
-
-  it("leva o usuario para /login depois do logout", async () => {
-    render(
-      <MemoryRouter initialEntries={["/app/dashboard"]}>
-        <LocationProbe />
-        <Routes>
-          <Route
-            path="/app"
-            element={<Layout />}
-          >
-            <Route path="dashboard" element={<div>Dashboard</div>} />
-          </Route>
-          <Route path="/login" element={<div>Login Screen</div>} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /admin/i }));
-    fireEvent.click(screen.getByRole("button", { name: /sair/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("location")).toHaveTextContent("/login");
-    });
-
-    expect(finqzAuth.signOut).toHaveBeenCalledTimes(1);
-    expect(await screen.findByText("Login Screen")).toBeInTheDocument();
-  });
+const buildAuthedUser = () => ({
+  id: "user-1",
+  email: "admin@finqz.com.br",
+  firstName: "Admin",
+  lastName: "Sistema",
+  roleId: "role-1",
+  role: "ROLE_ADMIN_SISTEMA",
+  perfil: "admin",
+  tenantId: "tenant-1",
+  tenantName: "FINQZ PRO",
+  roles: [
+    {
+      id: "role-1",
+      name: "Admin Sistema",
+      slug: "ROLE_ADMIN_SISTEMA",
+      type: "SYSTEM",
+    },
+  ],
+  permissions: ["USUARIOS_VIEW", "PERMISSOES_VIEW"],
 });
 
-describe("logout runtime", () => {
+describe("auth logout flow", () => {
   beforeEach(() => {
-    vi.resetModules();
-    vi.clearAllMocks();
     localStorage.clear();
+    vi.clearAllMocks();
+    clearLocalAuthState();
   });
 
-  it("mantem o login quando o bootstrap resolve depois do logout", async () => {
-    const { clearSession: clearFreshSession } = await import("./session");
-    const { finalizeLocalLogout: finalizeFreshLogout } = await import("./logout");
-
-    const deferredSession = (() => {
-      let resolve: (value: unknown) => void = () => undefined;
-      const promise = new Promise((res) => {
-        resolve = res;
-      });
-
-      return { promise, resolve };
-    })();
-
-    const appStoreState = {
-      sidebarOpen: true,
-      setSidebarOpen: vi.fn(),
-      user: null as any,
-      userPermissions: {},
-      theme: "light",
-      toggleTheme: vi.fn(),
-      setAuth: vi.fn((nextUser: any | null) => {
-        appStoreState.user = nextUser;
-      }),
-    };
-    const getSessionMock = vi.fn(() => deferredSession.promise);
-    const useAppStoreMock = Object.assign(() => appStoreState, {
-      getState: () => appStoreState,
+  it("redirects protected routes to /login after logout", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
     });
 
-    vi.doUnmock("../App");
-    vi.doMock("../auth/finqzAuth", () => ({
-      finqzAuth: {
-        getSession: getSessionMock,
-        signOut: vi.fn().mockResolvedValue({ data: null, error: null }),
-        login: vi.fn(),
-      },
-    }));
-    vi.doMock("../components/auth/AdminLoginScreen", () => ({
-      AdminLoginScreen: () => <div>Login Screen</div>,
-    }));
-    vi.doMock("../pages/Dashboard", () => ({
-      default: () => <div>Dashboard Page</div>,
-    }));
-    vi.doMock("../pages/LoginParceiro", () => ({
-      default: () => <div>Partner Login</div>,
-    }));
-    vi.doMock("../pages/DashboardParceiro", () => ({
-      default: () => <div>Partner Dashboard</div>,
-    }));
-    vi.doMock("../routes", () => ({
-      adminRoutes: [],
-      crmRoutes: [],
-      hubRoutes: [],
-      integrationsRoutes: [],
-      operacoesRoutes: [],
-    }));
-    vi.doMock("../store", () => ({
-      default: useAppStoreMock,
-    }));
-
-    const { default: App } = await import("../App");
-
-    clearFreshSession();
-    window.history.pushState({}, "", "/app/dashboard");
-
-    render(<App />);
-
-    await waitFor(() => {
-      expect(getSessionMock).toHaveBeenCalled();
-    });
-
-    await act(async () => {
-      finalizeFreshLogout();
-    });
-
-    deferredSession.resolve({
+    finqzClientMock.get.mockResolvedValueOnce({
       data: {
-        user: {
-          id: "1",
-          email: "user@finqz.com",
-          perfil: "Admin Sistema",
-          permissions: ["*"],
+        success: true,
+        data: {
+          user: buildAuthedUser(),
         },
       },
     });
-
-    await waitFor(() => {
-      expect(getSessionMock).toHaveBeenCalledTimes(2);
-    });
-
-    expect(appStoreState.user).toBeNull();
-  });
-
-  it("faz auth:error terminar em logout e nao reativar a sessao", async () => {
-    const ErrorHost = () => {
-      useApiErrorHandler();
-      const location = useLocation();
-      return <span data-testid="path">{location.pathname}</span>;
-    };
-
-    setSessionUser({ id: "2", email: "error@finqz.com" });
-    storeSessionTokens({
-      accessToken: "error-access",
-      refreshToken: "error-refresh",
+    finqzClientMock.post.mockResolvedValueOnce({
+      data: { success: true },
     });
 
     render(
-      <MemoryRouter initialEntries={["/app/dashboard"]}>
-        <LocationProbe />
-        <Routes>
-          <Route path="*" element={<ErrorHost />} />
-          <Route path="/login" element={<div>Login Screen</div>} />
-        </Routes>
-      </MemoryRouter>
+      <MemoryRouter initialEntries={["/app/private"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginScreen />} />
+            <Route
+              path="/app/*"
+              element={
+                <ProtectedRoute>
+                  <ProtectedScreen />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
     );
 
-    expect(screen.getByTestId("path")).toHaveTextContent("/app/dashboard");
+    await waitFor(() => expect(screen.getByText("Protected screen")).toBeTruthy());
 
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent("auth:error", { detail: { message: "Sessao expirada" } }));
+    fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+
+    await waitFor(() => expect(screen.getByText("Login screen")).toBeTruthy());
+
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(useAppStore.getState().isAuthenticated).toBe(false);
+    expect(useAppStore.getState().user).toBeNull();
+    expect(useAppStore.getState().userPermissions).toEqual({});
+    expect(screen.queryByText("Protected screen")).toBeNull();
+  });
+
+  it("redirects to /login when auth:error is emitted after refresh failure", async () => {
+    storeSessionTokens({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId("location")).toHaveTextContent("/login");
+    finqzClientMock.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          user: buildAuthedUser(),
+        },
+      },
+    });
+    finqzClientMock.post.mockResolvedValueOnce({
+      data: { success: true },
     });
 
-    expect(screen.getByText("Login Screen")).toBeInTheDocument();
+    render(
+      <MemoryRouter initialEntries={["/app/private"]}>
+        <AuthProvider>
+          <ErrorListener />
+          <Routes>
+            <Route path="/login" element={<LoginScreen />} />
+            <Route
+              path="/app/*"
+              element={
+                <ProtectedRoute>
+                  <ProtectedScreen />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText("Protected screen")).toBeTruthy());
+
+    window.dispatchEvent(
+      new CustomEvent("auth:error", {
+        detail: { message: "Sessão expirada" },
+      }),
+    );
+
+    await waitFor(() => expect(screen.getByText("Login screen")).toBeTruthy());
+
+    expect(getAccessToken()).toBeNull();
+    expect(getRefreshToken()).toBeNull();
+    expect(useAppStore.getState().isAuthenticated).toBe(false);
+    expect(useAppStore.getState().user).toBeNull();
   });
 });

@@ -1,7 +1,7 @@
 // FINQZ PRO - Base API Module
 // Configuração base para todos os módulos de API
 
-import { httpRequest } from '../http';
+import { ApiException, getErrorMessage, httpRequest } from '../http';
 
 // ============================================
 // TYPES
@@ -59,8 +59,45 @@ export async function apiCall<T>(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({})) as Record<string, unknown>;
-      throw new Error((errorData.message as string | undefined) || `Erro HTTP ${response.status}`);
+      const rawBody = await response.text().catch(() => '');
+      let parsedBody: unknown = rawBody;
+      let errorData: Record<string, unknown> = {};
+
+      if (rawBody.trim().length > 0) {
+        try {
+          const parsed = JSON.parse(rawBody) as unknown;
+          parsedBody = parsed;
+          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            errorData = parsed as Record<string, unknown>;
+          }
+        } catch {
+          errorData = { rawBody };
+        }
+      }
+
+      const nestedError =
+        typeof errorData.error === 'object' && errorData.error !== null
+          ? (errorData.error as Record<string, unknown>)
+          : null;
+      const backendMessage =
+        (nestedError?.message as string | undefined) ||
+        (errorData.message as string | undefined) ||
+        (typeof errorData.error === 'string' ? errorData.error : undefined);
+      const message = backendMessage || getErrorMessage(response.status, `Erro HTTP ${response.status}`);
+      const error = new ApiException(
+        message,
+        response.status,
+        errorData.code as string | undefined,
+        errorData.details as Record<string, string[]> | undefined,
+      ) as ApiException & { body?: unknown; responseBody?: unknown };
+
+      error.body = parsedBody;
+      error.responseBody = parsedBody;
+      throw error;
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
     }
 
     return response.json() as Promise<T>;

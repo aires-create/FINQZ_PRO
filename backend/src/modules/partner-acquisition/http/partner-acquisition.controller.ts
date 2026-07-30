@@ -1,4 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
 
 import { AppError } from '../../../shared/errors/AppError.js';
@@ -471,6 +472,7 @@ export class PartnerAcquisitionController {
         ? items.filter((item) =>
           [
               item.leadId,
+              item.leadCode,
               item.fullName,
               item.email,
               item.phone,
@@ -582,7 +584,7 @@ export class PartnerAcquisitionController {
 
       reply.status(200).send({
         success: true,
-        data: toLeadDto(result as PartnerLead),
+        data: partnerAcquisitionLeadDtoSchema.parse(result),
       });
     } catch (error) {
       handleControllerError(error, reply);
@@ -637,6 +639,7 @@ export class PartnerAcquisitionController {
         ? items.filter((item) =>
           [
               item.prospectId,
+              item.prospectCode,
               item.fullName,
               item.email,
               item.phone,
@@ -705,7 +708,7 @@ export class PartnerAcquisitionController {
           normalizeCommandMetadata(body.metadata),
         ),
         commandType: 'CreatePartnerProspectCommand',
-        prospectId: body.prospectCode,
+        prospectId: randomUUID(),
         prospectCode: body.prospectCode,
         leadId: body.leadId,
         fullName: body.fullName,

@@ -1,0 +1,66 @@
+Listagem de caminhos de pasta para o volume OS
+O n�mero de s�rie do volume � A4B8-F1DA
+C:\PROJECTS\FINQZ_PRO\DOCS
+�   PHASE_2.19-B.4_PLAN.md
+�
++---00-governance
+�       PROJECT_CONTROL_CENTER.md
+�
++---01-product
++---02-architecture
+�       ARCH-001-DOMAIN_HIERARCHY_REVIEW_REQUIRED.md
+�       ARCH-002-DOMAIN_SPECIALIZATION_MAP_REVIEW_REQUIRED.md
+�       ARCH-003-DOMAINS_OVERVIEW_DRAFT.md
+�       ARCH-004-ENTITIES_MODEL_REVIEW_REQUIRED.md
+�       ARCH-005-RELATIONSHIPS_REVIEW_REQUIRED.md
+�       ARCH-006-OPERATIONAL_RULES_REVIEW_REQUIRED.md
+�       ARCH-007-OFFICIAL_METRICS_REVIEW_REQUIRED.md
+�       ARCH-008-OPERATIONAL_EVENTS_REVIEW_REQUIRED.md
+�       ARCH-009-RBAC_REVIEW_REQUIRED.md
+�       ARCH-010-BACKEND_STANDARDS_REVIEW_REQUIRED.md
+�       ARCH-011-FRONTEND_STANDARDS_REVIEW_REQUIRED.md
+�       ARCH-012-INTEGRATIONS_DOMAIN_REVIEW_REQUIRED.md
+�       ARCH-013-BACKEND_MODULARIZATION_PLAN_REVIEW_REQUIRED.md
+�       ARCH-014-DOMAIN_REFACTORING_PLAN_REVIEW_REQUIRED.md
+�       ARCH-015-FRONTEND_DOMAIN_MAP_REVIEW_REQUIRED.md
+�
++---03-runtime
+�       RUN-001-RUNTIME_GOVERNANCE.md
+�       RUN-002-MIGRATION_MATRIX_REVIEW_REQUIRED.md
+�       RUN-003-API_MIGRATION_PLAN_REVIEW_REQUIRED.md
+�       RUN-004-RUNTIME_DECOUPLING_PLAN_REVIEW_REQUIRED.md
+�
++---04-domains
++---05-adr
+�       ADR-001-commercial-api-source-of-truth.md
+�       ADR-002-provider-engine.md
+�       ADR-003-simulation-engine-source-of-truth.md
+�       ADR-004-commercial-master-catalog.md
+�       ADR-005-legacy-youware-backend-classification.md
+�       ADR-006-products-domain-decommission.md
+�
++---06-audits
+�       AUDIT_2026-06-03_PHASE_G25.txt
+�
++---07-roadmap
++---08-standards
+�       ci-cd.md
+�       CODING_STANDARDS.md
+�       testing-strategy.md
+�
++---09-providers
++---99-archive
+�       BACKEND_FOLDER_STRUCTURE_2026-05-11_ARCHIVED.md
+�       BACKEND_MODELING_2026-05-11_ARCHIVED.md
+�       EXECUTIVE_SUMMARY_2026-05-11_ARCHIVED.md
+�       IMPLEMENTATION_ROADMAP_2026-05-11_ARCHIVED.md
+�       TECHNICAL_ROADMAP_2026-05-11_ARCHIVED.md
+�
++---architecture
+�   �   current-state-audit.md
+�   �   seed-specialization-plan.md
+�   �
+�   +---adr
++---providers
+        handmais-provider-audit.md
+        sos-bolso-homologation-checklist.md

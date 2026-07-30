@@ -2,7 +2,6 @@
 // FINQZ PRO - Auth Controller
 // ============================================
 
-import { prisma } from '../../database/prisma.js';
 import { authService } from './service.js';
 import { config } from '../../config/app.js';
 import { ApiResponse } from '../../types/index.js';
@@ -15,7 +14,6 @@ import type {
   AuthResponse,
   LogoutRequest,
   SessionResponse,
-  SessionRoleResponse,
 } from './types.js';
 import type { SecurityEventContext } from '../security-events/index.js';
 
@@ -160,110 +158,21 @@ export class AuthController {
       return;
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        id: currentUser.userId,
-        tenantId: currentUser.tenantId,
-        isActive: true,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        tenantId: true,
-        tenant: {
-          select: {
-            id: true,
-            name: true,
-            isActive: true,
-          },
-        },
-        userRoles: {
-          orderBy: {
-            assignedAt: 'desc',
-          },
-          include: {
-            role: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                type: true,
-                rolePermissions: {
-                  select: {
-                    permission: {
-                      select: {
-                        slug: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    const session = await authService.getSession(currentUser);
 
-    if (!user || !user.tenant.isActive || user.userRoles.length === 0) {
+    if (!session) {
       reply.status(401).send({
         success: false,
         message: 'Invalid or expired access token',
       });
       return;
     }
-
-    const roleEntries = user.userRoles
-      .map<SessionRoleResponse | null>((userRole) => {
-        const role = userRole.role;
-
-        if (!role) {
-          return null;
-        }
-
-        return {
-          id: role.id,
-          name: role.name,
-          slug: role.slug,
-          type: role.type,
-        };
-      })
-      .filter((role): role is SessionRoleResponse => role !== null);
-
-    const primaryRoleAssignment =
-      user.userRoles.find((userRole) => userRole.roleId === currentUser.roleId) ??
-      user.userRoles[0];
-    const primaryRole = primaryRoleAssignment?.role;
-    const permissions = Array.from(
-      new Set(
-        user.userRoles.flatMap((userRole) =>
-          userRole.role?.rolePermissions.map((rolePermission) => rolePermission.permission.slug) ?? [],
-        ),
-      ),
-    );
-
-    const sessionUser: SessionResponse['user'] = {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      roleId: primaryRole?.id ?? currentUser.roleId,
-      role: primaryRole?.slug ?? primaryRole?.name ?? currentUser.role ?? '',
-      perfil: primaryRole?.slug ?? primaryRole?.name ?? currentUser.role ?? '',
-      tenantId: user.tenantId,
-      tenantName: user.tenant.name,
-      roles: roleEntries,
-      permissions,
-    };
-
-    logger.info(`Get session request for user: ${user.id}`);
+    logger.info(`Get session request for user: ${session.user.id}`);
 
     const response: ApiResponse<SessionResponse> = {
       success: true,
       data: {
-        user: sessionUser,
+        user: session.user,
       },
       message: 'Session retrieved successfully',
     };

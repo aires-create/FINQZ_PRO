@@ -1,4 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
+
+const prismaMock = vi.hoisted(() => ({
+  user: {
+    findFirst: vi.fn(),
+  },
+}));
+
+vi.mock('../../../core/prisma/client.js', () => ({
+  prisma: prismaMock,
+}));
 
 import type { IntegrationConnectionStatus } from '../../../modules/integrations/domain/contracts/provider.contract.js';
 import type { IntegrationProposal } from '../../../modules/integrations/domain/contracts/integration-proposal.contract.js';
@@ -41,7 +52,16 @@ const createApp = async (
   runtimeDiagnostics: (providerKey?: string) => any = (_providerKey?: string) => [],
   listFinancialProposals: ListFinancialProposalsHandler = async () => [],
   payloadDiagnostics: (providerKey: string) => Promise<unknown> = async () => ({}),
+  listCapabilities: (scope?: 'all' | 'runtime' | 'planned') => any[] = () => [],
 ) => {
+  prismaMock.user.findFirst.mockResolvedValue({
+    id: 'user-1',
+    tenantId: 'tenant-1',
+    organizationId: 'org-1',
+    partnerId: null,
+    userRoles: [],
+  });
+
   const app = Fastify({
     logger: false,
   });
@@ -78,16 +98,18 @@ const createApp = async (
     execute: runtimeDiagnostics,
   } as unknown as GetProviderRuntimeDiagnosticsUseCase;
   const controller = new IntegrationsController(
-    useCase,
-    listProposalsUseCase,
-    listFinancialProposalsUseCase,
-    payloadDiagnosticsUseCase,
-    { execute: () => [] } as any,
-    marginInquiryUseCase,
-    runtimeSummaryUseCase,
-    runtimeIssuesUseCase,
-    runtimeDiagnosticsUseCase,
-  );
+  useCase,
+  listProposalsUseCase,
+  listFinancialProposalsUseCase,
+  payloadDiagnosticsUseCase,
+  { execute: listCapabilities } as any,
+  marginInquiryUseCase,
+  { execute: async () => ({}) } as any,
+  runtimeSummaryUseCase,
+  runtimeIssuesUseCase,
+  runtimeDiagnosticsUseCase,
+  { execute: () => ({}) } as any,
+);
 
   await app.register(createIntegrationsRoutes(controller), {
     prefix: '/api/v1/integrations',
@@ -97,9 +119,64 @@ const createApp = async (
 };
 
 describe('IntegrationsController', () => {
+  it('returns catalog with optional runtime scope', async () => {
+    const listCapabilitiesSpy = vi.fn((scope?: 'all' | 'runtime' | 'planned') => {
+      expect(scope).toBe('runtime');
+      return [
+        {
+          providerKey: 'sos-bolso',
+          displayName: 'SOS BOLSO',
+          category: 'credito',
+          status: 'active',
+          capabilities: {
+            initialSimulation: false,
+            marginInquiry: 'planned',
+            rateTables: 'planned',
+            proposalPipeline: 'planned',
+            commissions: 'planned',
+            commissionPayout: false,
+            dataEnrichment: 'planned',
+            messageSender: false,
+            bulkMessaging: false,
+            webhooks: 'planned',
+          },
+        },
+      ];
+    });
+    const app = await createApp(
+      async () => ({ connected: true, status: 200 }),
+      async () => [],
+      async () => ({ providerKey: 'sos-bolso', availableMargin: 0 }),
+      () => ({
+        generatedAt: new Date('2026-05-27T00:00:00.000Z'),
+        totalProviders: 0,
+        healthy: 0,
+        degraded: 0,
+        down: 0,
+        disabled: 0,
+      }),
+      () => [],
+      () => [],
+      async () => [],
+      async () => ({}),
+      listCapabilitiesSpy,
+    );
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/integrations/providers/capabilities?scope=runtime',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.json())).toBe(true);
+    expect(listCapabilitiesSpy).toHaveBeenCalledWith('runtime');
+
+    await app.close();
+  });
+
   it('returns a consistent success payload', async () => {
     const app = await createApp(async (providerName) => {
-      expect(providerName).toBe('nova-promotora');
+      expect(providerName).toBe('sos-bolso');
 
       return {
         connected: true,
@@ -109,7 +186,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/test',
+      url: '/api/v1/integrations/providers/sos-bolso/test',
     });
 
     expect(response.statusCode).toBe(200);
@@ -150,7 +227,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/test',
+      url: '/api/v1/integrations/providers/sos-bolso/test',
     });
 
     expect(response.statusCode).toBe(502);
@@ -158,7 +235,7 @@ describe('IntegrationsController', () => {
       success: false,
       error: {
         code: 'PROVIDER_CONNECTION_ERROR',
-        message: 'Integration provider connection failed: nova-promotora',
+        message: 'Integration provider connection failed: sos-bolso',
       },
     });
 
@@ -172,7 +249,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/test',
+      url: '/api/v1/integrations/providers/sos-bolso/test',
     });
     const payload = response.json();
 
@@ -199,7 +276,7 @@ describe('IntegrationsController', () => {
         status: 'approved',
         amount: 1500,
         createdAt: '2026-05-21T00:00:00.000Z',
-        providerKey: 'nova-promotora',
+        providerKey: 'sos-bolso',
         rawStatus: 'Aprovada',
       },
     ];
@@ -209,7 +286,7 @@ describe('IntegrationsController', () => {
         status: 200,
       }),
       async (providerName) => {
-        expect(providerName).toBe('nova-promotora');
+        expect(providerName).toBe('sos-bolso');
 
         return proposals;
       },
@@ -217,7 +294,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/proposals',
+      url: '/api/v1/integrations/providers/sos-bolso/proposals',
     });
 
     expect(response.statusCode).toBe(200);
@@ -230,7 +307,7 @@ describe('IntegrationsController', () => {
     const financialProposals: FinancialProposal[] = [
       {
         proposalId: 'proposal-1',
-        providerKey: 'nova-promotora',
+        providerKey: 'sos-bolso',
         externalProposalId: 'PROP-1',
         customerDocument: '12345678900',
         bank: 'BANCO PAN',
@@ -253,14 +330,14 @@ describe('IntegrationsController', () => {
       () => [],
       () => [],
       async (providerName) => {
-        expect(providerName).toBe('nova-promotora');
+        expect(providerName).toBe('sos-bolso');
         return financialProposals;
       },
     );
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/financial-proposals',
+      url: '/api/v1/integrations/providers/sos-bolso/financial-proposals',
     });
 
     expect(response.statusCode).toBe(200);
@@ -294,7 +371,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/financial-proposals',
+      url: '/api/v1/integrations/providers/sos-bolso/financial-proposals',
     });
 
     expect(response.statusCode).toBe(500);
@@ -326,9 +403,9 @@ describe('IntegrationsController', () => {
       () => [],
       async () => [],
       async (providerKey: string) => {
-        expect(providerKey).toBe('nova-promotora');
+        expect(providerKey).toBe('sos-bolso');
         return {
-          providerKey: 'nova-promotora',
+          providerKey: 'sos-bolso',
           totalRecords: 1,
           validRecords: 1,
           invalidRecords: 0,
@@ -340,14 +417,14 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/payload-diagnostics',
+      url: '/api/v1/integrations/providers/sos-bolso/payload-diagnostics',
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
       success: true,
       data: {
-        providerKey: 'nova-promotora',
+        providerKey: 'sos-bolso',
         totalRecords: 1,
         validRecords: 1,
         invalidRecords: 0,
@@ -382,7 +459,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/payload-diagnostics',
+      url: '/api/v1/integrations/providers/sos-bolso/payload-diagnostics',
     });
 
     expect(response.statusCode).toBe(500);
@@ -440,7 +517,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/proposals',
+      url: '/api/v1/integrations/providers/sos-bolso/proposals',
     });
 
     expect(response.statusCode).toBe(500);
@@ -448,7 +525,7 @@ describe('IntegrationsController', () => {
       success: false,
       error: {
         code: 'PROVIDER_CONFIGURATION_ERROR',
-        message: 'Integration provider configuration is incomplete: nova-promotora',
+        message: 'Integration provider configuration is incomplete: sos-bolso',
       },
     });
 
@@ -468,7 +545,7 @@ describe('IntegrationsController', () => {
 
     const response = await app.inject({
       method: 'GET',
-      url: '/api/v1/integrations/providers/nova-promotora/proposals',
+      url: '/api/v1/integrations/providers/sos-bolso/proposals',
     });
     const payload = response.json();
 
@@ -566,18 +643,18 @@ describe('IntegrationsController', () => {
 
   it('returns runtime summary payload', async () => {
     const app = await createApp(
-      async () => ({ connected: true, status: 200 }),
-      async () => [],
-      async () => ({ providerKey: 'sos-bolso', availableMargin: 0 }),
-      () => ({
-        generatedAt: new Date('2026-05-27T00:00:00.000Z'),
-        totalProviders: 3,
-        healthy: 2,
-        degraded: 1,
-        down: 0,
-        disabled: 0,
-      }),
-    );
+  async () => ({ connected: true, status: 200 }),
+  async () => [],
+  async () => ({ providerKey: 'sos-bolso', availableMargin: 0 }),
+  () => ({
+    generatedAt: new Date('2026-05-27T00:00:00.000Z'),
+    totalProviders: 3,
+    healthy: 2,
+    degraded: 1,
+    down: 0,
+    disabled: 0,
+  }),
+);
 
     const response = await app.inject({
       method: 'GET',

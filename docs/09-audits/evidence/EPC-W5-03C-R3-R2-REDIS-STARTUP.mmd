@@ -1,0 +1,21 @@
+graph TD
+  Developer[Developer]
+  Desktop[Docker Desktop]
+  Engine[Docker Engine]
+  Compose[Docker Compose]
+  Redis[(Redis)]
+  Backend[Backend API]
+  Ready[GET /ready]
+  Ready200[HTTP 200 ready]
+  Ready503[HTTP 503 not_ready]
+  Unavailable[Redis unavailable]
+
+  Developer --> Desktop
+  Desktop --> Engine
+  Engine --> Compose
+  Compose --> Redis
+  Redis --> Backend
+  Backend --> Ready
+  Ready --> Ready200
+  Ready --> Ready503
+  Unavailable --> Ready503

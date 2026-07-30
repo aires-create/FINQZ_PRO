@@ -60,15 +60,18 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
   const redisPort = parsePort(input.REDIS_PORT) ?? redisUrlParts.port ?? 6379;
   const redisDb = parseNonNegativeInteger(input.REDIS_DB) ?? redisUrlParts.db ?? 0;
   const redisPassword = input.REDIS_PASSWORD ?? redisUrlParts.password;
-  const novaPromotoraTimeoutMs = parsePositiveInteger(input.NOVA_PROMOTORA_TIMEOUT_MS);
   const sosBolsoTimeoutMs = parsePositiveInteger(input.SOS_BOLSO_TIMEOUT_MS);
   const sosBolsoEnabled = parseOptionalBoolean(input.SOS_BOLSO_ENABLED) ?? false;
   const bluepayTimeoutMs = parsePositiveInteger(input.BLUEPAY_TIMEOUT_MS);
   const bluepayEnabled = parseOptionalBoolean(input.BLUEPAY_ENABLED) ?? false;
   const handmaisTimeoutMs = parsePositiveInteger(input.HANDMAIS_TIMEOUT);
+  const externalEffectsEnabled =
+    parseOptionalBoolean(input.EXTERNAL_EFFECTS_ENABLED) ?? false;
 
   return {
     nodeEnv: input.NODE_ENV,
+    appEnv: input.APP_ENV,
+    externalEffectsEnabled,
     host: input.HOST ?? '0.0.0.0',
     port,
     databaseUrl: input.DATABASE_URL ?? '',
@@ -91,11 +94,6 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
     swaggerDescription:
       input.SWAGGER_DESCRIPTION ?? 'FINQZ PRO backend API documentation',
     swaggerPath,
-    novaPromotoraBaseUrl: input.NOVA_PROMOTORA_BASE_URL,
-    novaPromotoraApiKey: input.NOVA_PROMOTORA_API_KEY,
-    novaPromotoraHealthPath: input.NOVA_PROMOTORA_HEALTH_PATH,
-    novaPromotoraProposalsPath: input.NOVA_PROMOTORA_PROPOSALS_PATH,
-    novaPromotoraTimeoutMs,
     sosBolsoEnabled,
     sosBolsoBaseUrl: input.SOS_BOLSO_BASE_URL,
     sosBolsoTokenPath: input.SOS_BOLSO_TOKEN_PATH,
@@ -113,5 +111,7 @@ export const transformEnv = (input: z.infer<typeof rawEnvSchema>) => {
     handmaisApiKey: input.HANDMAIS_API_KEY,
     handmaisTimeoutMs,
     handmaisEnv: input.HANDMAIS_ENV,
+    handmaisLogin: input.HANDMAIS_LOGIN,
+    handmaisPassword: input.HANDMAIS_PASSWORD,
   };
 };

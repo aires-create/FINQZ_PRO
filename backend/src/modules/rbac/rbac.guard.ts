@@ -6,6 +6,44 @@ import { recordRequestSecurityEvent } from '../security-events/index.js';
 const normalize = (value: string | string[]) =>
   Array.isArray(value) ? value : [value];
 
+const permissionMatches = (grantedPermission: string, requiredPermission: string): boolean => {
+  const required = String(requiredPermission ?? '').trim().toLowerCase();
+  const granted = String(grantedPermission ?? '').trim().toLowerCase();
+
+  if (!required || !granted) {
+    return false;
+  }
+
+  if (granted === '*') {
+    return true;
+  }
+
+  if (granted === required) {
+    return true;
+  }
+
+  const [grantedResource, grantedAction] = granted.split(':');
+  const [requiredResource, requiredAction] = required.split(':');
+
+  if (!grantedAction || !requiredAction) {
+    return false;
+  }
+
+  if (grantedAction === '*' && grantedResource === requiredResource) {
+    return true;
+  }
+
+  const isOpportunityResourcePair =
+    (grantedResource === 'opportunity' || grantedResource === 'oportunidades') &&
+    (requiredResource === 'opportunity' || requiredResource === 'oportunidades');
+
+  if (grantedAction === '*' && isOpportunityResourcePair) {
+    return true;
+  }
+
+  return false;
+};
+
 export const requireRoles = (acceptedRoles: string | string[]) => {
   const roles = normalize(acceptedRoles);
 
@@ -45,7 +83,9 @@ export const requireRoles = (acceptedRoles: string | string[]) => {
 };
 
 export const requirePermissions = (requiredPermissions: string | string[]) => {
-  const permissions = normalize(requiredPermissions);
+  const permissions = normalize(requiredPermissions).map((permission) =>
+    String(permission ?? '').trim().toLowerCase(),
+  );
 
   return async (request: FastifyRequest, _reply: FastifyReply) => {
     const user = request.currentUser;
@@ -64,7 +104,9 @@ export const requirePermissions = (requiredPermissions: string | string[]) => {
     }
 
     const hasPermission = permissions.every((permission) =>
-      user.permissions?.includes(permission),
+      (user.permissions ?? []).some((grantedPermission) =>
+        permissionMatches(grantedPermission, permission),
+      ),
     );
 
     if (!hasPermission) {

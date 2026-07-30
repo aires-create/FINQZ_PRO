@@ -1,0 +1,52 @@
+flowchart TD
+  A[W5-03C Baseline on 1d20966] --> B[Validate observability architecture]
+  B --> C[Attempt backend bootstrap]
+  C --> D{Database readiness succeeds?}
+  D -- No --> E[PrismaClientInitializationError TLS credential failure]
+  E --> F[No HTTP listener]
+  F --> G[No real endpoint calls]
+  G --> H[No live metrics]
+  G --> I[No live event evidence]
+  H --> J[Release gates deferred]
+  I --> J
+
+  subgraph Architecture["Validated architecture"]
+    A1[Master Catalog Runtime]
+    A2[Observability Adapter]
+    A3[Structured Logger Sink]
+    A4[Noop Sink fallback]
+    A5[Corporate logger]
+    A1 --> A2 --> A3 --> A5
+    A3 -. failure .-> A4
+  end
+
+  subgraph Endpoints["Endpoints analyzed"]
+    P1[GET /api/v1/master-catalog/tree]
+    P2[GET /api/v1/master-catalog/segments]
+    P3[GET /api/v1/master-catalog/products]
+    P4[GET /api/v1/master-catalog/products/:productId/subproducts]
+    P5[GET /api/v1/master-catalog/subproducts/:subproductId/modalities]
+  end
+
+  subgraph Gates["Release gates"]
+    G1[Gate A PASS_BY_TEST_AND_STATIC_EVIDENCE]
+    G2[Gate B PASS_BY_TEST_NOT_LIVE_VALIDATED]
+    G3[Gate C FAIL_NO_LIVE_EVIDENCE]
+    G4[Gate D NOT_APPLICABLE]
+    G5[Gate E NOT_APPLICABLE]
+    G6[Gate F FAIL_NO_LIVE_EVIDENCE]
+    G7[Gate G FAIL_NO_LIVE_EVIDENCE]
+    G8[Gate H PASS_BY_DOCUMENTATION_AND_TEST]
+  end
+
+  J --> G1
+  J --> G2
+  J --> G3
+  J --> G4
+  J --> G5
+  J --> G6
+  J --> G7
+  J --> G8
+
+  style E fill:#ffd6d6,stroke:#cc0000,stroke-width:2px
+  style J fill:#fff2cc,stroke:#b38f00,stroke-width:2px

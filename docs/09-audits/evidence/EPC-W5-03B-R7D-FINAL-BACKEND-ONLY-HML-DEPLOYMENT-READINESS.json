@@ -1,0 +1,130 @@
+{
+  "id": "EPC-W5-03B-R7D",
+  "title": "Final Backend-Only HML Deployment Readiness",
+  "phase": "EPC-W5-03B-R7D - Final Backend-Only HML Deployment Readiness",
+  "verdict": "DEFERRED_PENDING_COMPOSE_IMAGE_PINNING",
+  "evidenceClassification": "PARTIAL_LOCAL_EVIDENCE_ONLY",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "874a3a827e061ffad0490c934c418da2afbecb84",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "leftRight": "0 0",
+    "lastCommit": "fix(nginx): route readiness probe to backend",
+    "lastCommitFiles": [
+      "backend/infra/nginx/nginx.conf"
+    ]
+  },
+  "workingTree": {
+    "dirty": true,
+    "preexistingArtifacts": [
+      ".env.example",
+      "_worktrees/",
+      "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "docs/09-audits/* preexisting W5-03B artifacts",
+      "scripts/sdc-3.4h-f-local-readiness.mjs"
+    ]
+  },
+  "hashes": {
+    "backend/package.json": "46FFB3793600CA2491776BA717A8568ED02EB3949D4AE55C76C2E907DD994BCE",
+    "backend/package-lock.json": "97DC963BBBE7E65FDC2E3BC03496965F60BD7687A80205998A27ED39A4F515E7",
+    "backend/Dockerfile": "8A8E44977C64C11932DD514AF23B2E5B0DF2CBFCF3432905C507B778C8C78C5C",
+    "backend/.dockerignore": "92AFF5F7B307B217010F19239C3D7BF5E2E2E68E1FB94EBC1C96CA578524544A",
+    "backend/docker-compose.yml": "BF500DE49EAFF5E04A3C406ED90DD77371CFF446764EF2577128F0FD65DB742A",
+    "backend/docker-compose.hml.yml": "62BC56CA1BC73185E8B57ED21E3BA8C51074288E8AF237D00A08FE6F70C80AEE",
+    "backend/infra/nginx/nginx.conf": "5C4EB433F4AA576E886DD68C76CFC6E35278D2935A9BC09735F86CB4787A3DB5",
+    "backend/prisma/schema.prisma": "6A9462B36AEEF0DBFB8EF1C522E31D8166E4264638BD554FE37A373705299B89",
+    "backend/prisma/migrations/20260710120000_sdc_3_4h_b_simulation_runtime_evidence/migration.sql": "E33323AF5C08600B1663DABC4B37299DF22228135B1C011528B583FD560B64D9",
+    "dist/index.html": "D070FA438EFE2A787CFADDE77B52152C6B616F6299339390D0BB39C64CA7DDC2"
+  },
+  "localValidation": {
+    "node": "v24.15.0",
+    "npm": "11.12.1",
+    "openssl": "unavailable",
+    "build": "pass",
+    "prismaValidate": "blocked",
+    "prismaGenerate": "blocked",
+    "test": "fail",
+    "testFailureReason": "missing native binding @rolldown/binding-win32-x64-msvc"
+  },
+  "docker": {
+    "version": "client-only",
+    "info": "daemon-unavailable",
+    "candidateBuild": "not-completed",
+    "candidateImageTag": "finqz-pro-backend:hml-874a3a8-r7d",
+    "candidateImageId": null,
+    "candidateDigest": null,
+    "candidateSize": null
+  },
+  "compose": {
+    "apiBuild": true,
+    "apiImagePinned": false,
+    "preservedServices": [
+      "postgres",
+      "redis",
+      "nginx"
+    ],
+    "futureDeployCommand": "docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps api",
+    "futureDeployRisk": "current compose can still attempt an API rebuild because api uses build:",
+    "futureRollbackCommand": "docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.hml.yml up -d --no-deps api after repointing api to the preserved rollback image"
+  },
+  "hml": {
+    "sshInventory": "not-executed",
+    "composeValidation": "not-executed",
+    "rollbackImageCapture": "not-executed",
+    "postgresBackup": "not-executed",
+    "frontendFingerprint": "not-executed",
+    "health": "not-executed",
+    "live": "not-executed",
+    "ready": "not-executed"
+  },
+  "rollback": {
+    "rollbackImageId": "sha256:f945b26ed54242be14736dcc10e21a5a59e7984288a9892cbae7d2d0ae81a898",
+    "preserved": true,
+    "retagged": false,
+    "removed": false,
+    "overwritten": false
+  },
+  "smokePlan": [
+    "API container running",
+    "/health 200",
+    "/live 200",
+    "/ready 200",
+    "database connected",
+    "Redis connected",
+    "Nginx health endpoints 200",
+    "authentication",
+    "tenant context",
+    "RBAC",
+    "Master Catalog",
+    "EDP",
+    "simulation runtime",
+    "simulation runtime evidence",
+    "opportunities",
+    "logs without 5xx spikes",
+    "frontend fingerprint unchanged"
+  ],
+  "risks": [
+    "Compose still uses build: for api and is not pinned to an immutable image",
+    "Docker daemon unavailable locally, so candidate image rebuild and inspect were blocked",
+    "Prisma CLI could not be executed in this Windows session",
+    "Linux Node 20 validation was not reproduced in this session",
+    "HML SSH checks and backup were not executed in this session"
+  ],
+  "documents": {
+    "markdown": "docs/09-audits/EPC-W5-03B-R7D-FINAL-BACKEND-ONLY-HML-DEPLOYMENT-READINESS.md",
+    "json": "docs/09-audits/evidence/EPC-W5-03B-R7D-FINAL-BACKEND-ONLY-HML-DEPLOYMENT-READINESS.json",
+    "mermaid": "docs/09-audits/evidence/EPC-W5-03B-R7D-BACKEND-ONLY-DEPLOYMENT-SEQUENCE.mmd"
+  },
+  "constraints": {
+    "noDeploy": true,
+    "noMigrationHML": true,
+    "noRestart": true,
+    "noReload": true,
+    "noContainerRemoval": true,
+    "noFrontendChange": true,
+    "noNginxChange": true,
+    "noComposeChange": true,
+    "noProductionChange": true,
+    "noSecretExposure": true
+  }
+}

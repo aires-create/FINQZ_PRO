@@ -1,0 +1,35 @@
+flowchart LR
+  subgraph Host["Host workspace"]
+    WT["FINQZ_PRO worktree"]
+    DOCS["R5C validation artifacts"]
+  end
+
+  subgraph Docker["Disposable Linux Docker stack"]
+    NET["finqz-r5c-test-network"]
+    PG["finqz-r5c-postgres"]
+    RD["finqz-r5c-redis"]
+    BT["finqz-r5c-backend-tests"]
+  end
+
+  subgraph Validation["Validation steps"]
+    PRISMA["npm ci + Prisma validate/generate/migrate"]
+    EDP["EDP runtime 5x"]
+    DBSUITES["Prisma-backed integration suites"]
+    MEM["In-memory companion suites"]
+    FULLB["backend test:integration + test + build"]
+    FE["frontend test + build in Linux"]
+    IMG["docker build finqz-pro-backend:hml-cce8840-r5c"]
+  end
+
+  WT --> DOCS
+  WT --> NET
+  NET --> PG
+  NET --> RD
+  NET --> BT
+  BT --> PRISMA
+  BT --> EDP
+  BT --> DBSUITES
+  BT --> MEM
+  BT --> FULLB
+  BT --> FE
+  BT --> IMG

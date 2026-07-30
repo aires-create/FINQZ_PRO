@@ -1,0 +1,742 @@
+{
+  "planId": "EPC-W5-03C-R2",
+  "title": "Runtime Bootstrap Alignment Plan",
+  "subtitle": "Official Startup Launch-Path and Environment Resolution Review",
+  "generatedAt": "2026-07-13T00:00:00-03:00",
+  "branch": "homologation/bootstrap-vps",
+  "head": "1fdac11d10d3fc5106eb952a260fc7e318e5dcab",
+  "baseline": {
+    "branch": "homologation/bootstrap-vps",
+    "head": "1fdac11d10d3fc5106eb952a260fc7e318e5dcab",
+    "upstream": "origin/homologation/bootstrap-vps",
+    "workingTree": [
+      "M .env.example",
+      "?? docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+      "?? scripts/sdc-3.4h-f-local-readiness.mjs"
+    ]
+  },
+  "documentsReviewed": [
+    "docs/09-audits/EPC-W5-03C-R1-LOCAL-RUNTIME-READINESS-DIAGNOSIS.md",
+    "docs/09-audits/evidence/EPC-W5-03C-R1-LOCAL-RUNTIME-READINESS-DIAGNOSIS.json",
+    "docs/09-audits/evidence/EPC-W5-03C-R1-RUNTIME-VS-TESTS.mmd",
+    "docs/09-audits/EPC-W5-03C-OBSERVABILITY-BASELINE.md",
+    "docs/09-audits/evidence/EPC-W5-03C-OBSERVABILITY-BASELINE.json",
+    "docs/09-audits/EPC-W5-03A-SPEC-MASTER-CATALOG-OBSERVABILITY.md",
+    "docs/09-audits/evidence/EPC-W5-03A-SPEC-MASTER-CATALOG-OBSERVABILITY.json",
+    "docs/09-audits/evidence/EPC-W5-03A-OBSERVABILITY-ARCHITECTURE.mmd",
+    "docs/00-master/DCA-FINQZ-PRO-ENTERPRISE-v2.md",
+    "docs/00-master/PCCD-FINQZ-PRO-ENTERPRISE.md",
+    "docs/03-decision-platform/DCA-ENTERPRISE-DECISION-PLATFORM-v1.md",
+    "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md",
+    "docs/05-adr/ADR-004-commercial-master-catalog.md",
+    "docs/05-adr/ADR-010-loan-with-collateral-canonical-taxonomy.md",
+    "docs/01-architecture/SDC-FASE-3.4H-F-LOCAL-ACTIVATION-READINESS.md",
+    "scripts/sdc-3.4h-f-local-readiness.mjs"
+  ],
+  "sourceFilesReviewed": [
+    "backend/src/config/env.ts",
+    "backend/src/config/env/env.ts",
+    "backend/src/config/env/env.schema.ts",
+    "backend/src/config/env/env.validation.ts",
+    "backend/src/config/env/env.transform.ts",
+    "backend/src/server.ts",
+    "backend/src/server.fastify.ts",
+    "backend/src/app.ts",
+    "backend/src/core/http/fastify.ts",
+    "backend/src/database/prisma.ts",
+    "backend/src/core/prisma/client.ts",
+    "backend/src/shared/logger.ts",
+    "backend/src/tests/setup.ts",
+    "backend/vitest.config.ts",
+    "backend/package.json",
+    "package.json",
+    "backend/prisma/schema.prisma",
+    "backend/prisma/seed.ts",
+    "backend/Dockerfile",
+    "backend/docker-compose.yml",
+    "backend/docker-compose.hml.yml",
+    "backend/docs/environment-variables.md",
+    "backend/docs/staging-smoke-checklist.md"
+  ],
+  "currentState": {
+    "rootCauseStatus": "CONFIRMED",
+    "primaryCause": "cwd-dependent environment resolution during local backend startup",
+    "runtime": {
+      "currentBootstrap": "backend/src/server.ts",
+      "targetBootstrap": "backend/src/server.fastify.ts",
+      "envFacade": "backend/src/config/env.ts",
+      "envLoader": "backend/src/config/env/env.ts",
+      "prismaBootstrap": "backend/src/database/prisma.ts"
+    },
+    "runtimeBehavior": {
+      "rootCwd": "fails before Prisma because required backend env is not resolved",
+      "backendCwd": "loads backend env and succeeds",
+      "testLoader": "seeds env before Prisma import and succeeds",
+      "docker": "injects env explicitly and does not need local file loading"
+    },
+    "baselineLiveEvidence": "not yet collected",
+    "observabilityBaseline": "existing and documented, but live release gates C/F/G remain deferred"
+  },
+  "rootCause": {
+    "status": "CONFIRMED",
+    "primaryCause": "cwd-dependent environment resolution during local backend startup",
+    "conclusion": "The backend must stop relying on implicit cwd discovery for startup correctness. The runtime should read env deterministically, respect existing process.env, and preserve a local-only file path only when explicitly authorized.",
+    "staleEvidence": "Prior TLS evidence is STALE_OR_NOT_REPRODUCED on the confirmed baseline"
+  },
+  "requirements": [
+    "deterministic startup",
+    "explicit environment precedence",
+    "production must not depend on local files",
+    "root execution must remain possible through an explicit wrapper",
+    "backend execution must remain official and direct",
+    "tests must keep env isolation",
+    "Docker/HML/production must use injected env",
+    "Prisma CLI must share the same policy",
+    "zero duplicate dotenv loader",
+    "zero import-order dependency",
+    "clear fail-fast error messages",
+    "simple rollback"
+  ],
+  "constraints": [
+    "no code changes in this phase",
+    "no .env edits",
+    "no package.json edits",
+    "no Docker edits",
+    "no Prisma schema edits",
+    "no migrations",
+    "no deploy",
+    "no VPS access",
+    "no build execution",
+    "no test execution",
+    "no secret leakage",
+    "no machine-specific hardcoded paths"
+  ],
+  "environmentPrecedencePolicy": {
+    "order": [
+      "existing process.env",
+      "runtime injection from Docker/CI/HML/production",
+      "explicit local backend file only when local development is authorized",
+      "non-sensitive defaults from validation",
+      "fail-fast validation"
+    ],
+    "override": false,
+    "multipleFilesAllowed": false,
+    "nodeEnvControlsFiles": true,
+    "rootEnvIgnoredByBackend": true,
+    "srcEnvProhibited": true,
+    "backendEnvLocalOfficial": true,
+    "backendEnvExampleTemplateOnly": true,
+    "backendEnvMissingInLocalFailsClearly": true,
+    "productionIgnoresLocalFiles": true,
+    "dotEnvLocal": "not auto-loaded",
+    "dotEnvTest": "not auto-loaded"
+  },
+  "officialCommands": [
+    {
+      "context": "LOCAL_ROOT",
+      "cwd": "repo root",
+      "command": "npm --prefix backend run dev",
+      "loader": "deterministic backend env bootstrap",
+      "environmentSource": "backend/.env only when local is authorized",
+      "prerequisites": [
+        "backend dependencies installed",
+        "backend env available or exported"
+      ],
+      "expectedOutput": "backend dev server starts deterministically",
+      "expectedError": "clear env validation failure if required vars are missing",
+      "owner": "Runtime engineering",
+      "rollback": "revert to backend-only direct start if wrapper is removed"
+    },
+    {
+      "context": "LOCAL_BACKEND",
+      "cwd": "backend/",
+      "command": "npm run dev",
+      "loader": "deterministic backend env bootstrap",
+      "environmentSource": "backend/.env only when local is authorized",
+      "prerequisites": [
+        "backend dependencies installed",
+        "backend env available"
+      ],
+      "expectedOutput": "dev server starts from backend/",
+      "expectedError": "fail-fast env validation before Prisma",
+      "owner": "Runtime engineering",
+      "rollback": "keep backend cwd as the official direct path"
+    },
+    {
+      "context": "TEST",
+      "cwd": "backend/",
+      "command": "npm run test",
+      "loader": "Vitest setupFiles",
+      "environmentSource": "setupFiles seeds process.env",
+      "prerequisites": [
+        "test env configured",
+        "no local file leak"
+      ],
+      "expectedOutput": "isolated deterministic tests",
+      "expectedError": "test failure only if env contract breaks",
+      "owner": "QA / Runtime engineering",
+      "rollback": "keep setupFiles as the env authority for tests"
+    },
+    {
+      "context": "BUILD",
+      "cwd": "backend/",
+      "command": "npm run build",
+      "loader": "no dotenv local dependency",
+      "environmentSource": "none required for compilation",
+      "prerequisites": [
+        "TypeScript toolchain installed"
+      ],
+      "expectedOutput": "dist/ generated",
+      "expectedError": "TypeScript compile failure only",
+      "owner": "Runtime engineering",
+      "rollback": "restore previous build contract"
+    },
+    {
+      "context": "START_COMPILED",
+      "cwd": "backend/",
+      "command": "node dist/server.js",
+      "loader": "environment injection only",
+      "environmentSource": "orchestrator / wrapper / container env",
+      "prerequisites": [
+        "dist/ present",
+        "env injected externally"
+      ],
+      "expectedOutput": "compiled server starts",
+      "expectedError": "fail-fast env validation if injection is missing",
+      "owner": "Runtime / Operations",
+      "rollback": "revert to previous compiled start contract"
+    },
+    {
+      "context": "PRISMA_VALIDATE",
+      "cwd": "backend/",
+      "command": "npx prisma validate",
+      "loader": "Prisma CLI env contract",
+      "environmentSource": "injected env or explicitly authorized local backend file",
+      "prerequisites": [
+        "schema present",
+        "datasource variables resolved"
+      ],
+      "expectedOutput": "schema validated",
+      "expectedError": "datasource resolution failure if env missing",
+      "owner": "Backend platform",
+      "rollback": "keep CLI execution anchored to backend/"
+    },
+    {
+      "context": "PRISMA_GENERATE",
+      "cwd": "backend/",
+      "command": "npm run db:generate",
+      "loader": "Prisma CLI env contract",
+      "environmentSource": "injected env or explicitly authorized local backend file",
+      "prerequisites": [
+        "schema present",
+        "node modules installed"
+      ],
+      "expectedOutput": "Prisma client generated",
+      "expectedError": "schema/env resolution failure",
+      "owner": "Backend platform",
+      "rollback": "regenerate with the previous contract"
+    },
+    {
+      "context": "SEED",
+      "cwd": "backend/",
+      "command": "npm run db:seed",
+      "loader": "single backend bootstrap contract",
+      "environmentSource": "injected env or explicitly authorized local backend file",
+      "prerequisites": [
+        "database reachable",
+        "migrations applied"
+      ],
+      "expectedOutput": "seed completes",
+      "expectedError": "readiness or datasource failure",
+      "owner": "Backend platform",
+      "rollback": "idempotent reseed or reset local DB"
+    },
+    {
+      "context": "DOCKER",
+      "cwd": "backend/",
+      "command": "docker compose up --build",
+      "loader": "compose environment",
+      "environmentSource": "docker-compose environment entries",
+      "prerequisites": [
+        "Docker available",
+        "compose env prepared"
+      ],
+      "expectedOutput": "api, postgres and redis start",
+      "expectedError": "compose or healthcheck failure",
+      "owner": "Infrastructure",
+      "rollback": "stop compose stack and preserve volumes"
+    },
+    {
+      "context": "HOMOLOGACAO",
+      "cwd": "backend/",
+      "command": "docker compose -f docker-compose.yml -f docker-compose.hml.yml up --build",
+      "loader": "compose override environment",
+      "environmentSource": "compose + external env file or host materialization",
+      "prerequisites": [
+        "override file present",
+        "secrets injected externally"
+      ],
+      "expectedOutput": "hml stack starts with explicit env",
+      "expectedError": "compose validation or healthcheck failure",
+      "owner": "Infrastructure / Release",
+      "rollback": "scale down the hml stack"
+    },
+    {
+      "context": "PRODUCTION",
+      "cwd": "container / host operational context",
+      "command": "node dist/server.js",
+      "loader": "environment injection only",
+      "environmentSource": "orchestrator / secrets / runtime env",
+      "prerequisites": [
+        "dist artifacts present",
+        "all critical env injected"
+      ],
+      "expectedOutput": "production server starts",
+      "expectedError": "fail-fast env validation",
+      "owner": "Operations",
+      "rollback": "revert to previous deploy or disable the new bootstrap path"
+    }
+  ],
+  "alternatives": [
+    {
+      "id": "A1",
+      "name": "BACKEND_CWD_ONLY",
+      "classification": "NOT_RECOMMENDED",
+      "summary": "Simple and safe, but weak on root ergonomics.",
+      "strengths": [
+        "lowest conceptual complexity",
+        "easy to explain"
+      ],
+      "weaknesses": [
+        "does not preserve root-first ergonomics",
+        "does not eliminate implicit cwd dependency by itself"
+      ]
+    },
+    {
+      "id": "A2",
+      "name": "ROOT_WRAPPER",
+      "classification": "ACCEPTABLE",
+      "summary": "Use `npm --prefix backend` from the root as an explicit wrapper.",
+      "strengths": [
+        "good root ergonomics",
+        "minimal diff",
+        "keeps root frontend package untouched"
+      ],
+      "weaknesses": [
+        "wrapper alone does not solve env policy without a deterministic loader"
+      ]
+    },
+    {
+      "id": "A3",
+      "name": "EXPLICIT_ENV_PATH",
+      "classification": "CONDITIONAL",
+      "summary": "Resolve a local env file by explicit path.",
+      "strengths": [
+        "removes cwd dependence",
+        "cross-platform if implemented with module-relative path"
+      ],
+      "weaknesses": [
+        "must be gated to local development only",
+        "can become dangerous if it ever reaches production"
+      ]
+    },
+    {
+      "id": "A4",
+      "name": "PROJECT_ROOT_DISCOVERY",
+      "classification": "ACCEPTABLE",
+      "summary": "Resolve the backend root from module location or a marker.",
+      "strengths": [
+        "deterministic",
+        "compatible with ESM and dist/",
+        "portable across Windows/Linux"
+      ],
+      "weaknesses": [
+        "slightly more complex than a plain wrapper"
+      ]
+    },
+    {
+      "id": "A5",
+      "name": "ENV_INJECTION_ONLY",
+      "classification": "ACCEPTABLE",
+      "summary": "No dotenv in runtime; everything comes from process.env.",
+      "strengths": [
+        "best for production, Docker and CI",
+        "cleanest security posture"
+      ],
+      "weaknesses": [
+        "poor local onboarding if used alone",
+        "does not solve developer convenience by itself"
+      ]
+    },
+    {
+      "id": "A6",
+      "name": "CONTROLLED_HYBRID",
+      "classification": "RECOMMENDED",
+      "summary": "Use env injection in non-local environments and explicit local loading only when authorized.",
+      "strengths": [
+        "balanced",
+        "safe",
+        "minimal diff",
+        "compatible with root, backend, Docker, tests and Prisma"
+      ],
+      "weaknesses": [
+        "requires discipline to avoid fallback ambiguity"
+      ]
+    }
+  ],
+  "selectedStrategy": {
+    "strategy": "CONTROLLED_HYBRID",
+    "why": "It is the smallest safe path that preserves all environments while removing the implicit cwd dependency.",
+    "diffSize": "minimal",
+    "impact": "low to medium",
+    "compatibility": [
+      "Windows",
+      "Linux",
+      "dist/",
+      "Vitest",
+      "Docker",
+      "Prisma CLI",
+      "HML",
+      "production"
+    ],
+    "rationale": [
+      "production never reads a local file",
+      "tests keep control of env through setupFiles",
+      "Docker and HML continue to inject env explicitly",
+      "root remains supported through an explicit wrapper",
+      "backend remains the official direct path"
+    ],
+    "nextMicrophase": "R2-A",
+    "abortCriteria": [
+      "any design that overrides existing process.env",
+      "any design that auto-loads local files in production",
+      "any design that introduces a silent fallback to the wrong file"
+    ],
+    "rollback": [
+      "revert the loader/wrapper adjustment",
+      "fall back to explicit env injection only",
+      "preserve the documented backend cwd path"
+    ]
+  },
+  "dockerImpact": {
+    "risk": "LOW_RISK",
+    "why": [
+      "compose already injects env explicitly",
+      "the future loader must respect prefilled process.env",
+      "no local file should be read inside the container"
+    ],
+    "goCondition": [
+      "Docker keeps using explicit env entries",
+      "no production container reads local files"
+    ]
+  },
+  "testImpact": {
+    "risk": "NO_IMPACT",
+    "why": [
+      "Vitest setup already seeds env before imports",
+      "backend/.env must not leak into NODE_ENV=test"
+    ],
+    "goCondition": [
+      "test setup remains the env authority",
+      "no auto-loaded local file in tests"
+    ]
+  },
+  "prismaImpact": {
+    "risk": "LOW_RISK",
+    "why": [
+      "Prisma runtime and Prisma CLI should share the same env contract",
+      "backend cwd stays the canonical direct path",
+      "root access is via wrapper, not implicit cwd"
+    ],
+    "goCondition": [
+      "validate/generate/seed run from backend/",
+      "no root .env fallback"
+    ]
+  },
+  "securityControls": [
+    "existing process.env has first priority",
+    "Docker/CI/HML/prod injection comes before any local file",
+    "backend/.env is the only allowed local file in authorized local dev",
+    "backend/.env.example remains template only",
+    "root .env is ignored by the backend",
+    "src/.env is prohibited",
+    ".env.local and .env.test are not auto-loaded",
+    "override remains false",
+    "no secrets in logs",
+    "no machine-specific paths",
+    "no silent fallback to another file"
+  ],
+  "futureImplementationPhases": [
+    {
+      "id": "R2-A",
+      "goal": "Approve Bootstrap Alignment Plan",
+      "scope": "review and approval only",
+      "filesLikely": [],
+      "risks": ["none beyond review latency"],
+      "tests": ["JSON parse", "document cross-check"],
+      "rollback": "not applicable",
+      "entryCriteria": "baseline confirmed",
+      "exitCriteria": "plan approved",
+      "commitSuggestion": "docs(plan): approve bootstrap alignment plan",
+      "deployNeeded": false,
+      "adrNeeded": false,
+      "functionalImpact": "none"
+    },
+    {
+      "id": "R2-B",
+      "goal": "Centralize Environment Bootstrap Contract",
+      "scope": "single bootstrap contract and single import surface",
+      "filesLikely": ["backend/src/config/env.ts", "backend/src/config/env/env.ts", "backend/src/server.ts", "backend/src/server.fastify.ts"],
+      "risks": ["loader duplication if not centralized"],
+      "tests": ["env precedence unit tests", "bootstrap import order tests"],
+      "rollback": "revert to the current explicit contract",
+      "entryCriteria": "plan approved",
+      "exitCriteria": "single official env contract exists",
+      "commitSuggestion": "refactor(env): centralize bootstrap contract",
+      "deployNeeded": false,
+      "adrNeeded": true,
+      "functionalImpact": "none at this phase"
+    },
+    {
+      "id": "R2-C",
+      "goal": "Introduce Deterministic Local Env Resolution",
+      "scope": "explicit local file resolution only when authorized",
+      "filesLikely": ["backend/src/config/env.ts", "backend/src/config/env/env.ts"],
+      "risks": ["wrong-file fallback", "production leakage"],
+      "tests": ["path resolution unit tests", "Windows/Linux path tests"],
+      "rollback": "remove deterministic local file resolution",
+      "entryCriteria": "contract centralized",
+      "exitCriteria": "local dev resolves the intended file deterministically",
+      "commitSuggestion": "refactor(env): make local env resolution deterministic",
+      "deployNeeded": false,
+      "adrNeeded": true,
+      "functionalImpact": "startup only"
+    },
+    {
+      "id": "R2-D",
+      "goal": "Add Root-Level Launch Wrapper",
+      "scope": "document or add wrapper command only if needed",
+      "filesLikely": ["package.json", "backend/package.json", "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md"],
+      "risks": ["root/frontend script collision"],
+      "tests": ["root wrapper smoke", "backend wrapper smoke"],
+      "rollback": "remove wrapper and keep backend direct path",
+      "entryCriteria": "deterministic loader exists",
+      "exitCriteria": "root wrapper launches backend deterministically",
+      "commitSuggestion": "docs(runtime): add root wrapper guidance",
+      "deployNeeded": false,
+      "adrNeeded": false,
+      "functionalImpact": "none if documentation-only"
+    },
+    {
+      "id": "R2-E",
+      "goal": "Align Tests and Prisma CLI",
+      "scope": "ensure tests and Prisma commands obey the same precedence",
+      "filesLikely": ["backend/vitest.config.ts", "backend/src/tests/setup.ts", "backend/package.json"],
+      "risks": ["test env leakage"],
+      "tests": ["unit env precedence", "Prisma validate/generate smoke"],
+      "rollback": "restore the current test setup contract",
+      "entryCriteria": "bootstrap contract approved",
+      "exitCriteria": "tests and Prisma follow the same policy",
+      "commitSuggestion": "test(env): align tests and Prisma CLI with bootstrap contract",
+      "deployNeeded": false,
+      "adrNeeded": true,
+      "functionalImpact": "none"
+    },
+    {
+      "id": "R2-F",
+      "goal": "Validate Docker and Compiled Start",
+      "scope": "check Docker compose and dist start against the new policy",
+      "filesLikely": ["backend/Dockerfile", "backend/docker-compose.yml", "backend/docker-compose.hml.yml"],
+      "risks": ["compose env drift"],
+      "tests": ["docker build", "docker compose up", "health/readiness smoke"],
+      "rollback": "revert to current Docker/start contract",
+      "entryCriteria": "loader contract stabilized",
+      "exitCriteria": "Docker and dist start remain compatible",
+      "commitSuggestion": "docs(docker): validate bootstrap alignment against compose",
+      "deployNeeded": false,
+      "adrNeeded": true,
+      "functionalImpact": "none"
+    },
+    {
+      "id": "R2-G",
+      "goal": "Collect Live Baseline",
+      "scope": "read-only live startup and readiness baseline",
+      "filesLikely": ["docs/09-audits/*"],
+      "risks": ["live environment unavailability"],
+      "tests": ["live startup", "readiness", "Prisma connect/select"],
+      "rollback": "stop the local process and preserve code",
+      "entryCriteria": "new contract approved and deployed in a safe context",
+      "exitCriteria": "live evidence captured",
+      "commitSuggestion": "docs(audit): capture live bootstrap baseline",
+      "deployNeeded": false,
+      "adrNeeded": false,
+      "functionalImpact": "none"
+    },
+    {
+      "id": "R2-H",
+      "goal": "Reevaluate Gates C, F and G",
+      "scope": "reclassify live gates after evidence exists",
+      "filesLikely": ["docs/09-audits/*"],
+      "risks": ["premature gate promotion"],
+      "tests": ["live evidence review"],
+      "rollback": "keep gates deferred until evidence is sufficient",
+      "entryCriteria": "live baseline present",
+      "exitCriteria": "gates resolved",
+      "commitSuggestion": "docs(audit): re-evaluate live gates",
+      "deployNeeded": false,
+      "adrNeeded": false,
+      "functionalImpact": "none"
+    }
+  ],
+  "probableFiles": [
+    { "path": "backend/src/config/env.ts", "classification": "REQUIRED", "reason": "single public environment contract surface" },
+    { "path": "backend/src/config/env/env.ts", "classification": "REQUIRED", "reason": "deterministic loader implementation" },
+    { "path": "backend/src/server.ts", "classification": "REQUIRED", "reason": "current operational bootstrap" },
+    { "path": "backend/src/server.fastify.ts", "classification": "LIKELY", "reason": "target bootstrap already documented" },
+    { "path": "backend/package.json", "classification": "LIKELY", "reason": "backend scripts and wrappers" },
+    { "path": "package.json", "classification": "POSSIBLE", "reason": "optional root wrapper only if justified" },
+    { "path": "backend/src/tests/setup.ts", "classification": "LIKELY", "reason": "test env isolation" },
+    { "path": "backend/vitest.config.ts", "classification": "LIKELY", "reason": "test setup and isolation contract" },
+    { "path": "backend/Dockerfile", "classification": "POSSIBLE", "reason": "validate compiled start compatibility" },
+    { "path": "backend/docker-compose.yml", "classification": "POSSIBLE", "reason": "compose env injection contract" },
+    { "path": "backend/docs/environment-variables.md", "classification": "LIKELY", "reason": "operator-facing env policy" },
+    { "path": "docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md", "classification": "LIKELY", "reason": "official runtime governance reference" }
+  ],
+  "futureTests": [
+    { "type": "UNIT", "name": "deterministic resolution", "goal": "confirm loader chooses the same file every time" },
+    { "type": "UNIT", "name": "precedence", "goal": "confirm process.env wins" },
+    { "type": "UNIT", "name": "override false", "goal": "confirm no overwriting of existing env" },
+    { "type": "UNIT", "name": "missing file", "goal": "fail clearly when local file is absent" },
+    { "type": "UNIT", "name": "production no local dotenv", "goal": "confirm production ignores local files" },
+    { "type": "UNIT", "name": "test env preserved", "goal": "confirm setupFiles remain authoritative" },
+    { "type": "UNIT", "name": "Windows path", "goal": "confirm module-relative resolution on Windows" },
+    { "type": "UNIT", "name": "Linux path", "goal": "confirm module-relative resolution on Linux" },
+    { "type": "UNIT", "name": "dist path", "goal": "confirm compiled output resolves the same policy" },
+    { "type": "INTEGRATION", "name": "start from root", "goal": "confirm wrapper reaches backend deterministically" },
+    { "type": "INTEGRATION", "name": "start from backend", "goal": "confirm direct backend startup works" },
+    { "type": "INTEGRATION", "name": "Prisma connect/select", "goal": "confirm runtime DB readiness" },
+    { "type": "DOCKER", "name": "docker build/start", "goal": "confirm compose and image remain compatible" },
+    { "type": "SECURITY", "name": "no secret leak", "goal": "confirm docs/logs do not expose secrets" }
+  ],
+  "rollbackPlan": [
+    {
+      "level": 1,
+      "name": "COMMAND ROLLBACK",
+      "trigger": "wrapper command is confusing or fails",
+      "owner": "Runtime engineering",
+      "command": "use the backend cwd official command again",
+      "impact": "low",
+      "validation": "local start and Prisma commands still work",
+      "evidence": "shell command history and smoke start",
+      "timeMax": "immediate",
+      "risk": "low"
+    },
+    {
+      "level": 2,
+      "name": "CODE ROLLBACK",
+      "trigger": "deterministic loader introduces regression",
+      "owner": "Runtime engineering",
+      "command": "revert the loader/wrapper change",
+      "impact": "medium",
+      "validation": "tests and Docker return to current baseline",
+      "evidence": "git revert / release note",
+      "timeMax": "same cycle",
+      "risk": "medium"
+    },
+    {
+      "level": 3,
+      "name": "OPERATIONAL ROLLBACK",
+      "trigger": "root/backend/Docker divergence persists",
+      "owner": "Architecture + Operations",
+      "command": "restrict official execution to the approved backend path",
+      "impact": "ergonomics only",
+      "validation": "runbook and approvals updated",
+      "evidence": "operational notice",
+      "timeMax": "same release window",
+      "risk": "low to medium"
+    }
+  ],
+  "decisionClassification": [
+    { "decision": "cwd official", "classification": "ADR_REQUIRED" },
+    { "decision": "environment precedence policy", "classification": "ADR_REQUIRED" },
+    { "decision": "deterministic loader", "classification": "ADR_REQUIRED" },
+    { "decision": "root wrapper command", "classification": "RUNBOOK_SUFFICIENT" },
+    { "decision": "production .env policy", "classification": "ADR_UPDATE_REQUIRED" },
+    { "decision": "multiple .env files", "classification": "ADR_REQUIRED" },
+    { "decision": "npm scripts change", "classification": "ADR_UPDATE_REQUIRED" },
+    { "decision": "Docker change", "classification": "ADR_UPDATE_REQUIRED" },
+    { "decision": "CI change", "classification": "ADR_UPDATE_REQUIRED" },
+    { "decision": "Prisma CLI convention", "classification": "RUNBOOK_SUFFICIENT" },
+    { "decision": "monorepo convention", "classification": "ADR_REQUIRED" }
+  ],
+  "goNoGoMatrix": [
+    { "dimension": "cwd", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "medium", "conditionForGo": "explicit backend cwd or wrapper" },
+    { "dimension": "env loader", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "high", "conditionForGo": "single deterministic loader" },
+    { "dimension": "precedence", "currentState": "UNKNOWN", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "medium", "conditionForGo": "process.env first" },
+    { "dimension": "root start", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "medium", "conditionForGo": "wrapper documented" },
+    { "dimension": "backend start", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "direct backend command" },
+    { "dimension": "tests", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "setupFiles preserved" },
+    { "dimension": "Prisma runtime", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "same policy as runtime" },
+    { "dimension": "Prisma CLI", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "medium", "conditionForGo": "backend cwd and no root .env" },
+    { "dimension": "Docker", "currentState": "READY", "proposedState": "READY", "risk": "low", "conditionForGo": "compose env unchanged" },
+    { "dimension": "HML", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "medium", "conditionForGo": "override file and secrets policy" },
+    { "dimension": "production", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "ignore local files entirely" },
+    { "dimension": "security", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "allowlist/denylist enforced" },
+    { "dimension": "rollback", "currentState": "READY", "proposedState": "READY", "risk": "low", "conditionForGo": "three rollback levels documented" },
+    { "dimension": "documentation", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "all command contracts documented" },
+    { "dimension": "onboarding", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "medium", "conditionForGo": "root wrapper explained" },
+    { "dimension": "observability baseline", "currentState": "READY_WITH_RESTRICTIONS", "proposedState": "READY", "risk": "low", "conditionForGo": "R1 baseline accepted" },
+    { "dimension": "Gate C", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "high", "conditionForGo": "live evidence collected later" },
+    { "dimension": "Gate F", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "high", "conditionForGo": "live evidence collected later" },
+    { "dimension": "Gate G", "currentState": "NOT_READY", "proposedState": "READY_WITH_RESTRICTIONS", "risk": "high", "conditionForGo": "live evidence collected later" }
+  ],
+  "risks": [
+    { "severity": "BLOCKER", "item": "implicit cwd dependency remains unresolved" },
+    { "severity": "CRITICAL", "item": "production accidentally reads a local file" },
+    { "severity": "CRITICAL", "item": "silent fallback to the wrong env file" },
+    { "severity": "HIGH", "item": "Prisma CLI and runtime diverge" },
+    { "severity": "HIGH", "item": "duplicate loader due to import order" },
+    { "severity": "HIGH", "item": "root wrapper conflicts with frontend root package" },
+    { "severity": "MEDIUM", "item": "root wrapper increases command verbosity" },
+    { "severity": "LOW", "item": "extra documentation to maintain" }
+  ],
+  "gaps": [
+    "live baseline for C/F/G is still missing",
+    "no implementation has started yet",
+    "final `.env.local` / `.env.test` policy needs closure if an exception is requested",
+    "server.fastify bootstrap promotion remains a future decision",
+    "root wrapper versus backend-only direct path needs explicit approval",
+    "post-change operational evidence still needs collection"
+  ],
+  "openDecisions": [
+    "keep wrapper as CLI only or add a root script later",
+    "promote server.fastify.ts as official bootstrap or keep server.ts current",
+    "allow or deny backend/.env.local in a future phase",
+    "use import.meta.url alone or pair with a backend marker file",
+    "document Prisma CLI as wrapper-only or with a dedicated script alias",
+    "allow root execution only through npm --prefix backend or also through a new root script",
+    "request an ADR update now or only after implementation"
+  ],
+  "nextStep": {
+    "id": "R2-A",
+    "name": "Approve Bootstrap Alignment Plan",
+    "objective": "Obtain approval before any implementation begins.",
+    "note": "The actual implementation microphases start after this approval gate."
+  },
+  "summary": {
+    "documentCount": 16,
+    "sourceFileCount": 23,
+    "requirementCount": 12,
+    "constraintCount": 12,
+    "officialCommandCount": 11,
+    "alternativeCount": 6,
+    "implementationPhaseCount": 8,
+    "probableFileCount": 12,
+    "futureTestCount": 14,
+    "rollbackLevelCount": 3,
+    "decisionCount": 11,
+    "riskCount": 8,
+    "gapCount": 6,
+    "openDecisionCount": 7
+  }
+}

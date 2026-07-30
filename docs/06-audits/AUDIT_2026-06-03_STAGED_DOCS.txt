@@ -1,0 +1,44 @@
+A	docs/00-governance/PROJECT_CONTROL_CENTER.md
+R100	docs/architecture/domain-hierarchy.md	docs/02-architecture/ARCH-001-DOMAIN_HIERARCHY_REVIEW_REQUIRED.md
+R100	docs/architecture/domain-specialization-map.md	docs/02-architecture/ARCH-002-DOMAIN_SPECIALIZATION_MAP_REVIEW_REQUIRED.md
+A	docs/02-architecture/ARCH-003-DOMAINS_OVERVIEW_DRAFT.md
+A	docs/02-architecture/ARCH-004-ENTITIES_MODEL_REVIEW_REQUIRED.md
+A	docs/02-architecture/ARCH-005-RELATIONSHIPS_REVIEW_REQUIRED.md
+R100	docs/architecture/04-regras-operacionais.md	docs/02-architecture/ARCH-006-OPERATIONAL_RULES_REVIEW_REQUIRED.md
+R100	docs/architecture/05-metricas-oficiais.md	docs/02-architecture/ARCH-007-OFFICIAL_METRICS_REVIEW_REQUIRED.md
+A	docs/02-architecture/ARCH-008-OPERATIONAL_EVENTS_REVIEW_REQUIRED.md
+A	docs/02-architecture/ARCH-009-RBAC_REVIEW_REQUIRED.md
+R100	docs/architecture/08-padroes-backend.md	docs/02-architecture/ARCH-010-BACKEND_STANDARDS_REVIEW_REQUIRED.md
+R100	docs/architecture/09-padroes-frontend.md	docs/02-architecture/ARCH-011-FRONTEND_STANDARDS_REVIEW_REQUIRED.md
+R100	docs/architecture/12-integrations-domain.md	docs/02-architecture/ARCH-012-INTEGRATIONS_DOMAIN_REVIEW_REQUIRED.md
+R100	docs/architecture/backend-modularization-plan.md	docs/02-architecture/ARCH-013-BACKEND_MODULARIZATION_PLAN_REVIEW_REQUIRED.md
+R100	docs/architecture/domain-refactoring-plan.md	docs/02-architecture/ARCH-014-DOMAIN_REFACTORING_PLAN_REVIEW_REQUIRED.md
+A	docs/02-architecture/ARCH-015-FRONTEND_DOMAIN_MAP_REVIEW_REQUIRED.md
+A	docs/03-runtime/RUN-001-RUNTIME_GOVERNANCE.md
+R100	docs/architecture/migration-matrix.md	docs/03-runtime/RUN-002-MIGRATION_MATRIX_REVIEW_REQUIRED.md
+R100	docs/architecture/api-migration-plan.md	docs/03-runtime/RUN-003-API_MIGRATION_PLAN_REVIEW_REQUIRED.md
+R100	docs/architecture/runtime-decoupling-plan.md	docs/03-runtime/RUN-004-RUNTIME_DECOUPLING_PLAN_REVIEW_REQUIRED.md
+R100	docs/architecture/adr/ADR-001-commercial-api-source-of-truth.md	docs/05-adr/ADR-001-commercial-api-source-of-truth.md
+R100	docs/architecture/adr/ADR-002-provider-engine.md	docs/05-adr/ADR-002-provider-engine.md
+R100	docs/architecture/adr/ADR-003-simulation-engine-source-of-truth.md	docs/05-adr/ADR-003-simulation-engine-source-of-truth.md
+A	docs/05-adr/ADR-004-commercial-master-catalog.md
+A	docs/05-adr/ADR-005-legacy-youware-backend-classification.md
+A	docs/05-adr/ADR-006-products-domain-decommission.md
+R100	docs/architecture/seed-specialization-plan.md	docs/06-audits/AUD-002-SEED_SPECIALIZATION_PLAN_REVIEW_REQUIRED.md
+A	docs/06-audits/AUDIT_2026-06-03_PHASE_G25.txt
+A	docs/08-standards/CODING_STANDARDS.md
+R100	docs/ci-cd.md	docs/08-standards/ci-cd.md
+R100	docs/testing-strategy.md	docs/08-standards/testing-strategy.md
+A	docs/99-archive/BACKEND_FOLDER_STRUCTURE_2026-05-11_ARCHIVED.md
+R100	docs/architecture/11-backend-modelagem.md	docs/99-archive/BACKEND_MODELING_2026-05-11_ARCHIVED.md
+R100	docs/architecture/current-state-audit.md	docs/99-archive/CURRENT_STATE_AUDIT_2026-05-22_INCOMPLETE_ARCHIVED.md
+A	docs/99-archive/EXECUTIVE_SUMMARY_2026-05-11_ARCHIVED.md
+A	docs/99-archive/IMPLEMENTATION_ROADMAP_2026-05-11_ARCHIVED.md
+R100	docs/architecture/10-roadmap-tecnico.md	docs/99-archive/TECHNICAL_ROADMAP_2026-05-11_ARCHIVED.md
+D	docs/architecture/01-dominios.md
+D	docs/architecture/02-entidades.md
+D	docs/architecture/03-relacionamentos.md
+D	docs/architecture/06-eventos-operacionais.md
+D	docs/architecture/07-rbac.md
+D	docs/architecture/frontend-domain-map.md
+D	docs/runtime-governance-enterprise.md

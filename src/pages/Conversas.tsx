@@ -1,12 +1,11 @@
 // FINQZ PRO - Conversas Page
 import React, { useEffect, useState, useRef } from "react";
 import { Search, Send, MessageCircle, Bot, User, ArrowLeft, Users, AlertCircle, Filter } from "lucide-react";
-import api from "../api/client";
+import { apiFetch } from "../api/http";
 import useAppStore from "../store";
 import { Button, EmptyState, LoadingState } from "../components/ui";
 import { SdrPanel } from "../components/ui/SdrPanel";
 import { PageHeader } from "../components/layout/PageHeader";
-import { USE_MOCKS } from "../config/environment";
 import { ROLE_PERMISSIONS, type Permission } from "../types";
 
 // Tipos
@@ -70,14 +69,6 @@ const CONVERSATION_STATUSES = new Set<ConversationStatus>(["open", "waiting", "b
 const parseConversationStatus = (value: string): ConversationStatus | null =>
   CONVERSATION_STATUSES.has(value as ConversationStatus) ? (value as ConversationStatus) : null;
 
-// Seed para modo mock
-const initialConversasSeed: Conversation[] = [
-  { id: 1, clienteId: 1, status: 'active', conversationStatus: 'open', direction: 'outbound', provider: 'whatsapp', providerPhone: '11999999999', lastMessageAt: Date.now() - 3600000, createdAt: Date.now() - 86400000 * 2, updatedAt: Date.now() - 3600000, cliente: { id: 1, nome: 'João Silva', celular: '11999999999' }, ultimaMensagem: { id: 1, contatoId: 1, recipient: '11999999999', provider: 'whatsapp', content: 'Olá João! Gostaria de conhecer nosso plano Premium?', status: 'delivered', direction: 'outbound', createdAt: Date.now() - 86400000, updatedAt: Date.now() } },
-  { id: 2, clienteId: 2, status: 'active', conversationStatus: 'waiting', direction: 'inbound', provider: 'whatsapp', providerPhone: '11988888888', lastMessageAt: Date.now() - 1800000, createdAt: Date.now() - 86400000, updatedAt: Date.now() - 1800000, cliente: { id: 2, nome: 'Maria Santos', celular: '11988888888' }, ultimaMensagem: { id: 2, contatoId: 2, recipient: '11988888888', provider: 'whatsapp', content: 'Tenho interesse! Qual o valor?', status: 'delivered', direction: 'inbound', createdAt: Date.now() - 1800000, updatedAt: Date.now() } },
-  { id: 3, clienteId: 3, status: 'active', conversationStatus: 'human', direction: 'inbound', provider: 'whatsapp', providerPhone: '11977777777', lastMessageAt: Date.now() - 7200000, createdAt: Date.now() - 86400000 * 3, updatedAt: Date.now() - 7200000, cliente: { id: 3, nome: 'Pedro Costa', celular: '11977777777' }, ultimaMensagem: { id: 3, contatoId: 3, recipient: '11977777777', provider: 'whatsapp', content: 'Quero falar com um atendente', status: 'delivered', direction: 'inbound', createdAt: Date.now() - 7200000, updatedAt: Date.now() } },
-  { id: 4, clienteId: 4, status: 'closed', conversationStatus: 'closed', direction: 'outbound', provider: 'whatsapp', providerPhone: '11966666666', lastMessageAt: Date.now() - 86400000, createdAt: Date.now() - 86400000 * 5, updatedAt: Date.now() - 86400000, cliente: { id: 4, nome: 'Ana Oliveira', celular: '11966666666' }, ultimaMensagem: { id: 4, contatoId: 4, recipient: '11966666666', provider: 'whatsapp', content: 'Obrigado pela preferência!', status: 'delivered', direction: 'outbound', createdAt: Date.now() - 86400000, updatedAt: Date.now() } },
-];
-
 export default function Conversas() {
   const { tenantId, user } = useAppStore();
   const [conversas, setConversas] = useState<Conversation[]>([]);
@@ -135,18 +126,16 @@ export default function Conversas() {
   const loadConversas = async () => {
     try {
       setLoading(true);
-      if (USE_MOCKS) {
-        setConversas(initialConversasSeed);
-      } else {
-        const params = new URLSearchParams();
-        if (statusFilter) params.append('conversationStatus', statusFilter);
-        
-        const response = await api.get(`/api/conversations?${params.toString()}`);
-        setConversas(response.data.conversations || []);
-      }
+      const params = new URLSearchParams();
+      if (statusFilter) params.append('conversationStatus', statusFilter);
+
+      const data = await apiFetch<{ conversations?: Conversation[] }>(`/api/conversations?${params.toString()}`, {
+        preserveApiPrefix: true,
+      });
+      setConversas(data.conversations || []);
     } catch (error) {
       console.error("Erro ao carregar conversas:", error);
-      setConversas(initialConversasSeed);
+      setConversas([]);
     } finally {
       setLoading(false);
     }
@@ -155,20 +144,13 @@ export default function Conversas() {
   const loadMensagens = async (conversationId: number) => {
     try {
       setLoadingMensagens(true);
-      if (USE_MOCKS) {
-        // Simular mensagens
-        const msgs: Mensagem[] = [
-          { id: 1, contatoId: selectedConversation?.clienteId || 1, recipient: '11999999999', provider: 'whatsapp', content: 'Olá! Gostaria de conhecer seu produto.', status: 'delivered', direction: 'inbound', createdAt: Date.now() - 86400000, updatedAt: Date.now() - 86400000 },
-          { id: 2, contatoId: selectedConversation?.clienteId || 1, recipient: '11999999999', provider: 'whatsapp', content: 'Olá João! Claro, vou te enviar mais informações.', status: 'delivered', direction: 'outbound', createdAt: Date.now() - 86000000, updatedAt: Date.now() - 86000000 },
-          { id: 3, contatoId: selectedConversation?.clienteId || 1, recipient: '11999999999', provider: 'whatsapp', content: selectedConversation?.ultimaMensagem?.content || 'Obrigado!', status: 'delivered', direction: selectedConversation?.direction as 'inbound' | 'outbound' || 'outbound', createdAt: Date.now() - 3600000, updatedAt: Date.now() - 3600000 },
-        ];
-        setMensagens(msgs);
-      } else {
-        const response = await api.get(`/api/conversations/${conversationId}/mensagens`);
-        setMensagens(response.data.mensagens || []);
-      }
+      const data = await apiFetch<{ mensagens?: Mensagem[] }>(`/api/conversations/${conversationId}/mensagens`, {
+        preserveApiPrefix: true,
+      });
+      setMensagens(data.mensagens || []);
     } catch (error) {
       console.error("Erro ao carregar mensagens:", error);
+      setMensagens([]);
     } finally {
       setLoadingMensagens(false);
     }
@@ -184,25 +166,12 @@ export default function Conversas() {
 
     try {
       setSendingMessage(true);
-      if (USE_MOCKS) {
-        const newMsg: Mensagem = {
-          id: Date.now(),
-          contatoId: selectedConversation.clienteId,
-          recipient: selectedConversation.cliente?.celular || '',
-          provider: 'whatsapp',
-          content: novaMensagem,
-          status: 'sent',
-          direction: 'outbound',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        setMensagens([...mensagens, newMsg]);
-      } else {
-        await api.post(`/api/conversations/${selectedConversation.id}/resposta`, {
-          mensagem: novaMensagem,
-        });
-        await loadMensagens(selectedConversation.id);
-      }
+      await apiFetch(`/api/conversations/${selectedConversation.id}/resposta`, {
+        preserveApiPrefix: true,
+        method: "POST",
+        body: JSON.stringify({ mensagem: novaMensagem }),
+      });
+      await loadMensagens(selectedConversation.id);
       setNovaMensagem("");
       loadConversas(); // Atualiza lista
     } catch (error) {
@@ -216,11 +185,11 @@ export default function Conversas() {
     if (!selectedConversation) return;
 
     try {
-      if (!USE_MOCKS) {
-        await api.put(`/api/conversations/${selectedConversation.id}`, {
-          conversationStatus,
-        });
-      }
+      await apiFetch(`/api/conversations/${selectedConversation.id}`, {
+        preserveApiPrefix: true,
+        method: "PUT",
+        body: JSON.stringify({ conversationStatus }),
+      });
       setSelectedConversation({ ...selectedConversation, conversationStatus });
       loadConversas();
     } catch (error) {
@@ -232,22 +201,13 @@ export default function Conversas() {
   const loadQueue = async () => {
     try {
       setLoadingQueue(true);
-      if (USE_MOCKS) {
-        // Simular fila de atendimento
-        setQueueConversas(initialConversasSeed.filter(c => 
-          c.conversationStatus !== 'closed'
-        ).map(c => ({
-          ...c,
-          waitingTime: Date.now() - (c.lastMessageAt || Date.now()),
-          waitingTimeFormatted: '5m',
-          unreadCount: c.conversationStatus === 'inbound' ? 1 : 0,
-        })));
-      } else {
-        const response = await api.get(`/api/conversations/queue?sort=${queueFilter}`);
-        setQueueConversas(response.data.queue || []);
-      }
+      const data = await apiFetch<{ queue?: Conversation[] }>(`/api/conversations/queue?sort=${queueFilter}`, {
+        preserveApiPrefix: true,
+      });
+      setQueueConversas(data.queue || []);
     } catch (error) {
       console.error("Erro ao carregar fila:", error);
+      setQueueConversas([]);
     } finally {
       setLoadingQueue(false);
     }
@@ -256,9 +216,10 @@ export default function Conversas() {
   // Assumir conversa
   const handleAssumeConversation = async (conv: Conversation) => {
     try {
-      if (!USE_MOCKS) {
-        await api.post(`/api/conversations/${conv.id}/assume`);
-      }
+      await apiFetch(`/api/conversations/${conv.id}/assume`, {
+        preserveApiPrefix: true,
+        method: "POST",
+      });
       // Atualizar a conversa na lista
       const updatedConv = { ...conv, assignedTo: 'current_user', conversationStatus: 'human' as const };
       setSelectedConversation(updatedConv);
@@ -272,9 +233,11 @@ export default function Conversas() {
   // Atualizar prioridade
   const handleUpdatePriority = async (conv: Conversation, priority: number) => {
     try {
-      if (!USE_MOCKS) {
-        await api.put(`/api/conversations/${conv.id}`, { priority });
-      }
+      await apiFetch(`/api/conversations/${conv.id}`, {
+        preserveApiPrefix: true,
+        method: "PUT",
+        body: JSON.stringify({ priority }),
+      });
       loadQueue();
     } catch (error) {
       console.error("Erro ao atualizar prioridade:", error);

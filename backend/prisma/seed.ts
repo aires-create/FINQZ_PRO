@@ -1,6 +1,8 @@
-import { Prisma, PrismaClient, PermissionAction, RoleType } from '@prisma/client';
+import { CatalogStatus, Prisma, PrismaClient, PermissionAction, RoleType } from '@prisma/client';
+import { MASTER_CATALOG_INITIAL_TREE } from '../src/modules/master-catalog/domain/master-catalog.seed.js';
 import { hashPassword } from '../src/utils/password';
 import { createModuleLogger } from '../src/shared/logger';
+import { PARTNER_ACQUISITION_RBAC_PERMISSIONS } from '../src/modules/permissions/partner-acquisition-rbac.catalog.js';
 
 const prisma = new PrismaClient();
 const logger = createModuleLogger('DatabaseSeed');
@@ -50,6 +52,26 @@ interface UserData {
   roleSlug: string;
 }
 
+const consignadoPipelineSeed = {
+  name: 'Consignado',
+  description: 'Pipeline oficial minimo para homologacao de oportunidades.',
+  isDefault: true,
+  isActive: true,
+  stages: [
+    { name: 'Novo Lead', order: 1, isWon: false, isLost: false },
+    { name: 'Negociação', order: 2, isWon: false, isLost: false },
+    { name: 'Documentação', order: 3, isWon: false, isLost: false },
+    { name: 'Aceite', order: 4, isWon: false, isLost: false },
+    { name: 'Contrato Enviado', order: 5, isWon: false, isLost: false },
+    { name: 'Aguardando Assinatura', order: 6, isWon: false, isLost: false },
+    { name: 'Contrato Assinado', order: 7, isWon: false, isLost: false },
+    { name: 'Formalização', order: 8, isWon: false, isLost: false },
+    { name: 'Integrado', order: 9, isWon: true, isLost: false },
+    { name: 'Pendência', order: 10, isWon: false, isLost: false },
+    { name: 'Perdido', order: 11, isWon: false, isLost: true },
+  ],
+} as const;
+
 /**
  * Enterprise RBAC Seed System for FINQZ PRO
  * Idempotent execution with TypeScript strict mode compatibility
@@ -61,8 +83,14 @@ async function seedRBAC(): Promise<void> {
     // 1. Create default tenant
     const tenant = await createDefaultTenant();
 
+    // 1.1 Create minimum pipeline/stage foundation
+    await seedOpportunityFoundation(tenant.id);
+
     // 2. Create permissions
     const permissions = await createPermissions();
+
+    // 2.1 Persist the official Master Catalog tree
+    await seedMasterCatalog(tenant.id);
 
     // 3. Create roles
     const roles = await createRoles(tenant.id, permissions);
@@ -84,6 +112,172 @@ async function seedRBAC(): Promise<void> {
     logger.error('RBAC seed process failed:', error);
     throw error;
   }
+}
+
+async function seedOpportunityFoundation(tenantId: string): Promise<void> {
+  logger.info('Creating minimum opportunity pipeline foundation...');
+
+  const existingPipeline = await prisma.pipeline.findFirst({
+    where: {
+      tenantId,
+      name: consignadoPipelineSeed.name,
+    },
+    select: { id: true },
+  });
+
+  const pipeline = existingPipeline
+    ? await prisma.pipeline.update({
+        where: { id: existingPipeline.id },
+        data: {
+          description: consignadoPipelineSeed.description,
+          isDefault: consignadoPipelineSeed.isDefault,
+          isActive: consignadoPipelineSeed.isActive,
+          deletedAt: null,
+        },
+      })
+    : await prisma.pipeline.create({
+        data: {
+          tenantId,
+          name: consignadoPipelineSeed.name,
+          description: consignadoPipelineSeed.description,
+          isDefault: consignadoPipelineSeed.isDefault,
+          isActive: consignadoPipelineSeed.isActive,
+        },
+      });
+
+  for (const stage of consignadoPipelineSeed.stages) {
+    await prisma.stage.upsert({
+      where: {
+        pipelineId_order: {
+          pipelineId: pipeline.id,
+          order: stage.order,
+        },
+      },
+      update: {
+        tenantId,
+        name: stage.name,
+        isWon: stage.isWon,
+        isLost: stage.isLost,
+        deletedAt: null,
+      },
+      create: {
+        tenantId,
+        pipelineId: pipeline.id,
+        name: stage.name,
+        order: stage.order,
+        isWon: stage.isWon,
+        isLost: stage.isLost,
+      },
+    });
+  }
+
+  logger.info(`Pipeline foundation created/updated: ${pipeline.id}`);
+}
+
+async function seedMasterCatalog(tenantId: string): Promise<void> {
+  logger.info('Persisting Master Catalog tree...');
+
+  for (const segment of MASTER_CATALOG_INITIAL_TREE.segments) {
+    await prisma.masterCatalogSegment.upsert({
+      where: {
+        tenantId_code: {
+          tenantId,
+          code: segment.code,
+        },
+      },
+      update: {
+        name: segment.name,
+        status: segment.status as CatalogStatus,
+        displayOrder: segment.displayOrder,
+        deletedAt: null,
+      },
+      create: {
+        tenantId,
+        code: segment.code,
+        name: segment.name,
+        status: segment.status as CatalogStatus,
+        displayOrder: segment.displayOrder,
+      },
+    });
+  }
+
+  for (const product of MASTER_CATALOG_INITIAL_TREE.products) {
+    const persistedProduct = await prisma.masterCatalogProduct.upsert({
+      where: {
+        tenantId_code: {
+          tenantId,
+          code: product.code,
+        },
+      },
+      update: {
+        name: product.name,
+        status: product.status as CatalogStatus,
+        displayOrder: product.displayOrder,
+        deletedAt: null,
+      },
+      create: {
+        tenantId,
+        code: product.code,
+        name: product.name,
+        status: product.status as CatalogStatus,
+        displayOrder: product.displayOrder,
+      },
+    });
+
+    for (const subproduct of product.subproducts) {
+      const persistedSubproduct = await prisma.masterCatalogSubproduct.upsert({
+        where: {
+          tenantId_productId_code: {
+            tenantId,
+            productId: persistedProduct.id,
+            code: subproduct.code,
+          },
+        },
+        update: {
+          name: subproduct.name,
+          status: subproduct.status as CatalogStatus,
+          displayOrder: subproduct.displayOrder,
+          deletedAt: null,
+        },
+        create: {
+          tenantId,
+          productId: persistedProduct.id,
+          code: subproduct.code,
+          name: subproduct.name,
+          status: subproduct.status as CatalogStatus,
+          displayOrder: subproduct.displayOrder,
+        },
+      });
+
+      for (const modality of subproduct.modalities) {
+        await prisma.masterCatalogModality.upsert({
+          where: {
+            tenantId_subproductId_code: {
+              tenantId,
+              subproductId: persistedSubproduct.id,
+              code: modality.code,
+            },
+          },
+          update: {
+            name: modality.name,
+            status: modality.status as CatalogStatus,
+            displayOrder: modality.displayOrder,
+            deletedAt: null,
+          },
+          create: {
+            tenantId,
+            subproductId: persistedSubproduct.id,
+            code: modality.code,
+            name: modality.name,
+            status: modality.status as CatalogStatus,
+            displayOrder: modality.displayOrder,
+          },
+        });
+      }
+    }
+  }
+
+  logger.info('Master Catalog tree persisted successfully');
 }
 
 /**
@@ -151,6 +345,13 @@ async function createPermissions() {
       description: 'Delete users',
       resource: 'users',
       action: PermissionAction.DELETE,
+    },
+    {
+      name: 'Reset User Password',
+      slug: 'user:reset-password',
+      description: 'Reset user passwords administratively',
+      resource: 'users',
+      action: PermissionAction.UPDATE,
     },
 
     // Role permissions
@@ -400,6 +601,13 @@ async function createPermissions() {
       action: PermissionAction.UPDATE,
     },
     {
+      name: 'Move Opportunity Stage',
+      slug: 'opportunity:move_stage',
+      description: 'Move opportunity to another stage',
+      resource: 'opportunities',
+      action: PermissionAction.UPDATE,
+    },
+    {
       name: 'Delete Opportunity',
       slug: 'opportunity:delete',
       description: 'Delete opportunities',
@@ -412,6 +620,22 @@ async function createPermissions() {
       description: 'Approve opportunities',
       resource: 'opportunities',
       action: PermissionAction.APPROVE,
+    },
+
+    // Simulation permissions
+    {
+      name: 'Execute Simulation',
+      slug: 'simulation:execute',
+      description: 'Execute the official simulation runtime',
+      resource: 'simulations',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Write Simulation Evidence',
+      slug: 'simulation:evidence:write',
+      description: 'Persist sanitized simulation runtime evidence',
+      resource: 'simulations',
+      action: PermissionAction.CREATE,
     },
 
     // Bank Proposal permissions
@@ -518,6 +742,8 @@ async function createPermissions() {
       action: PermissionAction.ASSIGN,
     },
 
+    ...PARTNER_ACQUISITION_RBAC_PERMISSIONS,
+
     // Pipeline permissions
     {
       name: 'Create Pipeline',
@@ -548,6 +774,73 @@ async function createPermissions() {
       action: PermissionAction.DELETE,
     },
 
+    // Stage permissions
+    {
+      name: 'Create Stage',
+      slug: 'stage:create',
+      description: 'Create new stages',
+      resource: 'stages',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Read Stage',
+      slug: 'stage:read',
+      description: 'View stage information',
+      resource: 'stages',
+      action: PermissionAction.READ,
+    },
+    {
+      name: 'Update Stage',
+      slug: 'stage:update',
+      description: 'Update stage information',
+      resource: 'stages',
+      action: PermissionAction.UPDATE,
+    },
+    {
+      name: 'Delete Stage',
+      slug: 'stage:delete',
+      description: 'Delete stages',
+      resource: 'stages',
+      action: PermissionAction.DELETE,
+    },
+
+    // Commercial Governance permissions
+    {
+      name: 'Create Commercial Request',
+      slug: 'commercial-request:create',
+      description: 'Create commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.CREATE,
+    },
+    {
+      name: 'Read Commercial Request',
+      slug: 'commercial-request:read',
+      description: 'View commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.READ,
+    },
+    {
+      name: 'Submit Commercial Request',
+      slug: 'commercial-request:submit',
+      description: 'Submit commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.UPDATE,
+    },
+    {
+      name: 'Approve Commercial Request',
+      slug: 'commercial-request:approve',
+      description: 'Approve commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.APPROVE,
+    },
+    {
+      name: 'Reject Commercial Request',
+      slug: 'commercial-request:reject',
+      description: 'Reject commercial governance requests',
+      resource: 'commercial-requests',
+      action: PermissionAction.UPDATE,
+    },
+
     // Report permissions
     {
       name: 'Read Report',
@@ -562,6 +855,15 @@ async function createPermissions() {
       description: 'Export report data',
       resource: 'reports',
       action: PermissionAction.EXPORT,
+    },
+
+    // Master Catalog permissions
+    {
+      name: 'Read Master Catalog',
+      slug: 'master-catalog:read',
+      description: 'View master catalog information',
+      resource: 'master-catalogs',
+      action: PermissionAction.READ,
     },
 
     // Audit permissions
@@ -837,7 +1139,7 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         // Customer management
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
         // Opportunity management
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         // Bank proposal management
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         // Commission management
@@ -846,6 +1148,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:create', 'partner:read', 'partner:update', 'partner:delete', 'partner:assign',
         // Pipeline management
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        // Stage management
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
         // Reports
         'report:read', 'report:export',
         // Audit
@@ -872,7 +1176,7 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         // Customer management
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
         // Opportunity management
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         // Bank proposal management
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         // Commission management
@@ -881,6 +1185,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:read', 'partner:update', 'partner:assign',
         // Pipeline management
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        // Stage management
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
         // Reports
         'report:read', 'report:export',
       ],
@@ -909,6 +1215,8 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
         'partner:read',
         // Pipeline management (limited)
         'pipeline:read',
+        // Stage management (limited)
+        'stage:read',
         // Reports (limited)
         'report:read',
       ],
@@ -990,7 +1298,13 @@ async function createRoles(tenantId: string, permissions: Record<string, any>) {
       description: 'Chief executive access',
       isSystem: true,
       priority: 95,
-      permissions: [],
+      permissions: [
+        'partner:create',
+        'partner:read',
+        'partner:update',
+        'partner:delete',
+        'opportunity:move_stage',
+      ],
     },
     {
       name: 'Diretor de Auditoria',
@@ -1244,6 +1558,17 @@ async function createRolePermissions(
       roleSlug: 'ROLE_ADMIN_SISTEMA',
       permissionSlugs: [
         'tenant:read',
+        'user:reset-password',
+        'customer:create',
+        'customer:read',
+        'customer:update',
+        'customer:delete',
+        'customer:export',
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
       ],
     },
     {
@@ -1258,6 +1583,19 @@ async function createRolePermissions(
         'FINANCE_VIEW',
         'SALES_VIEW',
         'CUSTOMER_VIEW',
+        'customer:create',
+        'customer:read',
+        'customer:update',
+        'customer:delete',
+        'customer:export',
+        'partner:create',
+        'partner:read',
+        'partner:update',
+        'partner:delete',
+        'master-catalog:read',
+        'commercial-request:read',
+        'commercial-request:approve',
+        'commercial-request:reject',
       ],
     },
     {
@@ -1283,6 +1621,7 @@ async function createRolePermissions(
       roleSlug: 'admin',
       permissionSlugs: [
         'user:create', 'user:read', 'user:update', 'user:delete',
+        'user:reset-password',
         'role:create', 'role:read', 'role:update', 'role:delete',
         'permission:create', 'permission:read', 'permission:update', 'permission:delete',
         'organization:create', 'organization:read', 'organization:update', 'organization:delete',
@@ -1290,11 +1629,13 @@ async function createRolePermissions(
         'tenant:create', 'tenant:read', 'tenant:update', 'tenant:delete',
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:create', 'partner:read', 'partner:update', 'partner:delete', 'partner:assign',
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
+        'commercial-request:create', 'commercial-request:read', 'commercial-request:submit', 'commercial-request:approve', 'commercial-request:reject',
         'report:read', 'report:export',
         'audit:read',
       ],
@@ -1307,11 +1648,13 @@ async function createRolePermissions(
         'membership:create', 'membership:read', 'membership:update',
         'lead:create', 'lead:read', 'lead:update', 'lead:delete', 'lead:export',
         'customer:create', 'customer:read', 'customer:update', 'customer:delete', 'customer:export',
-        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:delete', 'opportunity:approve',
+        'opportunity:create', 'opportunity:read', 'opportunity:update', 'opportunity:move_stage', 'opportunity:delete', 'opportunity:approve',
         'bank-proposal:create', 'bank-proposal:read', 'bank-proposal:update', 'bank-proposal:delete', 'bank-proposal:approve',
         'commission:create', 'commission:read', 'commission:update', 'commission:delete',
         'partner:read', 'partner:update', 'partner:assign',
         'pipeline:create', 'pipeline:read', 'pipeline:update', 'pipeline:delete',
+        'stage:create', 'stage:read', 'stage:update', 'stage:delete',
+        'commercial-request:create', 'commercial-request:read', 'commercial-request:submit', 'commercial-request:approve', 'commercial-request:reject',
         'report:read', 'report:export',
       ],
     },
@@ -1327,6 +1670,8 @@ async function createRolePermissions(
         'commission:read',
         'partner:read',
         'pipeline:read',
+        'stage:read',
+        'commercial-request:create', 'commercial-request:read', 'commercial-request:submit',
         'report:read',
       ],
     },
@@ -1346,6 +1691,8 @@ async function createRolePermissions(
         'commission:read',
         'partner:read',
         'pipeline:read',
+        'commercial-request:read',
+        'commercial-request:reject',
         'report:read',
         'audit:read',
       ],
@@ -1363,8 +1710,102 @@ async function createRolePermissions(
         'commission:read', 'commission:update',
         'partner:read', 'partner:update',
         'pipeline:read',
+        'commercial-request:read',
         'report:read',
         'audit:read',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_DIRETOR_AUDITORIA',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_AUDITORIA',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_AUDITOR',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_DIRETOR_COMERCIAL_B2C',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_DIRETOR_COMERCIAL_B2B',
+      permissionSlugs: [
+        'commercial-request:read',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_COMERCIAL_B2C',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_COMERCIAL_B2B',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_REGIONAL_B2C',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_GERENTE_REGIONAL_B2B',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+        'commercial-request:approve',
+        'commercial-request:reject',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_CONSULTOR_COMERCIAL_B2C',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
+      ],
+    },
+    {
+      roleSlug: 'ROLE_CONSULTOR_COMERCIAL_B2B',
+      permissionSlugs: [
+        'commercial-request:create',
+        'commercial-request:read',
+        'commercial-request:submit',
       ],
     },
   ];

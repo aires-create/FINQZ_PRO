@@ -1,0 +1,64 @@
+flowchart TD
+  subgraph Current["Estado atual"]
+    S0["R1 confirmado"] --> S1["cwd-dependent env resolution"]
+    S1 --> S2["root fails before Prisma"]
+    S1 --> S3["backend succeeds"]
+    S1 --> S4["tests succeed via setupFiles"]
+  end
+
+  subgraph Bootstrap["Bootstrap"]
+    B0["backend/src/server.ts"] --> B1["testDatabaseConnection()"]
+    B1 --> B2["Prisma $connect"]
+    B2 --> B3["SELECT 1"]
+    B3 --> B4["listen"]
+  end
+
+  subgraph dotenv["dotenv implícito"]
+    D0["backend/src/config/env/env.ts"] --> D1["dotenv.config()"]
+    D1 --> D2["process.env"]
+    D2 --> D3["module import order dependency"]
+  end
+
+  subgraph Options["Alternativas"]
+    A1["A1 BACKEND_CWD_ONLY"]
+    A2["A2 ROOT_WRAPPER"]
+    A3["A3 EXPLICIT_ENV_PATH"]
+    A4["A4 PROJECT_ROOT_DISCOVERY"]
+    A5["A5 ENV_INJECTION_ONLY"]
+    A6["A6 CONTROLLED_HYBRID"]
+  end
+
+  A1 --> Cmp["comparacao"]
+  A2 --> Cmp
+  A3 --> Cmp
+  A4 --> Cmp
+  A5 --> Cmp
+  A6 --> Cmp
+
+  Cmp --> Sel["estrategia selecionada: CONTROLLED_HYBRID"]
+  Sel --> Local["ambiente local"]
+  Sel --> Tests["testes"]
+  Sel --> Docker["Docker"]
+  Sel --> Hml["HML"]
+  Sel --> Prod["producao"]
+  Sel --> RB["rollback"]
+  Sel --> Next["proxima microfase: R2-A"]
+
+  Local --> L1["backend/ e wrapper explicito"]
+  Tests --> T1["setupFiles preservado"]
+  Docker --> Dk1["compose injeta env"]
+  Hml --> H1["compose override + secrets externos"]
+  Prod --> P1["env injetado externamente"]
+  RB --> R1["command rollback"]
+  RB --> R2["code rollback"]
+  RB --> R3["operational rollback"]
+
+  classDef current fill:#f0f6ff,stroke:#3b5bb5,color:#18306b;
+  classDef good fill:#e8f6e8,stroke:#2f8f2f,color:#0d4d0d;
+  classDef warn fill:#fff4e6,stroke:#d88a00,color:#6b3f00;
+  classDef bad fill:#ffe5e5,stroke:#cc0000,color:#6a0000;
+
+  class S0,S1,S3,S4,B0,B1,B2,B3,B4,D0,D1,D2,D3,Cmp,Sel,Local,Tests,Docker,Hml,Prod,RB,Next current;
+  class A6 good;
+  class A3,A4,A5 warn;
+  class A1 bad;

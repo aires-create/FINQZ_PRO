@@ -20,9 +20,12 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      APP_ENV: ${APP_ENV:-local}
+      EXTERNAL_EFFECTS_ENABLED: ${EXTERNAL_EFFECTS_ENABLED:-false}
       PORT: 4000
       HOST: 0.0.0.0
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
@@ -58,15 +61,18 @@ services:
       - /tmp
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ../dist:/usr/share/nginx/html:ro
     depends_on:
       api:
         condition: service_healthy
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/health"]
+      test: ["CMD", "wget", "--spider", "-q", "--header=Host: hml.finqz.com.br", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3

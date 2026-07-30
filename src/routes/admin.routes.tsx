@@ -10,6 +10,7 @@ const GeralPage = lazy(() => import("../pages/admin/Geral"));
 const TagsPage = lazy(() => import("../pages/admin/Tags"));
 const PipelinesPage = lazy(() => import("../pages/admin/Pipelines"));
 const IntegracoesPage = lazy(() => import("../pages/admin/Integracoes"));
+const ProviderOperationsConsolePage = lazy(() => import("../pages/admin/ProviderOperationsConsole"));
 const AdminAutomacoesPage = lazy(() => import("../pages/admin/Automacoes"));
 const NotificacoesPage = lazy(() => import("../pages/admin/Notificacoes"));
 const SegurancaPage = lazy(() => import("../pages/admin/Seguranca"));
@@ -17,26 +18,8 @@ const BancosPage = lazy(() => import("../pages/admin/Bancos"));
 
 export const adminRoutes = (
   <>
-    <Route
-      path="auditoria"
-      element={
-        <ProtectedRoute
-          requiredPermission="AUDIT_VIEW"
-          requiredModule="auditoria"
-          requiredAction="view"
-        >
-          <AuditoriaPage />
-        </ProtectedRoute>
-      }
-    />
-    <Route
-      path="usuarios"
-      element={
-        <ProtectedRoute requiredModule="usuarios" requiredAction="view">
-          <UsuariosPage />
-        </ProtectedRoute>
-      }
-    />
+    <Route path="auditoria" element={<Navigate to="/app/admin/auditoria" replace />} />
+    <Route path="usuarios" element={<Navigate to="/app/admin/usuarios" replace />} />
     <Route
       path="admin/usuarios"
       element={
@@ -102,6 +85,14 @@ export const adminRoutes = (
       element={
         <ProtectedRoute requiredModule="configuracoes" requiredAction="view">
           <IntegracoesPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="admin/provider-operations"
+      element={
+        <ProtectedRoute requiredPermission="tenant:read">
+          <ProviderOperationsConsolePage />
         </ProtectedRoute>
       }
     />

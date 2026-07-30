@@ -15,6 +15,11 @@ export interface ClienteFilters {
   estado?: string;
 }
 
+export interface ClienteAuditLogParams {
+  entityId: string;
+  limit?: number;
+}
+
 export interface CreateClientePayload {
   nome: string;
   cpf_cnpj?: string;
@@ -36,7 +41,8 @@ export interface CreateClientePayload {
 
 export interface UpdateClientePayload extends Partial<CreateClientePayload> {}
 
-// TODO(legacy-cleanup): remover aliases antigos de clientes e manter somente /api/v1/crm/clientes.
+type ClienteId = string | number;
+
 const CRM_CLIENTES_BASE_PATH = '/api/v1/crm/clientes';
 
 // ============================================
@@ -59,7 +65,7 @@ export const clientesApi = {
   /**
    * Get single cliente by ID
    */
-  async getById(id: number): Promise<any> {
+  async getById(id: ClienteId): Promise<any> {
     return apiCall<any>(`${CRM_CLIENTES_BASE_PATH}/${id}`);
   },
 
@@ -76,7 +82,7 @@ export const clientesApi = {
   /**
    * Update existing cliente
    */
-  async update(id: number, data: UpdateClientePayload): Promise<any> {
+  async update(id: ClienteId, data: UpdateClientePayload): Promise<any> {
     return apiCall<any>(`${CRM_CLIENTES_BASE_PATH}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -86,7 +92,7 @@ export const clientesApi = {
   /**
    * Delete cliente
    */
-  async delete(id: number): Promise<void> {
+  async delete(id: ClienteId): Promise<void> {
     return apiCall<void>(`${CRM_CLIENTES_BASE_PATH}/${id}`, {
       method: 'DELETE',
     });
@@ -97,6 +103,26 @@ export const clientesApi = {
    */
   async search(query: string): Promise<any[]> {
     return this.getAll({ search: query });
+  },
+
+  /**
+   * Get audit logs for a cliente using the official audit surface
+   */
+  async getAuditLogs(params: ClienteAuditLogParams): Promise<any[]> {
+    const query = new URLSearchParams();
+    query.set('entity', 'Customer');
+    query.set('entityId', params.entityId);
+    query.set('limit', String(params.limit ?? 20));
+
+    const response = await apiCall<any>(`/api/v1/audit/logs?${query.toString()}`, {
+      preserveApiPrefix: true,
+    });
+
+    return Array.isArray(response?.logs)
+      ? response.logs
+      : Array.isArray(response?.data)
+        ? response.data
+        : [];
   },
 };
 
@@ -114,7 +140,7 @@ export const clientesApiResult = {
     }
   },
 
-  async getById(id: number): Promise<ApiResult<any>> {
+  async getById(id: ClienteId): Promise<ApiResult<any>> {
     try {
       const data = await clientesApi.getById(id);
       return { success: true, data };
@@ -132,7 +158,7 @@ export const clientesApiResult = {
     }
   },
 
-  async update(id: number, data: UpdateClientePayload): Promise<ApiResult<any>> {
+  async update(id: ClienteId, data: UpdateClientePayload): Promise<ApiResult<any>> {
     try {
       const result = await clientesApi.update(id, data);
       return { success: true, data: result };
@@ -141,7 +167,7 @@ export const clientesApiResult = {
     }
   },
 
-  async delete(id: number): Promise<ApiResult<void>> {
+  async delete(id: ClienteId): Promise<ApiResult<void>> {
     try {
       await clientesApi.delete(id);
       return { success: true, data: undefined };

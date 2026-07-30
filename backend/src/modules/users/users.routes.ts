@@ -1,10 +1,13 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
-import { prisma } from '../../database/prisma.js';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
+import { registerAuditLog } from '../audit/services/audit.service.js';
+import { requirePermissions } from '../rbac/rbac.guard.js';
 import { ConflictError, NotFoundError, ValidationAppError } from '../../shared/errors/index.js';
-import { hashPassword } from '../../utils/password.js';
+import { hashPassword, validatePasswordStrength } from '../../utils/password.js';
+import { usersRepository } from './repositories/users.repository.js';
+import { rolesRepository } from '../roles/repositories/roles.repository.js';
 
 type UserRoleRow = {
   role?: {
@@ -65,6 +68,10 @@ type UpdateUserBody = {
   isActive?: boolean;
 };
 
+type ResetPasswordBody = {
+  newPassword: string;
+};
+
 const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -81,6 +88,10 @@ const updateUserSchema = z.object({
 }).strict().refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided',
 });
+
+const resetPasswordSchema = z.object({
+  newPassword: z.string().min(8),
+}).strict();
 
 const validateBody = (schema: z.ZodTypeAny) => async (request: FastifyRequest, reply: FastifyReply) => {
   const result = schema.safeParse(request.body);
@@ -191,16 +202,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
   }, async (request, reply) => {
     const tenantId = getTenantId(request);
 
-    const users = await prisma.user.findMany({
-      where: {
-        tenantId,
-        deletedAt: null,
-      },
-      select: buildUserWithRolesSelect(),
-      orderBy: {
-        createdAt: 'desc',
-      },
-    }) as UserRecord[];
+    const users = await usersRepository.listByTenant(tenantId) as UserRecord[];
 
     return reply.send({
       success: true,
@@ -216,17 +218,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const { id } = request.params as { id: string };
     const body = request.body as UpdateUserBody;
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        id,
-        tenantId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        emailNormalized: true,
-      },
-    });
+    const existingUser = await usersRepository.findById(tenantId, id);
 
     if (!existingUser) {
       throw new NotFoundError('User not found');
@@ -245,18 +237,11 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       const emailNormalized = email.toLowerCase();
 
       if (emailNormalized !== existingUser.emailNormalized) {
-        const conflictingUser = await prisma.user.findFirst({
-          where: {
-            tenantId,
-            emailNormalized,
-            NOT: {
-              id: existingUser.id,
-            },
-          },
-          select: {
-            id: true,
-          },
-        });
+        const conflictingUser = await usersRepository.findByEmailNormalized(
+          tenantId,
+          emailNormalized,
+          existingUser.id,
+        );
 
         if (conflictingUser) {
           throw new ConflictError('User already exists for this tenant');
@@ -279,13 +264,7 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
       updateData.isActive = body.isActive;
     }
 
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: existingUser.id,
-      },
-      data: updateData,
-      select: buildUserWithRolesSelect(),
-    }) as UserRecord;
+    const updatedUser = await usersRepository.update(existingUser.id, updateData) as UserRecord;
 
     return reply.send({
       success: true,
@@ -306,32 +285,13 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
     const lastName = (body.lastName ?? '').trim();
     const roleSlug = body.role.trim();
 
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        tenantId,
-        emailNormalized,
-      },
-    });
+    const existingUser = await usersRepository.findByEmailNormalized(tenantId, emailNormalized);
 
     if (existingUser) {
       throw new ConflictError('User already exists for this tenant');
     }
 
-    const role = await prisma.role.findFirst({
-      where: {
-        tenantId,
-        OR: [
-          { slug: roleSlug },
-          { name: roleSlug },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        type: true,
-      },
-    });
+    const role = await rolesRepository.findByTenantAndSlugOrName(tenantId, roleSlug);
 
     if (!role) {
       throw new ValidationAppError('Role not found for tenant');
@@ -339,41 +299,64 @@ const usersRoutes: FastifyPluginAsync = async (app) => {
 
     const hashedPassword = await hashPassword(body.password);
 
-    const createdUser = await prisma.user.create({
-      data: {
-        email,
-        emailNormalized,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        tenant: {
-          connect: {
-            id: tenantId,
-          },
-        },
-        userRoles: {
-          create: {
-            tenant: {
-              connect: {
-                id: tenantId,
-              },
-            },
-            role: {
-              connect: {
-                id: role.id,
-              },
-            },
-          },
-        },
-        isActive: true,
-      },
-      select: buildUserWithRolesSelect(),
+    const createdUser = await usersRepository.create({
+      tenantId,
+      email,
+      emailNormalized,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      roleId: role.id,
+      isActive: true,
     }) as UserRecord;
 
     return reply.status(201).send({
       success: true,
       data: buildSafeUser(createdUser),
       message: 'User created successfully',
+    });
+  });
+
+  app.patch('/:id/reset-password', {
+    preHandler: [authenticate, tenantContextMiddleware, requirePermissions('user:reset-password')],
+    preValidation: validateBody(resetPasswordSchema),
+  }, async (request, reply) => {
+    const tenantId = getTenantId(request);
+    const actorUserId = request.currentUser?.userId ?? null;
+    const { id } = request.params as { id: string };
+    const body = request.body as ResetPasswordBody;
+
+    const targetUser = await usersRepository.findTargetForReset(tenantId, id);
+
+    if (!targetUser) {
+      throw new NotFoundError('User not found');
+    }
+
+    const passwordValidation = validatePasswordStrength(body.newPassword);
+    if (!passwordValidation.isValid) {
+      throw new ValidationAppError('New password does not meet requirements', passwordValidation.errors);
+    }
+
+    const hashedPassword = await hashPassword(body.newPassword);
+
+    await Promise.all([
+      usersRepository.updatePassword(targetUser.id, hashedPassword),
+      usersRepository.revokeRefreshTokens(targetUser.id, 'Password reset by administrator'),
+      registerAuditLog({
+        tenantId,
+        userId: actorUserId,
+        action: 'USER_PASSWORD_RESET',
+        entity: 'USER',
+        entityId: targetUser.id,
+        metadata: {
+          targetEmail: targetUser.email,
+        },
+      }),
+    ]);
+
+    return reply.send({
+      success: true,
+      message: 'Password reset successfully',
     });
   });
 };
