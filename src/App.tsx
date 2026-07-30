@@ -11,7 +11,6 @@ import { finqzAuth } from "./auth/finqzAuth";
 import { AUTH_LOGOUT_EVENT } from "./auth/logout";
 import { getCurrentUser, getSessionVersion, setSessionUser } from "./auth/session";
 import { mergeFrontendAdminPermissions } from "./config/permissions";
-import { ENABLE_LEGACY_AUTH_FALLBACK } from "./config/environment";
 import {
   adminRoutes,
   crmRoutes,
@@ -298,15 +297,10 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    if (ENABLE_LEGACY_AUTH_FALLBACK) {
-  console.warn('[AUTH] Using legacy auth fallback');
-  return runLegacyLogin();
-}
-
-return {
-  success: false,
-  error: 'Authentication failed',
-};
+    return {
+      success: false,
+      error: nativeLogin.error || "Authentication failed",
+    };
   }, [applyAuthenticatedUser]);
 
   const requestPasswordReset = useCallback(async (identifier: string) => {
