@@ -2,6 +2,10 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -215,5 +219,14 @@ describe("Oportunidades Kanban hardening", () => {
     expect(reset.totalOpportunitiesAudited).toBe(0);
     expect(reset.totalGroupedByUuid).toBe(0);
     expect(reset.recentObservations).toHaveLength(1);
+  });
+
+  it("keeps the Pipeline opening flow wired to the official workspace normalizer", () => {
+    const filePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../pages/Oportunidades.tsx");
+    const source = readFileSync(filePath, "utf8");
+
+    expect(source).toContain('normalizeOpportunityWorkspace } from "../components/pipeline"');
+    expect(source).toContain("setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));");
+    expect(source).toContain("onClick={() => handleOpenLead(cardData)}");
   });
 });

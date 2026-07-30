@@ -16,7 +16,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { KanbanColumn, formatCurrency } from "../components/pipeline";
+import { KanbanColumn, formatCurrency, normalizeOpportunityWorkspace } from "../components/pipeline";
 import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
