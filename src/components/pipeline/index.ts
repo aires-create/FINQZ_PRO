@@ -7,3 +7,4 @@
 export { KanbanColumn } from './KanbanColumn';
 export { PipelineSelect } from './PipelineSelect';
 export * from './pipelineUtils';
+export * from './workspaceOpportunity';

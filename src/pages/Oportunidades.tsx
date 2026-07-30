@@ -13,6 +13,7 @@ import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor,
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
 import { KanbanColumn, PipelineSelect, getStageColor, formatCurrency, filterOportunitiesByPipeline, groupOportunitiesByStage, calculateTotalsByStage } from "../components/pipeline";
 import { getPipelineOptions, getProductOptions, getSubproductsByProductId, getModalitiesByProductAndSubproduct, getModalityLabel, getPipelineByProductId, emitOpportunityEvent, createOpportunityEventPayload, getPipelineStages, getPipelineStageColor } from "../data/catalogRepository";
+import { buildOpportunityWorkspaceUpdatePayload, normalizeOpportunityWorkspace, persistOpportunityWorkspaceMutation, resolveOpportunityWorkspaceMutationId } from "../components/pipeline/workspaceOpportunity";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
@@ -387,7 +388,8 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   // Handler to open lead drawer
   function handleOpenLead(lead: any) {
     if (!lead) return;
-    setSelectedLead(lead);
+    setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
+    setWorkspaceMutationError(null);
     setOpenLeadDrawer(false);
     setShowEditDrawerModal(false);
     setShowOpportunityForm(false);
@@ -399,6 +401,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setOpenLeadDrawer(false);
     setShowEditDrawerModal(false);
     setShowOpportunityForm(false);
+    setWorkspaceMutationError(null);
   };
   
   // Filter state
@@ -459,6 +462,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [editingOportunidade, setEditingOportunidade] = useState<any>(null);
   const [showPipelineMenu, setShowPipelineMenu] = useState(false);
   const [showOpportunityForm, setShowOpportunityForm] = useState(false);
+  const [workspaceMutationError, setWorkspaceMutationError] = useState<string | null>(null);
   
   // Aba ativa no modal fullscreen
   const [activeTab, setActiveTab] = useState<DetailTabId>('tarefas');
@@ -896,41 +900,33 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     
     const now = Date.now();
     const novoValor = Number(simuladorResultado.valorLiberado || 0);
+    const mutationId = resolveOpportunityWorkspaceMutationId(selectedLead);
+    const payload = {
+      valor: novoValor,
+      simulationStatus: 'aceita',
+      simulationAcceptedAt: now,
+      simulationResult: simuladorResultado,
+    };
     
     // Atualizar estados de simulação
     setSimulationStatus('aceita');
     setSimulationAcceptedAt(now);
     setSimulationResult({ ...simuladorResultado });
     setShowFaseSelector(true);
-    
-    // Atualizar localmente no store
-    updateOportunidade(String(selectedLead.id), { 
-      valor: novoValor, 
-      simulationStatus: 'aceita',
-      simulationAcceptedAt: now,
-      simulationResult: simuladorResultado
-    });
-    
-    // Atualizar selectedLead para refletir na UI
-    setSelectedLead((prev: any) => prev ? ({ 
-      ...prev, 
-      valor: novoValor, 
-      simulationStatus: 'aceita',
-      simulationAcceptedAt: now,
-      simulationResult: simuladorResultado
-    }) : null);
-    
-    // Persistir no backend
-    try {
-      await api.updateOportunidade(Number(selectedLead.id), { 
-        valor: novoValor, 
-        simulationStatus: 'aceita',
-        simulationAcceptedAt: now,
-        simulationResult: simuladorResultado
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar valor da oportunidade:', error);
+
+    const localId = mutationId ?? selectedLead.id ?? selectedLead.displayId;
+    if (localId !== null && localId !== undefined && localId !== '') {
+      updateOportunidade(String(localId), payload);
     }
+
+    setSelectedLead((prev: any) => prev ? normalizeOpportunityWorkspace({
+      ...prev,
+      ...payload,
+    }, {
+      source: 'session',
+      pipelineLabel: currentPipelineConfig?.nome ?? null,
+      stageCatalog: workspaceStageCatalog,
+    }) : null);
   };
   
   // Função para recusar a simulação
@@ -946,29 +942,31 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     if (!selectedLead) return;
     
     const novoStatus = novaFaseAposAceite === 'perdido' ? 'perdido' : 'ativo';
-    
-    // Atualizar localmente no store
-    moveOportunidade(selectedLead.id, { 
-      etapa_id: novaFaseAposAceite, 
-      status: novoStatus 
-    });
-    
-    // Atualizar selectedLead para refletir na UI
-    setSelectedLead((prev: any) => prev ? ({ 
-      ...prev, 
+
+    const mutationId = resolveOpportunityWorkspaceMutationId(selectedLead);
+    const payload = {
       etapa_id: novaFaseAposAceite,
       etapa: novaFaseAposAceite,
-      status: novoStatus
+      status: novoStatus,
+    };
+
+    const localId = mutationId ?? selectedLead.id ?? selectedLead.displayId;
+    if (localId !== null && localId !== undefined && localId !== '') {
+      moveOportunidade(String(localId), {
+        etapa_id: novaFaseAposAceite,
+        status: novoStatus,
+      });
+    }
+
+    setSelectedLead((prev: any) => prev ? normalizeOpportunityWorkspace({
+      ...prev,
+      ...payload,
+    }, {
+      source: 'session',
+      pipelineLabel: currentPipelineConfig?.nome ?? null,
+      stageCatalog: workspaceStageCatalog,
     }) : null);
-    
-    // Persistir no backend
-    api.updateOportunidade(Number(selectedLead.id), { 
-      etapa_id: novaFaseAposAceite, 
-      status: novoStatus 
-    }).catch(error => {
-      console.error('Erro ao mover oportunidade:', error);
-    });
-    
+
     setShowFaseSelector(false);
   };
   
@@ -1025,7 +1023,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     // Motivo de pendência
     pendenciaMotivo: ""
   });
-  
+
   // Form state
   const [formData, setFormData] = useState({
     // Dados Pessoais / Cliente
@@ -1148,12 +1146,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       
       // Atualiza a oportunidade com o ID do envelope
       if (editingOportunidade) {
-        updateOportunidade(editingOportunidade.id, {
+        const mutationId = resolveOpportunityWorkspaceMutationId(editingOportunidade);
+        const payload = {
           envelopeId: resultado.id,
           envelopeStatus: resultado.status,
           envelopeUrl: resultado.urlAssinatura,
           envelopeProvider: selectedProvider
-        });
+        };
+
+        const localId = mutationId ?? editingOportunidade.id ?? editingOportunidade.displayId;
+        if (localId !== null && localId !== undefined && localId !== '') {
+          updateOportunidade(String(localId), payload);
+        }
       }
       
       alert(`Assinatura enviada com sucesso! ID: ${resultado.id}`);
@@ -1184,13 +1188,39 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setEnvelopeStatus(novoStatus);
     
     // Atualizar oportunidade
-    updateOportunidade(oportunidade.id, {
+    const mutationId = resolveOpportunityWorkspaceMutationId(oportunidade);
+    const payload = {
       envelopeStatus: 'assinado',
       etapa_id: 'ativo',
       etapa: 'ativo',
       status: 'ganho',
       dataAssinatura: novoStatus.dataAssinatura
-    });
+    };
+
+    const localId = mutationId ?? oportunidade.id ?? oportunidade.displayId;
+    if (localId !== null && localId !== undefined && localId !== '') {
+      updateOportunidade(String(localId), payload);
+    }
+
+    setSelectedLead(normalizeOpportunityWorkspace({
+      ...oportunidade,
+      ...payload,
+    }, {
+      source: 'session',
+      pipelineLabel: currentPipelineConfig?.nome ?? null,
+      stageCatalog: workspaceStageCatalog,
+    }));
+
+    if (editingOportunidade) {
+      setEditingOportunidade(normalizeOpportunityWorkspace({
+        ...editingOportunidade,
+        ...payload,
+      }, {
+        source: 'session',
+        pipelineLabel: currentPipelineConfig?.nome ?? null,
+        stageCatalog: workspaceStageCatalog,
+      }));
+    }
     
     // Preparar dados para automação
     const oportunidadeAssinada: OportunidadeAssinada = {
@@ -1450,6 +1480,27 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   
   // Protection: Check if pipeline is valid
   const isPipelineValid = currentPipelineConfig && etapasAtivas.length > 0;
+
+  const workspaceStageCatalog = useMemo(
+    () => (etapasAtivas.length > 0 ? etapasAtivas : ETAPAS_PIPELINE).map((etapa) => ({
+      id: String(etapa.id),
+      key: String(etapa.id),
+      label: String(etapa.nome ?? etapa.label ?? etapa.id),
+      nome: String(etapa.nome ?? etapa.label ?? etapa.id),
+    })),
+    [etapasAtivas],
+  );
+
+  const selectedWorkspaceLead = useMemo(
+    () => selectedLead
+      ? normalizeOpportunityWorkspace(selectedLead, {
+        source: 'session',
+        pipelineLabel: currentPipelineConfig?.nome ?? null,
+        stageCatalog: workspaceStageCatalog,
+      })
+      : null,
+    [selectedLead, currentPipelineConfig?.nome, workspaceStageCatalog],
+  );
   
   // Check if current pipeline requires digital signature
   const requerAssinaturaDigital = currentPipelineConfig ? pipelineRequerAssinaturaDigital(currentPipelineConfig.id) : false;
@@ -1983,107 +2034,55 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   };
 
   // Handle para editar oportunidade existente
-  const handleSubmitEdit = (e: React.FormEvent) => {
+  const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const lead = editingOportunidade || selectedLead;
     if (!lead) return;
 
-    const idToUpdate = lead.id ?? lead.displayId;
-    if (!idToUpdate) return;
-
-    const etapaId = formData.etapa_id || lead.etapa_id || lead.etapa || "novo_lead";
-
+    const etapaId = formData.etapa_id || lead.etapa_id || lead.etapa || 'novo_lead';
     const novoStatus =
-      etapaId === "integrado" ? "ganho" :
-      etapaId === "perdido" ? "perdido" :
-      "ativo";
+      etapaId === 'integrado' ? 'ganho' :
+      etapaId === 'perdido' ? 'perdido' :
+      'ativo';
 
-    const payload = {
-      nome: formData.nome || "Sem nome",
-      cliente_nome: formData.nome || "Sem nome",
-      telefone: formData.telefone?.replace(/\D/g, "") || "",
-      celular: formData.celular?.replace(/\D/g, "") || "",
-      email: formData.email || "",
-      cpf_cnpj: formData.cpf_cnpj || "",
-      tipoPessoa: formData.tipoPessoa || "CPF",
-
-      profissao: formData.profissao || "",
-      estado_civil: formData.estado_civil || "",
-      sexo: formData.sexo || "",
-      data_nascimento: formData.data_nascimento || "",
-      data_abertura: formData.data_abertura || "",
-
-      cep: formData.cep || "",
-      rua: formData.rua || "",
-      numero: formData.numero || "",
-      complemento: formData.complemento || "",
-      bairro: formData.bairro || "",
-      cidade: formData.cidade || "",
-      estado: formData.estado || "",
-
-      produto: formData.produto || "",
-      valor: Number(formData.valor || 0),
-      etapa_id: etapaId,
-      etapa: etapaId,
+    const payload = buildOpportunityWorkspaceUpdatePayload(formData, {
+      etapaId,
       status: novoStatus,
+    });
+    const mutationId = resolveOpportunityWorkspaceMutationId(lead);
 
-      cliente_id: formData.cliente_id || null,
-      responsavel_id: formData.responsavel_id || null,
-      responsavel_nome: formData.responsavel_nome || "",
-      observacoes: formData.observacoes || "",
-      tags: Array.isArray(formData.tags) ? formData.tags : [],
+    const commitLocal = () => {
+      const localId = mutationId ?? lead.id ?? lead.displayId;
+      if (localId !== null && localId !== undefined && localId !== '') {
+        updateOportunidade(String(localId), payload);
+      }
 
-      banco: formData.banco || "",
-      agencia: formData.agencia || "",
-      conta: formData.conta || "",
-      tipoConta: formData.tipoConta || "",
-      titular: formData.titular || "",
-      documentoTitular: formData.documentoTitular || "",
-      pixTipo: formData.pixTipo || "",
-      pixChave: formData.pixChave || "",
-
-      rdStatus: formData.rdStatus || "nao_consultado",
-      rdConsultedAt: formData.rdConsultedAt || "",
-      rdNotes: formData.rdNotes || "",
-
-      racionalCompany_id: formData.racionalCompany_id,
-      franquia_id: formData.franquia_id,
-      franqueado_id: formData.franqueado_id,
-
-      pendenciaMotivo: etapaId === "pendencia" ? formData.pendenciaMotivo : "",
-      
-      // Dados Onboarding Parceiro Comercial
-      parceiroTipo: formData.parceiroTipo || "",
-      razaoSocial: formData.razaoSocial || "",
-      cnpj: formData.cnpj || "",
-      telefoneComercial: formData.telefoneComercial || "",
-      emailCorporativo: formData.emailCorporativo || "",
-      responsavelLegal: formData.responsavelLegal || "",
-      cpfResponsavel: formData.cpfResponsavel || "",
-      cargoResponsavel: formData.cargoResponsavel || "",
-      documentosEnviados: formData.documentosEnviados || [],
-      
-      // Dados Onboarding Colaborador FINQZ
-      vinculoTipo: formData.vinculoTipo || "",
-      cargo: formData.cargo || "",
-      departamento: formData.departamento || "",
-      salario: formData.salario || "",
-      formacao: formData.formacao || "",
-      experienciaProfissional: formData.experienciaProfissional || "",
-      disponibilidade: formData.disponibilidade || []
+      setSelectedLead(normalizeOpportunityWorkspace({
+        ...lead,
+        ...payload,
+      }, {
+        source: 'session',
+        pipelineLabel: currentPipelineConfig?.nome ?? null,
+        stageCatalog: workspaceStageCatalog,
+      }));
     };
 
-    updateOportunidade(String(idToUpdate), payload);
-
-    setSelectedLead({
-      ...lead,
-      ...payload
+    const source = await persistOpportunityWorkspaceMutation({
+      mutationId,
+      payload,
+      updateRemote: (id, body) => api.updateOportunidade(id, body),
+      onSuccess: commitLocal,
     });
 
-    setShowOpportunityForm(false);
-    setShowModal(false);
-    setEditingOportunidade(null);
+    if (source === 'backend') {
+      setWorkspaceMutationError(null);
+      setShowOpportunityForm(false);
+      setShowModal(false);
+      setEditingOportunidade(null);
+    } else {
+      setWorkspaceMutationError('Falha ao salvar a oportunidade no backend. A alteração não foi confirmada.');
+    }
   };
 
   // Pipeline handlers
@@ -2169,7 +2168,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       etapa_id: card.etapa_id ?? card.etapa ?? 'negociacao',
     };
 
-    setSelectedLead(lead);
+    setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
     setEditingOportunidade(lead);
 
     // Preencher dados para o formulário principal (modal)
@@ -2262,7 +2261,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     });
 
     // O formulário será aberto pelo botão que chamou esta função
-    setSelectedLead(lead);
+    setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
     setEditingOportunidade(lead);
     setShowModal(true);
   };
@@ -2337,12 +2336,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     setShowModal(true);
   };
 
-  const handleSaveEditFromDrawer = () => {
+  const handleSaveEditFromDrawer = async () => {
     const leadToEdit = selectedLead || editingOportunidade;
     if (!leadToEdit) return;
 
-    const idToUpdate = leadToEdit.id ?? leadToEdit.displayId;
-    if (!idToUpdate) return;
+    const mutationId = resolveOpportunityWorkspaceMutationId(leadToEdit);
 
     // Se a etapa mudou, validar antes de salvar
     const etapaAnterior = leadToEdit.etapa_id || leadToEdit.etapa;
@@ -2358,89 +2356,50 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     const novoStatus = editDrawerData.etapa_id === 'integrado' ? 'ganho' : 
                       editDrawerData.etapa_id === 'perdido' ? 'perdido' : 'ativo';
 
-    updateOportunidade(String(idToUpdate), {
-      // Dados Pessoais / Cliente
-      nome: editDrawerData.nome,
-      telefone: editDrawerData.telefone?.replace(/\D/g, "") || "",
-      celular: editDrawerData.celular?.replace(/\D/g, "") || "",
-      email: editDrawerData.email || "",
-      cpf_cnpj: editDrawerData.cpf_cnpj || "",
-      tipoPessoa: editDrawerData.tipoPessoa || "CPF",
-      profissao: editDrawerData.profissao || "",
-      estado_civil: editDrawerData.estado_civil || "",
-      sexo: editDrawerData.sexo || "",
-      data_nascimento: editDrawerData.data_nascimento || "",
-      data_abertura: editDrawerData.data_abertura || "",
-      // Endereço
-      cep: editDrawerData.cep || "",
-      rua: editDrawerData.rua || "",
-      numero: editDrawerData.numero || "",
-      complemento: editDrawerData.complemento || "",
-      bairro: editDrawerData.bairro || "",
-      cidade: editDrawerData.cidade || "",
-      estado: editDrawerData.estado || "",
-      // Dados da Oportunidade
-      produto: editDrawerData.produto || "",
-      valor: Number(editDrawerData.valor || 0),
-      etapa_id: editDrawerData.etapa_id,
-      etapa: editDrawerData.etapa_id,
+    const payload = buildOpportunityWorkspaceUpdatePayload(editDrawerData, {
+      etapaId: editDrawerData.etapa_id,
       status: novoStatus,
-      cliente_nome: editDrawerData.nome,
-      responsavel_id: editDrawerData.responsavel_id,
-      responsavel_nome: editDrawerData.responsavel_nome,
-      observacoes: editDrawerData.observacoes || "",
-      tags: Array.isArray(editDrawerData.tags) ? editDrawerData.tags : [],
-      // Dados Bancários
-      banco: editDrawerData.banco || "",
-      agencia: editDrawerData.agencia || "",
-      conta: editDrawerData.conta || "",
-      tipoConta: editDrawerData.tipoConta || "",
-      titular: editDrawerData.titular || "",
-      documentoTitular: editDrawerData.documentoTitular || "",
-      pixTipo: editDrawerData.pixTipo || "",
-      pixChave: editDrawerData.pixChave || "",
-      // RD / Consulta Restrição
-      rdStatus: editDrawerData.rdStatus || "nao_consultado",
-      rdConsultedAt: editDrawerData.rdConsultedAt || "",
-      rdNotes: editDrawerData.rdNotes || "",
-      // Hierarquia Comercial
-      racionalCompany_id: editDrawerData.racionalCompany_id,
-      franquia_id: editDrawerData.franquia_id,
-      franqueado_id: editDrawerData.franqueado_id,
-      // Motivo de pendência
-      pendenciaMotivo: editDrawerData.etapa_id === "pendencia" ? editDrawerData.pendenciaMotivo : ""
     });
 
-    // Atualizar o selectedLead com os novos dados
-    setSelectedLead({
+    const normalizedLead = normalizeOpportunityWorkspace({
       ...leadToEdit,
-      nome: editDrawerData.nome,
-      cliente_nome: editDrawerData.nome,
-      telefone: editDrawerData.telefone,
-      celular: editDrawerData.celular,
-      email: editDrawerData.email,
-      produto: editDrawerData.produto,
-      valor: editDrawerData.valor,
-      etapa_id: editDrawerData.etapa_id,
-      etapa: editDrawerData.etapa_id,
-      status: novoStatus,
-      responsavel_id: editDrawerData.responsavel_id,
-      responsavel_nome: editDrawerData.responsavel_nome,
-      tags: editDrawerData.tags,
-      observacoes: editDrawerData.observacoes
+      ...payload,
+    }, {
+      source: 'session',
+      pipelineLabel: currentPipelineConfig?.nome ?? null,
+      stageCatalog: workspaceStageCatalog,
     });
 
-    // Se a etapa mudou, mover o card para a coluna correta
-    if (etapaAnterior !== editDrawerData.etapa_id) {
-      moveOportunidade(idToUpdate, {
-        etapa_id: editDrawerData.etapa_id,
-        status: novoStatus
-      });
-    }
+    const commitLocal = () => {
+      const localId = mutationId ?? leadToEdit.id ?? leadToEdit.displayId;
+      if (localId !== null && localId !== undefined && localId !== '') {
+        updateOportunidade(String(localId), payload);
+        if (etapaAnterior !== editDrawerData.etapa_id) {
+          moveOportunidade(String(localId), {
+            etapa_id: editDrawerData.etapa_id,
+            status: novoStatus,
+          });
+        }
+      }
 
-    setShowEditDrawerModal(false);
-    setEditingOportunidade(null);
-    setSelectedLead(null);
+      setSelectedLead(normalizedLead);
+      setEditingOportunidade(normalizedLead);
+    };
+
+    const source = await persistOpportunityWorkspaceMutation({
+      mutationId,
+      payload,
+      updateRemote: (id, body) => api.updateOportunidade(id, body),
+      onSuccess: commitLocal,
+    });
+
+    if (source === 'backend') {
+      setWorkspaceMutationError(null);
+      setShowEditDrawerModal(false);
+      setEditingOportunidade(null);
+    } else {
+      setWorkspaceMutationError('Falha ao salvar a oportunidade no backend. A alteração não foi confirmada.');
+    }
   };
 
   const pipelineSelectControl = (
@@ -2826,24 +2785,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
               {/* Cards - Versão Estável */}
               <div className="p-2 space-y-2 overflow-y-auto flex-1">
                 {columnOportunidades.map((card) => {
-                  // Normalizar dados do card com optional chaining e fallbacks
-                  const cardData = {
-                    id: card?.id ?? '0',
-                    displayId: card?.displayId ?? card?.id ?? 'L-0000',
-                    nome: card?.cliente_nome ?? card?.nome ?? 'Sem nome',
-                    produto: card?.produto ?? '',
-                    valor: Number(card?.valor ?? 0),
-                    telefone: card?.telefone ?? '',
-                    email: card?.email ?? '',
-                    tags: Array.isArray(card?.tags) ? card.tags : [],
-                    etapa: card?.etapa_id ?? card?.etapa ?? 'novo_lead',
-                    status: card?.status ?? 'ativo',
-                    cliente_id: card?.cliente_id ?? null,
-                    responsavel_id: card?.responsavel_id ?? null,
-                    responsavel_nome: card?.responsavel_nome ?? '',
-                    createdAt: card?.createdAt ?? null,
-                    updatedAt: card?.updatedAt ?? null
-                  };
+                  const cardData = card;
 
                   // Função para formatar data
                   const formatDate = (dateStr: string | null | undefined) => {
@@ -3695,7 +3637,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
             <div className="p-5 border-b flex items-center justify-between">
               <div>
                 <span className="text-xs font-medium text-slate-500">OPORTUNIDADE</span>
-                <h2 className="text-lg font-semibold">#{selectedLead?.displayId ?? selectedLead?.id ?? '-'}</h2>
+                <h2 className="text-lg font-semibold">#{selectedWorkspaceLead?.displayId ?? selectedWorkspaceLead?.id ?? '-'}</h2>
               </div>
               <button 
                 onClick={() => setOpenLeadDrawer(false)}
@@ -4215,13 +4157,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                 <div className="flex items-center gap-4">
                   <button onClick={handleCloseNegotiation} className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-white hover:bg-gray-100 rounded-lg text-sm font-medium"><ArrowLeft size={18} />Voltar ao Kanban</button>
                   <span className="text-slate-300">|</span>
-                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedLead?.displayId ?? selectedLead?.id ?? '---'}</h1></div>
+                  <div><span className="text-xs text-slate-500 uppercase">Oportunidade</span><h1 className="text-xl font-bold text-white">#{selectedWorkspaceLead?.displayId ?? selectedWorkspaceLead?.id ?? '---'}</h1></div>
                 </div>
               </div>
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Cliente</span><p className="font-semibold text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem cliente'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Produto</span><p className="font-semibold text-white">{selectedLead?.produto || 'Não selecionado'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedWorkspaceLead?.derived.stageLabel ?? 'Etapa não identificada'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Responsável</span><p className="font-semibold text-white">{selectedLead?.responsavel_nome || 'Sem responsável'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Valor</span><p className="font-bold text-xl text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>
               </div>
@@ -4230,6 +4172,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <span className="text-xs text-amber-700 uppercase font-medium">Observações da Pendência</span>
                   <p className="text-sm text-amber-900 mt-1">{selectedLead.observacoes}</p>
+                </div>
+              )}
+              {workspaceMutationError && (
+                <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <span className="text-xs text-amber-700 uppercase font-medium">Sincronização pendente</span>
+                  <p className="text-sm text-amber-900 mt-1">{workspaceMutationError}</p>
                 </div>
               )}
             </div>
