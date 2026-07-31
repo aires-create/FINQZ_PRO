@@ -74,6 +74,15 @@ Escopo:
 - UI-03
 - TEST-02
 
+**Registro de fechamento do Bloco B**
+
+- **Status:** CONCLUÍDO
+- **Branch:** promotion/hml-g18-full
+- **Commit:** 3710a21b1d36bb916e5cf86b56945df4739cb9b6
+- **Validação:** 146 testes aprovados (suite completa), build aprovado, `arch:check` aprovado, `git diff --check` sem erros
+- **Risco residual:** seletores de modal dependentes de classe CSS; cobertura adicional necessária para menus/exclusão
+
+
 ### Bloco C - Canonizacao visual da workspace
 
 Objetivo: padronizar o cabecalho e separar identidade operacional de label de exibição.

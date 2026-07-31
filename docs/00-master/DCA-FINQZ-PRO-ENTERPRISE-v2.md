@@ -202,6 +202,48 @@ O FINQZ PRO Enterprise e uma plataforma SaaS multi-tenant para CRM, operacoes fi
 - Legados relacionados: [placeholder]
 - Proximas fases: [placeholder]
 
+## Registro de Continuidade — Bloco B — Regressão Funcional do Card
+
+### Status
+
+CONCLUÍDO
+
+### Branch
+
+promotion/hml-g18-full
+
+### Commit oficial
+
+3710a21b1d36bb916e5cf86b56945df4739cb9b6
+
+### Mensagem do commit
+
+fix(workspace): normalize stage label and add card interaction regression tests
+
+### Resumo técnico
+
+A função `normalizeOpportunityWorkspace` era utilizada no código, porém o `handleOpenLead` não fornecia o `stageCatalog` ativo, e o header do modal priorizava `etapa_id` em vez de `stageLabel`. Corrigiu-se o `handleOpenLead` para passar `stageCatalog: etapasAtivas` e o modal foi atualizado para priorizar `stageLabel`. Foram adicionados testes de interação de cartão e de hardening estrutural.
+
+### Evidências
+
+- 31 arquivos de teste aprovados / 146 testes aprovados
+- Build concluído com sucesso
+- Architecture governance check: passado
+- git diff --check: sem erros
+- Commit: 3710a21b1d36bb916e5cf86b56945df4739cb9b6 (branch `promotion/hml-g18-full`)
+
+### Riscos remanescentes
+
+- Seletores de modal baseados em classe CSS (não bloqueante)
+- Cobertura adicional necessária para menus e exclusão
+- Workspace ainda híbrido em funcionalidades adicionais
+
+### Governança observada
+
+- Nenhuma alteração em Prisma, migrations, endpoints, RBAC, tenant ou VPS
+- Nenhum deploy, instalação de dependências ou force-push
+
+
 ### 4.11 Commercial Coverage
 - Responsabilidade: [placeholder]
 - Owner: [placeholder]
