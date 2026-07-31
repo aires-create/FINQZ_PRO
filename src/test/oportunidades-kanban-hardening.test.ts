@@ -199,7 +199,7 @@ describe("Oportunidades Kanban hardening", () => {
     const filePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../pages/Oportunidades.tsx");
     const source = readFileSync(filePath, "utf8");
 
-    expect(source).toContain("selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'");
+    expect(source).toContain("selectedLead?.stageLabel ?? selectedLead?.derived?.stageLabel ?? selectedLead?.etapa ?? selectedLead?.etapa_id ?? 'Novo Lead'");
     expect(source).not.toContain("selectedWorkspaceLead?.derived.stageLabel");
   });
 
@@ -226,7 +226,9 @@ describe("Oportunidades Kanban hardening", () => {
     const source = readFileSync(filePath, "utf8");
 
     expect(source).toContain('normalizeOpportunityWorkspace } from "../components/pipeline"');
-    expect(source).toContain("setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));");
+    expect(source).toContain("setSelectedLead(normalizeOpportunityWorkspace(lead, {");
+    expect(source).toContain("source: 'session',");
+    expect(source).toContain("stageCatalog: etapasAtivas,");
     expect(source).toContain("onClick={() => handleOpenLead(cardData)}");
   });
 });

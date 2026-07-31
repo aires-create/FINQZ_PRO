@@ -1436,7 +1436,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
   // Handler to open lead drawer
   function handleOpenLead(lead: any) {
     if (!lead) return;
-    setSelectedLead(normalizeOpportunityWorkspace(lead, { source: 'session' }));
+    setSelectedLead(normalizeOpportunityWorkspace(lead, {
+      source: 'session',
+      stageCatalog: etapasAtivas,
+    }));
     setWorkspaceMutationError(null);
     setOpenLeadDrawer(false);
     setShowOpportunityForm(false);
@@ -5491,12 +5494,12 @@ if (
               <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Cliente</span><p className="font-semibold text-white">{selectedLead?.cliente_nome ?? selectedLead?.nome ?? 'Sem cliente'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Produto</span><p className="font-semibold text-white">{selectedLead?.produto || 'Não selecionado'}</p></div>
-                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedLead?.etapa_id ?? selectedLead?.etapa ?? 'Novo Lead'}</p></div>
+                <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Etapa</span><p className="font-semibold text-white">{selectedLead?.stageLabel ?? selectedLead?.derived?.stageLabel ?? selectedLead?.etapa ?? selectedLead?.etapa_id ?? 'Novo Lead'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Responsável</span><p className="font-semibold text-white">{selectedLead?.responsavel_nome || 'Sem responsável'}</p></div>
                 <div className="flex-1 min-w-[140px]"><span className="text-xs text-slate-500 uppercase">Valor</span><p className="font-bold text-xl text-[#000dff]">R$ {Number(selectedLead?.valor ?? 0).toLocaleString("pt-BR")}</p></div>
               </div>
               {/* Observações da Pendência no header */}
-              {(selectedLead?.etapa_id === 'pendencia' || selectedLead?.etapa === 'pendencia') && selectedLead?.observacoes && (
+              {(normalizeKey(selectedLead?.stageLabel ?? selectedLead?.etapa ?? selectedLead?.etapa_id ?? '') === 'pendencia') && selectedLead?.observacoes && (
                 <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <span className="text-xs text-amber-700 uppercase font-medium">Observações da Pendência</span>
                   <p className="text-sm text-amber-900 mt-1">{selectedLead.observacoes}</p>
