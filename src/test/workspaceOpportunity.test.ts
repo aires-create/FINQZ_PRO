@@ -15,6 +15,54 @@ const stageCatalog = [
 ];
 
 describe('normalizeOpportunityWorkspace', () => {
+  it('formaliza uma saída canônica completa sem perder derivados e compatibilidade', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'canonical-1',
+      pipelineId: 'pipeline-oficial',
+      stageId: 'negociacao',
+      title: 'Oportunidade Oficial',
+      amount: 1250,
+      customerId: 'customer-oficial',
+      productId: 'product-oficial',
+      ownerId: 'owner-oficial',
+      status: 'ganha',
+      description: 'Descrição oficial',
+      cliente_nome: 'Cliente Oficial',
+      produto: 'Produto Oficial',
+      responsavel_nome: 'Owner Oficial',
+    }, {
+      stageCatalog,
+      pipelineLabel: 'Pipeline Oficial',
+    });
+
+    expect(normalized.id).toBe('canonical-1');
+    expect(normalized.pipelineId).toBe('pipeline-oficial');
+    expect(normalized.stageId).toBe('negociacao');
+    expect(normalized.title).toBe('Oportunidade Oficial');
+    expect(normalized.amount).toBe(1250);
+    expect(normalized.customerId).toBe('customer-oficial');
+    expect(normalized.productId).toBe('product-oficial');
+    expect(normalized.ownerId).toBe('owner-oficial');
+    expect(normalized.status).toBe('ganha');
+    expect(normalized.description).toBe('Descrição oficial');
+    expect(normalized.displayId).toBe('canonical-1');
+    expect(normalized.stageLabel).toBe('Negociação');
+    expect(normalized.pipelineLabel).toBe('Pipeline Oficial');
+    expect(normalized.formattedValue).toBe(normalized.derived.formattedValue);
+    expect(normalized.displayName).toBe('Cliente Oficial');
+    expect(normalized.initials).toBe('CO');
+    expect(normalized.pipeline_id).toBe('pipeline-oficial');
+    expect(normalized.stage_id).toBe('negociacao');
+    expect(normalized.valor).toBe(1250);
+    expect(normalized.cliente_id).toBe('customer-oficial');
+    expect(normalized.cliente_nome).toBe('Cliente Oficial');
+    expect(normalized.produto_id).toBe('product-oficial');
+    expect(normalized.produto).toBe('Produto Oficial');
+    expect(normalized.responsavel_id).toBe('owner-oficial');
+    expect(normalized.responsavel_nome).toBe('Owner Oficial');
+    expect(normalized.observacoes).toBe('Descrição oficial');
+  });
+
   it('prioriza amount canônico sobre valor legado', () => {
     const normalized = normalizeOpportunityWorkspace({
       id: 'amount-1',
@@ -233,6 +281,7 @@ describe('normalizeOpportunityWorkspace', () => {
 
     expect(normalized.customerId).toBe('customer-oficial');
     expect(normalized.identity.customerId).toBe('customer-oficial');
+    expect(normalized.cliente_id).toBe('customer-oficial');
   });
 
   it('prioriza ownerId canônico sobre responsavel_id legado', () => {
@@ -246,6 +295,7 @@ describe('normalizeOpportunityWorkspace', () => {
     });
 
     expect(normalized.ownerId).toBe('owner-oficial');
+    expect(normalized.responsavel_id).toBe('owner-oficial');
   });
 
   it('prioriza pipelineId canônico sobre pipeline_id legado', () => {
@@ -278,6 +328,29 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(normalized.persisted.observacoes).toBe('Descrição oficial');
   });
 
+  it('mantém aliases equivalentes espelhando a saída canônica final', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'equivalence-1',
+      pipelineId: 'pipeline-oficial',
+      stageId: 'negociacao',
+      amount: 1000,
+      customerId: 'customer-oficial',
+      productId: 'product-oficial',
+      ownerId: 'owner-oficial',
+      description: 'Descrição oficial',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.pipeline_id).toBe(normalized.pipelineId);
+    expect(normalized.stage_id).toBe(normalized.stageId);
+    expect(normalized.valor).toBe(normalized.amount);
+    expect(normalized.cliente_id).toBe(normalized.customerId);
+    expect(normalized.produto_id).toBe(normalized.productId);
+    expect(normalized.responsavel_id).toBe(normalized.ownerId);
+    expect(normalized.observacoes).toBe(normalized.description);
+  });
+
   it('continua normalizando um objeto composto apenas por aliases', () => {
     const normalized = normalizeOpportunityWorkspace({
       opportunityId: 'legacy-10',
@@ -297,11 +370,18 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(normalized.nome).toBe('Maria Legada');
     expect(normalized.valor).toBe(900);
     expect(normalized.pipelineId).toBe('pipeline-legado');
+    expect(normalized.pipeline_id).toBe('pipeline-legado');
     expect(normalized.stageId).toBe('negociacao');
+    expect(normalized.stage_id).toBe('negociacao');
     expect(normalized.customerId).toBe('customer-legado');
+    expect(normalized.cliente_id).toBe('customer-legado');
     expect(normalized.productId).toBe('product-legado');
+    expect(normalized.produto_id).toBe('product-legado');
     expect(normalized.ownerId).toBe('owner-legado');
+    expect(normalized.responsavel_id).toBe('owner-legado');
+    expect(normalized.amount).toBe(900);
     expect(normalized.observacoes).toBe('Observação legada');
+    expect(normalized.description).toBe('Observação legada');
   });
 
   it('permite fallback para aliases quando o canônico está undefined', () => {
@@ -318,6 +398,7 @@ describe('normalizeOpportunityWorkspace', () => {
 
     expect(normalized.valor).toBe(900);
     expect(normalized.customerId).toBe('customer-legado');
+    expect(normalized.cliente_id).toBe('customer-legado');
   });
 
   it('trata null no canônico como ausência e mantém a semântica atual de fallback', () => {
@@ -334,6 +415,26 @@ describe('normalizeOpportunityWorkspace', () => {
 
     expect(normalized.valor).toBe(900);
     expect(normalized.observacoes).toBe('Observação legada');
+    expect(normalized.amount).toBe(900);
+    expect(normalized.description).toBe('Observação legada');
+  });
+
+  it('não gera strings literais null ou undefined nos aliases espelhados', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'null-mirror',
+      customerId: null,
+      productId: undefined,
+      ownerId: null,
+      description: undefined,
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.cliente_id).toBeNull();
+    expect(normalized.produto_id).toBeNull();
+    expect(normalized.responsavel_id).toBeNull();
+    expect(normalized.observacoes).toBe('');
   });
 
   it('não muta o objeto de entrada', () => {

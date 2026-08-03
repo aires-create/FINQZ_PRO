@@ -124,47 +124,63 @@ export interface OpportunityWorkspaceResolution {
   displayIdSource: OpportunityWorkspaceDisplayIdSource;
 }
 
-export interface OpportunityWorkspaceViewModel {
+export interface OpportunityWorkspaceCanonicalFields {
+  id: string;
+  pipelineId: string | null;
+  stageId: string | null;
+  title: string;
+  amount: number;
+  customerId: string | null;
+  productId: string | null;
+  ownerId: string | null;
+  status: string;
+  description: string;
+}
+
+export interface OpportunityWorkspaceDerivedViewFields {
+  displayId: string;
+  stageLabel: string;
+  pipelineLabel: string;
+  formattedValue: string;
+  displayName: string;
+  initials: string;
+}
+
+export interface OpportunityWorkspaceCompatibilityFields {
+  leadId: string | null;
+  opportunityId: string | null;
+  // Legacy compatibility aliases. Keep flat while the workspace still consumes them.
+  pipeline_id: string | null;
+  stage_id: string | null;
+  etapa_id: string;
+  etapa: string;
+  nome: string;
+  valor: number;
+  cliente_id: string | null;
+  cliente_nome: string;
+  produto_id: string | null;
+  produto: string;
+  responsavel_id: string | null;
+  responsavel_nome: string;
+  observacoes: string;
+}
+
+export interface OpportunityWorkspaceViewModel
+  extends OpportunityWorkspaceCanonicalFields,
+    OpportunityWorkspaceDerivedViewFields,
+    OpportunityWorkspaceCompatibilityFields {
   source: OpportunityWorkspaceSource;
   identity: OpportunityWorkspaceIdentity;
   persisted: OpportunityWorkspacePersistedFields;
   derived: OpportunityWorkspaceDerivedFields;
   resolution: OpportunityWorkspaceResolution;
   raw: Record<string, unknown>;
-  id: string;
-  displayId: string;
-  leadId: string | null;
-  opportunityId: string | null;
-  customerId: string | null;
-  productId: string | null;
-  ownerId: string | null;
-  pipelineId: string | null;
-  pipeline_id: string | null;
-  stageId: string | null;
-  stage_id: string | null;
-  etapa_id: string;
-  etapa: string;
-  cliente_nome: string;
-  nome: string;
-  title: string;
-  produto: string;
-  responsavel_nome: string;
-  description: string;
-  amount: number;
-  valor: number;
   origem: string;
-  status: string;
-  observacoes: string;
   tags: string[];
   telefone: string;
   email: string;
   createdAt: string | number | null;
   updatedAt: string | number | null;
-  stageLabel: string;
-  pipelineLabel: string;
-  formattedValue: string;
-  displayName: string;
-  initials: string;
 }
 
 export interface OpportunityWorkspaceUpdatePayload {
@@ -632,10 +648,13 @@ export const normalizeOpportunityWorkspace = (
     stage_id: stage.id,
     etapa_id: legacyStageId,
     etapa: legacyStageLabel,
+    cliente_id: customerId,
     cliente_nome: clienteNome,
     nome: clienteNome,
     title,
+    produto_id: productId,
     produto,
+    responsavel_id: ownerId,
     responsavel_nome: responsavelNome,
     description,
     amount,
