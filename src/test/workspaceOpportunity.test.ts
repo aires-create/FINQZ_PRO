@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  buildOpportunityEnvelopeUpdatePayload,
+  buildCreateOpportunityIntakePayload,
+  buildCreateOpportunityPayload,
+  buildMoveStagePayload,
+  buildUpdateOpportunityPayload,
   buildOpportunityWorkspaceUpdatePayload,
   mergeOpportunityWorkspace,
   persistOpportunityWorkspaceMutation,
@@ -452,6 +457,215 @@ describe('normalizeOpportunityWorkspace', () => {
 
     normalizeOpportunityWorkspace(input, { stageCatalog });
 
+    expect(input).toEqual(snapshot);
+  });
+});
+
+describe('opportunity workspace API builders', () => {
+  const createCanonicalViewModel = () => normalizeOpportunityWorkspace({
+    id: 'vm-1',
+    title: 'Oportunidade Canonica',
+    amount: 1500,
+    valor: 900,
+    pipelineId: 'pipeline-oficial',
+    pipeline_id: 'pipeline-legado',
+    stageId: 'negociacao',
+    stage_id: 'stage-legado',
+    customerId: 'customer-oficial',
+    cliente_id: 'customer-legado',
+    productId: 'product-oficial',
+    produto_id: 'product-legado',
+    ownerId: 'owner-oficial',
+    responsavel_id: 'owner-legado',
+    status: 'ativo',
+    description: 'Descrição oficial',
+    observacoes: 'Descrição legada',
+    cliente_nome: 'Cliente Canonico',
+    responsavel_nome: 'Owner Canonico',
+    produto: 'Produto Canonico',
+    leadId: 'lead-10',
+  }, {
+    stageCatalog,
+    pipelineLabel: 'Pipeline Oficial',
+  });
+
+  it('buildCreateOpportunityPayload produz o DTO oficial usando o ViewModel canônico', () => {
+    const viewModel = createCanonicalViewModel();
+    const snapshot = JSON.parse(JSON.stringify(viewModel));
+
+    const payload = buildCreateOpportunityPayload(viewModel, {
+      catalog: {
+        subproductId: 'subproduct-oficial',
+        modalityId: 'modality-oficial',
+      },
+      overrides: {
+        expectedCloseDate: '2026-12-31',
+      },
+    });
+
+    expect(payload).toEqual({
+      title: 'Oportunidade Canonica',
+      amount: 1500,
+      pipelineId: 'pipeline-oficial',
+      stageId: 'negociacao',
+      productId: 'product-oficial',
+      subproductId: 'subproduct-oficial',
+      modalityId: 'modality-oficial',
+      customerId: 'customer-oficial',
+      leadId: 'lead-10',
+      ownerId: 'owner-oficial',
+      description: 'Descrição oficial',
+      expectedCloseDate: '2026-12-31',
+    });
+    expect(viewModel).toEqual(snapshot);
+  });
+
+  it('buildCreateOpportunityIntakePayload consolida customer e opportunity em uma única camada', () => {
+    const viewModel = createCanonicalViewModel();
+    const payload = buildCreateOpportunityIntakePayload(viewModel, {
+      catalog: {
+        subproductId: 'subproduct-oficial',
+        modalityId: 'modality-oficial',
+      },
+      customer: {
+        id: 'customer-oficial',
+        fullName: 'Cliente Canonico',
+        email: 'cliente@example.com',
+        cpfCnpj: '12345678900',
+        phone: '11999990000',
+        birthDate: null,
+        documentType: 'CPF',
+        address: null,
+        bankData: null,
+        profession: null,
+        maritalStatus: null,
+        gender: null,
+      },
+      options: {
+        allowCreateCustomer: true,
+        updateExistingCustomer: false,
+      },
+    });
+
+    expect(payload).toEqual({
+      customer: {
+        id: 'customer-oficial',
+        firstName: 'Cliente',
+        lastName: 'Canonico',
+        email: 'cliente@example.com',
+        cpfCnpj: '12345678900',
+        phone: '11999990000',
+        birthDate: null,
+        documentType: 'CPF',
+        address: null,
+        bankData: null,
+        profession: null,
+        maritalStatus: null,
+        gender: null,
+      },
+      opportunity: {
+        title: 'Oportunidade Canonica',
+        amount: 1500,
+        pipelineId: 'pipeline-oficial',
+        stageId: 'negociacao',
+        productId: 'product-oficial',
+        subproductId: 'subproduct-oficial',
+        modalityId: 'modality-oficial',
+        ownerId: 'owner-oficial',
+        description: 'Descrição oficial',
+      },
+      options: {
+        allowCreateCustomer: true,
+        updateExistingCustomer: false,
+      },
+    });
+  });
+
+  it('buildUpdateOpportunityPayload envia apenas os campos selecionados e ignora aliases divergentes', () => {
+    const viewModel = createCanonicalViewModel();
+
+    const payload = buildUpdateOpportunityPayload(viewModel, {
+      catalog: {
+        subproductId: 'subproduct-oficial',
+        modalityId: 'modality-oficial',
+      },
+      include: ['title', 'amount', 'customerId', 'ownerId', 'productId', 'subproductId', 'modalityId', 'status', 'description'],
+    });
+
+    expect(payload).toEqual({
+      title: 'Oportunidade Canonica',
+      amount: 1500,
+      customerId: 'customer-oficial',
+      ownerId: 'owner-oficial',
+      productId: 'product-oficial',
+      subproductId: 'subproduct-oficial',
+      modalityId: 'modality-oficial',
+      status: 'ativo',
+      description: 'Descrição oficial',
+    });
+  });
+
+  it('buildUpdateOpportunityPayload preserva zero, omite undefined e não gera strings literais de null', () => {
+    const viewModel = normalizeOpportunityWorkspace({
+      id: 'vm-zero',
+      title: 'Zero',
+      amount: 0,
+      customerId: null,
+      ownerId: null,
+      productId: null,
+      description: '',
+      stageId: 'novo_lead',
+      pipelineId: 'pipeline-oficial',
+    }, {
+      stageCatalog,
+    });
+
+    const payload = buildUpdateOpportunityPayload(viewModel, {
+      include: ['amount', 'customerId', 'ownerId', 'productId', 'description'],
+    });
+
+    expect(payload).toEqual({
+      amount: 0,
+      productId: null,
+      description: '',
+    });
+    expect(String(payload)).not.toContain('undefined');
+    expect(String(payload)).not.toContain('null');
+  });
+
+  it('buildMoveStagePayload centraliza a tradução de stageId e pipelineId', () => {
+    const viewModel = createCanonicalViewModel();
+    const snapshot = JSON.parse(JSON.stringify(viewModel));
+
+    const payload = buildMoveStagePayload(viewModel, {
+      stageId: 'stage-destino',
+      pipelineId: 'pipeline-destino',
+    });
+
+    expect(payload).toEqual({
+      stageId: 'stage-destino',
+      pipelineId: 'pipeline-destino',
+    });
+    expect(viewModel).toEqual(snapshot);
+  });
+
+  it('buildOpportunityEnvelopeUpdatePayload centraliza patches auxiliares sem mutar a entrada', () => {
+    const input = {
+      envelopeId: 'env-1',
+      envelopeStatus: 'sent',
+      envelopeUrl: 'https://example.com/sign',
+      envelopeProvider: 'clicksign',
+    };
+    const snapshot = JSON.parse(JSON.stringify(input));
+
+    const payload = buildOpportunityEnvelopeUpdatePayload(input);
+
+    expect(payload).toEqual({
+      envelopeId: 'env-1',
+      envelopeStatus: 'sent',
+      envelopeUrl: 'https://example.com/sign',
+      envelopeProvider: 'clicksign',
+    });
     expect(input).toEqual(snapshot);
   });
 });

@@ -16,42 +16,9 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { KanbanColumn, formatCurrency, normalizeOpportunityWorkspace } from "../components/pipeline";
+import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, normalizeOpportunityWorkspace } from "../components/pipeline";
 import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
-
-const mapKanbanOpportunityToCreateIntakePayload = (formData: any, oportunidade: any, selectedPipelineId: string, selectedStageId: string) => {
-  const name = String(formData?.nome || oportunidade?.nome || oportunidade?.cliente_nome || "Sem nome").trim();
-  const amount = Number(formData?.valor ?? oportunidade?.valor ?? oportunidade?.amount ?? 0);
-  const customerNameParts = name.split(" ").filter(Boolean);
-  const firstName = customerNameParts[0] || name || "Cliente";
-  const lastName = customerNameParts.slice(1).join(" ") || "Não informado";
-
-  return {
-    customer: {
-      id: oportunidade?.cliente_id ?? oportunidade?.customerId ?? null,
-      firstName,
-      lastName,
-      email: String(formData?.email || oportunidade?.email || ""),
-      cpfCnpj: String(formData?.cpf_cnpj || oportunidade?.cpf_cnpj || "").replace(/\D/g, ""),
-      phone: String(formData?.telefone || formData?.celular || oportunidade?.telefone || oportunidade?.celular || ""),
-      birthDate: formData?.data_nascimento || null,
-      documentType: formData?.tipoPessoa || null,
-    },
-    opportunity: {
-      title: name,
-      amount,
-      pipelineId: String(selectedPipelineId || oportunidade?.pipelineId || oportunidade?.backendPipelineId || ""),
-      stageId: String(selectedStageId || oportunidade?.stageId || oportunidade?.backendStageId || ""),
-      ownerId: formData?.responsavel_id || oportunidade?.ownerId || null,
-      description: String(formData?.observacoes || oportunidade?.observacoes || oportunidade?.description || ""),
-    },
-    options: {
-      allowCreateCustomer: true,
-      updateExistingCustomer: true,
-    },
-  };
-};
 
 // 🔧 UTILITÁRIA: Normalizar chave de etapa para comparação resiliente
 const normalizeKey = (value: any): string => {
@@ -2178,9 +2145,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         throw new Error("Oportunidade sem identificador para persistência oficial.");
       }
 
-      await opportunitiesApi.update(opportunityId, {
-        amount: novoValor,
-      });
+      await opportunitiesApi.update(
+        opportunityId,
+        buildUpdateOpportunityPayload(selectedLead, {
+          overrides: {
+            amount: novoValor,
+          },
+          include: ['amount'],
+        }),
+      );
       setApiReadReloadKey((prev) => prev + 1);
     } catch (error) {
       console.error('Erro ao atualizar valor da oportunidade:', error);
@@ -2248,10 +2221,13 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     }
 
     try {
-      await opportunitiesApi.moveStage(selectedLeadId, {
-        stageId: resolvedBackendStageId,
-        pipelineId: resolvedBackendPipelineId || undefined,
-      });
+      await opportunitiesApi.moveStage(
+        selectedLeadId,
+        buildMoveStagePayload(selectedLead, {
+          stageId: resolvedBackendStageId,
+          pipelineId: resolvedBackendPipelineId || undefined,
+        }),
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao confirmar mudança de fase";
       console.error("[Oportunidades] Falha ao confirmar mudança de fase via API oficial:", {
@@ -2396,12 +2372,15 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       if (editingOportunidade) {
         const envelopeOpportunityId = String(getCanonicalOpportunityId(editingOportunidade) ?? editingOportunidade.id ?? "");
         if (envelopeOpportunityId) {
-          await opportunitiesApi.update(envelopeOpportunityId, {
-            envelopeId: resultado.id,
-            envelopeStatus: resultado.status,
-            envelopeUrl: resultado.urlAssinatura,
-            envelopeProvider: selectedProvider
-          });
+          await opportunitiesApi.update(
+            envelopeOpportunityId,
+            buildOpportunityEnvelopeUpdatePayload({
+              envelopeId: resultado.id,
+              envelopeStatus: resultado.status,
+              envelopeUrl: resultado.urlAssinatura,
+              envelopeProvider: selectedProvider,
+            }),
+          );
         }
       }
 
@@ -3193,10 +3172,20 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     });
 
     try {
-      await opportunitiesApi.moveStage(canonicalOpportunityId, {
-        stageId: resolvedBackendStageId,
-        pipelineId: resolvedBackendPipelineId || undefined,
-      });
+      await opportunitiesApi.moveStage(
+        canonicalOpportunityId,
+        buildMoveStagePayload(
+          normalizeOpportunityWorkspace(oportunidade, {
+            source: "session",
+            pipelineLabel: currentPipelineConfig?.nome ?? null,
+            stageCatalog: workspaceStageCatalog,
+          }),
+          {
+            stageId: resolvedBackendStageId,
+            pipelineId: resolvedBackendPipelineId || undefined,
+          },
+        ),
+      );
       upsertKanbanRuntimeDragEvent(String(oportunidade?.id ?? canonicalOpportunityId), {
         patchStatus: "success",
         patchMessage: "PATCH /stage OK",
@@ -3250,35 +3239,42 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       const nome = String(item?.nomeCompleto || item?.nome || "Sem nome");
 
       try {
-        await opportunitiesApi.createIntake({
-          customer: {
-            id: null,
-            firstName: nome.split(" ").filter(Boolean)[0] || nome,
-            lastName: nome.split(" ").filter(Boolean).slice(1).join(" ") || "Não informado",
-            email: String(item?.email || ""),
-            cpfCnpj,
-            phone: celular || telefone || null,
-            birthDate: null,
-            documentType: String(item?.tipoPessoa || "").toUpperCase() === "CNPJ" || String(item?.tipoPessoa || "").toUpperCase() === "PJ" ? "CNPJ" : "CPF",
-            address: null,
-            bankData: null,
-            profession: null,
-            maritalStatus: null,
-            gender: null,
-          },
-          opportunity: {
-            title: nome,
-            amount: Number(item?.valor) || 0,
-            pipelineId: pipelineIdParaImportacao,
-            stageId: stageIdParaImportacao,
-            ownerId: null,
-            description: String(item?.observacoes || ""),
-          },
-          options: {
-            allowCreateCustomer: true,
-            updateExistingCustomer: true,
-          },
+        const importedWorkspaceOpportunity = normalizeOpportunityWorkspace({
+          title: nome,
+          amount: Number(item?.valor) || 0,
+          pipelineId: pipelineIdParaImportacao,
+          stageId: stageIdParaImportacao,
+          description: String(item?.observacoes || ""),
+          cliente_nome: nome,
+          nome,
+        }, {
+          source: "adapter",
+          pipelineLabel: currentPipelineConfig?.nome ?? null,
+          stageCatalog: workspaceStageCatalog,
         });
+
+        await opportunitiesApi.createIntake(
+          buildCreateOpportunityIntakePayload(importedWorkspaceOpportunity, {
+            customer: {
+              id: null,
+              fullName: nome,
+              email: String(item?.email || ""),
+              cpfCnpj,
+              phone: celular || telefone || null,
+              birthDate: null,
+              documentType: String(item?.tipoPessoa || "").toUpperCase() === "CNPJ" || String(item?.tipoPessoa || "").toUpperCase() === "PJ" ? "CNPJ" : "CPF",
+              address: null,
+              bankData: null,
+              profession: null,
+              maritalStatus: null,
+              gender: null,
+            },
+            options: {
+              allowCreateCustomer: true,
+              updateExistingCustomer: true,
+            },
+          }),
+        );
         importedCount += 1;
       } catch (error) {
         console.error("[Oportunidades] Falha ao importar oportunidade via API oficial:", error);
@@ -3520,7 +3516,28 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
 
-    const payloadBackend = {
+    const createWorkspaceOpportunity = normalizeOpportunityWorkspace({
+      ...newOportunidade,
+      title: newOportunidade.nome || "",
+      amount: Number(newOportunidade.valor || 0),
+      pipelineId: resolvedBackendPipelineId,
+      stageId: resolvedBackendStageId,
+      customerId: resolvedCustomerId ?? null,
+      productId: selectedProductId || null,
+      ownerId: newOportunidade.responsavel_id ? String(newOportunidade.responsavel_id) : null,
+      description: newOportunidade.observacoes || "",
+    }, {
+      source: "session",
+      pipelineLabel: currentPipelineConfig?.nome ?? null,
+      stageCatalog: workspaceStageCatalog,
+    });
+
+    const payloadBackend = buildCreateOpportunityIntakePayload(createWorkspaceOpportunity, {
+      catalog: {
+        productId: selectedProductId || null,
+        subproductId: selectedSubproductId || null,
+        modalityId: selectedModality || null,
+      },
       customer: {
         id: resolvedCustomerId,
         firstName,
@@ -3553,22 +3570,11 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
         maritalStatus: formData.estado_civil || null,
         gender: formData.sexo || null,
       },
-      opportunity: {
-        title: newOportunidade.nome || "",
-        amount: Number(newOportunidade.valor || 0),
-        pipelineId: resolvedBackendPipelineId,
-        stageId: resolvedBackendStageId,
-        productId: selectedProductId || null,
-        subproductId: selectedSubproductId || null,
-        modalityId: selectedModality || null,
-        ownerId: newOportunidade.responsavel_id ? String(newOportunidade.responsavel_id) : undefined,
-        description: newOportunidade.observacoes || undefined,
-      },
       options: {
         allowCreateCustomer: true,
         updateExistingCustomer: false,
       },
-    };
+    });
 
     const missingRequiredFields: string[] = [];
     if (!payloadBackend.opportunity.title) missingRequiredFields.push("title");
@@ -3642,29 +3648,31 @@ const handleSubmitEdit = async (e: React.FormEvent) => {
     return;
   }
 
-  const payload = {
-    nome: formData.nome || "Sem nome",
-    valor: Number(formData.valor || 0),
-    pipeline_id: explicitPipelineId,
+  const editedWorkspaceOpportunity = normalizeOpportunityWorkspace({
+    ...lead,
+    title: formData.nome || "Sem nome",
+    amount: Number(formData.valor || 0),
+    pipelineId: explicitPipelineId,
     etapa_id: etapaId,
     status: novoStatus,
-    cliente_id: formData.cliente_id || null,
-    responsavel_id: formData.responsavel_id || null,
+    customerId: formData.cliente_id || null,
+    ownerId: formData.responsavel_id || null,
     responsavel_nome: formData.responsavel_nome || "",
-    observacoes: formData.observacoes || "",
-  };
+    description: String(formData.observacoes || ""),
+  }, {
+    source: "session",
+    pipelineLabel: currentPipelineConfig?.nome ?? null,
+    stageCatalog: workspaceStageCatalog,
+  });
 
-  const payloadBackend = {
-  title: payload.nome,
-  amount: Number(payload.valor || 0),
-  customerId: payload.cliente_id ?? undefined,
-  ownerId: payload.responsavel_id ?? undefined,
-  productId: selectedProductId || null,
-  subproductId: selectedSubproductId || null,
-  modalityId: selectedModality || null,
-  status: novoStatus,
-  description: String(payload.observacoes || ""),
-};
+  const payloadBackend = buildUpdateOpportunityPayload(editedWorkspaceOpportunity, {
+    catalog: {
+      productId: selectedProductId || null,
+      subproductId: selectedSubproductId || null,
+      modalityId: selectedModality || null,
+    },
+    include: ['title', 'amount', 'customerId', 'ownerId', 'productId', 'subproductId', 'modalityId', 'status', 'description'],
+  });
 
   const missingRequiredFields: string[] = [];
 

@@ -1,5 +1,11 @@
 import { formatCurrency, normalizeKey } from './pipelineUtils';
 import { mapearProdutoLegadoParaPipeline } from '../../config/pipelines';
+import type {
+  CreateOpportunityIntakePayload,
+  CreateOpportunityPayload,
+  MoveOpportunityStagePayload,
+  UpdateOpportunityPayload,
+} from '../../api/modules/opportunities.api';
 
 export type OpportunityWorkspaceSource =
   | 'backend'
@@ -254,6 +260,91 @@ export interface OpportunityWorkspaceUpdatePayload {
   disponibilidade: string[];
 }
 
+export interface OpportunityWorkspaceCatalogSelectionInput {
+  productId?: unknown;
+  subproductId?: unknown;
+  modalityId?: unknown;
+}
+
+export interface OpportunityWorkspaceUpdateBuilderOptions {
+  catalog?: OpportunityWorkspaceCatalogSelectionInput;
+  overrides?: Partial<{
+    title: unknown;
+    amount: unknown;
+    status: unknown;
+    description: unknown;
+    customerId: unknown;
+    ownerId: unknown;
+    leadId: unknown;
+    productId: unknown;
+    subproductId: unknown;
+    modalityId: unknown;
+    probability: unknown;
+    expectedCloseDate: unknown;
+  }>;
+  include?: readonly (keyof UpdateOpportunityPayload)[];
+}
+
+export interface OpportunityWorkspaceCreateBuilderOptions {
+  catalog?: OpportunityWorkspaceCatalogSelectionInput;
+  overrides?: Partial<{
+    title: unknown;
+    amount: unknown;
+    pipelineId: unknown;
+    stageId: unknown;
+    customerId: unknown;
+    leadId: unknown;
+    ownerId: unknown;
+    description: unknown;
+    productId: unknown;
+    subproductId: unknown;
+    modalityId: unknown;
+    probability: unknown;
+    currency: unknown;
+    expectedCloseDate: unknown;
+  }>;
+}
+
+export interface OpportunityWorkspaceMoveStageBuilderOptions {
+  stageId?: unknown;
+  pipelineId?: unknown;
+  status?: unknown;
+  reason?: unknown;
+}
+
+export interface OpportunityWorkspaceEnvelopeUpdateInput {
+  envelopeId?: unknown;
+  envelopeStatus?: unknown;
+  envelopeUrl?: unknown;
+  envelopeProvider?: unknown;
+}
+
+export interface OpportunityWorkspaceIntakeCustomerInput {
+  id?: unknown;
+  fullName?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+  email?: unknown;
+  cpfCnpj?: unknown;
+  phone?: unknown;
+  birthDate?: unknown;
+  documentType?: unknown;
+  address?: Record<string, unknown> | null;
+  bankData?: Record<string, unknown> | null;
+  profession?: unknown;
+  maritalStatus?: unknown;
+  gender?: unknown;
+}
+
+export interface OpportunityWorkspaceCreateIntakeBuilderOptions
+  extends OpportunityWorkspaceCreateBuilderOptions {
+  customer: OpportunityWorkspaceIntakeCustomerInput;
+  options?: {
+    allowCreateCustomer?: boolean;
+    updateExistingCustomer?: boolean;
+  };
+}
+
 const SOURCE_RANK: Record<OpportunityWorkspaceSource, number> = {
   backend: 0,
   session: 1,
@@ -286,6 +377,27 @@ const toNullableString = (value: unknown): string | null => {
   return normalized ? normalized : null;
 };
 
+const toOptionalString = (value: unknown): string | undefined => {
+  return toNullableString(value) ?? undefined;
+};
+
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = Number(value.replace(',', '.'));
+    return Number.isFinite(normalized) ? normalized : undefined;
+  }
+
+  return undefined;
+};
+
 const pickFirstPresentValue = (...values: unknown[]): unknown => {
   for (const value of values) {
     if (value === undefined || value === null) {
@@ -304,6 +416,51 @@ const pickFirstPresentValue = (...values: unknown[]): unknown => {
 
 const pickFirstPresentString = (...values: unknown[]): string | null => {
   return toNullableString(pickFirstPresentValue(...values));
+};
+
+const omitUndefinedFields = <T extends Record<string, unknown>>(value: T): T => {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entryValue]) => entryValue !== undefined),
+  ) as T;
+};
+
+const hasOwnField = <T extends object>(
+  value: T | undefined,
+  key: PropertyKey,
+): boolean => {
+  return !!value && Object.prototype.hasOwnProperty.call(value, key);
+};
+
+const pickCatalogSelection = (
+  viewModel: OpportunityWorkspaceViewModel,
+  catalog: OpportunityWorkspaceCatalogSelectionInput = {},
+): { productId: string | null; subproductId: string | null; modalityId: string | null } => {
+  return {
+    productId: pickFirstPresentString(catalog.productId, viewModel.productId) ?? null,
+    subproductId: pickFirstPresentString(catalog.subproductId) ?? null,
+    modalityId: pickFirstPresentString(catalog.modalityId) ?? null,
+  };
+};
+
+const resolveFullNameParts = (
+  customer: OpportunityWorkspaceIntakeCustomerInput,
+): { firstName: string; lastName: string } => {
+  const explicitFirstName = toOptionalString(customer.firstName);
+  const explicitLastName = toOptionalString(customer.lastName);
+
+  if (explicitFirstName || explicitLastName) {
+    return {
+      firstName: explicitFirstName ?? 'Cliente',
+      lastName: explicitLastName ?? 'Não informado',
+    };
+  }
+
+  const fullName = toOptionalString(customer.fullName) ?? '';
+  const parts = fullName.split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] ?? fullName ?? 'Cliente',
+    lastName: parts.slice(1).join(' ') || 'Não informado',
+  };
 };
 
 const toArrayOfStrings = (value: unknown): string[] => {
@@ -727,6 +884,194 @@ export const resolveOpportunityWorkspaceApiMutationId = (
   input: unknown,
 ): number | null => {
   return parsePositiveSafeInteger(input);
+};
+
+export const buildCreateOpportunityPayload = (
+  viewModel: OpportunityWorkspaceViewModel,
+  options: OpportunityWorkspaceCreateBuilderOptions = {},
+): CreateOpportunityPayload => {
+  const catalogSelection = pickCatalogSelection(viewModel, options.catalog);
+  const descriptionSource = hasOwnField(options.overrides, 'description')
+    ? options.overrides?.description
+    : viewModel.description;
+
+  return omitUndefinedFields({
+    title: toStringValue(
+      pickFirstPresentValue(options.overrides?.title, viewModel.title),
+    ).trim(),
+    amount: toNumberValue(
+      pickFirstPresentValue(options.overrides?.amount, viewModel.amount),
+    ),
+    pipelineId: toStringValue(
+      pickFirstPresentValue(options.overrides?.pipelineId, viewModel.pipelineId),
+    ).trim(),
+    stageId: toStringValue(
+      pickFirstPresentValue(options.overrides?.stageId, viewModel.stageId),
+    ).trim(),
+    productId: pickFirstPresentString(
+      options.overrides?.productId,
+      catalogSelection.productId,
+    ) ?? null,
+    subproductId: pickFirstPresentString(
+      options.overrides?.subproductId,
+      catalogSelection.subproductId,
+    ) ?? null,
+    modalityId: pickFirstPresentString(
+      options.overrides?.modalityId,
+      catalogSelection.modalityId,
+    ) ?? null,
+    customerId: pickFirstPresentString(
+      options.overrides?.customerId,
+      viewModel.customerId,
+    ) ?? null,
+    leadId: pickFirstPresentString(
+      options.overrides?.leadId,
+      viewModel.leadId,
+    ) ?? null,
+    ownerId: pickFirstPresentString(
+      options.overrides?.ownerId,
+      viewModel.ownerId,
+    ) ?? null,
+    description: descriptionSource === null
+      ? null
+      : toOptionalString(descriptionSource) ?? null,
+    probability: toOptionalNumber(options.overrides?.probability),
+    currency: toOptionalString(options.overrides?.currency),
+    expectedCloseDate: options.overrides?.expectedCloseDate as string | Date | null | undefined,
+  });
+};
+
+export const buildUpdateOpportunityPayload = (
+  viewModel: OpportunityWorkspaceViewModel,
+  options: OpportunityWorkspaceUpdateBuilderOptions = {},
+): UpdateOpportunityPayload => {
+  const catalogSelection = pickCatalogSelection(viewModel, options.catalog);
+  const descriptionSource = hasOwnField(options.overrides, 'description')
+    ? options.overrides?.description
+    : viewModel.description;
+  const productIdSource = hasOwnField(options.overrides, 'productId')
+    ? options.overrides?.productId
+    : catalogSelection.productId;
+  const subproductIdSource = hasOwnField(options.overrides, 'subproductId')
+    ? options.overrides?.subproductId
+    : catalogSelection.subproductId;
+  const modalityIdSource = hasOwnField(options.overrides, 'modalityId')
+    ? options.overrides?.modalityId
+    : catalogSelection.modalityId;
+  const candidatePayload = omitUndefinedFields({
+    title: toOptionalString(
+      pickFirstPresentValue(options.overrides?.title, viewModel.title),
+    ),
+    description: descriptionSource === null
+      ? undefined
+      : toStringValue(descriptionSource),
+    amount: toOptionalNumber(
+      pickFirstPresentValue(options.overrides?.amount, viewModel.amount),
+    ),
+    probability: toOptionalNumber(options.overrides?.probability),
+    status: toOptionalString(
+      pickFirstPresentValue(options.overrides?.status, viewModel.status),
+    ),
+    expectedCloseDate: options.overrides?.expectedCloseDate as string | Date | null | undefined,
+    ownerId: pickFirstPresentString(
+      options.overrides?.ownerId,
+      viewModel.ownerId,
+    ) ?? undefined,
+    customerId: pickFirstPresentString(
+      options.overrides?.customerId,
+      viewModel.customerId,
+    ) ?? undefined,
+    leadId: pickFirstPresentString(
+      options.overrides?.leadId,
+      viewModel.leadId,
+    ) ?? undefined,
+    productId: productIdSource === null
+      ? null
+      : pickFirstPresentString(productIdSource) ?? undefined,
+    subproductId: subproductIdSource === null
+      ? null
+      : pickFirstPresentString(subproductIdSource) ?? undefined,
+    modalityId: modalityIdSource === null
+      ? null
+      : pickFirstPresentString(modalityIdSource) ?? undefined,
+  });
+
+  if (!options.include || options.include.length === 0) {
+    return candidatePayload;
+  }
+
+  return options.include.reduce<UpdateOpportunityPayload>((accumulator, field) => {
+    const fieldValue = candidatePayload[field];
+    if (fieldValue !== undefined) {
+      accumulator[field] = fieldValue as never;
+    }
+    return accumulator;
+  }, {});
+};
+
+export const buildMoveStagePayload = (
+  viewModel: OpportunityWorkspaceViewModel,
+  options: OpportunityWorkspaceMoveStageBuilderOptions,
+): MoveOpportunityStagePayload => {
+  return omitUndefinedFields({
+    stageId: toStringValue(
+      pickFirstPresentValue(options.stageId, viewModel.stageId),
+    ).trim(),
+    pipelineId: toOptionalString(
+      pickFirstPresentValue(options.pipelineId, viewModel.pipelineId),
+    ),
+    status: toOptionalString(options.status),
+    reason: pickFirstPresentString(options.reason) ?? undefined,
+  });
+};
+
+export const buildOpportunityEnvelopeUpdatePayload = (
+  input: OpportunityWorkspaceEnvelopeUpdateInput,
+): Record<string, unknown> => {
+  return omitUndefinedFields({
+    envelopeId: toOptionalString(input.envelopeId),
+    envelopeStatus: toOptionalString(input.envelopeStatus),
+    envelopeUrl: toOptionalString(input.envelopeUrl),
+    envelopeProvider: toOptionalString(input.envelopeProvider),
+  });
+};
+
+export const buildCreateOpportunityIntakePayload = (
+  viewModel: OpportunityWorkspaceViewModel,
+  options: OpportunityWorkspaceCreateIntakeBuilderOptions,
+): CreateOpportunityIntakePayload => {
+  const { firstName, lastName } = resolveFullNameParts(options.customer);
+  const opportunityPayload = buildCreateOpportunityPayload(viewModel, options);
+
+  return {
+    customer: omitUndefinedFields({
+      id: pickFirstPresentString(options.customer.id) ?? null,
+      firstName,
+      lastName,
+      email: toOptionalString(options.customer.email),
+      cpfCnpj: toOptionalString(options.customer.cpfCnpj),
+      phone: pickFirstPresentString(options.customer.phone) ?? null,
+      birthDate: options.customer.birthDate as string | Date | null | undefined,
+      documentType: toOptionalString(options.customer.documentType) ?? null,
+      address: options.customer.address ?? null,
+      bankData: options.customer.bankData ?? null,
+      profession: toOptionalString(options.customer.profession) ?? null,
+      maritalStatus: toOptionalString(options.customer.maritalStatus) ?? null,
+      gender: toOptionalString(options.customer.gender) ?? null,
+    }),
+    opportunity: {
+      title: opportunityPayload.title,
+      amount: opportunityPayload.amount,
+      pipelineId: opportunityPayload.pipelineId,
+      stageId: opportunityPayload.stageId,
+      productId: opportunityPayload.productId ?? null,
+      subproductId: opportunityPayload.subproductId ?? null,
+      modalityId: opportunityPayload.modalityId ?? null,
+      ownerId: opportunityPayload.ownerId ?? undefined,
+      description: opportunityPayload.description ?? undefined,
+    },
+    options: options.options,
+  };
 };
 
 export interface OpportunityWorkspaceMutationCommitParams {
