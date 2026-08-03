@@ -41,6 +41,48 @@ export interface OpportunityWorkspaceContext {
   stageCatalog?: readonly OpportunityWorkspaceStageDescriptor[];
 }
 
+export interface OpportunityWorkspaceInput {
+  source?: unknown;
+  displayId?: unknown;
+  id?: unknown;
+  opportunityId?: unknown;
+  leadId?: unknown;
+  customerId?: unknown;
+  cliente_id?: unknown;
+  pipelineId?: unknown;
+  pipeline_id?: unknown;
+  pipelineNome?: unknown;
+  pipelineName?: unknown;
+  stageId?: unknown;
+  stage_id?: unknown;
+  etapa_id?: unknown;
+  etapa?: unknown;
+  title?: unknown;
+  nome?: unknown;
+  cliente_nome?: unknown;
+  amount?: unknown;
+  valor?: unknown;
+  productId?: unknown;
+  product_id?: unknown;
+  produto_id?: unknown;
+  produto?: unknown;
+  ownerId?: unknown;
+  responsavel_id?: unknown;
+  assignedTo?: unknown;
+  responsavel_nome?: unknown;
+  status?: unknown;
+  description?: unknown;
+  observacoes?: unknown;
+  telefone?: unknown;
+  email?: unknown;
+  tags?: unknown;
+  origem?: unknown;
+  createdAt?: unknown;
+  created_at?: unknown;
+  updatedAt?: unknown;
+  updated_at?: unknown;
+}
+
 export interface OpportunityWorkspaceIdentity {
   id: string;
   displayId: string;
@@ -94,6 +136,8 @@ export interface OpportunityWorkspaceViewModel {
   leadId: string | null;
   opportunityId: string | null;
   customerId: string | null;
+  productId: string | null;
+  ownerId: string | null;
   pipelineId: string | null;
   pipeline_id: string | null;
   stageId: string | null;
@@ -102,8 +146,11 @@ export interface OpportunityWorkspaceViewModel {
   etapa: string;
   cliente_nome: string;
   nome: string;
+  title: string;
   produto: string;
   responsavel_nome: string;
+  description: string;
+  amount: number;
   valor: number;
   origem: string;
   status: string;
@@ -223,6 +270,26 @@ const toNullableString = (value: unknown): string | null => {
   return normalized ? normalized : null;
 };
 
+const pickFirstPresentValue = (...values: unknown[]): unknown => {
+  for (const value of values) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+
+    if (typeof value === 'string' && value.trim() === '') {
+      continue;
+    }
+
+    return value;
+  }
+
+  return undefined;
+};
+
+const pickFirstPresentString = (...values: unknown[]): string | null => {
+  return toNullableString(pickFirstPresentValue(...values));
+};
+
 const toArrayOfStrings = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
@@ -338,19 +405,28 @@ const resolveDisplayId = (
 };
 
 const resolvePipeline = (
-  source: Record<string, unknown>,
+  source: OpportunityWorkspaceInput,
   context: OpportunityWorkspaceContext,
 ): { id: string | null; source: OpportunityWorkspacePipelineSource; label: string } => {
-  const pipelineId = toNullableString(source.pipelineId) ?? toNullableString(source.pipeline_id);
-  if (pipelineId) {
+  const canonicalPipelineId = pickFirstPresentString(source.pipelineId);
+  if (canonicalPipelineId) {
     return {
-      id: pipelineId,
-      source: source.pipelineId ? 'pipelineId' : 'pipeline_id',
-      label: context.pipelineLabel ?? toStringValue(source.pipelineNome ?? source.pipelineName ?? pipelineId),
+      id: canonicalPipelineId,
+      source: 'pipelineId',
+      label: context.pipelineLabel ?? toStringValue(source.pipelineNome ?? source.pipelineName ?? canonicalPipelineId),
     };
   }
 
-  const productLabel = toNullableString(source.produto);
+  const compatPipelineId = pickFirstPresentString(source.pipeline_id);
+  if (compatPipelineId) {
+    return {
+      id: compatPipelineId,
+      source: 'pipeline_id',
+      label: context.pipelineLabel ?? toStringValue(source.pipelineNome ?? source.pipelineName ?? compatPipelineId),
+    };
+  }
+
+  const productLabel = pickFirstPresentString(source.produto);
   if (productLabel) {
     const mappedPipelineId = mapearProdutoLegadoParaPipeline(productLabel);
     if (mappedPipelineId) {
@@ -370,10 +446,10 @@ const resolvePipeline = (
 };
 
 const resolveStage = (
-  source: Record<string, unknown>,
+  source: OpportunityWorkspaceInput,
   pipelineStages: readonly OpportunityWorkspaceStageDescriptor[] = [],
 ): { id: string | null; label: string; source: OpportunityWorkspaceStageSource } => {
-  const stageId = toNullableString(source.stageId);
+  const stageId = pickFirstPresentString(source.stageId);
   if (stageId) {
     const matched = getStageCandidates(stageId, pipelineStages);
     return {
@@ -383,7 +459,7 @@ const resolveStage = (
     };
   }
 
-  const stageIdCompat = toNullableString(source.stage_id);
+  const stageIdCompat = pickFirstPresentString(source.stage_id);
   if (stageIdCompat) {
     const matched = getStageCandidates(stageIdCompat, pipelineStages);
     return {
@@ -393,7 +469,7 @@ const resolveStage = (
     };
   }
 
-  const etapaId = toNullableString(source.etapa_id);
+  const etapaId = pickFirstPresentString(source.etapa_id);
   if (etapaId) {
     const matched = getStageCandidates(etapaId, pipelineStages);
     return {
@@ -403,7 +479,7 @@ const resolveStage = (
     };
   }
 
-  const etapaText = toNullableString(source.etapa);
+  const etapaText = pickFirstPresentString(source.etapa);
   if (etapaText) {
     const matched = getStageCandidates(etapaText, pipelineStages);
     if (matched) {
@@ -462,7 +538,8 @@ export const normalizeOpportunityWorkspace = (
   input: unknown,
   context: OpportunityWorkspaceContext = {},
 ): OpportunityWorkspaceViewModel => {
-  const source = isRecord(input) ? input : {};
+  const source = (isRecord(input) ? input : {}) as OpportunityWorkspaceInput;
+  const rawSource = (isRecord(input) ? input : {}) as Record<string, unknown>;
   const sourceKind = context.source ?? (toNullableString(source.source) as OpportunityWorkspaceSource | null) ?? 'unknown';
 
   const canonicalId = toStringValue(
@@ -472,15 +549,28 @@ export const normalizeOpportunityWorkspace = (
   const pipeline = resolvePipeline(source, context);
   const stage = resolveStage(source, context.stageCatalog ?? []);
 
-  const clienteNome = toStringValue(source.cliente_nome ?? source.nome).trim() || 'Sem nome';
+  const title = pickFirstPresentString(source.title, source.nome) ?? '';
+  const clienteNome = pickFirstPresentString(source.cliente_nome, source.nome) ?? 'Sem nome';
+  const customerId = pickFirstPresentString(source.customerId, source.cliente_id);
+  const productId = pickFirstPresentString(
+    source.productId,
+    source.product_id,
+    source.produto_id,
+  );
+  const ownerId = pickFirstPresentString(
+    source.ownerId,
+    source.responsavel_id,
+    source.assignedTo,
+  );
   const produto = toStringValue(source.produto).trim();
   const responsavelNome = toStringValue(source.responsavel_nome).trim();
-  const valor = toNumberValue(source.valor);
+  const amount = toNumberValue(pickFirstPresentValue(source.amount, source.valor));
   const telefone = toStringValue(source.telefone).trim();
   const email = toStringValue(source.email).trim();
   const tags = toArrayOfStrings(source.tags);
   const status = toStringValue(source.status).trim() || 'ativo';
-  const observacoes = toStringValue(source.observacoes).trim();
+  const description = pickFirstPresentString(source.description, source.observacoes) ?? '';
+  const observacoes = description;
   const origem = toStringValue(source.origem).trim();
   const createdAt = source.createdAt ?? source.created_at ?? null;
   const updatedAt = source.updatedAt ?? source.updated_at ?? null;
@@ -496,7 +586,7 @@ export const normalizeOpportunityWorkspace = (
       displayId: displayId.value,
       leadId: toNullableString(source.leadId),
       opportunityId: toNullableString(source.opportunityId),
-      customerId: toNullableString(source.customerId),
+      customerId,
       pipelineId: pipeline.id,
       stageId: stage.id,
     },
@@ -504,7 +594,7 @@ export const normalizeOpportunityWorkspace = (
       clienteNome,
       produto,
       responsavelNome,
-      valor,
+      valor: amount,
       origem,
       status,
       observacoes,
@@ -517,7 +607,7 @@ export const normalizeOpportunityWorkspace = (
     derived: {
       stageLabel,
       pipelineLabel: pipeline.label,
-      formattedValue: formatCurrency(valor),
+      formattedValue: formatCurrency(amount),
       displayName,
       initials: buildInitials(displayName),
     },
@@ -528,12 +618,14 @@ export const normalizeOpportunityWorkspace = (
       pipelineSource: pipeline.source,
       displayIdSource: displayId.source,
     },
-    raw: source,
+    raw: rawSource,
     id: canonicalId,
     displayId: displayId.value,
     leadId: toNullableString(source.leadId),
     opportunityId: toNullableString(source.opportunityId),
-    customerId: toNullableString(source.customerId),
+    customerId,
+    productId,
+    ownerId,
     pipelineId: pipeline.id,
     pipeline_id: pipeline.id,
     stageId: stage.id,
@@ -542,9 +634,12 @@ export const normalizeOpportunityWorkspace = (
     etapa: legacyStageLabel,
     cliente_nome: clienteNome,
     nome: clienteNome,
+    title,
     produto,
     responsavel_nome: responsavelNome,
-    valor,
+    description,
+    amount,
+    valor: amount,
     origem,
     status,
     observacoes,
@@ -555,7 +650,7 @@ export const normalizeOpportunityWorkspace = (
     updatedAt: updatedAt as string | number | null,
     stageLabel,
     pipelineLabel: pipeline.label,
-    formattedValue: formatCurrency(valor),
+    formattedValue: formatCurrency(amount),
     displayName,
     initials: buildInitials(displayName),
   };

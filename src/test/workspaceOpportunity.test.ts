@@ -15,6 +15,52 @@ const stageCatalog = [
 ];
 
 describe('normalizeOpportunityWorkspace', () => {
+  it('prioriza amount canônico sobre valor legado', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'amount-1',
+      amount: 1000,
+      valor: 900,
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.amount).toBe(1000);
+    expect(normalized.valor).toBe(1000);
+    expect(normalized.persisted.valor).toBe(1000);
+    expect(normalized.formattedValue).toBe(normalized.derived.formattedValue);
+  });
+
+  it('preserva amount zero sem cair no alias valor', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'amount-0',
+      amount: 0,
+      valor: 900,
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.amount).toBe(0);
+    expect(normalized.valor).toBe(0);
+    expect(normalized.persisted.valor).toBe(0);
+    expect(normalized.formattedValue).toBe(normalized.derived.formattedValue);
+  });
+
+  it('mantém fallback legado de valor quando amount não existe', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'amount-fallback',
+      valor: 900,
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.amount).toBe(900);
+    expect(normalized.valor).toBe(900);
+    expect(normalized.persisted.valor).toBe(900);
+  });
+
   it('preserva o id canônico e separa displayId do id', () => {
     const input = Object.freeze({
       id: 'a1e2f3d4-1111-2222-3333-444455556666',
@@ -62,23 +108,36 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(normalized.derived.displayName).toBe('Maria Santos');
   });
 
-  it('respeita a prioridade stageId > etapa_id > etapa > missing', () => {
+  it('respeita a prioridade stageId > stage_id > etapa_id > etapa > missing', () => {
     const stageIdPreferred = normalizeOpportunityWorkspace({
       id: '1',
-      stageId: 'negociacao',
-      etapa_id: 'novo_lead',
-      etapa: 'Pendência',
+      stageId: 'stage-oficial',
+      stage_id: 'stage-snake',
+      etapa_id: 'stage-legado',
     }, {
       stageCatalog,
     });
 
     expect(stageIdPreferred.resolution.stageSource).toBe('stageId');
-    expect(stageIdPreferred.resolution.stageId).toBe('negociacao');
-    expect(stageIdPreferred.stageLabel).toBe('Negociação');
+    expect(stageIdPreferred.resolution.stageId).toBe('stage-oficial');
+    expect(stageIdPreferred.stageId).toBe('stage-oficial');
+
+    const stageIdCompatPreferred = normalizeOpportunityWorkspace({
+      id: '2',
+      stage_id: 'stage-snake',
+      etapa_id: 'stage-legado',
+    }, {
+      stageCatalog,
+    });
+
+    expect(stageIdCompatPreferred.resolution.stageSource).toBe('stage_id');
+    expect(stageIdCompatPreferred.resolution.stageId).toBe('stage-snake');
+    expect(stageIdCompatPreferred.stageId).toBe('stage-snake');
 
     const etapaIdPreferred = normalizeOpportunityWorkspace({
-      id: '2',
+      id: '3',
       etapa_id: 'pendencia',
+      etapa: 'Negociação',
     }, {
       stageCatalog,
     });
@@ -88,7 +147,7 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(etapaIdPreferred.stageLabel).toBe('Pendência');
 
     const etapaTextPreferred = normalizeOpportunityWorkspace({
-      id: '3',
+      id: '4',
       etapa: 'Negociação',
     }, {
       stageCatalog,
@@ -162,10 +221,129 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(normalized.stageLabel).toBe('Negociação');
   });
 
+  it('prioriza customerId canônico sobre cliente_id legado', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'customer-1',
+      customerId: 'customer-oficial',
+      cliente_id: 'customer-legado',
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.customerId).toBe('customer-oficial');
+    expect(normalized.identity.customerId).toBe('customer-oficial');
+  });
+
+  it('prioriza ownerId canônico sobre responsavel_id legado', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'owner-1',
+      ownerId: 'owner-oficial',
+      responsavel_id: 'owner-legado',
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.ownerId).toBe('owner-oficial');
+  });
+
+  it('prioriza pipelineId canônico sobre pipeline_id legado', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'pipeline-1',
+      pipelineId: 'pipeline-oficial',
+      pipeline_id: 'pipeline-legado',
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.pipelineId).toBe('pipeline-oficial');
+    expect(normalized.pipeline_id).toBe('pipeline-oficial');
+    expect(normalized.resolution.pipelineSource).toBe('pipelineId');
+  });
+
+  it('prioriza description canônica sobre observacoes legadas', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'description-1',
+      description: 'Descrição oficial',
+      observacoes: 'Descrição legada',
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.description).toBe('Descrição oficial');
+    expect(normalized.observacoes).toBe('Descrição oficial');
+    expect(normalized.persisted.observacoes).toBe('Descrição oficial');
+  });
+
+  it('continua normalizando um objeto composto apenas por aliases', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      opportunityId: 'legacy-10',
+      nome: 'Maria Legada',
+      valor: '900',
+      pipeline_id: 'pipeline-legado',
+      etapa_id: 'negociacao',
+      cliente_id: 'customer-legado',
+      produto_id: 'product-legado',
+      responsavel_id: 'owner-legado',
+      observacoes: 'Observação legada',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.id).toBe('legacy-10');
+    expect(normalized.nome).toBe('Maria Legada');
+    expect(normalized.valor).toBe(900);
+    expect(normalized.pipelineId).toBe('pipeline-legado');
+    expect(normalized.stageId).toBe('negociacao');
+    expect(normalized.customerId).toBe('customer-legado');
+    expect(normalized.productId).toBe('product-legado');
+    expect(normalized.ownerId).toBe('owner-legado');
+    expect(normalized.observacoes).toBe('Observação legada');
+  });
+
+  it('permite fallback para aliases quando o canônico está undefined', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'undefined-fallback',
+      amount: undefined,
+      valor: 900,
+      customerId: undefined,
+      cliente_id: 'customer-legado',
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.valor).toBe(900);
+    expect(normalized.customerId).toBe('customer-legado');
+  });
+
+  it('trata null no canônico como ausência e mantém a semântica atual de fallback', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      id: 'null-fallback',
+      amount: null,
+      valor: 900,
+      description: null,
+      observacoes: 'Observação legada',
+      etapa_id: 'novo_lead',
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.valor).toBe(900);
+    expect(normalized.observacoes).toBe('Observação legada');
+  });
+
   it('não muta o objeto de entrada', () => {
     const input = {
       id: '5',
       cliente_nome: 'Input original',
+      amount: 0,
+      valor: 900,
+      customerId: 'customer-oficial',
+      cliente_id: 'customer-legado',
       etapa_id: 'novo_lead',
       tags: ['vip'],
     };
