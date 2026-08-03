@@ -2,10 +2,6 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -225,7 +221,8 @@ describe("Oportunidades Kanban hardening", () => {
     const filePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../pages/Oportunidades.tsx");
     const source = readFileSync(filePath, "utf8");
 
-    expect(source).toContain('normalizeOpportunityWorkspace } from "../components/pipeline"');
+    expect(source).toContain('mapOpportunityApiToWorkspaceInput');
+    expect(source).toContain('normalizeOpportunityWorkspace');
     expect(source).toContain("setSelectedLead(normalizeOpportunityWorkspace(lead, {");
     expect(source).toContain("source: 'session',");
     expect(source).toContain("stageCatalog: etapasAtivas,");

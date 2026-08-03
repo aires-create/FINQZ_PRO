@@ -4,6 +4,7 @@ import type {
   CreateOpportunityIntakePayload,
   CreateOpportunityPayload,
   MoveOpportunityStagePayload,
+  Opportunity,
   UpdateOpportunityPayload,
 } from '../../api/modules/opportunities.api';
 
@@ -53,6 +54,7 @@ export interface OpportunityWorkspaceInput {
   id?: unknown;
   opportunityId?: unknown;
   leadId?: unknown;
+  tenantId?: unknown;
   customerId?: unknown;
   cliente_id?: unknown;
   pipelineId?: unknown;
@@ -63,6 +65,8 @@ export interface OpportunityWorkspaceInput {
   stage_id?: unknown;
   etapa_id?: unknown;
   etapa?: unknown;
+  stageNome?: unknown;
+  stageName?: unknown;
   title?: unknown;
   nome?: unknown;
   cliente_nome?: unknown;
@@ -463,6 +467,34 @@ const resolveFullNameParts = (
   };
 };
 
+const joinDisplayName = (...parts: unknown[]): string => {
+  return parts
+    .map((part) => toStringValue(part).trim())
+    .filter(Boolean)
+    .join(' ');
+};
+
+const resolveProjectedCustomerName = (opportunity: Opportunity): string | undefined => {
+  return (
+    toOptionalString(opportunity.customer?.name) ??
+    toOptionalString(opportunity.customer?.fullName) ??
+    toOptionalString(
+      joinDisplayName(opportunity.customer?.firstName, opportunity.customer?.lastName),
+    ) ??
+    undefined
+  );
+};
+
+const resolveProjectedOwnerName = (opportunity: Opportunity): string | undefined => {
+  return (
+    toOptionalString(opportunity.owner?.name) ??
+    toOptionalString(
+      joinDisplayName(opportunity.owner?.firstName, opportunity.owner?.lastName),
+    ) ??
+    undefined
+  );
+};
+
 const toArrayOfStrings = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
@@ -622,12 +654,14 @@ const resolveStage = (
   source: OpportunityWorkspaceInput,
   pipelineStages: readonly OpportunityWorkspaceStageDescriptor[] = [],
 ): { id: string | null; label: string; source: OpportunityWorkspaceStageSource } => {
+  const projectedStageLabel = pickFirstPresentString(source.stageName, source.stageNome);
+
   const stageId = pickFirstPresentString(source.stageId);
   if (stageId) {
     const matched = getStageCandidates(stageId, pipelineStages);
     return {
       id: matched?.id ?? stageId,
-      label: matched?.label ?? 'Etapa não identificada',
+      label: matched?.label ?? projectedStageLabel ?? 'Etapa não identificada',
       source: 'stageId',
     };
   }
@@ -637,7 +671,7 @@ const resolveStage = (
     const matched = getStageCandidates(stageIdCompat, pipelineStages);
     return {
       id: matched?.id ?? stageIdCompat,
-      label: matched?.label ?? 'Etapa não identificada',
+      label: matched?.label ?? projectedStageLabel ?? 'Etapa não identificada',
       source: 'stage_id',
     };
   }
@@ -647,7 +681,7 @@ const resolveStage = (
     const matched = getStageCandidates(etapaId, pipelineStages);
     return {
       id: matched?.id ?? etapaId,
-      label: matched?.label ?? 'Etapa não identificada',
+      label: matched?.label ?? projectedStageLabel ?? 'Etapa não identificada',
       source: 'etapa_id',
     };
   }
@@ -705,6 +739,38 @@ const buildInitials = (name: string): string => {
   }
 
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
+export const mapOpportunityApiToWorkspaceInput = (
+  opportunity: Opportunity,
+): OpportunityWorkspaceInput => {
+  const projectedCustomerName = resolveProjectedCustomerName(opportunity);
+  const projectedOwnerName = resolveProjectedOwnerName(opportunity);
+
+  return omitUndefinedFields({
+    source: 'backend',
+    id: opportunity.id,
+    tenantId: opportunity.tenantId,
+    leadId: opportunity.leadId ?? null,
+    customerId: opportunity.customerId ?? opportunity.customer?.id ?? null,
+    pipelineId: opportunity.pipelineId,
+    pipelineName: opportunity.pipeline?.name,
+    stageId: opportunity.stageId,
+    stageName: opportunity.stage?.name,
+    title: opportunity.title,
+    amount: opportunity.amount,
+    productId: opportunity.productId ?? opportunity.product?.id ?? null,
+    ownerId: opportunity.ownerId ?? opportunity.owner?.id ?? null,
+    status: opportunity.status,
+    description: opportunity.description ?? null,
+    cliente_nome: projectedCustomerName,
+    produto: opportunity.product?.name,
+    responsavel_nome: projectedOwnerName,
+    telefone: opportunity.customer?.phone ?? undefined,
+    email: opportunity.customer?.email ?? undefined,
+    createdAt: opportunity.createdAt,
+    updatedAt: opportunity.updatedAt,
+  });
 };
 
 export const normalizeOpportunityWorkspace = (

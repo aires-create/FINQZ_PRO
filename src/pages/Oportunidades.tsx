@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import useAppStore from "../store";
-import { opportunitiesApi } from "../api/modules/opportunities.api";
+import { opportunitiesApi, type Opportunity } from "../api/modules/opportunities.api";
 import { pipelinesApi } from "../api/modules/pipelines.api";
 import { masterCatalogApi, type MasterCatalogTreeDto } from "../api/modules/master-catalog.api";
 import { clientesApi } from "../api/modules/clientes.api";
@@ -16,7 +16,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, normalizeOpportunityWorkspace } from "../components/pipeline";
+import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, mapOpportunityApiToWorkspaceInput, normalizeOpportunityWorkspace } from "../components/pipeline";
 import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
@@ -783,60 +783,60 @@ const getVisualOpportunityId = (opportunity: OpportunityUiShape): string => {
   return shortUuid || "SEM-ID-VISUAL";
 };
 
-export const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiShape => {
+export const mapApiOpportunityToKanbanShape = (opportunity: Opportunity): OpportunityUiShape => {
+  const legacyOpportunity = opportunity as Opportunity & Record<string, unknown>;
+  const workspaceInput = mapOpportunityApiToWorkspaceInput(opportunity);
+  const pipelineName = String(opportunity?.pipeline?.name ?? "");
+  const stageName = String(opportunity?.stage?.name ?? "");
   const backendPipelineId = String(opportunity?.pipelineId ?? "");
   const backendStageId = String(opportunity?.stageId ?? "");
-  const stageName = String(opportunity?.stage?.name ?? "");
-  const pipelineName = String(opportunity?.pipeline?.name ?? "");
-  const rawTitle = opportunity?.title ?? "";
-  const rawAmount = opportunity?.amount ?? 0;
-  const rawDescription = opportunity?.description ?? "";
-  const rawCustomerId = opportunity?.customerId ?? null;
-  const rawCustomerEmail =
-    opportunity?.customer?.email ??
-    opportunity?.email ??
-    "";
-  const rawCustomerPhone =
-    opportunity?.customer?.phone ??
-    opportunity?.telefone ??
-    opportunity?.phone ??
-    opportunity?.celular ??
-    "";
-  const rawOwnerId = opportunity?.ownerId ?? null;
-  const rawProductId = opportunity?.productId ?? opportunity?.product?.id ?? opportunity?.product_id ?? opportunity?.produto_id ?? null;
-  const rawSubproductId = opportunity?.subproductId ?? opportunity?.subproduct?.id ?? opportunity?.subproduto_id ?? null;
-  const rawModalityId = opportunity?.modalityId ?? opportunity?.modality?.id ?? opportunity?.modality_id ?? null;
-  const rawProdutoText = opportunity?.produto ?? opportunity?.product?.name ?? "";
-  const rawSubprodutoText = opportunity?.subproduto ?? opportunity?.subproduct?.name ?? "";
-  const rawModalityText = opportunity?.modality?.name ?? opportunity?.modality?.code ?? opportunity?.modality ?? "";
-  const rawClienteNome =
-    opportunity?.customer?.name ??
-    opportunity?.customer?.fullName ??
-    opportunity?.customerName ??
-    "";
-  const rawResponsavelNome = opportunity?.owner?.name ?? opportunity?.ownerName ?? "";
-  const legacyProductAliases = { product_id: rawProductId };
   const semanticStageId = normalizeKey(stageName) || "novo_lead";
-  const visualStageId = backendStageId || semanticStageId;
   const semanticPipelineId = mapBackendPipelineNameToSemanticId(
     pipelineName,
     backendPipelineId,
   );
+  const visualStageId = backendStageId || semanticStageId;
   const visualPipelineId = backendPipelineId || semanticPipelineId;
-  const mapped: OpportunityUiShape = {
-    id: String(opportunity?.id ?? ""),
+  const workspaceViewModel = normalizeOpportunityWorkspace(workspaceInput, {
+    source: "backend",
+    pipelineLabel: pipelineName || null,
+  });
+
+  return {
+    ...workspaceViewModel,
     displayId: getVisualOpportunityId(opportunity),
-    title: String(rawTitle),
-    amount: Number(rawAmount ?? 0),
-    nome: String(rawTitle ?? "Sem nome"),
-    valor: Number(rawAmount ?? 0),
-    status: String(opportunity?.status ?? "ativo"),
-    customerId: rawCustomerId,
+    nome: workspaceViewModel.cliente_nome || workspaceViewModel.title || "Sem nome",
+    title: workspaceViewModel.title,
+    amount: workspaceViewModel.amount,
+    valor: workspaceViewModel.amount,
     pipeline_id: visualPipelineId,
     pipelineId: backendPipelineId,
     etapa_id: visualStageId,
     etapa: visualStageId,
     stageId: backendStageId,
+    customerId: workspaceViewModel.customerId,
+    cliente_id: workspaceViewModel.customerId,
+    email: String(workspaceViewModel.email ?? ""),
+    telefone: String(workspaceViewModel.telefone ?? ""),
+    ownerId: workspaceViewModel.ownerId,
+    responsavel_id: workspaceViewModel.ownerId,
+    responsavel_nome: workspaceViewModel.responsavel_nome,
+    produto: workspaceViewModel.produto,
+    produto_id: workspaceViewModel.productId,
+    productId: workspaceViewModel.productId,
+    product_id: workspaceViewModel.productId,
+    productCode: String(opportunity?.product?.code ?? legacyOpportunity.productCode ?? ""),
+    subproduto: String(opportunity?.subproduct?.name ?? legacyOpportunity.subproduto ?? ""),
+    subproduto_id: opportunity?.subproductId ?? opportunity?.subproduct?.id ?? legacyOpportunity.subproduto_id ?? null,
+    subproductId: opportunity?.subproductId ?? opportunity?.subproduct?.id ?? legacyOpportunity.subproduto_id ?? null,
+    subproductCode: String(opportunity?.subproduct?.code ?? legacyOpportunity.subproductCode ?? ""),
+    modality: String(opportunity?.modality?.name ?? opportunity?.modality?.code ?? legacyOpportunity.modality ?? ""),
+    modalityId: opportunity?.modalityId ?? opportunity?.modality?.id ?? legacyOpportunity.modality_id ?? null,
+    modality_id: opportunity?.modalityId ?? opportunity?.modality?.id ?? legacyOpportunity.modality_id ?? null,
+    observacoes: workspaceViewModel.description,
+    description: workspaceViewModel.description,
+    createdAt: workspaceViewModel.createdAt ?? opportunity?.createdAt ?? null,
+    updatedAt: workspaceViewModel.updatedAt ?? opportunity?.updatedAt ?? opportunity?.createdAt ?? null,
     backendPipelineId,
     backendPipelineName: pipelineName,
     backendStageId,
@@ -844,33 +844,8 @@ export const mapApiOpportunityToKanbanShape = (opportunity: any): OpportunityUiS
     backendStageOrder: opportunity?.stage?.order,
     backendStageIsWon: Boolean(opportunity?.stage?.isWon),
     backendStageIsLost: Boolean(opportunity?.stage?.isLost),
-    cliente_id: rawCustomerId,
-    cliente_nome: String(rawClienteNome),
-    email: String(rawCustomerEmail ?? ""),
-    telefone: String(rawCustomerPhone ?? ""),
-    ownerId: rawOwnerId,
-    responsavel_id: rawOwnerId,
-    responsavel_nome: String(rawResponsavelNome),
-    produto: String(rawProdutoText),
-    produto_id: rawProductId,
-    productId: rawProductId,
-    product_id: rawProductId,
-    productCode: String(opportunity?.productCode ?? ""),
-    subproduto: String(rawSubprodutoText),
-    subproduto_id: rawSubproductId,
-    subproductId: rawSubproductId,
-    subproductCode: String(opportunity?.subproductCode ?? ""),
-    modality: String(rawModalityText),
-    modalityId: rawModalityId,
-    modality_id: rawModalityId,
-    observacoes: String(rawDescription),
-    description: String(rawDescription),
-    createdAt: opportunity?.createdAt ?? new Date().toISOString(),
-    updatedAt: opportunity?.updatedAt ?? opportunity?.createdAt ?? new Date().toISOString(),
     __officialApiSource: true,
   };
-
-  return mapped;
 };
 
 const UUID_V4_LIKE_REGEX =
@@ -4312,21 +4287,20 @@ if (
                   // Normalizar dados do card com optional chaining e fallbacks
                   const visualDisplayId = getVisualOpportunityId(card);
                   const cardData = {
+                    ...card,
                     id: card?.id ?? "",
                     displayId: visualDisplayId,
-                    title: card?.title || card?.nome || "",
-                    amount: Number(card?.amount ?? card?.valor ?? 0),
-                    description: card?.description || card?.observacoes || "",
-                    nome: card?.cliente_nome || card?.nome || card?.title || "Sem nome",
-                    produto: card?.produto || card?.product?.name || "",
+                    title: card?.title || "",
+                    amount: Number(card?.amount ?? 0),
+                    description: card?.description || "",
+                    nome: card?.nome || card?.title || "Sem nome",
+                    produto: card?.produto || "",
                     valor: Number(card?.valor ?? card?.amount ?? 0),
                     telefone: card?.telefone ?? '',
                     email: card?.email ?? '',
                     tags: Array.isArray(card?.tags) ? card.tags : [],
-                    etapa: card?.etapa_id ?? card?.etapa ?? 'novo_lead',
+                    etapa: card?.etapa ?? card?.etapa_id ?? 'novo_lead',
                     status: card?.status ?? 'ativo',
-                    customerId: card?.customerId ?? card?.cliente_id ?? null,
-                    ownerId: card?.ownerId ?? card?.responsavel_id ?? null,
                     pipelineId: card?.pipelineId ?? "",
                     stageId: card?.stageId ?? "",
                     backendPipelineId: card?.backendPipelineId ?? "",
@@ -4336,19 +4310,12 @@ if (
                     backendStageOrder: card?.backendStageOrder,
                     backendStageIsWon: card?.backendStageIsWon,
                     backendStageIsLost: card?.backendStageIsLost,
-                    cliente_id: card?.cliente_id ?? card?.customerId ?? null,
-                    responsavel_id: card?.responsavel_id ?? card?.ownerId ?? null,
-                    responsavel_nome: card?.responsavel_nome || card?.owner?.name || card?.ownerName || "",
-                    produto_id: card?.produto_id ?? card?.productId ?? card?.product_id ?? null,
-                    productId: card?.productId ?? card?.product_id ?? card?.produto_id ?? null,
-                    product_id: card?.product_id ?? card?.productId ?? card?.produto_id ?? null,
+                    responsavel_nome: card?.responsavel_nome || "",
                     productCode: card?.productCode ?? "",
                     subproduto: card?.subproduto ?? "",
-                    subproduto_id: card?.subproduto_id ?? card?.subproductId ?? null,
-                    subproductId: card?.subproductId ?? card?.subproduto_id ?? null,
                     subproductCode: card?.subproductCode ?? "",
                     modality: card?.modality ?? "",
-                    observacoes: card?.observacoes || card?.description || "",
+                    observacoes: card?.observacoes || "",
                     createdAt: card?.createdAt ?? null,
                     updatedAt: card?.updatedAt ?? null,
                     __officialApiSource: card?.__officialApiSource === true

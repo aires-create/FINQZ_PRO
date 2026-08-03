@@ -6,18 +6,207 @@ import {
   buildMoveStagePayload,
   buildUpdateOpportunityPayload,
   buildOpportunityWorkspaceUpdatePayload,
+  mapOpportunityApiToWorkspaceInput,
   mergeOpportunityWorkspace,
   persistOpportunityWorkspaceMutation,
   normalizeOpportunityWorkspace,
   resolveOpportunityWorkspaceApiMutationId,
   resolveOpportunityWorkspaceMutationId,
 } from '../components/pipeline/workspaceOpportunity';
+import type { Opportunity } from '../api/modules/opportunities.api';
 
 const stageCatalog = [
   { id: 'novo_lead', label: 'Novo Lead' },
   { id: 'negociacao', label: 'Negociação' },
   { id: 'pendencia', label: 'Pendência' },
 ];
+
+const buildApiOpportunity = (
+  overrides: Partial<Opportunity> = {},
+): Opportunity => ({
+  id: 'opp-1',
+  title: 'Oportunidade API',
+  description: 'Descrição API',
+  amount: 1250,
+  currency: 'BRL',
+  probability: 80,
+  status: 'open',
+  expectedCloseDate: null,
+  actualCloseDate: null,
+  tenantId: 'tenant-1',
+  partnerId: null,
+  leadId: 'lead-1',
+  customerId: 'customer-1',
+  productId: 'product-1',
+  subproductId: 'subproduct-1',
+  modalityId: 'modality-1',
+  pipelineId: 'pipeline-1',
+  stageId: 'negociacao',
+  ownerId: 'owner-1',
+  deletedAt: null,
+  createdAt: '2026-08-01T10:00:00.000Z',
+  updatedAt: '2026-08-01T11:00:00.000Z',
+  pipeline: {
+    id: 'pipeline-1',
+    name: 'Pipeline Oficial',
+  },
+  stage: {
+    id: 'negociacao',
+    name: 'Negociação',
+    order: 2,
+    isWon: false,
+    isLost: false,
+  },
+  customer: {
+    id: 'customer-1',
+    firstName: 'Maria',
+    lastName: 'Silva',
+    email: 'maria@example.com',
+    phone: '11999990000',
+  },
+  owner: {
+    id: 'owner-1',
+    firstName: 'Aires',
+    lastName: 'Fernandes',
+  },
+  product: {
+    id: 'product-1',
+    code: 'PROD-1',
+    name: 'Produto Oficial',
+  },
+  subproduct: {
+    id: 'subproduct-1',
+    code: 'SUB-1',
+    name: 'Subproduto Oficial',
+  },
+  modality: {
+    id: 'modality-1',
+    code: 'MOD-1',
+    name: 'Modalidade Oficial',
+  },
+  ...overrides,
+});
+
+describe('mapOpportunityApiToWorkspaceInput', () => {
+  it('mapeia o DTO oficial para o contrato canônico de entrada sem mutar o DTO', () => {
+    const dto = buildApiOpportunity();
+    const snapshot = JSON.parse(JSON.stringify(dto));
+
+    const input = mapOpportunityApiToWorkspaceInput(dto);
+
+    expect(input).toEqual({
+      source: 'backend',
+      id: 'opp-1',
+      tenantId: 'tenant-1',
+      leadId: 'lead-1',
+      customerId: 'customer-1',
+      pipelineId: 'pipeline-1',
+      pipelineName: 'Pipeline Oficial',
+      stageId: 'negociacao',
+      stageName: 'Negociação',
+      title: 'Oportunidade API',
+      amount: 1250,
+      productId: 'product-1',
+      ownerId: 'owner-1',
+      status: 'open',
+      description: 'Descrição API',
+      cliente_nome: 'Maria Silva',
+      produto: 'Produto Oficial',
+      responsavel_nome: 'Aires Fernandes',
+      telefone: '11999990000',
+      email: 'maria@example.com',
+      createdAt: '2026-08-01T10:00:00.000Z',
+      updatedAt: '2026-08-01T11:00:00.000Z',
+    });
+    expect(dto).toEqual(snapshot);
+  });
+
+  it('preserva amount zero e não gera nomes inválidos quando relações ausentes', () => {
+    const input = mapOpportunityApiToWorkspaceInput(buildApiOpportunity({
+      amount: 0,
+      customerId: null,
+      productId: null,
+      ownerId: null,
+      customer: null,
+      product: null,
+      owner: null,
+      pipeline: null,
+      stage: null,
+      description: null,
+    }));
+
+    expect(input.amount).toBe(0);
+    expect(input.customerId).toBeNull();
+    expect(input.productId).toBeNull();
+    expect(input.ownerId).toBeNull();
+    expect(input.cliente_nome).toBeUndefined();
+    expect(input.responsavel_nome).toBeUndefined();
+    expect(input.pipelineName).toBeUndefined();
+    expect(input.stageName).toBeUndefined();
+    expect(String(input)).not.toContain('undefined undefined');
+  });
+
+  it('resolve o nome do cliente com precedência determinística sem sobrescrever o título', () => {
+    const firstLast = mapOpportunityApiToWorkspaceInput(buildApiOpportunity({
+      title: 'Título Oficial',
+      customer: {
+        id: 'customer-1',
+        firstName: 'Joana',
+        lastName: 'Souza',
+      },
+    }));
+    expect(firstLast.cliente_nome).toBe('Joana Souza');
+    expect(firstLast.title).toBe('Título Oficial');
+
+    const firstOnly = mapOpportunityApiToWorkspaceInput(buildApiOpportunity({
+      customer: {
+        id: 'customer-1',
+        firstName: 'Joana',
+        lastName: '',
+      },
+    }));
+    expect(firstOnly.cliente_nome).toBe('Joana');
+
+    const named = mapOpportunityApiToWorkspaceInput(buildApiOpportunity({
+      customer: {
+        id: 'customer-1',
+        name: 'Cliente Pronto',
+        firstName: 'Ignorado',
+        lastName: 'Também',
+      },
+    }));
+    expect(named.cliente_nome).toBe('Cliente Pronto');
+  });
+
+  it('encadeia DTO oficial -> input canônico -> ViewModel único preservando labels e aliases', () => {
+    const dto = buildApiOpportunity();
+
+    const input = mapOpportunityApiToWorkspaceInput(dto);
+    const normalized = normalizeOpportunityWorkspace(input, {
+      source: 'backend',
+      stageCatalog,
+      pipelineLabel: dto.pipeline?.name ?? null,
+    });
+
+    expect(normalized.id).toBe(dto.id);
+    expect(normalized.pipelineId).toBe(dto.pipelineId);
+    expect(normalized.stageId).toBe(dto.stageId);
+    expect(normalized.title).toBe(dto.title);
+    expect(normalized.amount).toBe(dto.amount);
+    expect(normalized.customerId).toBe(dto.customerId);
+    expect(normalized.productId).toBe(dto.productId);
+    expect(normalized.ownerId).toBe(dto.ownerId);
+    expect(normalized.status).toBe(dto.status);
+    expect(normalized.description).toBe(dto.description);
+    expect(normalized.stageLabel).toBe('Negociação');
+    expect(normalized.pipelineLabel).toBe('Pipeline Oficial');
+    expect(normalized.valor).toBe(dto.amount);
+    expect(normalized.cliente_nome).toBe('Maria Silva');
+    expect(normalized.responsavel_nome).toBe('Aires Fernandes');
+    expect(normalized.pipeline_id).toBe(dto.pipelineId);
+    expect(normalized.stage_id).toBe(dto.stageId);
+  });
+});
 
 describe('normalizeOpportunityWorkspace', () => {
   it('formaliza uma saída canônica completa sem perder derivados e compatibilidade', () => {

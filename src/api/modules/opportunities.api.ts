@@ -26,9 +26,32 @@ export interface Opportunity {
   createdAt: string;
   updatedAt: string;
   customer?: OpportunityCustomer | null;
+  pipeline?: OpportunityPipeline | null;
+  stage?: OpportunityStage | null;
+  owner?: OpportunityOwner | null;
   product?: OpportunityCatalogEntry | null;
   subproduct?: OpportunityCatalogEntry | null;
   modality?: OpportunityCatalogEntry | null;
+}
+
+export interface OpportunityPipeline {
+  id: string;
+  name: string;
+}
+
+export interface OpportunityStage {
+  id: string;
+  name: string;
+  order?: number;
+  isWon?: boolean;
+  isLost?: boolean;
+}
+
+export interface OpportunityOwner {
+  id: string;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 }
 
 export interface OpportunityCatalogEntry {
@@ -39,9 +62,11 @@ export interface OpportunityCatalogEntry {
 
 export interface OpportunityCustomer {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  name?: string | null;
+  fullName?: string | null;
+  email?: string | null;
   phone?: string | null;
 }
 
