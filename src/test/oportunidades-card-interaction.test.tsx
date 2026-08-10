@@ -3,12 +3,13 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import OportunidadesPage from '../pages/Oportunidades';
+import OportunidadesPage, { getKanbanRuntimeHealthReport, resetKanbanRuntimeHealthReport } from '../pages/Oportunidades';
 import useAppStore from '../store';
 import { opportunitiesApi } from '../api/modules/opportunities.api';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const moveStageMock = vi.hoisted(() => vi.fn());
+const updateOpportunityMock = vi.hoisted(() => vi.fn());
 const opportunityGetAllMock = vi.hoisted(() => vi.fn());
 const pipelinesGetAllMock = vi.hoisted(() => vi.fn());
 const masterCatalogGetTreeMock = vi.hoisted(() => vi.fn());
@@ -52,7 +53,7 @@ vi.mock('../api/modules/opportunities.api', () => ({
     getById: vi.fn(),
     create: vi.fn(),
     createIntake: vi.fn(),
-    update: vi.fn(),
+    update: updateOpportunityMock,
     moveStage: moveStageMock,
     delete: vi.fn(),
   },
@@ -180,8 +181,67 @@ const buildLegacyOpportunity = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+const getModalRoot = () =>
+  document.body.querySelector('div.fixed.inset-0.z-50.flex.flex-col.bg-gray-50.overflow-hidden') as HTMLElement | null;
+
+const getFieldControl = (root: HTMLElement, label: string, selector: 'input' | 'select' = 'input') => {
+  const labelNode = within(root).getByText(label);
+  const field = labelNode.parentElement?.querySelector(selector) as HTMLInputElement | HTMLSelectElement | null;
+  expect(field).not.toBeNull();
+  return field as HTMLInputElement | HTMLSelectElement;
+};
+
+const openOfficialWorkspaceOnSimulatorTab = async () => {
+  const card = screen.getByText('João Silva').closest('[role="button"]');
+  expect(card).not.toBeNull();
+
+  fireEvent.click(card as HTMLElement);
+
+  await waitFor(() => expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument(), { timeout: 10000 });
+  const modalRoot = getModalRoot();
+  expect(modalRoot).not.toBeNull();
+  fireEvent.click(within(modalRoot as HTMLElement).getByRole('button', { name: 'Simulador' }));
+
+  return modalRoot as HTMLElement;
+};
+
+const prepareAcceptedSimulation = async (modalRoot: HTMLElement) => {
+  fireEvent.change(getFieldControl(modalRoot, 'Tipo de Simulação', 'select'), {
+    target: { value: 'fgts' },
+  });
+  fireEvent.change(getFieldControl(modalRoot, 'Saldo FGTS (R$)'), {
+    target: { value: '10000' },
+  });
+  fireEvent.change(getFieldControl(modalRoot, 'Anos Antecipados'), {
+    target: { value: '2' },
+  });
+  fireEvent.change(getFieldControl(modalRoot, 'Taxa ao Mês (%)'), {
+    target: { value: '0.9' },
+  });
+
+  fireEvent.click(within(modalRoot).getByRole('button', { name: /Calcular simulação/i }));
+
+  await waitFor(() => expect(within(modalRoot).getByRole('button', { name: /Aceitar simulação/i })).toBeInTheDocument(), { timeout: 10000 });
+  fireEvent.click(within(modalRoot).getByRole('button', { name: /Aceitar simulação/i }));
+
+  await waitFor(() => expect(within(modalRoot).getAllByRole('combobox')).toHaveLength(2), { timeout: 10000 });
+  fireEvent.change(within(modalRoot).getAllByRole('combobox')[1], {
+    target: { value: stageNegociacaoId },
+  });
+};
+
+const getApiGetAllObservationSummary = () =>
+  getKanbanRuntimeHealthReport().recentObservations
+    .filter((observation) => observation.type === 'api:getAll:success')
+    .map((observation) => ({
+      type: observation.type,
+      reloadKey: Number((observation.details as Record<string, unknown> | undefined)?.reloadKey ?? -1),
+      total: Number((observation.details as Record<string, unknown> | undefined)?.total ?? -1),
+    }));
+
 const setupWorkspace = async (opportunities: Array<Record<string, unknown>>) => {
   window.localStorage.clear();
+  resetKanbanRuntimeHealthReport();
   navigateMock.mockReset();
   opportunityGetAllMock.mockReset();
   pipelinesGetAllMock.mockReset();
@@ -192,6 +252,7 @@ const setupWorkspace = async (opportunities: Array<Record<string, unknown>>) => 
   clientesGetByIdMock.mockReset();
   runShadowExecutionMock.mockReset();
   moveStageMock.mockReset();
+  updateOpportunityMock.mockReset();
 
   useAppStore.setState({
     user: {
@@ -222,6 +283,11 @@ const setupWorkspace = async (opportunities: Array<Record<string, unknown>>) => 
   opportunityGetAllMock.mockResolvedValue({
     success: true,
     data: opportunities,
+  });
+  updateOpportunityMock.mockResolvedValue({
+    success: true,
+    message: 'ok',
+    data: buildOpportunity(),
   });
   pipelinesGetAllMock.mockResolvedValue([officialPipeline]);
   partnersGetAllMock.mockResolvedValue({ success: true, data: [] });
@@ -410,6 +476,132 @@ describe('Oportunidades - regressão funcional do card', () => {
     await waitFor(() => expect(moveStageMock).toHaveBeenCalledTimes(1), { timeout: 15000 });
     await waitFor(() => expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument(), { timeout: 15000 });
     expect(screen.getAllByText('João Silva').length).toBeGreaterThan(0);
+  }, 20000);
+
+  it('mantém a oportunidade oficial reconhecida no workspace e avança até chamar moveStage', async () => {
+    const alertMock = vi.fn();
+    vi.stubGlobal('alert', alertMock);
+    await setupWorkspace([buildOpportunity()]);
+    moveStageMock.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: {
+        id: '44444444-4444-4444-8444-444444444444',
+        title: 'João Silva',
+        amount: 5000,
+        status: 'open',
+        pipelineId,
+        stageId: stageNegociacaoId,
+        leadId: 'lead-1',
+        customerId: 'customer-1',
+        tenantId: 'tenant-1',
+        createdAt: '2026-07-30T10:00:00.000Z',
+        updatedAt: '2026-07-30T12:00:00.000Z',
+        pipeline: { id: pipelineId, name: 'Consignado' },
+        stage: { id: stageNegociacaoId, name: 'Negociação', order: 2 },
+        customer: { id: 'customer-1', name: 'João Silva', email: 'joao@example.com', phone: '11999990000' },
+      },
+    });
+
+    const modalRoot = await openOfficialWorkspaceOnSimulatorTab();
+    await prepareAcceptedSimulation(modalRoot);
+
+    fireEvent.click(within(modalRoot).getByRole('button', { name: /Confirmar e mover para Negociação/i }));
+
+    await waitFor(() => expect(moveStageMock).toHaveBeenCalledTimes(1), { timeout: 10000 });
+    expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument();
+    expect(
+      alertMock.mock.calls.some(([message]) =>
+        String(message).includes('Esta oportunidade não possui identificador interno oficial'),
+      ),
+    ).toBe(false);
+  }, 20000);
+
+  it('preserva selectedLead, lista e feedback quando moveStage falha remotamente no workspace', async () => {
+    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await setupWorkspace([buildOpportunity()]);
+    moveStageMock.mockRejectedValueOnce(new Error('Falha remota no moveStage'));
+
+    const modalRoot = await openOfficialWorkspaceOnSimulatorTab();
+    await prepareAcceptedSimulation(modalRoot);
+
+    const sourceColumn = screen.getByTestId(`kanban-column-${stageNovoLeadId}`);
+    const targetColumn = screen.getByTestId(`kanban-column-${stageNegociacaoId}`);
+    expect(within(sourceColumn).getByText('João Silva')).toBeInTheDocument();
+    expect(within(targetColumn).queryByText('João Silva')).not.toBeInTheDocument();
+    await waitFor(() => expect(opportunityGetAllMock.mock.calls.length).toBe(2), { timeout: 10000 });
+    expect(getApiGetAllObservationSummary().map((observation) => observation.reloadKey)).toContain(1);
+    const getAllCallsBeforeMoveFailure = opportunityGetAllMock.mock.calls.length;
+
+    fireEvent.click(within(modalRoot).getByRole('button', { name: /Confirmar e mover para Negociação/i }));
+
+    await waitFor(() => expect(moveStageMock).toHaveBeenCalledTimes(1), { timeout: 10000 });
+    expect(moveStageMock).toHaveBeenCalledTimes(1);
+    expect(opportunityGetAllMock.mock.calls.length).toBe(getAllCallsBeforeMoveFailure);
+    expect(consoleErrorMock).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument();
+    expect(within(modalRoot).getByText('Etapa').parentElement).toHaveTextContent('Novo Lead');
+    expect(within(modalRoot).getByText('Aceita pelo cliente')).toBeInTheDocument();
+    expect(within(sourceColumn).getByText('João Silva')).toBeInTheDocument();
+    expect(within(targetColumn).queryByText('João Silva')).not.toBeInTheDocument();
+  }, 20000);
+
+  it('preserva lista, selectedLead e runtime de drag quando moveStage falha remotamente', async () => {
+    const consoleErrorMock = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await setupWorkspace([buildOpportunity()]);
+    moveStageMock.mockRejectedValueOnce(new Error('Falha remota no moveStage'));
+
+    const card = Array.from(screen.getAllByRole('button')).find((button) => {
+      const text = button.textContent ?? '';
+      return text.includes('João Silva') && button.getAttribute('draggable') === 'true';
+    }) as HTMLElement | undefined;
+    expect(card).toBeDefined();
+    fireEvent.click(card as HTMLElement);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument(), { timeout: 10000 });
+    const modalRoot = getModalRoot();
+    expect(modalRoot).not.toBeNull();
+
+    const dataTransfer = {
+      setData: vi.fn((key: string, value: string) => {
+        dataTransfer[key] = value;
+      }),
+      getData: vi.fn((key: string) => dataTransfer[key] || ''),
+      effectAllowed: '',
+      dropEffect: '',
+    } as unknown as DataTransfer;
+    dataTransfer.setData('text/plain', '44444444-4444-4444-8444-444444444444');
+
+    const sourceColumn = screen.getByTestId(`kanban-column-${stageNovoLeadId}`);
+    const targetColumn = screen.getByTestId(`kanban-column-${stageNegociacaoId}`);
+    const getAllCallsBeforeDragFailure = opportunityGetAllMock.mock.calls.length;
+
+    fireEvent.dragStart(card as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(targetColumn, { dataTransfer });
+    fireEvent.drop(targetColumn, { dataTransfer });
+
+    await waitFor(() => expect(moveStageMock).toHaveBeenCalledTimes(1), { timeout: 10000 });
+
+    const report = getKanbanRuntimeHealthReport();
+    const dragEvent = report.recentDragEvents.find((event) => event.opportunityId === '44444444-4444-4444-8444-444444444444');
+
+    expect(moveStageMock).toHaveBeenCalledTimes(1);
+    expect(opportunityGetAllMock.mock.calls.length).toBe(getAllCallsBeforeDragFailure);
+    expect(consoleErrorMock).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument();
+    expect(within(modalRoot as HTMLElement).getByText('Novo Lead')).toBeInTheDocument();
+    expect(within(sourceColumn).getByText('João Silva')).toBeInTheDocument();
+    expect(within(targetColumn).queryByText('João Silva')).not.toBeInTheDocument();
+    expect(dragEvent?.patchStatus).toBe('error');
+    expect(dragEvent?.postGetStatus).toBe('error');
+    expect(
+      report.recentObservations.some((observation) =>
+        observation.type === 'drag:patch:success' &&
+        String((observation.details as Record<string, unknown> | undefined)?.opportunityId ?? '') === '44444444-4444-4444-8444-444444444444',
+      ),
+    ).toBe(false);
   }, 20000);
 
   it('abre um card com payload parcial e continua exibindo o label canônico da etapa', async () => {

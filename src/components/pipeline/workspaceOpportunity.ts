@@ -49,6 +49,7 @@ export interface OpportunityWorkspaceContext {
 }
 
 export interface OpportunityWorkspaceInput {
+  __officialApiSource?: unknown;
   source?: unknown;
   displayId?: unknown;
   id?: unknown;
@@ -179,6 +180,7 @@ export interface OpportunityWorkspaceViewModel
   extends OpportunityWorkspaceCanonicalFields,
     OpportunityWorkspaceDerivedViewFields,
     OpportunityWorkspaceCompatibilityFields {
+  __officialApiSource: boolean;
   source: OpportunityWorkspaceSource;
   identity: OpportunityWorkspaceIdentity;
   persisted: OpportunityWorkspacePersistedFields;
@@ -755,6 +757,7 @@ export const mapOpportunityApiToWorkspaceInput = (
   );
 
   return omitUndefinedFields({
+    __officialApiSource: true,
     source: 'backend',
     id: opportunity.id,
     tenantId: opportunity.tenantId,
@@ -826,6 +829,7 @@ export const normalizeOpportunityWorkspace = (
   const legacyStageLabel = stageLabel;
 
   return {
+    __officialApiSource: source.__officialApiSource === true,
     source: sourceKind,
     identity: {
       id: canonicalId,

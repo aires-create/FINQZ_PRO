@@ -96,6 +96,7 @@ describe('mapOpportunityApiToWorkspaceInput', () => {
     const input = mapOpportunityApiToWorkspaceInput(dto);
 
     expect(input).toEqual({
+      __officialApiSource: true,
       source: 'backend',
       id: 'opp-1',
       tenantId: 'tenant-1',
@@ -188,6 +189,12 @@ describe('mapOpportunityApiToWorkspaceInput', () => {
     expect(input.produto).toBe('Produto legado');
   });
 
+  it('marca origem oficial apenas para o DTO vindo da API oficial', () => {
+    const input = mapOpportunityApiToWorkspaceInput(buildApiOpportunity());
+
+    expect(input.__officialApiSource).toBe(true);
+  });
+
   it('encadeia DTO oficial -> input canônico -> ViewModel único preservando labels e aliases', () => {
     const dto = buildApiOpportunity();
 
@@ -208,6 +215,7 @@ describe('mapOpportunityApiToWorkspaceInput', () => {
     expect(normalized.ownerId).toBe(dto.ownerId);
     expect(normalized.status).toBe(dto.status);
     expect(normalized.description).toBe(dto.description);
+    expect(normalized.__officialApiSource).toBe(true);
     expect(normalized.stageLabel).toBe('Negociação');
     expect(normalized.pipelineLabel).toBe('Pipeline Oficial');
     expect(normalized.valor).toBe(dto.amount);
@@ -249,6 +257,7 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(normalized.ownerId).toBe('owner-oficial');
     expect(normalized.status).toBe('ganha');
     expect(normalized.description).toBe('Descrição oficial');
+    expect(normalized.__officialApiSource).toBe(false);
     expect(normalized.displayId).toBe('canonical-1');
     expect(normalized.stageLabel).toBe('Negociação');
     expect(normalized.pipelineLabel).toBe('Pipeline Oficial');
@@ -265,6 +274,63 @@ describe('normalizeOpportunityWorkspace', () => {
     expect(normalized.responsavel_id).toBe('owner-oficial');
     expect(normalized.responsavel_nome).toBe('Owner Oficial');
     expect(normalized.observacoes).toBe('Descrição oficial');
+  });
+
+  it('preserva origem oficial quando o marcador já vem da Mapping Layer', () => {
+    const normalized = normalizeOpportunityWorkspace({
+      __officialApiSource: true,
+      id: 'official-1',
+      pipelineId: 'pipeline-oficial',
+      stageId: 'negociacao',
+      title: 'Oficial',
+      amount: 2500,
+    }, {
+      stageCatalog,
+    });
+
+    expect(normalized.__officialApiSource).toBe(true);
+  });
+
+  it('não promove legado sem marcador e respeita false explícito', () => {
+    const legacy = normalizeOpportunityWorkspace({
+      id: 'legacy-1',
+      pipelineId: 'pipeline-legacy',
+      stageId: 'negociacao',
+      title: 'Legado',
+      amount: 100,
+    }, {
+      stageCatalog,
+    });
+    const explicitFalse = normalizeOpportunityWorkspace({
+      __officialApiSource: false,
+      id: 'legacy-2',
+      pipelineId: 'pipeline-legacy',
+      stageId: 'negociacao',
+      title: 'Legado false',
+      amount: 100,
+    }, {
+      stageCatalog,
+    });
+
+    expect(legacy.__officialApiSource).toBe(false);
+    expect(explicitFalse.__officialApiSource).toBe(false);
+  });
+
+  it('não muta a entrada ao preservar origem oficial', () => {
+    const input = {
+      __officialApiSource: true,
+      id: 'stable-1',
+      pipelineId: 'pipeline-1',
+      stageId: 'negociacao',
+      title: 'Estável',
+      amount: 300,
+    };
+    const snapshot = JSON.parse(JSON.stringify(input));
+
+    const normalized = normalizeOpportunityWorkspace(input, { stageCatalog });
+
+    expect(normalized.__officialApiSource).toBe(true);
+    expect(input).toEqual(snapshot);
   });
 
   it('prioriza amount canônico sobre valor legado', () => {
@@ -873,10 +939,11 @@ describe('reconcileOpportunityWorkspace', () => {
   it('reconcilia a lista e o selectedLead pela mesma oportunidade persistida', () => {
     const originalList = [
       normalizeOpportunityWorkspace({ id: 'opp-1', title: 'Primeira', amount: 100, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
-      normalizeOpportunityWorkspace({ id: 'opp-2', title: 'Segunda', amount: 200, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
+      normalizeOpportunityWorkspace({ __officialApiSource: true, id: 'opp-2', title: 'Segunda', amount: 200, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
       normalizeOpportunityWorkspace({ id: 'opp-3', title: 'Terceira', amount: 300, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
     ];
     const selectedLead = {
+      __officialApiSource: true,
       id: 'opp-2',
       title: 'Segunda antiga',
       amount: 200,
@@ -906,6 +973,8 @@ describe('reconcileOpportunityWorkspace', () => {
     expect(reconciliation.selectedLead?.title).toBe('Segunda atualizada');
     expect(reconciliation.selectedLead?.stageId).toBe('negociacao');
     expect(reconciliation.selectedLead?.stageLabel).toBe('Negociação');
+    expect((reconciliation.list[1] as any).__officialApiSource).toBe(true);
+    expect((reconciliation.selectedLead as any).__officialApiSource).toBe(true);
     expect((reconciliation.selectedLead as any).localFlag).toBe('preserve-me');
   });
 
@@ -952,6 +1021,7 @@ describe('reconcileOpportunityWorkspace', () => {
 
     expect(second.list).toEqual(first.list);
     expect(second.selectedLead).toEqual(first.selectedLead);
+    expect(second.viewModel.__officialApiSource).toBe(true);
   });
 });
 

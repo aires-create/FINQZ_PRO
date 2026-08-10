@@ -16,7 +16,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, mapOpportunityApiToWorkspaceInput, normalizeOpportunityWorkspace, reconcileOpportunityWorkspace } from "../components/pipeline";
+import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, mapOpportunityApiToWorkspaceInput, normalizeOpportunityWorkspace, reconcileOpportunityWorkspace, resolveOpportunityWorkspaceMutationId } from "../components/pipeline";
 import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
@@ -844,7 +844,7 @@ export const mapApiOpportunityToKanbanShape = (opportunity: Opportunity): Opport
     backendStageOrder: opportunity?.stage?.order,
     backendStageIsWon: Boolean(opportunity?.stage?.isWon),
     backendStageIsLost: Boolean(opportunity?.stage?.isLost),
-    __officialApiSource: true,
+    __officialApiSource: workspaceViewModel.__officialApiSource,
   };
 };
 
