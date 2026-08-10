@@ -16,7 +16,7 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { getTagsByIds, listarTags } from "../config/tags";
 import { criarEnvelopeAssinatura, verificarStatusAssinatura, configurarProvedor, PROVEDORES_DISPONIVEIS, getStatusLabel, getStatusColor, StatusAssinatura, RequisicaoAssinatura, RespostaAssinatura, ProvedorAssinatura } from "../config/assinaturaDigital";
 import { executarAutomacoes, getAutomacoesPendentes, getTipoAutomacaoLabel, getStatusAutomacaoColor, TipoAutomacao, ResultadoAutomacao, OportunidadeAssinada } from "../config/automacaoPosAssinatura";
-import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, mapOpportunityApiToWorkspaceInput, normalizeOpportunityWorkspace } from "../components/pipeline";
+import { buildOpportunityEnvelopeUpdatePayload, buildCreateOpportunityIntakePayload, buildMoveStagePayload, buildUpdateOpportunityPayload, KanbanColumn, formatCurrency, mapOpportunityApiToWorkspaceInput, normalizeOpportunityWorkspace, reconcileOpportunityWorkspace } from "../components/pipeline";
 import { useSimulationRuntimeShadow } from "../features/simulation-runtime/hooks/useSimulationRuntimeShadow";
 import type { PipelineColumn, PipelineTipo } from "../types";
 
@@ -2195,8 +2195,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       return;
     }
 
+    let moveResponse: Awaited<ReturnType<typeof opportunitiesApi.moveStage>> | null = null;
+
     try {
-      await opportunitiesApi.moveStage(
+      moveResponse = await opportunitiesApi.moveStage(
         selectedLeadId,
         buildMoveStagePayload(selectedLead, {
           stageId: resolvedBackendStageId,
@@ -2213,6 +2215,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       });
       alert(`Erro ao confirmar mudança de fase: ${message}`);
       return;
+    }
+
+    const persistedOpportunity = moveResponse?.data ? moveResponse.data as any : null;
+    if (persistedOpportunity) {
+      const reconciliation = reconcileOpportunityWorkspace(
+        Array.isArray(apiOportunidadesReadOnly) ? apiOportunidadesReadOnly : [],
+        persistedOpportunity,
+        selectedLead,
+        workspaceStageCatalog,
+      );
+      setApiOportunidadesReadOnly(reconciliation.list as any[]);
+      setSelectedLead(reconciliation.selectedLead as any);
     }
 
     setApiReadReloadKey((prev) => prev + 1);
@@ -2622,6 +2636,12 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     cor: getCorEtapa(normalizeKey(stage.name), index),
   }));
   const etapasAtivas = Array.isArray(etapasAtivasRaw) ? etapasAtivasRaw : [];
+  const workspaceStageCatalog = useMemo(() => (
+    etapasAtivas.map((etapa) => ({
+      id: String(etapa.id),
+      label: String(etapa.nome ?? etapa.id),
+    }))
+  ), [etapasAtivas]);
   const resolveOfficialStageById = (pipelineId: string, stageId: string) => {
     const pipeline = officialPipelines.find((item: any) => String(item?.id ?? "") === String(pipelineId ?? ""));
     const rawStages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
@@ -3068,7 +3088,7 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
     if (!cardId) return;
 
     // VALIDAÇÃO DE AVANÇO: Verifica campos obrigatórios por etapa
-    const oportunidade = oportunidadesBase.find(o => o.id.toString() === cardId);
+    const oportunidade = oportunidadesBase.find(o => String(o?.id ?? "") === String(cardId));
     if (!isOfficialApiOpportunity(oportunidade) || !hasCanonicalOpportunityId(oportunidade)) {
       alert(LEGACY_OPPORTUNITY_ACTION_BLOCK_MESSAGE);
       setDraggedCard(null);
@@ -3146,8 +3166,10 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       nextStageId: pendingMoveAuditRef.current.nextStageId,
     });
 
+    let moveResponse: Awaited<ReturnType<typeof opportunitiesApi.moveStage>> | null = null;
+
     try {
-      await opportunitiesApi.moveStage(
+      moveResponse = await opportunitiesApi.moveStage(
         canonicalOpportunityId,
         buildMoveStagePayload(
           normalizeOpportunityWorkspace(oportunidade, {
@@ -3187,6 +3209,18 @@ const [selectedProductId, setSelectedProductId] = useState<string>("");
       setDraggedCard(null);
       setDragOverColumn(null);
       return;
+    }
+
+    const persistedOpportunity = moveResponse?.data ? moveResponse.data as any : null;
+    if (persistedOpportunity) {
+      const reconciliation = reconcileOpportunityWorkspace(
+        Array.isArray(apiOportunidadesReadOnly) ? apiOportunidadesReadOnly : [],
+        persistedOpportunity,
+        selectedLead,
+        workspaceStageCatalog,
+      );
+      setApiOportunidadesReadOnly(reconciliation.list as any[]);
+      setSelectedLead(reconciliation.selectedLead as any);
     }
 
     appendKanbanRuntimeObservation("drag:patch:success", {
@@ -4217,6 +4251,7 @@ if (
           return (
             <div
               key={etapa.id}
+              data-testid={`kanban-column-${etapa.id}`}
               className={`w-[300px] flex-shrink-0 rounded-xl flex flex-col max-h-full bg-gray-100`}
               onDragOver={(e) => handleDragOver(e, etapa.id)}
               onDragLeave={handleDragLeave}

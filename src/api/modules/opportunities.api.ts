@@ -188,10 +188,16 @@ export interface OpportunityResponse {
   data: Opportunity;
 }
 
-export interface OpportunityMutationResponse {
+export interface OpportunityEntityMutationResponse {
   success: boolean;
   message: string;
-  data: Opportunity | { id: string };
+  data: Opportunity;
+}
+
+export interface OpportunityArchiveResponse {
+  success: boolean;
+  message: string;
+  data: { id: string };
 }
 
 export const opportunitiesApi = {
@@ -204,8 +210,8 @@ export const opportunitiesApi = {
     return apiCall<OpportunityResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}`);
   },
 
-  async create(payload: CreateOpportunityPayload): Promise<OpportunityMutationResponse> {
-    return apiCall<OpportunityMutationResponse>(OPPORTUNITIES_BASE_PATH, {
+  async create(payload: CreateOpportunityPayload): Promise<OpportunityEntityMutationResponse> {
+    return apiCall<OpportunityEntityMutationResponse>(OPPORTUNITIES_BASE_PATH, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
@@ -218,8 +224,8 @@ export const opportunitiesApi = {
     });
   },
 
-  async update(id: string, payload: UpdateOpportunityPayload): Promise<OpportunityMutationResponse> {
-    return apiCall<OpportunityMutationResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}`, {
+  async update(id: string, payload: UpdateOpportunityPayload): Promise<OpportunityEntityMutationResponse> {
+    return apiCall<OpportunityEntityMutationResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
@@ -228,15 +234,15 @@ export const opportunitiesApi = {
   async moveStage(
     id: string,
     payload: MoveOpportunityStagePayload,
-  ): Promise<OpportunityMutationResponse> {
-    return apiCall<OpportunityMutationResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}/stage`, {
+  ): Promise<OpportunityEntityMutationResponse> {
+    return apiCall<OpportunityEntityMutationResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}/stage`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     });
   },
 
-  async delete(id: string): Promise<OpportunityMutationResponse> {
-    return apiCall<OpportunityMutationResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}`, {
+  async delete(id: string): Promise<OpportunityArchiveResponse> {
+    return apiCall<OpportunityArchiveResponse>(`${OPPORTUNITIES_BASE_PATH}/${id}`, {
       method: 'DELETE',
     });
   },

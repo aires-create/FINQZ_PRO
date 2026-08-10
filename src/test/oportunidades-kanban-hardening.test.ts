@@ -14,6 +14,7 @@ import {
   resetKanbanRuntimeHealthMetrics,
   resetKanbanRuntimeHealthReport,
 } from "../pages/Oportunidades";
+import { reconcileOpportunityWorkspace } from "../components/pipeline/workspaceOpportunity";
 
 describe("Oportunidades Kanban hardening", () => {
   it("prioritizes official stageId in the mapper when present", () => {
@@ -158,6 +159,38 @@ describe("Oportunidades Kanban hardening", () => {
     expect(afterGrouped["stage-1"]).toHaveLength(0);
     expect(afterGrouped["stage-2"]).toHaveLength(1);
     expect(afterGrouped["stage-2"][0].stageId).toBe("stage-2");
+  });
+
+  it("reconciles persisted stage moves into the list and workspace view model", () => {
+    const currentList = [
+      mapApiOpportunityToKanbanShape({ id: "opp-1", title: "First", amount: 100, pipelineId: "pipeline-1", stageId: "stage-1", pipeline: { name: "Pipeline" }, stage: { name: "Novo Lead", order: 1 } }),
+      mapApiOpportunityToKanbanShape({ id: "opp-2", title: "Second", amount: 200, pipelineId: "pipeline-1", stageId: "stage-1", pipeline: { name: "Pipeline" }, stage: { name: "Novo Lead", order: 1 } }),
+    ];
+
+    const persisted = {
+      id: "opp-2",
+      title: "Second",
+      amount: 250,
+      pipelineId: "pipeline-1",
+      stageId: "stage-2",
+      status: "open",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-02T00:00:00.000Z",
+      pipeline: { id: "pipeline-1", name: "Pipeline" },
+      stage: { id: "stage-2", name: "Negociação", order: 2 },
+    };
+
+    const reconciled = reconcileOpportunityWorkspace(currentList, persisted as any, currentList[1], [
+      { id: "stage-1", label: "Novo Lead" },
+      { id: "stage-2", label: "Negociação" },
+    ]);
+
+    expect(reconciled.list).toHaveLength(2);
+    expect(reconciled.list[1].id).toBe("opp-2");
+    expect(reconciled.list[1].stageId).toBe("stage-2");
+    expect(reconciled.list[1].stageLabel).toBe("Negociação");
+    expect(reconciled.viewModel.stageId).toBe("stage-2");
+    expect(reconciled.viewModel.stageLabel).toBe("Negociação");
   });
 
   it("preserves official stageId across logout/login style remapping", () => {

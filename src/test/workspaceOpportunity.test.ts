@@ -10,6 +10,7 @@ import {
   mergeOpportunityWorkspace,
   persistOpportunityWorkspaceMutation,
   normalizeOpportunityWorkspace,
+  reconcileOpportunityWorkspace,
   resolveOpportunityWorkspaceApiMutationId,
   resolveOpportunityWorkspaceMutationId,
 } from '../components/pipeline/workspaceOpportunity';
@@ -176,6 +177,15 @@ describe('mapOpportunityApiToWorkspaceInput', () => {
       },
     }));
     expect(named.cliente_nome).toBe('Cliente Pronto');
+  });
+
+  it('usa o produto legado quando o DTO oficial não traz product.name', () => {
+    const input = mapOpportunityApiToWorkspaceInput(buildApiOpportunity({
+      product: null as never,
+      produto: 'Produto legado',
+    }));
+
+    expect(input.produto).toBe('Produto legado');
   });
 
   it('encadeia DTO oficial -> input canônico -> ViewModel único preservando labels e aliases', () => {
@@ -856,6 +866,92 @@ describe('opportunity workspace API builders', () => {
       envelopeProvider: 'clicksign',
     });
     expect(input).toEqual(snapshot);
+  });
+});
+
+describe('reconcileOpportunityWorkspace', () => {
+  it('reconcilia a lista e o selectedLead pela mesma oportunidade persistida', () => {
+    const originalList = [
+      normalizeOpportunityWorkspace({ id: 'opp-1', title: 'Primeira', amount: 100, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
+      normalizeOpportunityWorkspace({ id: 'opp-2', title: 'Segunda', amount: 200, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
+      normalizeOpportunityWorkspace({ id: 'opp-3', title: 'Terceira', amount: 300, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
+    ];
+    const selectedLead = {
+      id: 'opp-2',
+      title: 'Segunda antiga',
+      amount: 200,
+      stageId: 'novo_lead',
+      pipelineId: 'pipeline-1',
+      localFlag: 'preserve-me',
+    };
+
+    const persistedOpportunity = buildApiOpportunity({
+      id: 'opp-2',
+      title: 'Segunda atualizada',
+      amount: 250,
+      stageId: 'negociacao',
+      updatedAt: '2026-08-02T10:00:00.000Z',
+    });
+
+    const reconciliation = reconcileOpportunityWorkspace(originalList, persistedOpportunity, selectedLead, stageCatalog);
+
+    expect(reconciliation.list).toHaveLength(3);
+    expect(reconciliation.list[1].id).toBe('opp-2');
+    expect(reconciliation.list[1].title).toBe('Segunda atualizada');
+    expect(reconciliation.list[1].stageId).toBe('negociacao');
+    expect(reconciliation.list[1].stageLabel).toBe('Negociação');
+    expect(reconciliation.list[0].title).toBe('Primeira');
+    expect(reconciliation.list[2].title).toBe('Terceira');
+    expect(reconciliation.selectedLead?.id).toBe('opp-2');
+    expect(reconciliation.selectedLead?.title).toBe('Segunda atualizada');
+    expect(reconciliation.selectedLead?.stageId).toBe('negociacao');
+    expect(reconciliation.selectedLead?.stageLabel).toBe('Negociação');
+    expect((reconciliation.selectedLead as any).localFlag).toBe('preserve-me');
+  });
+
+  it('não altera a lista nem o selectedLead originais', () => {
+    const originalList = [
+      normalizeOpportunityWorkspace({ id: 'opp-1', title: 'Primeira', amount: 100, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
+      normalizeOpportunityWorkspace({ id: 'opp-2', title: 'Segunda', amount: 200, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog }),
+    ];
+    const selectedLead = normalizeOpportunityWorkspace({ id: 'opp-99', title: 'Outra', amount: 400, stageId: 'novo_lead', pipelineId: 'pipeline-1' }, { stageCatalog });
+    const snapshotList = JSON.parse(JSON.stringify(originalList));
+    const snapshotSelectedLead = JSON.parse(JSON.stringify(selectedLead));
+
+    const reconciliation = reconcileOpportunityWorkspace(originalList, buildApiOpportunity({ id: 'opp-2', stageId: 'negociacao' }), selectedLead, stageCatalog);
+
+    expect(originalList).toEqual(snapshotList);
+    expect(selectedLead).toEqual(snapshotSelectedLead);
+    expect(reconciliation.list).not.toBe(originalList);
+    expect(reconciliation.selectedLead).toBe(selectedLead);
+  });
+
+  it('mantém aliases consistentes após a reconciliação', () => {
+    const reconciliation = reconcileOpportunityWorkspace([], buildApiOpportunity({ id: 'opp-4', stageId: 'negociacao', pipelineId: 'pipeline-1' }), null, stageCatalog);
+
+    expect(reconciliation.viewModel.stageId).toBe('negociacao');
+    expect(reconciliation.viewModel.stage_id).toBe('negociacao');
+    expect(reconciliation.viewModel.etapa_id).toBe('negociacao');
+    expect(reconciliation.viewModel.stageLabel).toBe('Negociação');
+    expect(reconciliation.viewModel.etapa).toBe('Negociação');
+    expect(reconciliation.viewModel.pipeline_id).toBe('pipeline-1');
+  });
+
+  it('resolve stageLabel a partir do catálogo quando stage não vem na resposta', () => {
+    const persistedOpportunity = buildApiOpportunity({ id: 'opp-5', stageId: 'pendencia', stage: undefined as never });
+    const reconciliation = reconcileOpportunityWorkspace([], persistedOpportunity, null, stageCatalog);
+
+    expect(reconciliation.viewModel.stageId).toBe('pendencia');
+    expect(reconciliation.viewModel.stageLabel).toBe('Pendência');
+    expect(reconciliation.viewModel.etapa).toBe('Pendência');
+  });
+
+  it('é idempotente quando aplicada duas vezes com a mesma oportunidade', () => {
+    const first = reconcileOpportunityWorkspace([], buildApiOpportunity({ id: 'opp-6', stageId: 'negociacao', title: 'Primeira' }), null, stageCatalog);
+    const second = reconcileOpportunityWorkspace(first.list, buildApiOpportunity({ id: 'opp-6', stageId: 'negociacao', title: 'Primeira' }), first.selectedLead, stageCatalog);
+
+    expect(second.list).toEqual(first.list);
+    expect(second.selectedLead).toEqual(first.selectedLead);
   });
 });
 

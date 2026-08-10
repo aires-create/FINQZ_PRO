@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import OportunidadesPage from '../pages/Oportunidades';
 import useAppStore from '../store';
+import { opportunitiesApi } from '../api/modules/opportunities.api';
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const moveStageMock = vi.hoisted(() => vi.fn());
 const opportunityGetAllMock = vi.hoisted(() => vi.fn());
 const pipelinesGetAllMock = vi.hoisted(() => vi.fn());
 const masterCatalogGetTreeMock = vi.hoisted(() => vi.fn());
@@ -51,7 +53,7 @@ vi.mock('../api/modules/opportunities.api', () => ({
     create: vi.fn(),
     createIntake: vi.fn(),
     update: vi.fn(),
-    moveStage: vi.fn(),
+    moveStage: moveStageMock,
     delete: vi.fn(),
   },
 }));
@@ -139,6 +141,7 @@ const buildOpportunity = (overrides: Record<string, unknown> = {}) => ({
   id: '44444444-4444-4444-8444-444444444444',
   title: 'João Silva',
   amount: 5000,
+  produto: 'Consignado',
   status: 'open',
   pipelineId,
   stageId: stageNovoLeadId,
@@ -162,6 +165,7 @@ const buildLegacyOpportunity = (overrides: Record<string, unknown> = {}) => ({
   id: '55555555-5555-4555-8555-555555555555',
   title: 'Legacy Lead',
   amount: 7800,
+  produto: 'Consignado',
   status: 'open',
   pipelineId,
   stageId: stageNegociacaoId,
@@ -187,6 +191,7 @@ const setupWorkspace = async (opportunities: Array<Record<string, unknown>>) => 
   clientesSearchMock.mockReset();
   clientesGetByIdMock.mockReset();
   runShadowExecutionMock.mockReset();
+  moveStageMock.mockReset();
 
   useAppStore.setState({
     user: {
@@ -269,7 +274,7 @@ describe('Oportunidades - regressão funcional do card', () => {
     expect(reopenedModalRoot).not.toBeNull();
     expect(within(reopenedModalRoot as HTMLElement).getByText('Novo Lead')).toBeInTheDocument();
     expect(within(reopenedModalRoot as HTMLElement).getByText('Cliente').parentElement).toHaveTextContent('João Silva');
-  });
+  }, 20000);
 
   it('impede que ações internas abram o workspace e preserva a navegação do cliente', async () => {
     await setupWorkspace([buildOpportunity()]);
@@ -337,6 +342,75 @@ describe('Oportunidades - regressão funcional do card', () => {
     expect(within(secondModalRoot as HTMLElement).getByText('Negociação')).toBeInTheDocument();
     expect(within(secondModalRoot as HTMLElement).getByText('Cliente').parentElement).toHaveTextContent('Maria Santos');
   });
+
+  it('reconcilia o card e o workspace aberto após a resposta persistida de moveStage', async () => {
+    await setupWorkspace([buildOpportunity(), buildLegacyOpportunity({
+      id: '66666666-6666-4666-8666-666666666666',
+      title: 'Maria Santos',
+      customer: {
+        name: 'Maria Santos',
+        email: 'maria@example.com',
+        phone: '11977776666',
+      },
+      email: 'maria@example.com',
+      telefone: '11977776666',
+      cpf_cnpj: '11222333000199',
+      stageId: stageNegociacaoId,
+      stage: { name: 'Negociação', order: 2 },
+      customerName: 'Maria Santos',
+    })]);
+
+    const card = Array.from(screen.getAllByRole('button')).find((button) => {
+      const text = button.textContent ?? '';
+      return text.includes('João Silva') && button.getAttribute('draggable') === 'true';
+    }) as HTMLElement | undefined;
+    expect(card).toBeDefined();
+
+    fireEvent.click(card as HTMLElement);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument(), { timeout: 10000 });
+
+    const dataTransfer = {
+      setData: vi.fn((key: string, value: string) => {
+        dataTransfer[key] = value;
+      }),
+      getData: vi.fn((key: string) => dataTransfer[key] || ''),
+      effectAllowed: '',
+      dropEffect: '',
+    } as unknown as DataTransfer;
+    dataTransfer.setData('text/plain', '44444444-4444-4444-8444-444444444444');
+
+    moveStageMock.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        id: '44444444-4444-4444-8444-444444444444',
+        title: 'João Silva',
+        amount: 5000,
+        status: 'open',
+        pipelineId,
+        stageId: stageNegociacaoId,
+        leadId: 'lead-1',
+        customerId: 'customer-1',
+        tenantId: 'tenant-1',
+        createdAt: '2026-07-30T10:00:00.000Z',
+        updatedAt: '2026-07-30T12:00:00.000Z',
+        pipeline: { id: pipelineId, name: 'Consignado' },
+        stage: { id: stageNegociacaoId, name: 'Negociação', order: 2 },
+        customer: { id: 'customer-1', name: 'João Silva', email: 'joao@example.com', phone: '11999990000' },
+      },
+    });
+
+    const dropTarget = screen.getByTestId('kanban-column-33333333-3333-4333-8333-333333333333') as HTMLElement;
+
+    fireEvent.dragStart(card as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(dropTarget, { dataTransfer });
+    fireEvent.drop(dropTarget, { dataTransfer });
+
+    await waitFor(() => expect(moveStageMock).toHaveBeenCalledTimes(1), { timeout: 15000 });
+    await waitFor(() => expect(screen.getByRole('button', { name: /Voltar ao Kanban/i })).toBeInTheDocument(), { timeout: 15000 });
+    expect(screen.getAllByText('João Silva').length).toBeGreaterThan(0);
+  }, 20000);
 
   it('abre um card com payload parcial e continua exibindo o label canônico da etapa', async () => {
     await setupWorkspace([

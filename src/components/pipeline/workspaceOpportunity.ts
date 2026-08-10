@@ -746,6 +746,13 @@ export const mapOpportunityApiToWorkspaceInput = (
 ): OpportunityWorkspaceInput => {
   const projectedCustomerName = resolveProjectedCustomerName(opportunity);
   const projectedOwnerName = resolveProjectedOwnerName(opportunity);
+  const legacyOpportunity = opportunity as Opportunity & Record<string, unknown>;
+  const productName = pickFirstPresentString(
+    opportunity.product?.name,
+    legacyOpportunity.produto,
+    legacyOpportunity.productName,
+    legacyOpportunity.product_name,
+  );
 
   return omitUndefinedFields({
     source: 'backend',
@@ -764,7 +771,7 @@ export const mapOpportunityApiToWorkspaceInput = (
     status: opportunity.status,
     description: opportunity.description ?? null,
     cliente_nome: projectedCustomerName,
-    produto: opportunity.product?.name,
+    produto: productName,
     responsavel_nome: projectedOwnerName,
     telefone: opportunity.customer?.phone ?? undefined,
     email: opportunity.customer?.email ?? undefined,
@@ -895,6 +902,81 @@ export const normalizeOpportunityWorkspace = (
     formattedValue: formatCurrency(amount),
     displayName,
     initials: buildInitials(displayName),
+  };
+};
+
+export interface OpportunityWorkspaceReconciliationResult {
+  list: unknown[];
+  selectedLead: unknown;
+  viewModel: OpportunityWorkspaceViewModel;
+}
+
+export const reconcileOpportunityWorkspace = (
+  currentList: readonly unknown[],
+  persistedOpportunity: Opportunity | null | undefined,
+  selectedLead: unknown,
+  stageCatalog: readonly OpportunityWorkspaceStageDescriptor[] = [],
+): OpportunityWorkspaceReconciliationResult => {
+  const normalizedPersisted = persistedOpportunity
+    ? normalizeOpportunityWorkspace(
+        mapOpportunityApiToWorkspaceInput(persistedOpportunity),
+        {
+          source: 'backend',
+          stageCatalog,
+        },
+      )
+    : normalizeOpportunityWorkspace({}, { source: 'backend', stageCatalog });
+
+  const applyPersistedFields = (currentItem: Record<string, unknown>) => {
+    const mergedItem = { ...currentItem } as Record<string, unknown>;
+
+    Object.entries(normalizedPersisted).forEach(([key, value]) => {
+      if (value !== undefined) {
+        mergedItem[key] = value;
+      }
+    });
+
+    return mergedItem;
+  };
+
+  const reconciledList = Array.isArray(currentList)
+    ? currentList.map((currentItem) => {
+        if (!isRecord(currentItem)) {
+          return currentItem;
+        }
+
+        const currentId = String(
+          currentItem.id ?? currentItem.opportunityId ?? currentItem.leadId ?? currentItem.customerId ?? '',
+        ).trim();
+
+        if (currentId && currentId === normalizedPersisted.id) {
+          return applyPersistedFields(currentItem);
+        }
+
+        return currentItem;
+      })
+    : [];
+
+  const reconciledSelectedLead = (() => {
+    if (!selectedLead || !isRecord(selectedLead)) {
+      return selectedLead;
+    }
+
+    const selectedLeadId = String(
+      selectedLead.id ?? selectedLead.opportunityId ?? selectedLead.leadId ?? selectedLead.customerId ?? '',
+    ).trim();
+
+    if (!selectedLeadId || selectedLeadId !== normalizedPersisted.id) {
+      return selectedLead;
+    }
+
+    return applyPersistedFields(selectedLead as Record<string, unknown>);
+  })();
+
+  return {
+    list: reconciledList,
+    selectedLead: reconciledSelectedLead,
+    viewModel: normalizedPersisted,
   };
 };
 
