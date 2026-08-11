@@ -99,10 +99,6 @@ describe('simulation runtime evidence http schema', () => {
     expect(simulationRuntimeEvidenceRouteSchema.tags).toContain(
       'Simulation Runtime Evidence',
     );
-    expect(simulationRuntimeEvidenceRouteSchema.response[201]).toBeDefined();
-    expect(simulationRuntimeEvidenceRouteSchema.response[401]).toMatchObject({
-      required: ['success', 'requestId', 'message'],
-    });
-    expect(simulationRuntimeEvidenceRouteSchema.response[401].properties).not.toHaveProperty('error');
+    expect(Object.keys(simulationRuntimeEvidenceRouteSchema.response)).toEqual(['200', '201']);
   });
 });

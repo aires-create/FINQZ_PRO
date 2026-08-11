@@ -472,32 +472,12 @@ const simulationRuntimeSuccessResponseJsonSchema = {
   },
 };
 
-const simulationRuntimeErrorResponseJsonSchema = {
-  type: 'object',
-  required: ['success', 'requestId', 'message'],
-  properties: {
-    success: { type: 'boolean', enum: [false] },
-    requestId: { type: 'string', minLength: 1 },
-    message: { type: 'string' },
-    code: { type: 'string' },
-    errors: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-};
-
 export const simulationRuntimeRouteSchema = {
   tags: ['Simulation Runtime'],
   security: [{ bearerAuth: [] }],
   body: simulationRuntimeRequestBodyJsonSchema,
   response: {
     200: simulationRuntimeSuccessResponseJsonSchema,
-    400: simulationRuntimeErrorResponseJsonSchema,
-    401: simulationRuntimeErrorResponseJsonSchema,
-    403: simulationRuntimeErrorResponseJsonSchema,
-    422: simulationRuntimeErrorResponseJsonSchema,
-    500: simulationRuntimeErrorResponseJsonSchema,
   },
 } as const;
 

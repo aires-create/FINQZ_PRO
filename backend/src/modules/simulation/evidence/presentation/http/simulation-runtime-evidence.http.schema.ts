@@ -299,21 +299,6 @@ const simulationRuntimeEvidenceSuccessResponseJsonSchema = {
   },
 };
 
-const simulationRuntimeEvidenceErrorResponseJsonSchema = {
-  type: 'object',
-  required: ['success', 'requestId', 'message'],
-  properties: {
-    success: { type: 'boolean', enum: [false] },
-    requestId: { type: 'string', minLength: 1 },
-    message: { type: 'string' },
-    code: { type: 'string' },
-    errors: {
-      type: 'array',
-      items: { type: 'string' },
-    },
-  },
-};
-
 export const simulationRuntimeEvidenceRouteSchema = {
   tags: ['Simulation Runtime Evidence'],
   security: [{ bearerAuth: [] }],
@@ -321,11 +306,6 @@ export const simulationRuntimeEvidenceRouteSchema = {
   response: {
     200: simulationRuntimeEvidenceSuccessResponseJsonSchema,
     201: simulationRuntimeEvidenceSuccessResponseJsonSchema,
-    400: simulationRuntimeEvidenceErrorResponseJsonSchema,
-    401: simulationRuntimeEvidenceErrorResponseJsonSchema,
-    403: simulationRuntimeEvidenceErrorResponseJsonSchema,
-    409: simulationRuntimeEvidenceErrorResponseJsonSchema,
-    500: simulationRuntimeEvidenceErrorResponseJsonSchema,
   },
 } as const;
 
