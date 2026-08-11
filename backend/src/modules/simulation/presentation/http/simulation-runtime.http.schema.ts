@@ -474,18 +474,15 @@ const simulationRuntimeSuccessResponseJsonSchema = {
 
 const simulationRuntimeErrorResponseJsonSchema = {
   type: 'object',
-  required: ['success', 'error'],
+  required: ['success', 'requestId', 'message'],
   properties: {
     success: { type: 'boolean', enum: [false] },
-    error: {
-      type: 'object',
-      required: ['code', 'message'],
-      properties: {
-        code: { type: 'string' },
-        message: { type: 'string' },
-        statusCode: { type: 'number' },
-        details: {},
-      },
+    requestId: { type: 'string', minLength: 1 },
+    message: { type: 'string' },
+    code: { type: 'string' },
+    errors: {
+      type: 'array',
+      items: { type: 'string' },
     },
   },
 };

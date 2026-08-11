@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthenticationError, AuthorizationError } from '../../../types/index.js';
+
 const controllerMock = vi.hoisted(() => ({
   simulationRuntimeController: {
     execute: vi.fn(async (_request: any, reply: any) => {
@@ -36,7 +38,11 @@ const controllerMock = vi.hoisted(() => ({
 vi.mock('../../../core/http/middleware.js', () => ({
   authenticate: async (request: any, reply: any) => {
     if (!request.headers.authorization) {
-      return reply.status(401).send({ message: 'Unauthorized' });
+      throw new AuthenticationError('Authentication required');
+    }
+
+    if (request.headers.authorization === 'Bearer invalid-token') {
+      throw new AuthenticationError('Invalid or expired access token');
     }
 
     request.currentUser = {
@@ -66,7 +72,7 @@ vi.mock('../../../modules/rbac/rbac.guard.js', () => ({
 
       const allowed = required.every((item) => userPermissions.includes(item));
       if (!allowed) {
-        return reply.status(403).send({ message: 'Insufficient permissions' });
+        throw new AuthorizationError('Insufficient permissions');
       }
     };
   },
@@ -120,8 +126,20 @@ describe('simulation runtime routes', () => {
     vi.clearAllMocks();
     app = Fastify({ logger: false });
     app.setErrorHandler((error, _request, reply) => {
-      const statusCode = (error as any).statusCode ?? 500;
-      reply.status(statusCode).send({ message: error.message });
+      const statusCode =
+        error instanceof AuthenticationError || error instanceof AuthorizationError
+          ? error.statusCode
+          : 500;
+      reply.status(statusCode).send({
+        success: false,
+        requestId: _request.requestId ?? _request.id,
+        message: error instanceof Error ? error.message : 'Internal server error',
+        ...(error instanceof AuthenticationError
+          ? { code: 'UNAUTHORIZED' }
+          : error instanceof AuthorizationError
+            ? { code: 'FORBIDDEN' }
+            : {}),
+      });
     });
     await app.register(simulationRuntimeRoutes, {
       prefix: '/api/v1/simulations',
@@ -134,34 +152,55 @@ describe('simulation runtime routes', () => {
   });
 
   it('authenticate bloqueia sem auth', async () => {
-    const request = {
-      headers: {},
-    } as never;
-    const reply = {
-      status: vi.fn().mockReturnThis(),
-      send: vi.fn(),
-    } as never;
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/simulations/runtime',
+      payload: buildPayload(),
+    });
 
-    await authenticate(request, reply);
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({
+      success: false,
+      message: 'Authentication required',
+      code: 'UNAUTHORIZED',
+    });
+  });
 
-    expect((reply as any).status).toHaveBeenCalledWith(401);
+  it('token inválido retorna 401 com envelope global', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/simulations/runtime',
+      headers: {
+        authorization: 'Bearer invalid-token',
+      },
+      payload: buildPayload(),
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({
+      success: false,
+      message: 'Invalid or expired access token',
+      code: 'UNAUTHORIZED',
+    });
   });
 
   it('requirePermissions bloqueia sem permissão simulation:execute', async () => {
-    const guard = requirePermissions('simulation:execute');
-    const request = {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/simulations/runtime',
       headers: {
+        authorization: 'Bearer token',
         'x-user-permissions': 'opportunity:read',
       },
-    } as never;
-    const reply = {
-      status: vi.fn().mockReturnThis(),
-      send: vi.fn(),
-    } as never;
+      payload: buildPayload(),
+    });
 
-    await guard(request, reply);
-
-    expect((reply as any).status).toHaveBeenCalledWith(403);
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      success: false,
+      message: 'Insufficient permissions',
+      code: 'FORBIDDEN',
+    });
   });
 
   it('POST /runtime chama o renderer oficial', async () => {

@@ -64,10 +64,10 @@ export type SimulationRuntimeEvidenceHttpSuccessResponseContract = {
 };
 
 export type SimulationRuntimeEvidenceHttpErrorContract = {
-  code: string;
+  requestId: string;
   message: string;
-  statusCode: number;
-  details?: Record<string, unknown> | null;
+  code?: string;
+  errors?: string[];
 };
 
 export type SimulationRuntimeEvidenceHttpPermissionMap = {

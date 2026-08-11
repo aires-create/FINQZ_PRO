@@ -59,5 +59,9 @@ describe('simulation runtime http schema', () => {
       },
     ]);
     expect(simulationRuntimeRouteSchema.tags).toContain('Simulation Runtime');
+    expect(simulationRuntimeRouteSchema.response[401]).toMatchObject({
+      required: ['success', 'requestId', 'message'],
+    });
+    expect(simulationRuntimeRouteSchema.response[401].properties).not.toHaveProperty('error');
   });
 });

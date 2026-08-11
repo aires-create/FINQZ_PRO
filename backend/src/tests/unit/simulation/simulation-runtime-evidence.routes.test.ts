@@ -1,6 +1,8 @@
 import Fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { AuthenticationError, AuthorizationError } from '../../../types/index.js';
+
 const evidenceControllerMock = vi.hoisted(() => ({
   ingest: vi.fn(async (_request: unknown, reply: { status: (code: number) => { send: (payload: unknown) => unknown }; }) => {
     return reply.status(201).send({
@@ -58,9 +60,11 @@ const runtimeControllerMock = vi.hoisted(() => ({
 vi.mock('../../../core/http/middleware.js', () => ({
   authenticate: async (request: { headers: Record<string, string | undefined>; currentUser?: { userId: string; tenantId: string; permissions: string[] }; currentTenant?: { tenantId: string; userId: string } }) => {
     if (!request.headers.authorization) {
-      const error = new Error('Unauthorized') as Error & { statusCode: number };
-      error.statusCode = 401;
-      throw error;
+      throw new AuthenticationError('Authentication required');
+    }
+
+    if (request.headers.authorization === 'Bearer invalid-token') {
+      throw new AuthenticationError('Invalid or expired access token');
     }
 
     const permissionsHeader = request.headers['x-user-permissions'] ?? '';
@@ -89,9 +93,7 @@ vi.mock('../../../modules/rbac/rbac.guard.js', () => ({
       const allowed = required.every((item) => userPermissions.includes(item));
 
       if (!allowed) {
-        const error = new Error('Insufficient permissions') as Error & { statusCode: number };
-        error.statusCode = 403;
-        throw error;
+        throw new AuthorizationError('Insufficient permissions');
       }
     };
   },
@@ -151,17 +153,19 @@ describe('simulation runtime evidence routes', () => {
     vi.clearAllMocks();
     app = Fastify({ logger: false });
     app.setErrorHandler((error, _request, reply) => {
-      const statusCode = (error as { statusCode?: number }).statusCode ?? 500;
+      const statusCode =
+        error instanceof AuthenticationError || error instanceof AuthorizationError
+          ? error.statusCode
+          : 500;
       reply.status(statusCode).send({
         success: false,
-        error: {
-          code: (error as { code?: string }).code ?? 'INTERNAL_ERROR',
-          message: error instanceof Error ? error.message : 'Internal server error',
-          statusCode,
-          ...(error instanceof Error && 'details' in error && (error as { details?: unknown }).details !== undefined
-            ? { details: (error as { details?: Record<string, unknown> | null }).details }
+        requestId: _request.requestId ?? _request.id,
+        message: error instanceof Error ? error.message : 'Internal server error',
+        ...(error instanceof AuthenticationError
+          ? { code: 'UNAUTHORIZED' }
+          : error instanceof AuthorizationError
+            ? { code: 'FORBIDDEN' }
             : {}),
-        },
       });
     });
 
@@ -188,6 +192,29 @@ describe('simulation runtime evidence routes', () => {
     });
 
     expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({
+      success: false,
+      message: 'Authentication required',
+      code: 'UNAUTHORIZED',
+    });
+  });
+
+  it('rejects evidence ingestion with invalid token', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/simulations/runtime-evidence',
+      headers: {
+        authorization: 'Bearer invalid-token',
+      },
+      payload: buildBody(),
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toMatchObject({
+      success: false,
+      message: 'Invalid or expired access token',
+      code: 'UNAUTHORIZED',
+    });
   });
 
   it('rejects evidence ingestion without simulation:evidence:write', async () => {
@@ -202,6 +229,11 @@ describe('simulation runtime evidence routes', () => {
     });
 
     expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({
+      success: false,
+      message: 'Insufficient permissions',
+      code: 'FORBIDDEN',
+    });
   });
 
   it('accepts authorized evidence ingestion and keeps /runtime working', async () => {

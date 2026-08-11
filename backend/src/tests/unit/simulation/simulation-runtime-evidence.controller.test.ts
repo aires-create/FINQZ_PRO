@@ -96,6 +96,10 @@ const createRepository = () =>
   }) satisfies SimulationRuntimeEvidenceRepository;
 
 const createReply = () => ({
+  request: {
+    id: 'reply-req-1',
+    requestId: 'reply-req-1',
+  },
   status: vi.fn().mockReturnThis(),
   send: vi.fn().mockReturnThis(),
 }) as unknown as FastifyReply;

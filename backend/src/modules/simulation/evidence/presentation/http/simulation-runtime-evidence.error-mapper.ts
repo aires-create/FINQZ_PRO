@@ -13,28 +13,47 @@ type SimulationRuntimeEvidenceErrorResponse = {
   statusCode: number;
   payload: {
     success: false;
-    error: SimulationRuntimeEvidenceHttpErrorContract;
+    requestId: string;
+    message: string;
+    code?: string;
+    errors?: string[];
   };
 };
 
 const isZodError = (error: unknown): error is ZodError =>
   error instanceof ZodError;
 
-const getAppErrorCode = (error: AppError): SimulationRuntimeEvidenceHttpErrorContract['code'] =>
-  error.code;
+const getAppErrorCode = (error: AppError): string => error.code;
 
-const mapError = (error: unknown): SimulationRuntimeEvidenceErrorResponse => {
+const getErrors = (error: unknown): string[] | undefined => {
+  if (!isZodError(error)) {
+    return undefined;
+  }
+
+  const issues = error.issues;
+
+  if (issues.every((item) => typeof item.message === 'string')) {
+    return issues.map((item) => item.message);
+  }
+
+  return undefined;
+};
+
+const mapError = (
+  error: unknown,
+  requestId: string,
+): SimulationRuntimeEvidenceErrorResponse => {
   if (isZodError(error)) {
+    const errors = getErrors(error);
+
     return {
       statusCode: 400,
       payload: {
         success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Validation error',
-          statusCode: 400,
-          details: error.flatten(),
-        },
+        requestId,
+        message: 'Validation error',
+        code: 'VALIDATION_ERROR',
+        ...(errors ? { errors } : {}),
       },
     };
   }
@@ -44,11 +63,9 @@ const mapError = (error: unknown): SimulationRuntimeEvidenceErrorResponse => {
       statusCode: 400,
       payload: {
         success: false,
-        error: {
-          code: 'BAD_REQUEST',
-          message: error.message,
-          statusCode: 400,
-        },
+        requestId,
+        message: error.message,
+        code: 'BAD_REQUEST',
       },
     };
   }
@@ -58,26 +75,23 @@ const mapError = (error: unknown): SimulationRuntimeEvidenceErrorResponse => {
       statusCode: 409,
       payload: {
         success: false,
-        error: {
-          code: 'CONFLICT',
-          message: error.message,
-          statusCode: 409,
-        },
+        requestId,
+        message: error.message,
+        code: 'CONFLICT',
       },
     };
   }
 
   if (error instanceof AppError) {
+    const code = getAppErrorCode(error);
+
     return {
       statusCode: error.statusCode,
       payload: {
         success: false,
-        error: {
-          code: getAppErrorCode(error),
-          message: error.message,
-          statusCode: error.statusCode,
-          ...(error.details !== undefined ? { details: error.details as Record<string, unknown> | null } : {}),
-        },
+        requestId,
+        message: error.message,
+        code,
       },
     };
   }
@@ -86,11 +100,9 @@ const mapError = (error: unknown): SimulationRuntimeEvidenceErrorResponse => {
     statusCode: 500,
     payload: {
       success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Internal server error',
-        statusCode: 500,
-      },
+      requestId,
+      message: 'Internal server error',
+      code: 'INTERNAL_ERROR',
     },
   };
 };
@@ -99,7 +111,8 @@ export const sendSimulationRuntimeEvidenceError = (
   error: unknown,
   reply: FastifyReply,
 ): FastifyReply => {
-  const mapped = mapError(error);
+  const requestId = reply.request.requestId ?? reply.request.id;
+  const mapped = mapError(error, requestId);
 
   if (mapped.statusCode >= 500) {
     logger.error('Simulation runtime evidence controller error', {
@@ -108,7 +121,9 @@ export const sendSimulationRuntimeEvidenceError = (
     });
   }
 
-  return reply.status(mapped.statusCode).send(mapped.payload);
+  return reply.status(mapped.statusCode).send({
+    ...mapped.payload,
+  });
 };
 
 export { mapError as mapSimulationRuntimeEvidenceError };

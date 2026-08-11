@@ -7,6 +7,10 @@ import { SimulationRuntimeController } from '../../../modules/simulation/present
 
 const createReplyMock = () => {
   const reply = {
+    request: {
+      id: 'reply-req-1',
+      requestId: 'reply-req-1',
+    },
     status: vi.fn().mockReturnThis(),
     send: vi.fn(),
   };
@@ -413,10 +417,9 @@ describe('SimulationRuntimeController', () => {
     expect(reply.send).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        error: expect.objectContaining({
-          code: 'FORBIDDEN',
-          message: 'Missing tenant context',
-        }),
+        requestId: 'reply-req-1',
+        message: 'Missing tenant context',
+        code: 'FORBIDDEN',
       }),
     );
   });

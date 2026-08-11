@@ -10,13 +10,15 @@ import {
   UnsupportedProductError,
   UnsupportedSubproductError,
 } from '../../application/index.js';
-import type { SimulationRuntimeHttpErrorContract } from './simulation-runtime.http.contract.js';
 
 type SimulationRuntimeErrorResponse = {
   statusCode: number;
   payload: {
     success: false;
-    error: SimulationRuntimeHttpErrorContract;
+    requestId: string;
+    message: string;
+    code?: string;
+    errors?: string[];
   };
 };
 
@@ -27,42 +29,6 @@ const isZodError = (error: unknown): error is ZodError => {
     'flatten' in error &&
     typeof (error as ZodError).flatten === 'function'
   );
-};
-
-const getDetails = (error: unknown): Record<string, unknown> | null | undefined => {
-  if (error instanceof UnsupportedProductError) {
-    return {
-      productId: error.productId,
-      productCode: error.productCode,
-    };
-  }
-
-  if (error instanceof UnsupportedSubproductError) {
-    return {
-      subproductId: error.subproductId,
-      subproductCode: error.subproductCode,
-    };
-  }
-
-  if (error instanceof InvalidCollateralError) {
-    return {
-      collateralKind: error.collateralKind,
-    };
-  }
-
-  if (error instanceof InvalidSimulationRequestError) {
-    return null;
-  }
-
-  if (error instanceof LegacyExecutionError) {
-    return null;
-  }
-
-  if (error instanceof AppError) {
-    return (error.details as Record<string, unknown> | null | undefined) ?? null;
-  }
-
-  return null;
 };
 
 const getStatusCode = (error: unknown): number => {
@@ -133,23 +99,38 @@ const getMessage = (error: unknown): string => {
   return 'Internal server error';
 };
 
+const getErrors = (error: unknown): string[] | undefined => {
+  if (!isZodError(error)) {
+    return undefined;
+  }
+
+  const issues = error.issues;
+
+  if (issues.every((item) => typeof item.message === 'string')) {
+    return issues.map((item) => item.message);
+  }
+
+  return undefined;
+};
+
 export const mapSimulationRuntimeError = (
   error: unknown,
+  requestId: string,
 ): SimulationRuntimeErrorResponse => {
   const statusCode = getStatusCode(error);
-  const details: Record<string, unknown> | null | undefined = isZodError(error)
-    ? (error.flatten() as unknown as Record<string, unknown>)
-    : getDetails(error);
 
   const payload: SimulationRuntimeErrorResponse['payload'] = {
     success: false,
-    error: {
-      code: getCode(error),
-      message: getMessage(error),
-      statusCode,
-      ...(details !== null && details !== undefined ? { details } : {}),
-    },
+    requestId,
+    message: getMessage(error),
+    code: getCode(error),
   };
+
+  const errors = getErrors(error);
+
+  if (errors) {
+    payload.errors = errors;
+  }
 
   return {
     statusCode,
@@ -161,7 +142,8 @@ export const sendSimulationRuntimeError = (
   error: unknown,
   reply: FastifyReply,
 ): FastifyReply => {
-  const mapped = mapSimulationRuntimeError(error);
+  const requestId = reply.request.requestId ?? reply.request.id;
+  const mapped = mapSimulationRuntimeError(error, requestId);
 
   if (mapped.statusCode >= 500) {
     logger.error('Simulation runtime controller error', { error });

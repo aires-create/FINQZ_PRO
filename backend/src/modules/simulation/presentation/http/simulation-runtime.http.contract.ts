@@ -232,10 +232,10 @@ export type SimulationRuntimeHttpSuccessResponseContract = {
 };
 
 export type SimulationRuntimeHttpErrorContract = {
-  code: string;
+  requestId: string;
   message: string;
-  statusCode: number;
-  details?: Record<string, unknown> | null;
+  code?: string;
+  errors?: string[];
 };
 
 export type SimulationRuntimeHttpPermissionMap = {

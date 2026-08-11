@@ -301,21 +301,15 @@ const simulationRuntimeEvidenceSuccessResponseJsonSchema = {
 
 const simulationRuntimeEvidenceErrorResponseJsonSchema = {
   type: 'object',
-  required: ['success', 'error'],
+  required: ['success', 'requestId', 'message'],
   properties: {
     success: { type: 'boolean', enum: [false] },
-    error: {
-      type: 'object',
-      required: ['code', 'message', 'statusCode'],
-      properties: {
-        code: { type: 'string' },
-        message: { type: 'string' },
-        statusCode: { type: 'number' },
-        details: {
-          type: ['object', 'null'],
-          additionalProperties: true,
-        },
-      },
+    requestId: { type: 'string', minLength: 1 },
+    message: { type: 'string' },
+    code: { type: 'string' },
+    errors: {
+      type: 'array',
+      items: { type: 'string' },
     },
   },
 };
