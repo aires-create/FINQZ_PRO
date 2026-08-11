@@ -4,6 +4,7 @@ import type { ZodError } from 'zod';
 import { authenticate, tenantContextMiddleware } from '../../core/http/middleware.js';
 import { AppError } from '../../shared/errors/index.js';
 import { logger } from '../../shared/logger.js';
+import { requirePermissions } from '../rbac/rbac.guard.js';
 import type {
   CommercialTableFiltersDto,
   CreateCommercialTableDto,
@@ -88,6 +89,7 @@ const stripUndefinedValues = <T extends Record<string, unknown>>(value: T) => {
 export async function commercialRoutes(app: FastifyInstance) {
   app.addHook('preHandler', authenticate);
   app.addHook('preHandler', tenantContextMiddleware);
+  app.addHook('preHandler', requirePermissions('sales:view'));
 
   app.get('/tables', async (request, reply) => {
     try {
