@@ -219,6 +219,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { path: "/app/operacoes/parceiros", label: "Parceiros", icon: Handshake, permission: "customer:view" },
       { path: "/app/operacoes/estrutura-comercial", label: "Estrutura Comercial", icon: Building2, permission: "sales:view" },
+      { path: "/app/operacoes/commercial-coverage", label: "Coverage Comercial", icon: Layers, permission: "sales:view" },
       { path: "/app/operacoes/partner-acquisition/leads", label: "Aquisição de Parceiros", icon: Handshake, permission: "partner_acquisition:read" },
       { path: "/app/operacoes/tabelas-comerciais", label: "Tabelas Comerciais", icon: Table2, permission: "sales:view" },
       { path: "/app/operacoes/roteiros", label: "Roteiros Operacionais", icon: ClipboardList, permission: "roteiros:read" },
