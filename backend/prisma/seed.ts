@@ -954,6 +954,13 @@ async function createPermissions() {
       action: PermissionAction.VIEW,
     },
     {
+      name: 'View Commercial Sales',
+      slug: 'sales:view',
+      description: 'Canonical view access for commercial coverage and commercial tables',
+      resource: 'sales',
+      action: PermissionAction.VIEW,
+    },
+    {
       name: 'View Customer',
       slug: 'CUSTOMER_VIEW',
       description: 'View customer data',
@@ -1582,6 +1589,7 @@ async function createRolePermissions(
         'AUDIT_VIEW',
         'FINANCE_VIEW',
         'SALES_VIEW',
+        'sales:view',
         'CUSTOMER_VIEW',
         'customer:create',
         'customer:read',

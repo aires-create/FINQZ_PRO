@@ -42,7 +42,7 @@ export const operacoesRoutes = (
       path="operacoes/estrutura-comercial"
       element={
         <ProtectedRoute
-          requiredPermission="SALES_VIEW"
+          requiredPermission="sales:view"
           requiredModule="estrutura_comercial"
           requiredAction="view"
         >
@@ -54,7 +54,7 @@ export const operacoesRoutes = (
       path="operacoes/commercial-coverage"
       element={
         <ProtectedRoute
-          requiredPermission="SALES_VIEW"
+          requiredPermission="sales:view"
           requiredModule="estrutura_comercial"
           requiredAction="view"
         >

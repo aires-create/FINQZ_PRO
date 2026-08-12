@@ -160,6 +160,19 @@ describe('commercial routes', () => {
     });
   });
 
+  it('GET /tables retorna 403 com SALES_VIEW legado isolado', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/commercial/tables',
+      headers: {
+        authorization: 'Bearer token',
+        'x-user-permissions': 'SALES_VIEW',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
   it('POST /tables retorna 403 sem sales:view', async () => {
     const response = await app.inject({
       method: 'POST',
